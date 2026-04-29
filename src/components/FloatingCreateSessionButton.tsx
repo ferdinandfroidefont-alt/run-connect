@@ -36,8 +36,8 @@ export function FloatingCreateSessionButton() {
       onClick={handleClick}
       className={cn(
         "pointer-events-auto fixed z-[105] flex max-w-[min(22rem,calc(100vw-2rem))] items-center justify-center gap-2 rounded-full",
-        "border border-primary/20 bg-primary px-4 py-2.5 text-primary-foreground",
-        "text-sm font-semibold leading-tight shadow-[0_8px_28px_hsl(var(--primary)/0.38)] ring-[3px] ring-background transition-transform duration-200 ease-ios",
+        "border border-primary/20 bg-primary px-4 py-2.5 text-primary-foreground shadow-lg",
+        "text-sm font-semibold leading-tight ring-[3px] ring-background transition-transform duration-200 ease-ios",
         "active:scale-[0.97] touch-manipulation dark:ring-background",
         isIosPhone
           ? "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap))]"

@@ -238,8 +238,7 @@ export default function ConfirmPresence({
                 <span className="truncate text-[17px]">Retour</span>
               </button>
             }
-            title={t('confirmPresence.title')}
-            subtitle={t('brand.tagline')}
+            title="Présence"
           />
         </div>
       )}

@@ -1,9 +1,9 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -11,26 +11,30 @@ import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { addDays, format, isSameDay, startOfDay, startOfWeek } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SessionCalendarView } from '@/components/SessionCalendarView';
 import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
-import { useAppContext } from "@/contexts/AppContext";
-import { cn } from "@/lib/utils";
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
 );
 const ProfilePreviewDialog = lazy(() =>
   import('@/components/ProfilePreviewDialog').then((m) => ({ default: m.ProfilePreviewDialog }))
+);
+const OrganizerStatsCard = lazy(() =>
+  import('@/components/OrganizerStatsCard').then((m) => ({ default: m.OrganizerStatsCard }))
 );
 
 interface UserSession {
@@ -78,25 +82,86 @@ interface OrganizerProfile {
   avatar_url: string | null;
 }
 
+type ConfirmTarget = {
+  sessionId: string;
+  scheduledAt: string;
+  isCreator: boolean;
+};
+
+const CARD_SWIPE_THRESHOLD = -80;
+const SWIPE_ACTION_WIDTH = 148;
+
+function SwipeConfirmCard({
+  onConfirm,
+  children,
+}: {
+  onConfirm: () => void;
+  children: React.ReactNode;
+}) {
+  const [opened, setOpened] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  return (
+    <div className="relative overflow-hidden rounded-ios-lg">
+      <div
+        className={`absolute inset-y-0 right-0 flex w-[148px] items-center justify-center bg-primary px-3 transition-opacity ${
+          opened || isDragging ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onConfirm();
+            setOpened(false);
+          }}
+          className="h-10 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+        >
+          Confirmer cette séance
+        </button>
+      </div>
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -SWIPE_ACTION_WIDTH, right: 0 }}
+        dragElastic={0.08}
+        animate={{ x: opened ? -SWIPE_ACTION_WIDTH : 0 }}
+        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={(_, info) => {
+          setIsDragging(false);
+          if (info.offset.x < CARD_SWIPE_THRESHOLD) {
+            setOpened(true);
+            return;
+          }
+          if (info.offset.x > -24) {
+            setOpened(false);
+          }
+        }}
+        onTap={() => {
+          if (opened) setOpened(false);
+        }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
 export default function MySessions() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const { openCreateSession } = useAppContext();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
-  const [timeSegment, setTimeSegment] = useState<"upcoming" | "past">("upcoming");
-  const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
-  const [showConfirmEmbedded, setShowConfirmEmbedded] = useState(false);
+  const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
+  const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
-  const [myParticipationBySessionId, setMyParticipationBySessionId] = useState<
-    Map<string, { confirmed_by_gps: boolean | null; confirmed_by_creator: boolean | null }>
-  >(new Map());
   const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
-  const [selectedSessionRole, setSelectedSessionRole] = useState<"organizer" | "participant" | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
@@ -105,7 +170,11 @@ export default function MySessions() {
   const [showSessionShare, setShowSessionShare] = useState(false);
   const [showShareConversationDialog, setShowShareConversationDialog] = useState(false);
   const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
+  const [sessionPage, setSessionPage] = useState(0);
+  const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
+  const SESSIONS_PER_PAGE = 4;
 
 
   // Live tracking participant states
@@ -113,7 +182,7 @@ export default function MySessions() {
   const [showTrackingWarning, setShowTrackingWarning] = useState(false);
   const trackingWatchIdRef = useRef<string | null>(null);
 
-  const isViewingJoinedSession = selectedSession && selectedSessionRole === "participant";
+  const isViewingJoinedSession = selectedSession && sessionSource === 'joined';
 
   // Auto-stop tracking based on live_tracking_max_duration
   useEffect(() => {
@@ -152,7 +221,7 @@ export default function MySessions() {
       await Geolocation.requestPermissions();
 
       // If organizer (created session), activate live_tracking_active on the session for RLS
-      if (selectedSessionRole === "organizer") {
+      if (sessionSource === 'created') {
         await supabase.from('sessions').update({ live_tracking_active: true, live_tracking_started_at: new Date().toISOString() }).eq('id', selectedSession.id);
       }
 
@@ -202,7 +271,7 @@ export default function MySessions() {
         variant: "destructive",
       });
     }
-  }, [selectedSession, user, selectedSessionRole, toast]);
+  }, [selectedSession, user]);
 
   const stopParticipantTracking = useCallback(async () => {
     setLiveTrackingEnabled(false);
@@ -216,10 +285,10 @@ export default function MySessions() {
       trackingWatchIdRef.current = null;
     }
     // If organizer, deactivate live_tracking_active
-    if (selectedSessionRole === "organizer" && selectedSession) {
+    if (sessionSource === 'created' && selectedSession) {
       await supabase.from('sessions').update({ live_tracking_active: false }).eq('id', selectedSession.id);
     }
-  }, [selectedSessionRole, selectedSession]);
+  }, [sessionSource, selectedSession]);
 
   const openSessionShare = useCallback(async () => {
     if (!selectedSession) return;
@@ -446,45 +515,9 @@ export default function MySessions() {
     };
   }, [user]);
 
-  const handleSessionClick = async (session: UserSession, role: "organizer" | "participant") => {
+  const handleSessionClick = async (session: UserSession) => {
     setSelectedSession(session);
-    setSelectedSessionRole(role);
     await loadSessionParticipants(session.id);
-  };
-
-  const handleHeaderCreateSession = () => {
-    navigate("/");
-    window.setTimeout(() => openCreateSession(), 100);
-  };
-
-  const formatWeekdayLabel = (d: Date) =>
-    format(d, "EEE", { locale: fr })
-      .replace(/\.$/, "")
-      .toUpperCase()
-      .slice(0, 3);
-
-  const sessionBadge = (
-    session: UserSession,
-    role: "organizer" | "participant"
-  ): { label: string; className: string } => {
-    if (role === "organizer") {
-      return {
-        label: "Confirmée",
-        className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-      };
-    }
-    const p = myParticipationBySessionId.get(session.id);
-    const ok = p?.confirmed_by_gps === true || p?.confirmed_by_creator === true;
-    if (ok) {
-      return {
-        label: "Confirmée",
-        className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-      };
-    }
-    return {
-      label: "En attente",
-      className: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
-    };
   };
 
   const handleEditClick = () => {
@@ -537,10 +570,7 @@ export default function MySessions() {
         description: "Séance supprimée avec succès",
       });
       // Navigate back AFTER toast
-      setTimeout(() => {
-        setSelectedSession(null);
-        setSelectedSessionRole(null);
-      }, 100);
+      setTimeout(() => setSelectedSession(null), 100);
     } catch (error) {
       console.error('Error deleting session:', error);
       toast({
@@ -570,10 +600,7 @@ export default function MySessions() {
         title: "Succès",
         description: "Vous avez quitté la séance",
       });
-      setTimeout(() => {
-        setSelectedSession(null);
-        setSelectedSessionRole(null);
-      }, 100);
+      setTimeout(() => setSelectedSession(null), 100);
     } catch (error) {
       console.error('Error leaving session:', error);
       toast({
@@ -586,84 +613,40 @@ export default function MySessions() {
     }
   };
 
-  const mergedSessionEntries = useMemo(() => {
-    const map = new Map<string, { session: UserSession; role: "organizer" | "participant" }>();
-    for (const s of sessions) {
-      map.set(s.id, { session: s, role: "organizer" });
-    }
-    for (const s of joinedSessions) {
-      if (!map.has(s.id)) {
-        map.set(s.id, { session: s, role: "participant" });
-      }
-    }
-    return Array.from(map.values());
-  }, [sessions, joinedSessions]);
+  const now = new Date().toISOString();
+  const nowMs = Date.now();
+  const activeSessions =
+    sessionSource === 'created'
+      ? sessions
+      : sessionSource === 'joined'
+        ? joinedSessions
+        : [];
+  const filteredSessions = activeSessions.filter(session => {
+    if (filter === 'all') return true;
+    if (filter === 'upcoming') return session.scheduled_at >= now;
+    if (filter === 'completed') return session.scheduled_at < now;
+    return true;
+  });
 
-  const mergedIdsFingerprint = useMemo(
-    () =>
-      mergedSessionEntries
-        .map((e) => e.session.id)
-        .sort()
-        .join("|"),
-    [mergedSessionEntries]
-  );
-
-  useEffect(() => {
-    if (!user || mergedSessionEntries.length === 0) {
-      setMyParticipationBySessionId(new Map());
-      return;
-    }
-    const ids = mergedSessionEntries.map((e) => e.session.id);
-    let cancelled = false;
-    void (async () => {
-      const { data, error } = await supabase
-        .from("session_participants")
-        .select("session_id, confirmed_by_gps, confirmed_by_creator")
-        .eq("user_id", user.id)
-        .in("session_id", ids);
-      if (cancelled) return;
-      if (error) return;
-      const next = new Map<string, { confirmed_by_gps: boolean | null; confirmed_by_creator: boolean | null }>();
-      for (const row of data || []) {
-        next.set(row.session_id, {
-          confirmed_by_gps: row.confirmed_by_gps,
-          confirmed_by_creator: row.confirmed_by_creator,
-        });
-      }
-      setMyParticipationBySessionId(next);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, mergedIdsFingerprint, mergedSessionEntries.length]);
-
-  const weekDays = useMemo(() => {
-    const start = startOfWeek(selectedDay, { weekStartsOn: 1 });
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  }, [selectedDay]);
-
-  const dayKeysWithSessions = useMemo(() => {
-    const set = new Set<string>();
-    for (const { session } of mergedSessionEntries) {
-      set.add(format(startOfDay(new Date(session.scheduled_at)), "yyyy-MM-dd"));
-    }
-    return set;
-  }, [mergedSessionEntries]);
-
-  const displaySessionEntries = useMemo(() => {
-    const nowIso = new Date().toISOString();
-    let rows = mergedSessionEntries.filter(({ session }) => {
-      if (timeSegment === "upcoming") return session.scheduled_at >= nowIso;
-      return session.scheduled_at < nowIso;
+  const openConfirmDialog = (session: UserSession) => {
+    setConfirmTarget({
+      sessionId: session.id,
+      scheduledAt: session.scheduled_at,
+      isCreator: session.organizer_id === user?.id,
     });
-    rows = rows.filter(({ session }) => isSameDay(new Date(session.scheduled_at), selectedDay));
-    rows.sort((a, b) => {
-      const ta = new Date(a.session.scheduled_at).getTime();
-      const tb = new Date(b.session.scheduled_at).getTime();
-      return timeSegment === "upcoming" ? ta - tb : tb - ta;
-    });
-    return rows;
-  }, [mergedSessionEntries, timeSegment, selectedDay]);
+    setConfirmDialogOpen(true);
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialogOpen(false);
+    setConfirmTarget(null);
+  };
+
+  const isConfirmExpired = confirmTarget
+    ? nowMs - new Date(confirmTarget.scheduledAt).getTime() > 3 * 24 * 60 * 60 * 1000
+    : false;
+
+  // Session detail view
   if (selectedSession) {
     const isUpcoming = new Date(selectedSession.scheduled_at) >= new Date();
     const organizerProfile = isViewingJoinedSession && selectedSession.organizer_id 
@@ -682,7 +665,6 @@ export default function MySessions() {
                 onClick={() => {
                   stopParticipantTracking();
                   setSelectedSession(null);
-                  setSelectedSessionRole(null);
                 }}
                 className="gap-1 text-primary p-0 h-auto font-normal"
               >
@@ -797,7 +779,7 @@ export default function MySessions() {
               const sessionEndTime = new Date(selectedSession.scheduled_at).getTime() + maxDur * 60 * 1000;
               const isNotEnded = Date.now() < sessionEndTime;
               const showTracking =
-                liveOk && (isViewingJoinedSession || selectedSessionRole === "organizer") && isNotEnded;
+                liveOk && (isViewingJoinedSession || sessionSource === 'created') && isNotEnded;
               return showTracking;
             })() && (
               <IOSListGroup header="POSITION EN DIRECT">
@@ -1041,184 +1023,285 @@ export default function MySessions() {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
+        {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-          <div className="flex items-center justify-between gap-3 px-ios-4 py-ios-3">
-            <h1 className="min-w-0 flex-1 text-[28px] font-bold leading-tight tracking-tight text-foreground">
-              {t("navigation.mySessions")}
-            </h1>
-            <button
-              type="button"
-              onClick={handleHeaderCreateSession}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/25 transition-transform active:scale-[0.96]"
-              aria-label={t("navigation.createSession")}
-            >
-              <Plus className="h-6 w-6" strokeWidth={2.5} aria-hidden />
-            </button>
+          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
+            <h1 className="text-ios-title1 font-bold text-center">{t("navigation.mySessions")}</h1>
           </div>
-
-          <div className="px-ios-4 pb-ios-3" data-no-tab-swipe="true">
-            <div className="flex justify-between gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {weekDays.map((d) => {
-                const selected = isSameDay(d, selectedDay);
-                const dayKey = format(startOfDay(d), "yyyy-MM-dd");
-                const dot = dayKeysWithSessions.has(dayKey);
-                return (
-                  <button
-                    key={dayKey}
-                    type="button"
-                    onClick={() => setSelectedDay(startOfDay(d))}
-                    className={cn(
-                      "flex min-w-[2.75rem] flex-col items-center gap-1 rounded-xl px-1.5 py-2 text-[11px] font-semibold touch-manipulation transition-colors",
-                      selected ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                    )}
-                  >
-                    <span className="leading-none">{formatWeekdayLabel(d)}</span>
-                    <span className="tabular-nums leading-none">{format(d, "d")}</span>
-                    <span
-                      className={cn(
-                        "h-1 w-1 rounded-full",
-                        !dot ? "bg-transparent" : selected ? "bg-primary-foreground" : "bg-primary"
-                      )}
-                      aria-hidden
-                    />
-                  </button>
-                );
-              })}
+          
+          {/* iOS Segmented Control */}
+          <div className="px-ios-4 pb-ios-2">
+            <div className="bg-secondary rounded-ios-lg p-ios-1">
+              <div className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center">
+                Programmées
+              </div>
+              <div className="mt-ios-1 flex gap-ios-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSessionSource('created');
+                    setSessionPage(0);
+                  }}
+                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                    sessionSource === 'created'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  Créées
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSessionSource('joined');
+                    setSessionPage(0);
+                  }}
+                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                    sessionSource === 'joined'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  Rejointes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSessionSource('to-confirm');
+                    setSessionPage(0);
+                  }}
+                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                    sessionSource === 'to-confirm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  À confirmer
+                </button>
+              </div>
             </div>
           </div>
-
-          <div className="px-ios-4 pb-ios-3">
-            <div className="flex rounded-ios-lg bg-muted/80 p-1 dark:bg-muted/30">
-              <button
-                type="button"
-                onClick={() => setTimeSegment("upcoming")}
-                className={cn(
-                  "min-h-[40px] flex-1 rounded-ios-md text-[13px] font-semibold transition-colors",
-                  timeSegment === "upcoming" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
-                )}
-              >
-                À venir
-              </button>
-              <button
-                type="button"
-                onClick={() => setTimeSegment("past")}
-                className={cn(
-                  "min-h-[40px] flex-1 rounded-ios-md text-[13px] font-semibold transition-colors",
-                  timeSegment === "past" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
-                )}
-              >
-                Passées
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowConfirmEmbedded((v) => !v)}
-              className="mt-2 w-full py-2 text-center text-[13px] font-medium text-primary touch-manipulation"
-            >
-              {showConfirmEmbedded ? "Retour à la liste des séances" : "Confirmer des présences"}
-            </button>
-          </div>
+          <div className="h-px bg-border" />
         </div>
 
-        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto px-ios-4 pb-ios-6 pt-ios-3">
-          {showConfirmEmbedded ? (
-            <div className="min-h-0 pb-ios-6">
-              <ConfirmPresencePage embedded />
-            </div>
-          ) : loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="ios-card rounded-2xl border border-border/60 bg-card p-4 animate-pulse shadow-[var(--shadow-card,0_2px_12px_rgba(0,0,0,0.06))]">
-                  <div className="flex gap-3">
-                    <div className="h-12 w-12 shrink-0 rounded-full bg-secondary" />
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="h-4 max-w-[70%] rounded bg-secondary" />
-                      <div className="h-3 max-w-[40%] rounded bg-secondary" />
-                    </div>
-                  </div>
+        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
+          <>
+              {sessionSource === "to-confirm" ? (
+                <div className="min-h-0 px-ios-4 pb-ios-6">
+                  <ConfirmPresencePage embedded />
                 </div>
-              ))}
-            </div>
-          ) : displaySessionEntries.length === 0 ? (
-            <div className={emptyStateSx.shell}>
-              <div className={emptyStateSx.iconCircle}>
-                <Calendar className="h-12 w-12 text-muted-foreground" />
-              </div>
-              <div className={emptyStateSx.textBlock}>
-                <h3 className="text-ios-title3 font-semibold text-foreground">Aucune séance ce jour-là</h3>
-                <p className="text-ios-subheadline max-w-xs leading-relaxed text-muted-foreground">
-                  {timeSegment === "upcoming"
-                    ? "Choisis une autre date ou crée une séance depuis le bouton +."
-                    : "Aucune séance passée à afficher pour cette date."}
-                </p>
-              </div>
-              {timeSegment === "upcoming" && (
-                <Button type="button" onClick={handleHeaderCreateSession} className="w-full max-w-xs">
-                  <Plus className="mr-ios-2 h-5 w-5" />
-                  Créer une séance
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-ios-3">
-              {displaySessionEntries.map(({ session, role }) => {
-                const badge = sessionBadge(session, role);
-                const orgProfile =
-                  role === "participant" && session.organizer_id
-                    ? organizerProfiles.get(session.organizer_id)
-                    : null;
-                const dateLine = (() => {
-                  const raw = format(new Date(session.scheduled_at), "EEE d MMM yyyy 'à' HH:mm", { locale: fr });
-                  return raw.charAt(0).toUpperCase() + raw.slice(1);
-                })();
-                return (
+              ) : (
+                <>
+              {/* List/Calendar toggle */}
+              <div className="flex px-ios-4 mb-ios-1">
+                <div className="flex ios-card rounded-ios-lg p-ios-1 shrink-0">
                   <button
-                    key={session.id}
-                    type="button"
-                    onClick={() => void handleSessionClick(session, role)}
-                    className="ios-card w-full rounded-2xl border border-border/60 bg-card p-ios-3 text-left shadow-[var(--shadow-card,0_2px_12px_rgba(0,0,0,0.06))] transition-transform active:scale-[0.99] touch-manipulation dark:border-white/10"
+                    onClick={() => setSessionsDisplayMode('list')}
+                    className={`p-ios-1 rounded-ios-sm transition-colors ${
+                      sessionsDisplayMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                    }`}
                   >
-                    <div className="flex items-stretch gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <ActivityIcon activityType={session.activity_type} size="md" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start gap-2">
-                          <h3 className="min-w-0 flex-1 text-left text-[16px] font-semibold leading-tight text-foreground">
-                            {session.title}
-                          </h3>
-                          <span
-                            className={cn(
-                              "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-tight",
-                              badge.className
-                            )}
-                          >
-                            {badge.label}
-                          </span>
-                        </div>
-                        {orgProfile && (
-                          <p className="mt-1 truncate text-[12px] text-muted-foreground">
-                            Avec {orgProfile.display_name || orgProfile.username}
-                          </p>
-                        )}
-                        <p className="mt-1.5 text-[13px] text-muted-foreground">{dateLine}</p>
-                        <p className="mt-1 flex items-start gap-1 text-[13px] text-muted-foreground">
-                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70" aria-hidden />
-                          <span className="min-w-0 leading-snug">{session.location_name || "Lieu à préciser"}</span>
-                        </p>
-                      </div>
-                      <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/45" aria-hidden />
-                    </div>
+                    <List className="h-4 w-4" />
                   </button>
-                );
-              })}
-            </div>
-          )}
+                  <button
+                    onClick={() => setSessionsDisplayMode('calendar')}
+                    className={`p-ios-1 rounded-ios-sm transition-colors ${
+                      sessionsDisplayMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
+              <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-3">
+                {[
+                  { key: 'all', label: 'Toutes' },
+                  { key: 'upcoming', label: 'À venir' },
+                  { key: 'completed', label: 'Réalisées' }
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
+                    className={`px-ios-3 py-1.5 min-h-[32px] rounded-full text-[12px] leading-tight font-medium whitespace-nowrap transition-colors ${
+                      filter === f.key
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card text-muted-foreground'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sessions Display */}
+              {sessionsDisplayMode === 'calendar' ? (
+                <div className="box-border min-w-0 w-full max-w-full px-4">
+                  <SessionCalendarView
+                    sessions={filteredSessions}
+                    onSessionClick={handleSessionClick}
+                  />
+                </div>
+              ) : loading ? (
+                <div className="space-y-px">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-card p-ios-3 animate-pulse">
+                      <div className="flex gap-ios-2">
+                        <div className="h-10 w-10 bg-secondary rounded-ios-md" />
+                        <div className="flex-1 space-y-ios-2">
+                          <div className="h-4 bg-secondary rounded w-3/4" />
+                          <div className="h-3 bg-secondary rounded w-1/2" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredSessions.length === 0 ? (
+                <div className={emptyStateSx.shell}>
+                  <div className={emptyStateSx.iconCircle}>
+                    <Calendar className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className={emptyStateSx.textBlock}>
+                    <h3 className="text-ios-title3 font-semibold text-foreground">
+                      {sessionSource === 'created'
+                        ? 'Aucune séance créée'
+                        : 'Aucune séance rejointe'}
+                    </h3>
+                    <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
+                      {sessionSource === 'created'
+                        ? 'Créez votre première séance sportive et invitez vos amis à vous rejoindre.'
+                        : 'Rejoignez des séances depuis la page d\'accueil pour les retrouver ici.'}
+                    </p>
+                  </div>
+                  {sessionSource === 'created' && (
+                    <Button
+                      onClick={() => navigate('/')}
+                      className="w-full max-w-xs"
+                    >
+                      <Plus className="h-5 w-5 mr-ios-2" />
+                      Créer une séance
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="ios-list-stack">
+                  {/* Flèche haut */}
+                  {sessionPage > 0 && (
+                    <button
+                      onClick={() => setSessionPage(p => p - 1)}
+                      className="w-full flex items-center justify-center py-2 text-primary active:opacity-70 transition-opacity"
+                    >
+                      <ChevronUp className="h-6 w-6" />
+                    </button>
+                  )}
+
+                  {filteredSessions
+                    .slice(sessionPage * SESSIONS_PER_PAGE, (sessionPage + 1) * SESSIONS_PER_PAGE)
+                    .map((session) => {
+                      const isUpcoming = session.scheduled_at >= now;
+                      const orgProfile = sessionSource === 'joined' && session.organizer_id
+                        ? organizerProfiles.get(session.organizer_id)
+                        : null;
+                      return (
+                        <SwipeConfirmCard
+                          key={session.id}
+                          onConfirm={() => openConfirmDialog(session)}
+                        >
+                          <div
+                            onClick={() => handleSessionClick(session)}
+                            className="ios-list-row border border-white dark:border-white/10"
+                          >
+                            <div className="flex items-start gap-ios-2">
+                              <ActivityIcon activityType={session.activity_type} size="md" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  {sessionSource === 'joined' ? (
+                                    <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
+                                  ) : (
+                                    <Badge 
+                                      variant={isUpcoming ? "default" : "secondary"}
+                                      className="text-xs"
+                                    >
+                                      {isUpcoming ? "À venir" : "Terminée"}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <h3 className="text-ios-headline font-semibold truncate">{session.title}</h3>
+                                {/* Organizer info for joined sessions */}
+                                {orgProfile && (
+                                  <div className="flex items-center gap-ios-1 mt-ios-1">
+                                    <Avatar className="h-4 w-4">
+                                      <AvatarImage src={orgProfile.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[8px]">
+                                        {orgProfile.username?.[0]?.toUpperCase() || '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-ios-footnote text-muted-foreground truncate">
+                                      {orgProfile.display_name || orgProfile.username}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-ios-3 mt-0.5 text-[12px] text-muted-foreground leading-tight">
+                                  <span className="flex items-center gap-0.5">
+                                    <Calendar className="h-3 w-3 shrink-0" />
+                                    {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    <Clock className="h-3 w-3 shrink-0" />
+                                    {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    <Users className="h-3 w-3 shrink-0" />
+                                    {session.current_participants || 0}
+                                  </span>
+                                </div>
+                              </div>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
+                            </div>
+                          </div>
+                        </SwipeConfirmCard>
+                      );
+                    })}
+
+                  {/* Flèche bas */}
+                  {(sessionPage + 1) * SESSIONS_PER_PAGE < filteredSessions.length && (
+                    <button
+                      onClick={() => setSessionPage(p => p + 1)}
+                      className="w-full flex items-center justify-center py-2 text-primary active:opacity-70 transition-opacity"
+                    >
+                      <ChevronDown className="h-6 w-6" />
+                    </button>
+                  )}
+
+                  {/* Page indicator */}
+                  {filteredSessions.length > SESSIONS_PER_PAGE && (
+                    <p className="text-center text-[13px] text-muted-foreground">
+                      {sessionPage * SESSIONS_PER_PAGE + 1}-{Math.min((sessionPage + 1) * SESSIONS_PER_PAGE, filteredSessions.length)} sur {filteredSessions.length}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Organizer Stats - only for created sessions */}
+              {sessionSource === "created" && (
+                <div className="mt-ios-3 pb-ios-6">
+                  <Suspense fallback={null}>
+                    <OrganizerStatsCard weeklyOnly />
+                  </Suspense>
+                </div>
+              )}
+                </>
+              )}
+          </>
         </div>
       </div>
 
       <Suspense fallback={null}>
-        <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
+        <ProfilePreviewDialog
+          userId={selectedUserId}
+          onClose={closeProfilePreview}
+        />
       </Suspense>
 
       {/* Delete Session Confirmation Dialog - iOS Style */}
@@ -1245,6 +1328,68 @@ export default function MySessions() {
               Supprimer
             </AlertDialogAction>
           </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent className="rounded-ios-lg max-w-[320px] p-0 gap-0">
+          <AlertDialogHeader className="p-ios-6 pb-ios-4">
+            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
+              {isConfirmExpired ? "Séance expirée" : "Confirmer cette séance"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-ios-subheadline text-muted-foreground mt-ios-2">
+              {isConfirmExpired
+                ? "Cette séance est passée depuis plus de 3 jours."
+                : "Choisissez votre mode de confirmation."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {isConfirmExpired ? (
+            <AlertDialogFooter className="p-ios-4 pt-0">
+              <AlertDialogAction className="w-full" onClick={closeConfirmDialog}>
+                Fermer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          ) : (
+            <div className="px-ios-4 pb-ios-4 space-y-ios-2">
+              <button
+                type="button"
+                className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
+                onClick={() => {
+                  if (!confirmTarget) return;
+                  closeConfirmDialog();
+                  navigate(`/my-sessions/confirm/${confirmTarget.sessionId}`);
+                }}
+              >
+                <p className="text-[15px] font-semibold text-foreground">
+                  {confirmTarget?.isCreator
+                    ? "Créateur : valider la présence des participants"
+                    : "Participant : confirmer ma présence (position actuelle)"}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
+                onClick={() => {
+                  closeConfirmDialog();
+                  setSessionSource('to-confirm');
+                  setSessionPage(0);
+                }}
+              >
+                <p className="text-[15px] font-semibold text-foreground">
+                  Confirmer ma séance avec mes activités Strava
+                </p>
+              </button>
+
+              <AlertDialogCancel
+                className="w-full mt-ios-1"
+                onClick={closeConfirmDialog}
+              >
+                Annuler
+              </AlertDialogCancel>
+            </div>
+          )}
         </AlertDialogContent>
       </AlertDialog>
 

@@ -2990,10 +2990,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <div className="flex flex-col items-center justify-center gap-0.5 text-center px-10">
-                  <h1 className="text-ios-title1 font-bold">{t("navigation.messages")}</h1>
-                  <p className="text-[11px] font-medium text-primary/80 leading-tight">{t("brand.tagline")}</p>
-                </div>
+                <h1 className="text-ios-title1 font-bold text-center">{t("navigation.messages")}</h1>
                 <div className="absolute right-ios-4 flex items-center gap-ios-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}

@@ -226,7 +226,7 @@ export function HomeFeedBottomSheet() {
               aria-label={t("navigation.feed")}
             >
               <span className="text-[15px] font-semibold leading-none tracking-tight text-foreground/90">
-                {t("navigation.feedActivity")}
+                {t("navigation.feed")}
               </span>
               <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground/85" aria-hidden />
             </button>

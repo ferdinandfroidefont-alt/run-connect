@@ -168,9 +168,8 @@ export function CoachingPreviewExperience({ identity }: Props) {
         />
       }
     >
-      <div className="rc-page-container pb-6 pt-2">
-        <div className="rc-page-stack">
-        <div className="rc-card flex items-start gap-3 border-primary/20 bg-primary/[0.06] px-ios-4 py-ios-3">
+      <div className="space-y-4 px-4 pb-6 pt-2">
+        <div className="flex items-start gap-3 rounded-[14px] border border-primary/20 bg-primary/[0.06] px-3.5 py-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-primary/15 text-primary">
             <GraduationCap className="h-5 w-5" />
           </div>
@@ -188,7 +187,7 @@ export function CoachingPreviewExperience({ identity }: Props) {
         </div>
 
         {identity.role === "both" && (
-          <div className="rc-card flex rounded-[12px] p-1 shadow-sm">
+          <div className="flex rounded-[12px] border border-border/60 bg-card p-1 shadow-sm">
             <button
               type="button"
               className={cn(
@@ -217,7 +216,7 @@ export function CoachingPreviewExperience({ identity }: Props) {
         )}
 
         {showCoachSlice && (
-          <section className="rc-card shadow-sm">
+          <section className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-sm">
             <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
               <p className="text-[15px] font-semibold text-foreground">Planning club (fictif)</p>
               <p className="text-[12px] text-muted-foreground">
@@ -246,7 +245,7 @@ export function CoachingPreviewExperience({ identity }: Props) {
         )}
 
         {showAthleteSlice && (
-          <section className="rc-card shadow-sm">
+          <section className="overflow-hidden rounded-[14px] border border-border/50 bg-card shadow-sm">
             <AthleteMyPlanView
               loading={false}
               weekDays={weekDays}
@@ -272,15 +271,14 @@ export function CoachingPreviewExperience({ identity }: Props) {
           </section>
         )}
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full rounded-[12px]"
-            onClick={() => navigate(-1)}
-          >
-            Retour
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full rounded-[12px]"
+          onClick={() => navigate(-1)}
+        >
+          Retour
+        </Button>
       </div>
     </IosFixedPageHeaderShell>
   );

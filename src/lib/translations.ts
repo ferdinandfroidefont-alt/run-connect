@@ -89,9 +89,6 @@ const _translationBundles: Record<string, any> = {
       languageSectionLabel: 'Langue',
       completeErrorPrefix: 'Impossible de terminer : ',
     },
-    auth: {
-      landingSubtitle: 'Rejoins ta communauté pour organiser et rejoindre des séances.',
-    },
     settings: {
       title: 'Paramètres',
       general: 'Général',
@@ -242,13 +239,8 @@ const _translationBundles: Record<string, any> = {
       itinerary: 'Itinéraire',
       coaching: 'Coaching',
       confirmPresence: 'Présence',
-      feedActivity: 'Fil d\'activité',
       scrollNavHint: 'Faire défiler la navigation',
       switchNavSet: 'Changer de set de navigation',
-    },
-    brand: {
-      tagline: 'Planifie. Bouge. Progresse.',
-      wordmark: 'RunConnect',
     },
     sessions: {
       create: 'Créer',
@@ -494,9 +486,6 @@ const _translationBundles: Record<string, any> = {
       languageSectionLabel: 'Language',
       completeErrorPrefix: 'Could not complete: ',
     },
-    auth: {
-      landingSubtitle: 'Join your community to plan and join sessions.',
-    },
     settings: {
       title: 'Settings',
       general: 'General',
@@ -647,13 +636,8 @@ const _translationBundles: Record<string, any> = {
       itinerary: 'Route',
       coaching: 'Coaching',
       confirmPresence: 'Check-in',
-      feedActivity: 'Activity',
       scrollNavHint: 'Scroll navigation',
       switchNavSet: 'Switch navigation set',
-    },
-    brand: {
-      tagline: 'Plan. Move. Progress.',
-      wordmark: 'RunConnect',
     },
     sessions: {
       create: 'Create',

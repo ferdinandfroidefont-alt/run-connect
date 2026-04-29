@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, GraduationCap, User } from "lucide-react";
+import { Home, Calendar, MessageCircle, GraduationCap } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -47,7 +47,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const pathname = location.pathname;
   const isHome = pathname === "/";
 
-  /** Ordre : Accueil → Mes séances → Messages → Coaching → Profil */
+  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages */
   const navItems = useMemo<NavItem[]>(
     () => [
       { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
@@ -59,24 +59,18 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         isActive: (p) => p === "/my-sessions" || p.startsWith("/my-sessions/"),
       },
       {
-        path: "/messages",
-        icon: MessageCircle,
-        label: t("navigation.messages"),
-        tutorialId: "nav-messages",
-        isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
-        showUnreadBadge: true,
-      },
-      {
         path: "/coaching",
         icon: GraduationCap,
         label: t("navigation.coaching"),
         isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
       },
       {
-        path: "/me",
-        icon: User,
-        label: t("navigation.profile"),
-        isActive: (p) => p === "/me" || p.startsWith("/me/"),
+        path: "/messages",
+        icon: MessageCircle,
+        label: t("navigation.messages"),
+        tutorialId: "nav-messages",
+        isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
+        showUnreadBadge: true,
       },
     ],
     [t]
@@ -167,9 +161,8 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 z-[110] w-full overflow-visible",
-        "border-t border-border bg-background shadow-[0_-6px_24px_hsl(220_14%_10%/0.07)]",
-        "dark:border-[#1f1f1f] dark:bg-black dark:shadow-[0_-8px_32px_rgba(0,0,0,0.45)] dark:backdrop-blur-none",
+        "fixed inset-x-0 z-[110] w-full border-t border-border bg-background overflow-visible",
+        "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
         "[transition:none] motion-reduce:transition-none"
       )}
