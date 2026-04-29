@@ -10,7 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
-import { ScheduleCoachingDialog } from "./ScheduleCoachingDialog";
+import { CreateSessionWizard } from "@/components/session-creation/CreateSessionWizard";
+import type { CoachingSessionPrefill } from "@/components/session-creation/useSessionWizard";
 import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
 import { AthleteBlockRpeSliders } from "./AthleteBlockRpeSliders";
 import {
@@ -746,12 +747,31 @@ export const CoachingSessionDetail = ({
         </DialogContent>
       </Dialog>
 
-      <ScheduleCoachingDialog
+      <CreateSessionWizard
         isOpen={showSchedule}
         onClose={() => setShowSchedule(false)}
-        session={session}
-        suggestedDate={myParticipation?.suggested_date}
-        onScheduled={loadParticipations}
+        onSessionCreated={() => {}}
+        map={null}
+        coachingSession={session ? {
+          id: session.id,
+          title: session.title,
+          activity_type: session.activity_type,
+          description: session.description,
+          distance_km: session.distance_km,
+          pace_target: session.pace_target,
+          session_blocks: session.session_blocks,
+          club_id: session.club_id,
+          coach_id: session.coach_id,
+          coach_notes: session.coach_notes,
+          scheduled_at: session.scheduled_at,
+          suggestedDate: myParticipation?.suggested_date,
+          objective: session.objective ?? null,
+          default_location_lat: session.default_location_lat ?? null,
+          default_location_lng: session.default_location_lng ?? null,
+          default_location_name: session.default_location_name ?? null,
+          rcc_code: session.rcc_code ?? null,
+        } as CoachingSessionPrefill : null}
+        onCoachingScheduled={loadParticipations}
       />
     </>
   );

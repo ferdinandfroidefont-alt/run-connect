@@ -242,6 +242,10 @@ const _translationBundles: Record<string, any> = {
       scrollNavHint: 'Faire défiler la navigation',
       switchNavSet: 'Changer de set de navigation',
     },
+    brand: {
+      tagline: 'Planifie. Bouge. Progresse.',
+      wordmark: 'RunConnect',
+    },
     sessions: {
       create: 'Créer',
       upcoming: 'Séances à venir',
@@ -638,6 +642,10 @@ const _translationBundles: Record<string, any> = {
       confirmPresence: 'Check-in',
       scrollNavHint: 'Scroll navigation',
       switchNavSet: 'Switch navigation set',
+    },
+    brand: {
+      tagline: 'Plan. Move. Progress.',
+      wordmark: 'RunConnect',
     },
     sessions: {
       create: 'Create',

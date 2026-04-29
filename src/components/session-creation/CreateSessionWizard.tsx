@@ -9,6 +9,7 @@ import { useAdMob } from '@/hooks/useAdMob';
 import { supabase } from '@/integrations/supabase/client';
 import { useSendNotification } from '@/hooks/useSendNotification';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const subscriptionInfo = useEffectiveSubscriptionInfo();
   const { showAdAfterSessionCreation, showRewardedBoostAd } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
@@ -612,6 +614,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
                   title={
                     isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
                   }
+                  subtitle={t('brand.tagline')}
                 />
                 <ProgressIndicator
                   currentStep={wizard.currentStep}

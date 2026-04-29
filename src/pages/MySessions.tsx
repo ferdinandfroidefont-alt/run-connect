@@ -1025,8 +1025,9 @@ export default function MySessions() {
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
+          <div className="px-ios-4 py-ios-3 relative flex flex-col items-center justify-center gap-0.5">
             <h1 className="text-ios-title1 font-bold text-center">{t("navigation.mySessions")}</h1>
+            <p className="text-[11px] font-medium text-primary/80 text-center">{t("brand.tagline")}</p>
           </div>
           
           {/* iOS Segmented Control */}

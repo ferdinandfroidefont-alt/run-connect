@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
 const SettingsDialog = lazy(() =>
@@ -18,6 +19,7 @@ const SettingsDialog = lazy(() =>
 
 export default function Search() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const initialTab = (searchParams.get('tab') as TabType) || 'profiles';
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,7 +102,8 @@ export default function Search() {
                       <span className="truncate text-ios-headline">Retour</span>
                     </button>
                   }
-                title="Rechercher"
+                title={t('navigation.search')}
+                subtitle={t('brand.tagline')}
                 />
                 <div className="relative mt-ios-3">
                   <SearchIcon className="absolute left-ios-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

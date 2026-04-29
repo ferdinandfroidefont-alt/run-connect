@@ -12,9 +12,11 @@ import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Subscription = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { user, session } = useAuth();
   const { 
     status, 
@@ -132,17 +134,18 @@ const Subscription = () => {
       >
         {/* iOS Header */}
         <div className="z-10 shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
-          <div className="flex items-center justify-between px-ios-4 h-[56px]">
+          <div className="relative flex min-h-[56px] flex-col items-center justify-center px-ios-4 py-ios-3">
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full"
+              className="absolute left-ios-4 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full"
               onClick={() => navigate(-1)}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-ios-headline font-semibold">RunConnect Premium</h1>
-            <div className="w-9" />
+            <h1 className="text-ios-headline font-semibold text-center">RunConnect Premium</h1>
+            <p className="mt-0.5 text-center text-[11px] font-medium text-primary/80">{t('brand.tagline')}</p>
+            <div className="absolute right-ios-4 top-1/2 w-9 -translate-y-1/2" aria-hidden />
           </div>
         </div>
 
