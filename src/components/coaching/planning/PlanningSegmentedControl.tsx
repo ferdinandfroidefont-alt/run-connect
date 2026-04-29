@@ -13,7 +13,7 @@ export function PlanningSegmentedControl({ active, onChange }: PlanningSegmented
         onClick={() => onChange("planning")}
         className={cn(
           "rounded-xl py-2 text-[13px] font-semibold transition-all duration-200",
-          active === "planning" ? "bg-[#2563EB] text-white" : "text-muted-foreground"
+          active === "planning" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
         )}
       >
         Planification
@@ -23,7 +23,7 @@ export function PlanningSegmentedControl({ active, onChange }: PlanningSegmented
         onClick={() => onChange("create")}
         className={cn(
           "rounded-xl py-2 text-[13px] font-semibold transition-all duration-200",
-          active === "create" ? "bg-[#2563EB] text-white" : "text-muted-foreground"
+          active === "create" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
         )}
       >
         Créer une séance
