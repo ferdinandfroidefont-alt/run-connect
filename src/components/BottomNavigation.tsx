@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, GraduationCap } from "lucide-react";
+import { Home, Calendar, MessageCircle, GraduationCap, User } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -72,6 +72,12 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
         showUnreadBadge: true,
       },
+      {
+        path: "/profile",
+        icon: User,
+        label: "Profil",
+        isActive: (p) => p === "/profile" || p.startsWith("/profile/"),
+      },
     ],
     [t]
   );
@@ -133,6 +139,10 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const tabBarHidden = hideBottomNav || isProfileRoute;
 
   const handleNavClick = async (path: string) => {
+    if (path === "/profile") {
+      navigate("/", { state: { openProfileDialog: true } });
+      return;
+    }
     if (path === "/messages") {
       navigate("/messages", { state: { resetConversation: true, fromBottomTab: true, ts: Date.now() } });
       return;
