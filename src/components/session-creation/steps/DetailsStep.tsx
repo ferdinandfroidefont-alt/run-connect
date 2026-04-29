@@ -272,33 +272,24 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           )}
         </div>
 
-        {/* Simple Mode Content */}
-        {(formData.session_mode === 'simple' || !showEnduranceFields) && showEnduranceFields && (
-          <div className="bg-card rounded-2xl p-4 space-y-4">
-            {/* General Pace */}
-            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-              <Label className="text-sm font-medium flex items-center gap-2 mb-2">
-                <Gauge className="w-4 h-4 text-blue-500" />
-                Allure générale
-              </Label>
-              <Input
-                value={formData.pace_general || ''}
-                readOnly
-                onClick={openPacePicker}
-                placeholder={pacePlaceholder}
-                className="h-11 cursor-pointer"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Structured Mode - Block Builder */}
-        {formData.session_mode === 'structured' && showEnduranceFields && (
+        {/* Schéma de séance — builder type Zwift, identique au coaching */}
+        {showEnduranceFields && (
           <div className="space-y-3 rounded-[28px] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
             <SessionBlockBuilder
               blocks={resolvedBlocks}
               activityType={formData.activity_type}
               onBlocksChange={handleBlocksChange}
+            />
+          </div>
+        )}
+
+        {/* Route Selector - For endurance sports */}
+        {showEnduranceFields && (
+          <div className="bg-card rounded-2xl p-4">
+            <RouteSelector
+              selectedRouteId={formData.route_id}
+              onRouteSelect={(route) => onFormDataChange({ route_id: route?.id || null })}
+              onAutoFill={handleRouteAutoFill}
             />
           </div>
         )}
