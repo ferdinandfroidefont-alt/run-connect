@@ -242,34 +242,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             </div>
           </div>
 
-          {showEnduranceFields && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleModeChange('simple')}
-                className={cn(
-                  "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                  formData.session_mode === 'simple'
-                    ? "border-primary/70 bg-primary/10 text-primary"
-                    : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
-                )}
-              >
-                Simple
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange('structured')}
-                className={cn(
-                  "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                  formData.session_mode === 'structured'
-                    ? "border-primary/70 bg-primary/10 text-primary"
-                    : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
-                )}
-              >
-                Avec blocs
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Schéma de séance — builder type Zwift, identique au coaching */}
@@ -279,17 +251,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
               blocks={resolvedBlocks}
               activityType={formData.activity_type}
               onBlocksChange={handleBlocksChange}
-            />
-          </div>
-        )}
-
-        {/* Route Selector - For endurance sports */}
-        {showEnduranceFields && (
-          <div className="bg-card rounded-2xl p-4">
-            <RouteSelector
-              selectedRouteId={formData.route_id}
-              onRouteSelect={(route) => onFormDataChange({ route_id: route?.id || null })}
-              onAutoFill={handleRouteAutoFill}
             />
           </div>
         )}
