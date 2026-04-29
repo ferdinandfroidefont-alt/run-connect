@@ -241,7 +241,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
               />
             </div>
           </div>
-
         </div>
 
         {/* Schéma de séance — builder type Zwift, identique au coaching */}
