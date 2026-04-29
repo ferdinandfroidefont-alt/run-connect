@@ -17,7 +17,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
-import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
+import { ActivityIcon, getActivityLabel, getActivityConfig } from '@/lib/activityIcons';
+
+/** Pastille blanche avec icône sport bleue (uniquement pour les cards Mes Séances) */
+const SportWhiteIcon = ({ activityType, size = "md" }: { activityType: string; size?: "sm" | "md" | "lg" }) => {
+  const Icon = getActivityConfig(activityType).icon;
+  const wrap = size === "lg" ? "h-12 w-12" : size === "sm" ? "h-8 w-8" : "h-10 w-10";
+  const ic = size === "lg" ? "h-6 w-6" : size === "sm" ? "h-4 w-4" : "h-5 w-5";
+  return (
+    <div className={`${wrap} rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center shrink-0`}>
+      <Icon className={`${ic} text-[#5B7CFF]`} strokeWidth={2.2} />
+    </div>
+  );
+};
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1213,20 +1225,13 @@ export default function MySessions() {
                             className="ios-list-row border border-white dark:border-white/10"
                           >
                             <div className="flex items-start gap-ios-2">
-                              <ActivityIcon activityType={session.activity_type} size="md" />
+                              <SportWhiteIcon activityType={session.activity_type} size="md" />
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                  {sessionSource === 'joined' ? (
+                                {sessionSource === 'joined' && (
+                                  <div className="flex items-center gap-1.5 mb-0.5">
                                     <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
-                                  ) : (
-                                    <Badge 
-                                      variant={isUpcoming ? "default" : "secondary"}
-                                      className="text-xs"
-                                    >
-                                      {isUpcoming ? "À venir" : "Terminée"}
-                                    </Badge>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                                 <h3 className="text-ios-headline font-semibold truncate">{session.title}</h3>
                                 {/* Organizer info for joined sessions */}
                                 {orgProfile && (
@@ -1257,7 +1262,20 @@ export default function MySessions() {
                                   </span>
                                 </div>
                               </div>
-                              <ChevronRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
+                              <div className="flex items-center gap-1.5 mt-1 shrink-0">
+                                {isUpcoming ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                    En attente
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    Confirmée
+                                  </span>
+                                )}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                              </div>
                             </div>
                           </div>
                         </SwipeConfirmCard>
