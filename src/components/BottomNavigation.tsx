@@ -171,7 +171,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 z-[110] w-full border-t border-border bg-background overflow-visible",
+        "fixed inset-x-0 z-[120] w-full border-t border-border bg-background overflow-visible",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
         "[transition:none] motion-reduce:transition-none"
