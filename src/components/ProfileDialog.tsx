@@ -71,11 +71,15 @@ const HIGHLIGHT_GRID_MOVE_CANCEL_PX = 16;
 interface ProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Contenu pleine page (onglet Profil) : pas de portail ni voile modal. */
+  variant?: "modal" | "page";
 }
 export const ProfileDialog = ({
   open,
-  onOpenChange
+  onOpenChange,
+  variant = "modal",
 }: ProfileDialogProps) => {
+  const isPageVariant = variant === "page";
   const {
     user,
   } = useAuth();
@@ -187,7 +191,7 @@ export const ProfileDialog = ({
     loading: cameraLoading
   } = useCamera();
   useEffect(() => {
-    if (!user || !open) return;
+    if (!user || (!open && !isPageVariant)) return;
     setLoading(true);
     if (isPreviewMode && userProfile && previewIdentity) {
       const data = userProfile as unknown as Profile;
@@ -234,7 +238,7 @@ export const ProfileDialog = ({
     void fetchFollowCounts();
     void fetchReliabilityStats();
     void fetchStoriesAndHighlights();
-  }, [user, open, isPreviewMode, userProfile, previewIdentity]);
+  }, [user, open, isPageVariant, isPreviewMode, userProfile, previewIdentity]);
   const fetchStoriesAndHighlights = async () => {
     if (!user) return;
     const [{ data: stories }, { data: highlights }] = await Promise.all([
@@ -619,8 +623,15 @@ export const ProfileDialog = ({
     }
   };
   /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
-  const profileDialogShellClassName =
-    "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
+  const profileDialogShellClassName = cn(
+    "flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary",
+    isPageVariant ? "h-full max-h-full" : "z-[116] h-[100dvh] max-h-[100dvh]"
+  );
+
+  const handleProfileBack = () => {
+    if (isPageVariant) navigate("/");
+    else onOpenChange(false);
+  };
 
   const hasActiveOwnStory = ownStories.some((story) => {
     const expiresAtMs = Date.parse(story.expires_at);
@@ -645,15 +656,8 @@ export const ProfileDialog = ({
     isPremiumUser ? "Premium" : null,
   ].filter(Boolean) as string[];
 
-  return <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        {open ? (
-        <DialogContent
-          data-tutorial="tutorial-profile-page"
-          hideCloseButton
-          fullScreen
-          className={profileDialogShellClassName}
-        >
+  const profileShellBody = (
+    <>
           {loading ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
             <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
@@ -668,7 +672,7 @@ export const ProfileDialog = ({
             <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleProfileBack()}
                 className="flex min-w-0 max-w-[42%] items-center gap-1 text-primary"
               >
                 <ArrowLeft className="h-5 w-5 shrink-0" />
@@ -1071,9 +1075,29 @@ export const ProfileDialog = ({
           </div>
           </div>
           )}
-        </DialogContent>
-        ) : null}
-      </Dialog>
+    </>
+  );
+
+  return (
+    <>
+      {isPageVariant ? (
+        <div data-tutorial="tutorial-profile-page" className={profileDialogShellClassName}>
+          {profileShellBody}
+        </div>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          {open ? (
+            <DialogContent
+              data-tutorial="tutorial-profile-page"
+              hideCloseButton
+              fullScreen
+              className={profileDialogShellClassName}
+            >
+              {profileShellBody}
+            </DialogContent>
+          ) : null}
+        </Dialog>
+      )}
 
       <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} />
 
@@ -1353,5 +1377,6 @@ export const ProfileDialog = ({
         username={profile?.username?.trim() || "Profil"}
         stackNested
       />
-    </>;
+    </>
+  );
 };

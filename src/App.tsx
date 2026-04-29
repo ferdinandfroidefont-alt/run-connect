@@ -347,6 +347,7 @@ const App = () => {
                   <Route path="/my-sessions/confirm/:sessionId" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/coaching" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/me" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/leaderboard" element={<Navigate to="/route-create" replace />} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />

@@ -14,20 +14,21 @@ import { useLocation, useNavigate } from "react-router-dom";
 const Index = lazy(() => import("@/pages/Index"));
 const MySessions = lazy(() => import("@/pages/MySessions"));
 const Messages = lazy(() => import("@/pages/Messages"));
-const RouteCreation = lazy(() => import("@/pages/RouteCreation"));
 const Coaching = lazy(() => import("@/pages/Coaching"));
+const ProfileTabPage = lazy(() => import("@/pages/ProfileTabPage"));
 
 type TabDef = {
   path: string;
   render: () => ReactNode;
 };
 
+/** Ordre aligné sur la barre du bas : Accueil → Mes séances → Messages → Coaching → Profil */
 const TABS: TabDef[] = [
   { path: "/", render: () => <Index /> },
   { path: "/my-sessions", render: () => <MySessions /> },
   { path: "/messages", render: () => <Messages /> },
-  { path: "/route-create", render: () => <RouteCreation /> },
   { path: "/coaching", render: () => <Coaching /> },
+  { path: "/me", render: () => <ProfileTabPage /> },
 ];
 
 const SWIPE_INTENT_RATIO = 1.25;

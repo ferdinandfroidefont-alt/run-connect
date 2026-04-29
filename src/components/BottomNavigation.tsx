@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, GraduationCap } from "lucide-react";
+import { Home, Calendar, MessageCircle, GraduationCap, User } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -47,7 +47,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const pathname = location.pathname;
   const isHome = pathname === "/";
 
-  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages */
+  /** Ordre : Accueil → Mes séances → Messages → Coaching → Profil */
   const navItems = useMemo<NavItem[]>(
     () => [
       { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
@@ -59,18 +59,24 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         isActive: (p) => p === "/my-sessions" || p.startsWith("/my-sessions/"),
       },
       {
-        path: "/coaching",
-        icon: GraduationCap,
-        label: t("navigation.coaching"),
-        isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
-      },
-      {
         path: "/messages",
         icon: MessageCircle,
         label: t("navigation.messages"),
         tutorialId: "nav-messages",
         isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
         showUnreadBadge: true,
+      },
+      {
+        path: "/coaching",
+        icon: GraduationCap,
+        label: t("navigation.coaching"),
+        isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
+      },
+      {
+        path: "/me",
+        icon: User,
+        label: t("navigation.profile"),
+        isActive: (p) => p === "/me" || p.startsWith("/me/"),
       },
     ],
     [t]
