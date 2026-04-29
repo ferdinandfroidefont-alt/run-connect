@@ -1248,6 +1248,7 @@ export default function MySessions() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <SessionShareScreen
         open={showSessionShare}
         onClose={() => {
           setShowSessionShare(false);
