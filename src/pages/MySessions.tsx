@@ -1225,20 +1225,13 @@ export default function MySessions() {
                             className="ios-list-row border border-white dark:border-white/10"
                           >
                             <div className="flex items-start gap-ios-2">
-                              <ActivityIcon activityType={session.activity_type} size="md" />
+                              <SportWhiteIcon activityType={session.activity_type} size="md" />
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                  {sessionSource === 'joined' ? (
+                                {sessionSource === 'joined' && (
+                                  <div className="flex items-center gap-1.5 mb-0.5">
                                     <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
-                                  ) : (
-                                    <Badge 
-                                      variant={isUpcoming ? "default" : "secondary"}
-                                      className="text-xs"
-                                    >
-                                      {isUpcoming ? "À venir" : "Terminée"}
-                                    </Badge>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                                 <h3 className="text-ios-headline font-semibold truncate">{session.title}</h3>
                                 {/* Organizer info for joined sessions */}
                                 {orgProfile && (
@@ -1269,7 +1262,20 @@ export default function MySessions() {
                                   </span>
                                 </div>
                               </div>
-                              <ChevronRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
+                              <div className="flex items-center gap-1.5 mt-1 shrink-0">
+                                {isUpcoming ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                    En attente
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    Confirmée
+                                  </span>
+                                )}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                              </div>
                             </div>
                           </div>
                         </SwipeConfirmCard>
