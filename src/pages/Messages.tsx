@@ -735,12 +735,11 @@ const Messages = () => {
     navigate(`/?${params.toString()}`);
   };
 
-  // Long press handlers
+  // Long press handlers — open quick camera instead of selection mode
   const handleLongPressStart = (conversation: Conversation) => {
     const timer = setTimeout(() => {
-      setIsSelectionMode(true);
-      setSelectedConversations(new Set([conversation.id]));
-    }, 1000); // 1000ms for long press (doubled from 500ms)
+      handleQuickCameraForConversation(conversation);
+    }, 500); // 500ms long press to open camera
     setLongPressTimer(timer);
   };
 
