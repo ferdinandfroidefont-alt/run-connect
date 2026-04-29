@@ -86,8 +86,15 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     }
   }, [formData.activity_type, selectedLocation]);
 
+  // Force structured mode (schéma de séance) when sport supports it — like coaching wizard
+  useEffect(() => {
+    if (formData.session_mode !== 'structured') {
+      onFormDataChange({ session_mode: 'structured' });
+    }
+  }, [formData.session_mode, onFormDataChange]);
+
   // Auto-compute distance from structured blocks
-  const isStructured = formData.session_mode === 'structured';
+  const isStructured = true;
   const resolvedBlocks = React.useMemo(() => normalizeBlocksForStorage(formData.blocks), [formData.blocks]);
   const resolvedTotals = React.useMemo(() => resolveSessionTotals(resolvedBlocks), [resolvedBlocks]);
   const computedDistanceKm = React.useMemo(
