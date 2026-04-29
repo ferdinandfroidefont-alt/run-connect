@@ -17,7 +17,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
-import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
+import { ActivityIcon, getActivityLabel, getActivityConfig } from '@/lib/activityIcons';
+
+/** Pastille blanche avec icône sport bleue (uniquement pour les cards Mes Séances) */
+const SportWhiteIcon = ({ activityType, size = "md" }: { activityType: string; size?: "sm" | "md" | "lg" }) => {
+  const Icon = getActivityConfig(activityType).icon;
+  const wrap = size === "lg" ? "h-12 w-12" : size === "sm" ? "h-8 w-8" : "h-10 w-10";
+  const ic = size === "lg" ? "h-6 w-6" : size === "sm" ? "h-4 w-4" : "h-5 w-5";
+  return (
+    <div className={`${wrap} rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center shrink-0`}>
+      <Icon className={`${ic} text-[#5B7CFF]`} strokeWidth={2.2} />
+    </div>
+  );
+};
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
