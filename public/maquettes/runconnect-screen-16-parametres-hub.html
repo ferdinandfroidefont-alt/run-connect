@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RunConnect — Maquette Réglages (hub)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --rc-blue: #2f6bff;
+      --rc-navy: #1a2744;
+      --rc-bg: #f2f2f7;
+      --rc-muted: #8e8e93;
+      --rc-card: #fff;
+      --rc-line: rgba(60, 60, 67, 0.12);
+      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 10px 28px rgba(0,0,0,.09);
+      --radius: 14px;
+      --phone-w: 390px;
+      --phone-r: 44px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e8ecf5 0%, #d4dbf0 100%);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 12px 48px;
+      color: var(--rc-navy);
+    }
+    .phone {
+      width: var(--phone-w);
+      background: #0a0a0f;
+      border-radius: var(--phone-r);
+      padding: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.28);
+    }
+    .island {
+      width: 120px; height: 32px; background: #000; border-radius: 20px;
+      margin: 6px auto 10px;
+    }
+    .screen {
+      background: var(--rc-bg);
+      border-radius: calc(var(--phone-r) - 8px);
+      overflow: hidden;
+      min-height: 780px;
+    }
+    .header {
+      background: linear-gradient(115deg, #4da3ff 0%, #2f6bff 45%, #6b5cff 100%);
+      padding: 12px 16px 20px;
+      color: #fff;
+    }
+    .header-top {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+      opacity: 0.95;
+    }
+    .header h1 {
+      margin-top: 14px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .search {
+      margin-top: 14px;
+      background: rgba(255,255,255,.22);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      color: rgba(255,255,255,.9);
+    }
+    .search span { flex: 1; }
+    .content { padding: 16px; padding-bottom: 28px; }
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--rc-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 8px 4px 10px;
+    }
+    .cat {
+      background: var(--rc-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .cat-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--rc-line);
+      min-height: 56px;
+    }
+    .cat-row:last-child { border-bottom: none; }
+    .ico {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .ico.gray { background: #8e8e93; color: #fff; }
+    .ico.red { background: #ff3b30; color: #fff; }
+    .ico.blue { background: #007aff; color: #fff; }
+    .ico.green { background: #34c759; color: #fff; }
+    .ico.orange { background: #ff9500; color: #fff; }
+    .cat-body { flex: 1; min-width: 0; }
+    .cat-title { font-weight: 600; font-size: 16px; color: var(--rc-navy); }
+    .cat-desc { font-size: 13px; color: var(--rc-muted); margin-top: 2px; line-height: 1.3; }
+    .chev { color: #c7c7cc; font-size: 18px; font-weight: 300; }
+    .brand {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 11px;
+      color: var(--rc-muted);
+      letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="island"></div>
+    <div class="screen">
+      <header class="header">
+        <div class="header-top">
+          <span>Réglages</span>
+          <span style="opacity:.85">✕</span>
+        </div>
+        <h1>Paramètres</h1>
+        <div class="search">
+          <span style="opacity:.75">⌕</span>
+          <span>Rechercher un réglage…</span>
+        </div>
+      </header>
+      <div class="content">
+        <p class="section-label">Compte &amp; application</p>
+        <div class="cat">
+          <div class="cat-row">
+            <div class="ico gray">⚙</div>
+            <div class="cat-body">
+              <div class="cat-title">Général</div>
+              <div class="cat-desc">Langue, thème, distances, mot de passe</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+          <div class="cat-row">
+            <div class="ico red">🔔</div>
+            <div class="cat-body">
+              <div class="cat-title">Notifications</div>
+              <div class="cat-desc">Push, alertes, préférences</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+          <div class="cat-row">
+            <div class="ico blue">🔗</div>
+            <div class="cat-body">
+              <div class="cat-title">Connexions</div>
+              <div class="cat-desc">Strava, Instagram, partage</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+          <div class="cat-row">
+            <div class="ico green">🛡</div>
+            <div class="cat-body">
+              <div class="cat-title">Confidentialité</div>
+              <div class="cat-desc">RGPD, sécurité, données</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+          <div class="cat-row">
+            <div class="ico orange">?</div>
+            <div class="cat-body">
+              <div class="cat-title">Aide &amp; Support</div>
+              <div class="cat-desc">Contact, tutoriels, documents</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+        <p class="brand">RunConnect · maquette produit</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

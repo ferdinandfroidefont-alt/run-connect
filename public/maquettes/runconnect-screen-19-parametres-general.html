@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RunConnect — Maquette Réglages généraux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --rc-blue: #2f6bff;
+      --rc-navy: #1a2744;
+      --rc-bg: #f2f2f7;
+      --rc-muted: #8e8e93;
+      --rc-card: #fff;
+      --rc-line: rgba(60, 60, 67, 0.12);
+      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 10px 28px rgba(0,0,0,.09);
+      --radius: 14px;
+      --phone-w: 390px;
+      --phone-r: 44px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e8ecf5 0%, #d4dbf0 100%);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 24px 12px 48px;
+      color: var(--rc-navy);
+    }
+    .phone {
+      width: var(--phone-w);
+      background: #0a0a0f;
+      border-radius: var(--phone-r);
+      padding: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.28);
+    }
+    .island { width: 120px; height: 32px; background: #000; border-radius: 20px; margin: 6px auto 10px; }
+    .screen {
+      background: var(--rc-bg);
+      border-radius: calc(var(--phone-r) - 8px);
+      min-height: 780px;
+      overflow: hidden;
+    }
+    .nav {
+      background: var(--rc-card);
+      padding: 10px 12px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--rc-line);
+    }
+    .back {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: #f2f2f7;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--rc-blue);
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .nav h1 { flex: 1; text-align: center; font-size: 17px; font-weight: 600; margin-right: 34px; }
+    .content { padding: 16px; }
+    .section-h {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--rc-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 6px 4px 8px;
+    }
+    .card {
+      background: var(--rc-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .row {
+      display: flex; align-items: center;
+      padding: 14px 16px;
+      border-top: 1px solid var(--rc-line);
+      gap: 12px;
+    }
+    .row:first-child { border-top: none; }
+    .row-body { flex: 1; min-width: 0; }
+    .row-title { font-weight: 500; font-size: 16px; }
+    .row-val { font-size: 16px; color: var(--rc-muted); display: flex; align-items: center; gap: 6px; }
+    .chev { color: #c7c7cc; font-size: 18px; }
+    .pill {
+      display: inline-block;
+      background: #e8f0ff;
+      color: var(--rc-blue);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+    .brand { text-align: center; margin-top: 18px; font-size: 11px; color: var(--rc-muted); }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="island"></div>
+    <div class="screen">
+      <div class="nav">
+        <div class="back">‹</div>
+        <h1>Général</h1>
+      </div>
+      <div class="content">
+        <p class="section-h">Langue &amp; affichage</p>
+        <div class="card">
+          <div class="row">
+            <div class="row-body">
+              <div class="row-title">Langue de l’application</div>
+            </div>
+            <div class="row-val">Français <span class="chev">›</span></div>
+          </div>
+          <div class="row">
+            <div class="row-body">
+              <div class="row-title">Thème</div>
+            </div>
+            <div class="row-val"><span class="pill">Système</span> <span class="chev">›</span></div>
+          </div>
+        </div>
+
+        <p class="section-h">Sports &amp; mesures</p>
+        <div class="card">
+          <div class="row">
+            <div class="row-body">
+              <div class="row-title">Unités de distance</div>
+            </div>
+            <div class="row-val">Kilomètres <span class="chev">›</span></div>
+          </div>
+          <div class="row">
+            <div class="row-body">
+              <div class="row-title">Carte — appui long</div>
+            </div>
+            <div class="row-val">Point GPS <span class="chev">›</span></div>
+          </div>
+        </div>
+
+        <p class="section-h">Compte</p>
+        <div class="card">
+          <div class="row">
+            <div class="row-body">
+              <div class="row-title">Changer le mot de passe</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <p class="brand">RunConnect · maquette produit</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

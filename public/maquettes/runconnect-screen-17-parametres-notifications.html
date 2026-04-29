@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RunConnect — Maquette Notifications</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --rc-blue: #2f6bff;
+      --rc-navy: #1a2744;
+      --rc-bg: #f2f2f7;
+      --rc-muted: #8e8e93;
+      --rc-card: #fff;
+      --rc-line: rgba(60, 60, 67, 0.12);
+      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 10px 28px rgba(0,0,0,.09);
+      --radius: 14px;
+      --phone-w: 390px;
+      --phone-r: 44px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e8ecf5 0%, #d4dbf0 100%);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 24px 12px 48px;
+      color: var(--rc-navy);
+    }
+    .phone {
+      width: var(--phone-w);
+      background: #0a0a0f;
+      border-radius: var(--phone-r);
+      padding: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.28);
+    }
+    .island { width: 120px; height: 32px; background: #000; border-radius: 20px; margin: 6px auto 10px; }
+    .screen {
+      background: var(--rc-bg);
+      border-radius: calc(var(--phone-r) - 8px);
+      min-height: 780px;
+      overflow: hidden;
+    }
+    .nav {
+      background: var(--rc-card);
+      padding: 10px 12px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--rc-line);
+    }
+    .back {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: #f2f2f7;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--rc-blue);
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .nav h1 { flex: 1; text-align: center; font-size: 17px; font-weight: 600; margin-right: 34px; }
+    .scroll { padding: 16px; }
+    .hint {
+      font-size: 14px;
+      color: var(--rc-muted);
+      line-height: 1.45;
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+    .card {
+      background: var(--rc-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .section-h {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--rc-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 16px 16px 8px;
+      background: transparent;
+    }
+    .row {
+      display: flex; align-items: center;
+      padding: 12px 16px;
+      border-top: 1px solid var(--rc-line);
+      gap: 12px;
+    }
+    .row:first-of-type { border-top: none; }
+    .row-body { flex: 1; min-width: 0; }
+    .row-title { font-weight: 500; font-size: 16px; }
+    .row-sub { font-size: 13px; color: var(--rc-muted); margin-top: 2px; }
+    .toggle {
+      width: 51px; height: 31px; border-radius: 16px;
+      background: var(--rc-blue);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .toggle.off { background: #e9e9eb; }
+    .toggle::after {
+      content: "";
+      position: absolute; width: 27px; height: 27px; border-radius: 50%;
+      background: #fff; top: 2px; left: 22px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.12);
+    }
+    .toggle.off::after { left: 2px; }
+    .ico-cell { font-size: 18px; width: 28px; text-align: center; }
+    .btn {
+      margin-top: 8px;
+      background: var(--rc-blue);
+      color: #fff;
+      text-align: center;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 8px 20px rgba(47,107,255,.35);
+    }
+    .brand { text-align: center; margin-top: 18px; font-size: 11px; color: var(--rc-muted); }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="island"></div>
+    <div class="screen">
+      <div class="nav">
+        <div class="back">‹</div>
+        <h1>Notifications</h1>
+      </div>
+      <div class="scroll">
+        <p class="hint">Choisissez les alertes reçues sur cet appareil. Vous pouvez les modifier à tout moment.</p>
+
+        <div class="section-h" style="padding-left:4px;padding-top:0">Général</div>
+        <div class="card">
+          <div class="row">
+            <span class="ico-cell">📱</span>
+            <div class="row-body">
+              <div class="row-title">Notifications push</div>
+              <div class="row-sub">Autoriser RunConnect à envoyer des alertes</div>
+            </div>
+            <div class="toggle"></div>
+          </div>
+        </div>
+
+        <div class="section-h" style="padding-left:4px">Activité &amp; social</div>
+        <div class="card">
+          <div class="row">
+            <span class="ico-cell">💬</span>
+            <div class="row-body">
+              <div class="row-title">Messages</div>
+              <div class="row-sub">Nouveaux messages directs</div>
+            </div>
+            <div class="toggle"></div>
+          </div>
+          <div class="row">
+            <span class="ico-cell">🏃</span>
+            <div class="row-body">
+              <div class="row-title">Séances &amp; invitations</div>
+              <div class="row-sub">Demandes, amis, coaching</div>
+            </div>
+            <div class="toggle"></div>
+          </div>
+          <div class="row">
+            <span class="ico-cell">👥</span>
+            <div class="row-body">
+              <div class="row-title">Clubs</div>
+              <div class="row-sub">Invitations et annonces de groupe</div>
+            </div>
+            <div class="toggle off"></div>
+          </div>
+          <div class="row">
+            <span class="ico-cell">✓</span>
+            <div class="row-body">
+              <div class="row-title">Présence confirmée</div>
+              <div class="row-sub">Quand quelqu’un confirme pour une séance</div>
+            </div>
+            <div class="toggle"></div>
+          </div>
+          <div class="row">
+            <span class="ico-cell">👤</span>
+            <div class="row-body">
+              <div class="row-title">Demandes de suivi</div>
+              <div class="row-sub">Nouveaux abonnés ou demandes en attente</div>
+            </div>
+            <div class="toggle"></div>
+          </div>
+        </div>
+
+        <div class="btn">Tester une notification</div>
+        <p class="brand">RunConnect · maquette produit</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RunConnect — Maquette Profil autre utilisateur</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --rc-blue: #2f6bff;
+      --rc-navy: #1a2744;
+      --rc-bg: #f2f2f7;
+      --rc-muted: #8e8e93;
+      --rc-card: #fff;
+      --rc-line: rgba(60, 60, 67, 0.12);
+      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 10px 28px rgba(0,0,0,.09);
+      --radius: 14px;
+      --phone-w: 390px;
+      --phone-r: 44px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e8ecf5 0%, #d4dbf0 100%);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 24px 12px 48px;
+      color: var(--rc-navy);
+    }
+    .phone {
+      width: var(--phone-w);
+      background: #0a0a0f;
+      border-radius: var(--phone-r);
+      padding: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.28);
+    }
+    .island { width: 120px; height: 32px; background: #000; border-radius: 20px; margin: 6px auto 10px; }
+    .screen {
+      background: var(--rc-bg);
+      border-radius: calc(var(--phone-r) - 8px);
+      min-height: 820px;
+      overflow: hidden;
+      position: relative;
+    }
+    .cover {
+      height: 128px;
+      background: linear-gradient(115deg, rgba(77,163,255,.35) 0%, rgba(47,107,255,.45) 50%, rgba(107,92,255,.4) 100%);
+      position: relative;
+    }
+    .cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, var(--rc-bg) 0%, transparent 55%);
+    }
+    .back {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      z-index: 2;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.92);
+      border: 1px solid var(--rc-line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--rc-blue);
+      font-size: 22px;
+      box-shadow: var(--shadow);
+    }
+    .more {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      z-index: 2;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.92);
+      border: 1px solid var(--rc-line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      letter-spacing: 2px;
+      box-shadow: var(--shadow);
+    }
+    .identity {
+      position: relative;
+      padding: 0 16px;
+      margin-top: -52px;
+      z-index: 1;
+      display: flex;
+      gap: 14px;
+      align-items: flex-end;
+    }
+    .avatar {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 4px solid var(--rc-bg);
+      background: linear-gradient(145deg, #a78bfa, #6366f1);
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+    .id-text { flex: 1; min-width: 0; padding-bottom: 6px; }
+    .name-row { display: flex; align-items: center; gap: 6px; }
+    .name {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .verify {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #007aff;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .handle { font-size: 15px; color: var(--rc-muted); margin-top: 2px; }
+    .meta-line { font-size: 13px; color: var(--rc-muted); margin-top: 6px; }
+    .common {
+      margin: 14px 16px 0;
+      font-size: 13px;
+      color: var(--rc-muted);
+      line-height: 1.35;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      padding: 14px 16px 0;
+    }
+    .btn {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .btn-primary {
+      background: var(--rc-blue);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(47,107,255,.3);
+    }
+    .btn-outline {
+      background: var(--rc-card);
+      color: var(--rc-blue);
+      border: 1.5px solid var(--rc-blue);
+    }
+    .detail-link {
+      margin: 12px 16px 0;
+      display: block;
+      text-align: center;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid var(--rc-line);
+      background: var(--rc-card);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--rc-blue);
+    }
+    .content { padding: 14px 16px 28px; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .stat {
+      background: var(--rc-card);
+      border-radius: 12px;
+      padding: 12px 8px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .stat-n { font-size: 18px; font-weight: 700; color: var(--rc-navy); }
+    .stat-l { font-size: 11px; color: var(--rc-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .card {
+      background: var(--rc-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(0,0,0,.04);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--rc-navy);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title a { font-size: 14px; font-weight: 600; color: var(--rc-blue); text-decoration: none; }
+    .bio { font-size: 15px; line-height: 1.45; color: #475569; }
+    .records {
+      display: flex;
+      gap: 10px;
+    }
+    .rec {
+      flex: 1;
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      min-height: 88px;
+    }
+    .rec.navy { background: linear-gradient(145deg, #1e3a5f, #1a2744); }
+    .rec.purple { background: linear-gradient(145deg, #6b5cff, #4c1d95); }
+    .rec small { opacity: .85; font-size: 12px; }
+    .rec .time { font-size: 22px; font-weight: 700; margin-top: 4px; }
+    .rec .date { font-size: 11px; opacity: .75; margin-top: 4px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .chip {
+      background: #e8f0ff;
+      color: var(--rc-blue);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+    .brand { text-align: center; margin-top: 16px; font-size: 11px; color: var(--rc-muted); }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="island"></div>
+    <div class="screen">
+      <div class="cover">
+        <div class="back">‹</div>
+        <div class="more">⋯</div>
+      </div>
+      <div class="identity">
+        <div class="avatar"></div>
+        <div class="id-text">
+          <div class="name-row">
+            <h1 class="name">Léa Martin</h1>
+            <span class="verify" title="Premium">✓</span>
+          </div>
+          <p class="handle">@lea_runs</p>
+          <p class="meta-line">France · 28 ans · Fiabilité 4,9</p>
+        </div>
+      </div>
+      <p class="common">3 abonnements en commun · 1 club en commun</p>
+      <div class="actions">
+        <div class="btn btn-outline">Abonné ✓</div>
+        <div class="btn btn-primary">Message</div>
+      </div>
+      <a class="detail-link" href="#">Voir le profil détaillé</a>
+
+      <div class="content">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-n">124</div>
+            <div class="stat-l">Abonnés</div>
+          </div>
+          <div class="stat">
+            <div class="stat-n">89</div>
+            <div class="stat-l">Abonnements</div>
+          </div>
+          <div class="stat">
+            <div class="stat-n">36</div>
+            <div class="stat-l">Séances</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="bio">Semi et trails le week-end. Toujours partante pour un footing après le boulot 🏃‍♀️</p>
+          <div class="chips">
+            <span class="chip">Course</span>
+            <span class="chip">Trail</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            Records
+            <a href="#">Voir tout ›</a>
+          </div>
+          <div class="records">
+            <div class="rec navy">
+              <small>10 km</small>
+              <div class="time">42:08</div>
+              <div class="date">8 avr. 2026</div>
+            </div>
+            <div class="rec purple">
+              <small>Semi</small>
+              <div class="time">1:38</div>
+              <div class="date">21 sept. 2025</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Activité récente</div>
+          <p class="bio" style="font-size:14px;color:var(--rc-muted)">Footing duo · hier · 8,2 km</p>
+        </div>
+
+        <p class="brand">RunConnect · profil autre utilisateur (public)</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

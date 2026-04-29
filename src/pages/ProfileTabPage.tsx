@@ -272,35 +272,35 @@ export default function ProfileTabPage() {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-secondary">
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="relative">
-          <div className="relative h-[150px] overflow-hidden">
+          <div className="relative h-[170px] overflow-hidden">
             <div
               className="absolute inset-0 bg-gradient-to-br from-[#1f7bff] via-[#4f5be4] to-[#7a44e0]"
               aria-hidden
             />
             <svg
-              className="pointer-events-none absolute -bottom-px left-0 right-0 h-9 w-full text-secondary"
-              viewBox="0 0 400 36"
+              className="pointer-events-none absolute -bottom-px left-0 right-0 h-10 w-full text-secondary"
+              viewBox="0 0 400 40"
               preserveAspectRatio="none"
               aria-hidden
             >
               <path
                 fill="currentColor"
-                d="M0,8 C90,30 170,32 200,24 C250,12 320,8 400,18 L400,36 L0,36 Z"
+                d="M0,10 C90,32 170,34 200,26 C250,14 320,10 400,20 L400,40 L0,40 Z"
               />
             </svg>
-            <div className="relative flex justify-end px-2 pt-[max(env(safe-area-inset-top),8px)]">
+            <div className="relative flex justify-end px-3 pt-[max(env(safe-area-inset-top),10px)]">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0 rounded-full bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+                    className="h-9 w-9 shrink-0 rounded-full bg-white/12 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
                     aria-label="Plus d’actions"
                   >
-                    <MoreVertical className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                    <MoreVertical className="h-5 w-5" strokeWidth={2.25} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -331,56 +331,56 @@ export default function ProfileTabPage() {
             </div>
           </div>
 
-          <div className="relative z-10 -mt-[44px] flex flex-col items-center px-4">
+          <div className="relative z-10 -mt-[52px] flex flex-col items-center px-4">
             <div className="relative">
-              <Avatar className="h-[78px] w-[78px] border-[3px] border-white shadow-[0_3px_10px_rgba(0,0,0,0.18)]">
+              <Avatar className="h-[100px] w-[100px] border-[4px] border-white shadow-[0_4px_12px_rgba(0,0,0,0.18)]">
                 <AvatarImage src={displayAvatar} alt="" className="object-cover" />
-                <AvatarFallback className="bg-primary/15 text-base font-semibold text-primary">
+                <AvatarFallback className="bg-primary/15 text-xl font-semibold text-primary">
                   {fallbackInitial}
                 </AvatarFallback>
               </Avatar>
               <button
                 type="button"
-                className="absolute -bottom-0.5 -right-0.5 flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-white bg-[#2b8cff] text-white shadow-[0_2px_6px_rgba(0,0,0,0.18)] transition-transform active:scale-95"
+                className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-[3px] border-white bg-[#1d7bff] text-white shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-transform active:scale-95"
                 aria-label="Modifier la photo de profil"
                 onClick={() => navigate("/profile/edit")}
               >
-                <Pencil className="h-[12px] w-[12px]" strokeWidth={2.4} />
+                <Pencil className="h-[13px] w-[13px]" strokeWidth={2.4} />
               </button>
             </div>
 
-            <h1 className="mt-2 min-w-0 max-w-full truncate text-center text-[17px] font-semibold tracking-tight text-foreground">
+            <h1 className="mt-2.5 min-w-0 max-w-full truncate text-center text-[22px] font-bold tracking-tight text-foreground">
               {username}
             </h1>
             {bio ? (
-              <p className="mt-0.5 max-w-[260px] truncate text-center text-[12.5px] font-medium text-[#4a52d9]">
+              <p className="mt-0.5 max-w-[300px] truncate text-center text-[14px] font-medium text-[#4a52d9]">
                 {bio}
               </p>
             ) : (
-              <p className="mt-0.5 text-center text-[12px] text-muted-foreground">
+              <p className="mt-0.5 text-center text-[13px] text-muted-foreground">
                 Ajoute une bio
               </p>
             )}
           </div>
         </div>
 
-        <div className="mx-auto mt-3.5 w-full max-w-[420px] space-y-3.5 px-4">
-          <div className="rounded-[14px] border border-border/60 bg-card px-1 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="mx-auto mt-4 w-full max-w-[420px] space-y-4 px-4">
+          <div className="rounded-[16px] border border-border/60 bg-card px-1 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="flex min-w-0 items-stretch">
-              <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-r border-border/55 px-1">
-                <Footprints className="h-[19px] w-[19px] text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
-                <span className="text-[18px] font-bold leading-none text-foreground">{metricsDisplay.sessions}</span>
-                <span className="text-[10.5px] font-medium leading-none text-muted-foreground">Séances</span>
+              <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 border-r border-border/55 px-1">
+                <Footprints className="h-[22px] w-[22px] text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
+                <span className="text-[22px] font-bold leading-none text-foreground">{metricsDisplay.sessions}</span>
+                <span className="text-[11px] font-medium leading-none text-muted-foreground">Séances</span>
               </div>
-              <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-r border-border/55 px-1">
-                <Users className="h-[19px] w-[19px] text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
-                <span className="text-[18px] font-bold leading-none text-foreground">{metricsDisplay.friends}</span>
-                <span className="text-[10.5px] font-medium leading-none text-muted-foreground">Amis</span>
+              <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 border-r border-border/55 px-1">
+                <Users className="h-[22px] w-[22px] text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
+                <span className="text-[22px] font-bold leading-none text-foreground">{metricsDisplay.friends}</span>
+                <span className="text-[11px] font-medium leading-none text-muted-foreground">Amis</span>
               </div>
-              <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1">
-                <Shield className="h-[19px] w-[19px] text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
-                <span className="text-[18px] font-bold leading-none text-foreground">{metricsDisplay.clubs}</span>
-                <span className="text-[10.5px] font-medium leading-none text-muted-foreground">Clubs</span>
+              <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1">
+                <Shield className="h-[22px] w-[22px] text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
+                <span className="text-[22px] font-bold leading-none text-foreground">{metricsDisplay.clubs}</span>
+                <span className="text-[11px] font-medium leading-none text-muted-foreground">Clubs</span>
               </div>
             </div>
           </div>
@@ -388,38 +388,34 @@ export default function ProfileTabPage() {
           {showRecordsSection ? (
             <section className="min-w-0 space-y-2">
               <div className="flex min-w-0 items-center justify-between gap-2 px-0.5">
-                <h2 className="text-[15px] font-bold text-foreground">Records</h2>
+                <h2 className="text-[16px] font-bold text-foreground">Records</h2>
                 <button
                   type="button"
                   className="flex shrink-0 items-center gap-0.5 text-[12px] font-semibold text-[#1d7bff] active:opacity-70"
                   onClick={() => navigate("/profile/records")}
                 >
                   Voir tout
-                  <ChevronRight className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+                  <ChevronRight className="h-3 w-3" strokeWidth={2.75} aria-hidden />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 {recordPreviews.map((r, idx) => (
                   <div
                     key={r.id}
                     className={cn(
-                      "flex min-w-0 flex-col rounded-[14px] px-2.5 py-2.5 text-white shadow-[0_2px_6px_rgba(0,0,0,0.06)]",
+                      "flex min-w-0 flex-col rounded-[14px] px-2.5 py-2 text-white",
                       r.tone === "navy" ? "bg-[#1a2547]" : "bg-[#321f4f]"
                     )}
                   >
-                    <div className="flex items-start justify-between gap-1.5">
-                      <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-white/10">
-                        {idx === 0 ? (
-                          <Footprints className="h-[13px] w-[13px]" strokeWidth={2.25} aria-hidden />
-                        ) : (
-                          <Timer className="h-[13px] w-[13px]" strokeWidth={2.25} aria-hidden />
-                        )}
-                      </div>
-                      <span className="text-[10.5px] font-semibold uppercase tracking-wide text-white/80">
-                        {r.label}
-                      </span>
+                    <div className="flex min-w-0 items-center justify-between gap-1.5">
+                      {idx === 0 ? (
+                        <Footprints className="h-[14px] w-[14px] shrink-0" strokeWidth={2.25} aria-hidden />
+                      ) : (
+                        <Timer className="h-[14px] w-[14px] shrink-0" strokeWidth={2.25} aria-hidden />
+                      )}
+                      <span className="truncate text-[11px] font-semibold text-white/85">{r.label}</span>
                     </div>
-                    <span className="mt-1 text-[20px] font-bold leading-tight tracking-tight">{r.value}</span>
+                    <span className="mt-1 text-[18px] font-bold leading-tight tracking-tight">{r.value}</span>
                     {r.dateLabel ? (
                       <p className="mt-0.5 text-[10px] font-medium text-white/65">{r.dateLabel}</p>
                     ) : null}
@@ -429,22 +425,22 @@ export default function ProfileTabPage() {
             </section>
           ) : null}
 
-          <section className="min-w-0 space-y-1.5">
-            <h2 className="px-0.5 text-[15px] font-bold text-foreground">Paramètres</h2>
-            <div className="overflow-hidden rounded-[14px] border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <section className="min-w-0 space-y-2">
+            <h2 className="px-0.5 text-[16px] font-bold text-foreground">Paramètres</h2>
+            <div className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               {settingsRows.map((row, i) => (
                 <button
                   key={row.id}
                   type="button"
                   className={cn(
-                    "flex w-full min-w-0 items-center gap-2.5 px-3 py-2.5 text-left transition-colors active:bg-muted/60",
+                    "flex w-full min-w-0 items-center gap-3 px-3.5 py-3 text-left transition-colors active:bg-muted/60",
                     i < settingsRows.length - 1 && "border-b border-border/55"
                   )}
                   onClick={row.onClick}
                 >
-                  <row.Icon className="h-[17px] w-[17px] shrink-0 text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-foreground">{row.label}</span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/55" strokeWidth={2.25} aria-hidden />
+                  <row.Icon className="h-[19px] w-[19px] shrink-0 text-[#1d7bff]" strokeWidth={2.25} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-foreground">{row.label}</span>
+                  <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/55" strokeWidth={2.25} aria-hidden />
                 </button>
               ))}
             </div>
