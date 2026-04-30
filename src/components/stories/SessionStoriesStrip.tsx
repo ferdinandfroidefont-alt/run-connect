@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus } from "lucide-react";
 
@@ -114,25 +113,25 @@ export function SessionStoriesStrip({
   const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
   return (
-    <div className="overflow-x-auto px-ios-3 pb-3">
-      <div className="flex gap-3">
+    <div className="overflow-x-auto px-4 pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-max items-start gap-3.5">
         <button
           type="button"
           onClick={hasMyStory ? () => onOpenStory(currentUserId!) : onCreateStory}
-          className="flex min-w-[72px] flex-col items-center gap-1"
+          className="flex min-w-[74px] flex-col items-center gap-1.5"
         >
-          <div className="relative">
-            <Avatar className="h-14 w-14 border-2 border-primary/40">
+          <div className="relative rounded-full bg-white p-[3px] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.45)]">
+            <Avatar className="h-[66px] w-[66px] border-2 border-[#DBEAFE]">
               <AvatarImage src={myStoryAvatarUrl ?? ""} />
-              <AvatarFallback>MOI</AvatarFallback>
+              <AvatarFallback className="bg-[#DBEAFE] text-[#2563EB]">MOI</AvatarFallback>
             </Avatar>
             {!hasMyStory && (
-              <span className="absolute -bottom-1 -right-1 rounded-full bg-primary p-1 text-primary-foreground">
-                <Plus className="h-3 w-3" />
+              <span className="absolute bottom-0.5 right-0.5 rounded-full bg-[#2563EB] p-1 text-white shadow-sm">
+                <Plus className="h-3.5 w-3.5" />
               </span>
             )}
           </div>
-          <span className="max-w-[70px] truncate text-[11px] text-muted-foreground">Votre story</span>
+          <span className="max-w-[74px] truncate text-[12px] font-medium text-[#0F172A]">Votre story</span>
         </button>
 
         {authors
@@ -142,23 +141,28 @@ export function SessionStoriesStrip({
               key={author.author_id}
               type="button"
               onClick={() => onOpenStory(author.author_id)}
-              className="flex min-w-[72px] flex-col items-center gap-1"
+              className="flex min-w-[74px] flex-col items-center gap-1.5"
             >
-              <Avatar className={`h-14 w-14 border-2 ${author.viewed ? "border-border" : "border-primary"}`}>
-                <AvatarImage src={author.avatar_url ?? ""} />
-                <AvatarFallback>{(author.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <span className="max-w-[70px] truncate text-[11px] text-muted-foreground">
+              <div
+                className={
+                  author.viewed
+                    ? "rounded-full bg-[#E2E8F0] p-[2.5px] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.45)]"
+                    : "rounded-full bg-[linear-gradient(135deg,#2563EB_0%,#60A5FA_52%,#93C5FD_100%)] p-[2.5px] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.45)]"
+                }
+              >
+                <Avatar className="h-16 w-16 border-2 border-white">
+                  <AvatarImage src={author.avatar_url ?? ""} />
+                  <AvatarFallback className="bg-[#E2E8F0] text-[#334155]">
+                    {(author.username ?? "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <span className="max-w-[74px] truncate text-[12px] font-medium text-[#0F172A]">
                 {author.display_name || author.username || "Membre"}
               </span>
             </button>
           ))}
       </div>
-      {!authors.length && (
-        <div className="mt-2 text-center text-xs text-muted-foreground">
-          Pas de stories pour le moment. Cree une story depuis le bouton +.
-        </div>
-      )}
     </div>
   );
 }

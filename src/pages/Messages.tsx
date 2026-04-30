@@ -3026,19 +3026,7 @@ const Messages = () => {
           }
         >
         <div className="space-y-ios-3 pb-ios-2 pt-ios-3">
-          <div className="ios-card w-full overflow-hidden border border-border/60 border-x-0 rounded-none sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border-x">
-            <div className="flex items-center justify-between px-ios-3 pt-3">
-              <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Stories
-              </p>
-              <button
-                type="button"
-                onClick={() => setStoriesRefreshToken((t) => t + 1)}
-                className="text-[12px] font-medium text-primary"
-              >
-                Actualiser
-              </button>
-            </div>
+          <div className="w-full overflow-hidden border-x-0 rounded-none sm:mx-auto sm:max-w-2xl">
             <SessionStoriesStrip
               currentUserId={user?.id ?? null}
               refreshToken={storiesRefreshToken}
@@ -3085,8 +3073,8 @@ const Messages = () => {
                   >
                     <div
                       className={cn(
-                        "ios-list-row flex items-center gap-ios-3 relative",
-                        selectedConversations.has(conversation.id) && "bg-primary/5"
+                        "ios-list-row relative flex items-center gap-ios-3 rounded-[18px] border border-[#E6ECF5] bg-white px-3.5 py-3 shadow-[0_8px_20px_-16px_rgba(15,23,42,0.45)]",
+                        selectedConversations.has(conversation.id) && "bg-primary/5 border-primary/30"
                       )}
                       onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
                       onTouchEnd={handleLongPressEnd}
@@ -3154,12 +3142,12 @@ const Messages = () => {
                           }
                         }}
                       >
-                        <div className="flex items-center justify-between mb-ios-1">
+                        <div className="mb-ios-1 flex items-center justify-between">
                           <div className="flex items-center gap-ios-2 min-w-0">
                             {pinnedConversations.has(conversation.id) && (
                               <span className="text-[13px] flex-shrink-0">📌</span>
                             )}
-                            <p className="text-ios-headline font-medium truncate">
+                            <p className="truncate text-[17px] font-semibold text-[#0F172A]">
                               {conversation.is_group 
                                 ? conversation.group_name 
                                 : (conversation.other_participant?.username || "Utilisateur")
@@ -3168,10 +3156,10 @@ const Messages = () => {
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`text-ios-subheadline truncate ${
+                          <p className={`truncate text-[15px] ${
                             conversation.unread_count > 0 
-                              ? 'text-foreground font-medium' 
-                              : 'text-muted-foreground'
+                              ? 'text-[#334155] font-medium' 
+                              : 'text-[#64748B]'
                           }`}>
                             {conversation.last_message ? (
                               <>
@@ -3220,8 +3208,8 @@ const Messages = () => {
                       </div>
                       
                       {/* Right column: time + camera */}
-                      <div className="flex items-center justify-center gap-ios-2 flex-shrink-0 ml-ios-2">
-                        <span className="text-[13px] text-muted-foreground">
+                      <div className="ml-ios-2 flex flex-shrink-0 items-start justify-center gap-ios-2">
+                        <span className="text-[13px] text-[#64748B]">
                           {(() => {
                             const date = new Date(conversation.last_message_date || conversation.updated_at);
                             const now = new Date();
@@ -3249,10 +3237,7 @@ const Messages = () => {
                         )}
                       </div>
                       
-                      {/* iOS-style inset separator */}
-                      {index < filteredAndSortedConversations.length - 1 && (
-                        <div className="absolute bottom-0 left-[76px] right-0 h-px bg-border" />
-                      )}
+                      {index < filteredAndSortedConversations.length - 1 && <div className="h-px" aria-hidden />}
                     </div>
                   </SwipeableConversationItem>
                 ))}
