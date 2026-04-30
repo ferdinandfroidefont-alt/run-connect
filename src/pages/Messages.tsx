@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -68,6 +69,7 @@ import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
 import { CoachingMessageCard } from "@/components/coaching/CoachingMessageCard";
 import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
 import { SignedImage } from "@/components/SignedImage";
+import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 
 const NewConversationView = lazy(() =>
@@ -225,6 +227,7 @@ const Messages = () => {
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
   const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
+  const [storiesRefreshToken, setStoriesRefreshToken] = useState(0);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Conversation settings states
@@ -777,22 +780,6 @@ const Messages = () => {
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-
-  const storyCarouselItems = useMemo(() => {
-    return filteredAndSortedConversations
-      .filter((conv) => !conv.is_group && conv.other_participant?.user_id)
-      .slice(0, 14)
-      .map((conv) => ({
-        id: conv.id,
-        userId: conv.other_participant!.user_id,
-        label:
-          conv.other_participant?.username ||
-          conv.other_participant?.display_name ||
-          "Utilisateur",
-        avatarUrl: conv.other_participant?.avatar_url || "",
-        seen: (conv.unread_count ?? 0) === 0,
-      }));
-  }, [filteredAndSortedConversations]);
 
   const handleLongPressEnd = () => {
     if (longPressTimer) {
@@ -2974,10 +2961,10 @@ const Messages = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F8FAFC]" data-tutorial="tutorial-messages">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-messages">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="z-50 bg-white"
+          headerWrapperClassName="z-50 bg-card"
           header={
           <div className="pt-[var(--safe-area-top)]">
             {isSelectionMode ? (
@@ -3004,125 +2991,64 @@ const Messages = () => {
                 </Button>
               </div>
             ) : (
-              <div className="bg-white px-4 pb-3">
-                <div className="flex items-center justify-between pb-3 pt-2">
-                  <h1 className="text-[42px] font-bold leading-none tracking-[-0.02em] text-[#0F172A]">Messages</h1>
-                  <div className="flex items-center gap-2">
+              <MainTopHeader
+                title="Messages"
+                tabsAriaLabel="Navigation messages"
+                tabs={[
+                  { id: "conversations", label: "Conversations", active: true },
+                  { id: "search", label: "Recherche", active: false, onClick: () => navigate("/search") },
+                  { id: "create-club", label: "Créer un club", active: false, onClick: () => setShowCreateGroup(true) },
+                ]}
+                right={
+                  <>
                     <button
                       type="button"
                       onClick={() => setShowCreateGroup(true)}
-                      className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E2E8F0] bg-white text-[#0F172A] shadow-[0_8px_20px_-14px_rgba(15,23,42,0.45)] transition-transform active:scale-[0.97]"
+                      className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
                       aria-label="Créer un club"
                     >
                       <Users className="h-5 w-5" />
                     </button>
-                    <button
-                      type="button"
+                    <Button
                       onClick={() => setShowNewConversation(true)}
-                      className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E2E8F0] bg-white text-[#0F172A] shadow-[0_8px_20px_-14px_rgba(15,23,42,0.45)] transition-transform active:scale-[0.97]"
+                      size="sm"
+                      variant="ghost"
+                      className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
                       aria-label="Nouvelle conversation"
                     >
                       <Plus className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-
-                <div role="tablist" aria-label="Navigation messages" className="flex items-end gap-8 border-b border-[#E2E8F0]">
-                  <button type="button" role="tab" aria-selected className="relative pb-3 pt-1 text-[20px] font-medium text-[#2563EB]">
-                    Conversations
-                    <span className="absolute bottom-0 left-0 h-[3px] w-full rounded-full bg-[#2563EB]" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={false}
-                    onClick={() => navigate("/search")}
-                    className="pb-3 pt-1 text-[20px] font-medium text-[#64748B]"
-                  >
-                    Recherche
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={false}
-                    onClick={() => setShowCreateGroup(true)}
-                    className="pb-3 pt-1 text-[20px] font-medium text-[#64748B]"
-                  >
-                    Créer un club
-                  </button>
-                </div>
-              </div>
+                    </Button>
+                  </>
+                }
+              />
             )}
           </div>
           }
         >
-        <div className="space-y-3 bg-[#F8FAFC] px-4 pb-4 pt-3">
-          {!isSelectionMode && (
-            <>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#94A3B8]" />
-                <Input
-                  value={conversationSearch}
-                  onChange={(e) => setConversationSearch(e.target.value)}
-                  placeholder="Rechercher une conversation..."
-                  className="h-12 rounded-2xl border-0 bg-[#F1F5F9] pl-12 pr-4 text-[16px] text-[#0F172A] placeholder:text-[#94A3B8] shadow-none focus-visible:ring-1 focus-visible:ring-[#BFDBFE]"
-                  aria-label="Rechercher une conversation"
-                />
-              </div>
-
-              <div className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div className="flex min-w-max items-start gap-4 py-1">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/stories/create")}
-                    className="group flex w-[74px] shrink-0 flex-col items-center"
-                  >
-                    <div className="relative rounded-full bg-white p-[3px] shadow-[0_8px_18px_-12px_rgba(15,23,42,0.55)]">
-                      <div className="h-[68px] w-[68px] overflow-hidden rounded-full border border-[#DBEAFE] bg-[#EFF6FF]">
-                        <Avatar className="h-full w-full">
-                          <AvatarImage src="" />
-                          <AvatarFallback className="bg-[#DBEAFE] text-[#2563EB]">VS</AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <span className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#2563EB] text-white shadow-sm">
-                        <Plus className="h-3.5 w-3.5" />
-                      </span>
-                    </div>
-                    <span className="mt-2 max-w-full truncate text-[12px] font-medium text-[#0F172A]">Votre story</span>
-                  </button>
-
-                  {storyCarouselItems.map((story) => (
-                    <button
-                      key={story.id}
-                      type="button"
-                      onClick={() => setStoryAuthorId(story.userId)}
-                      className="group flex w-[74px] shrink-0 flex-col items-center"
-                    >
-                      <div
-                        className={cn(
-                          "rounded-full p-[2.5px] shadow-[0_8px_18px_-12px_rgba(15,23,42,0.55)]",
-                          story.seen
-                            ? "bg-[#E2E8F0]"
-                            : "bg-[linear-gradient(135deg,#2563EB_0%,#60A5FA_52%,#93C5FD_100%)]"
-                        )}
-                      >
-                        <Avatar className="h-16 w-16 border-2 border-white">
-                          <AvatarImage src={story.avatarUrl} />
-                          <AvatarFallback className="bg-[#E2E8F0] text-[#334155]">
-                            {story.label.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <span className="mt-2 max-w-full truncate text-[12px] font-medium text-[#0F172A]">{story.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+        <div className="space-y-ios-3 pb-ios-2 pt-ios-3">
+          <div className="ios-card w-full overflow-hidden border border-border/60 border-x-0 rounded-none sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border-x">
+            <div className="flex items-center justify-between px-ios-3 pt-3">
+              <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Stories
+              </p>
+              <button
+                type="button"
+                onClick={() => setStoriesRefreshToken((t) => t + 1)}
+                className="text-[12px] font-medium text-primary"
+              >
+                Actualiser
+              </button>
+            </div>
+            <SessionStoriesStrip
+              currentUserId={user?.id ?? null}
+              refreshToken={storiesRefreshToken}
+              onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+              onCreateStory={() => navigate("/stories/create")}
+            />
+          </div>
 
           {/* Conversations List */}
-          <div className={conversations.length === 0 ? "rounded-[20px] bg-white" : "space-y-2"}>
+          <div className={conversations.length === 0 ? "ios-card overflow-hidden" : "ios-list-stack"}>
             {conversations.length === 0 ? (
               <div className={emptyStateSx.shell}>
                 <div className={emptyStateSx.iconCircle}>
@@ -3159,8 +3085,8 @@ const Messages = () => {
                   >
                     <div
                       className={cn(
-                        "relative flex items-center gap-3 rounded-[20px] border border-[#E2E8F0] bg-white px-3.5 py-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)]",
-                        selectedConversations.has(conversation.id) && "border-[#93C5FD] bg-[#EFF6FF]"
+                        "ios-list-row flex items-center gap-ios-3 relative",
+                        selectedConversations.has(conversation.id) && "bg-primary/5"
                       )}
                       onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
                       onTouchEnd={handleLongPressEnd}
@@ -3189,22 +3115,22 @@ const Messages = () => {
                         }
                       >
                         {isSelectionMode && selectedConversations.has(conversation.id) ? (
-                          <div className="h-[54px] w-[54px] min-w-[54px] min-h-[54px] rounded-full border-2 border-[#2563EB] bg-[#2563EB] flex items-center justify-center">
-                            <Check className="h-5 w-5 text-white" />
+                          <div className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] rounded-full border-2 border-primary bg-primary flex items-center justify-center">
+                            <Check className="h-5 w-5 text-primary-foreground" />
                           </div>
                         ) : (
-                          <Avatar className="h-[54px] w-[54px] min-w-[54px] min-h-[54px] aspect-square avatar-fixed border border-[#E2E8F0]">
+                          <Avatar className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] aspect-square avatar-fixed">
                             {conversation.is_group ? (
                               <>
                                 <AvatarImage src={conversation.group_avatar_url || ""} />
-                                <AvatarFallback className="bg-[#EFF6FF]">
-                                  <Users className="h-6 w-6 text-[#2563EB]" />
+                                <AvatarFallback className="bg-secondary">
+                                  <Users className="h-6 w-6 text-muted-foreground" />
                                 </AvatarFallback>
                               </>
                             ) : (
                               <>
                                 <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                                <AvatarFallback className="bg-[#F1F5F9] text-[17px] font-semibold text-[#334155]">
+                                <AvatarFallback className="bg-secondary text-[17px] font-semibold">
                                   {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </>
@@ -3215,9 +3141,9 @@ const Messages = () => {
                           <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
                         )}
                       </button>
-
-                      <div
-                        className="min-w-0 flex-1"
+                      
+                      <div 
+                        className="flex-1 min-w-0"
                         onClick={() => {
                           if (isSelectionMode) {
                             toggleConversationSelection(conversation.id);
@@ -3228,36 +3154,25 @@ const Messages = () => {
                           }
                         }}
                       >
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <div className="flex min-w-0 items-center gap-1.5">
+                        <div className="flex items-center justify-between mb-ios-1">
+                          <div className="flex items-center gap-ios-2 min-w-0">
                             {pinnedConversations.has(conversation.id) && (
-                              <span className="flex-shrink-0 text-[13px]">📌</span>
+                              <span className="text-[13px] flex-shrink-0">📌</span>
                             )}
-                            <p className="truncate text-[17px] font-semibold text-[#0F172A]">
-                              {conversation.is_group
-                                ? conversation.group_name
+                            <p className="text-ios-headline font-medium truncate">
+                              {conversation.is_group 
+                                ? conversation.group_name 
                                 : (conversation.other_participant?.username || "Utilisateur")
                               }
                             </p>
                           </div>
-                          <span className="shrink-0 text-[13px] font-medium text-[#64748B]">
-                            {(() => {
-                              const date = new Date(conversation.last_message_date || conversation.updated_at);
-                              const now = new Date();
-                              const diffMs = now.getTime() - date.getTime();
-                              const diffMin = Math.floor(diffMs / 60000);
-                              const diffH = Math.floor(diffMs / 3600000);
-                              const diffD = Math.floor(diffMs / 86400000);
-                              if (diffMin < 1) return "à l'instant";
-                              if (diffMin < 60) return `${diffMin} min`;
-                              if (diffH < 24) return `${diffH}h`;
-                              if (diffD < 7) return format(date, 'EEEE', { locale: fr });
-                              return format(date, 'dd/MM', { locale: fr });
-                            })()}
-                          </span>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-[15px] text-[#64748B]">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-ios-subheadline truncate ${
+                            conversation.unread_count > 0 
+                              ? 'text-foreground font-medium' 
+                              : 'text-muted-foreground'
+                          }`}>
                             {conversation.last_message ? (
                               <>
                                 {conversation.last_message.message_type === 'image' && (
@@ -3277,35 +3192,66 @@ const Messages = () => {
                                 {conversation.last_message.message_type === 'poll' && '📊 Sondage'}
                                 {conversation.last_message.message_type === 'coaching_session' && '🎓 Séance coach'}
                                 {conversation.last_message.message_type === 'system' && (
-                                  <span className="italic text-[#64748B]">
+                                  <span className="italic text-muted-foreground">
                                     {conversation.last_message.content}
                                   </span>
                                 )}
-                                {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') &&
-                                  (conversation.last_message.content?.length > 40
-                                    ? conversation.last_message.content.substring(0, 40) + '…'
+                                {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
+                                  (conversation.last_message.content?.length > 40 
+                                    ? conversation.last_message.content.substring(0, 40) + '…' 
                                     : conversation.last_message.content || 'Message supprimé'
                                   )
                                 }
                               </>
                             ) : (
-                              conversation.is_group
+                              conversation.is_group 
                                 ? `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? 's' : ''}`
                                 : 'Aucun message'
                             )}
                           </p>
                           {conversation.unread_count > 0 && (
-                            <div className="ml-2 flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[#2563EB] px-1.5">
-                              <span className="text-[11px] font-semibold text-white">
+                            <div className="h-5 min-w-5 px-ios-1 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-ios-2 animate-[pulse_2s_ease-in-out_infinite]">
+                              <span className="text-[11px] font-semibold text-primary-foreground">
                                 {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                               </span>
                             </div>
                           )}
                         </div>
                       </div>
-
+                      
+                      {/* Right column: time + camera */}
+                      <div className="flex items-center justify-center gap-ios-2 flex-shrink-0 ml-ios-2">
+                        <span className="text-[13px] text-muted-foreground">
+                          {(() => {
+                            const date = new Date(conversation.last_message_date || conversation.updated_at);
+                            const now = new Date();
+                            const diffMs = now.getTime() - date.getTime();
+                            const diffMin = Math.floor(diffMs / 60000);
+                            const diffH = Math.floor(diffMs / 3600000);
+                            const diffD = Math.floor(diffMs / 86400000);
+                            if (diffMin < 1) return "à l'instant";
+                            if (diffMin < 60) return `${diffMin} min`;
+                            if (diffH < 24) return `${diffH}h`;
+                            if (diffD < 7) return format(date, 'EEEE', { locale: fr });
+                            return format(date, 'dd/MM', { locale: fr });
+                          })()}
+                        </span>
+                        {!isSelectionMode && (
+                          <button
+                            className="p-ios-1 rounded-full active:bg-secondary transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickCameraForConversation(conversation);
+                            }}
+                          >
+                            <Camera className="h-5 w-5 text-muted-foreground" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* iOS-style inset separator */}
                       {index < filteredAndSortedConversations.length - 1 && (
-                        <div className="pointer-events-none absolute -bottom-1 left-[84px] right-4 h-px bg-[#EEF2F7]" />
+                        <div className="absolute bottom-0 left-[76px] right-0 h-px bg-border" />
                       )}
                     </div>
                   </SwipeableConversationItem>
