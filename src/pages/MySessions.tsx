@@ -643,6 +643,25 @@ export default function MySessions() {
     return true;
   });
 
+  /** Points calendrier : agrège créées + rejointes pour la vue mensuelle (style « Mon plan »). */
+  const monthDots: MonthSessionDot[] = useMemo(() => {
+    const merged = [...sessions, ...joinedSessions];
+    const seen = new Set<string>();
+    const dots: MonthSessionDot[] = [];
+    for (const s of merged) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      dots.push({
+        id: s.id,
+        scheduled_at: s.scheduled_at,
+        objective: (s as any).objective ?? null,
+        title: s.title ?? '',
+        activity_type: (s as any).activity_type ?? '',
+      });
+    }
+    return dots;
+  }, [sessions, joinedSessions]);
+
   const openConfirmDialog = (session: UserSession) => {
     setConfirmTarget({
       sessionId: session.id,
