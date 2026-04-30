@@ -13,6 +13,7 @@ interface PlanningHeaderProps {
 export function PlanningHeader({ onOpenMenu, title, subtitle }: PlanningHeaderProps) {
   return (
     <div className="pt-[var(--safe-area-top)]">
+      {/* Header unifié : px-4 / py-3 (cohérent avec Messages, MySessions, Home). */}
       <IosPageHeaderBar
         left={
           <button
