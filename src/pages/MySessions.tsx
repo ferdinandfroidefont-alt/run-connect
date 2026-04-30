@@ -172,6 +172,7 @@ export default function MySessions() {
   const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => new Date());
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
   const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
