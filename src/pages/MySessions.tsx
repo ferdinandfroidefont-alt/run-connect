@@ -1068,32 +1068,15 @@ export default function MySessions() {
 
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
-              {sessionSource === "to-confirm" ? (
-                <div className="min-h-0 px-ios-4 pb-ios-6">
-                  <ConfirmPresencePage embedded />
-                </div>
-              ) : (
-                <>
-              {/* List/Calendar toggle */}
-              <div className="flex px-ios-4 mb-ios-1">
-                <div className="flex ios-card rounded-ios-lg p-ios-1 shrink-0">
-                  <button
-                    onClick={() => setSessionsDisplayMode('list')}
-                    className={`p-ios-1 rounded-ios-sm transition-colors ${
-                      sessionsDisplayMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <List className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setSessionsDisplayMode('calendar')}
-                    className={`p-ios-1 rounded-ios-sm transition-colors ${
-                      sessionsDisplayMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                  </button>
-                </div>
+              <>
+              {/* Calendrier mensuel — même rendu que « Mon plan » coaching */}
+              <div className="px-ios-4 mb-ios-3">
+                <MonthlyCalendarView
+                  monthDate={calendarMonth}
+                  sessions={monthDots}
+                  onPrevMonth={() => setCalendarMonth((d) => subMonths(d, 1))}
+                  onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
+                />
               </div>
 
               {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
