@@ -1063,58 +1063,6 @@ export default function MySessions() {
             <h1 className="text-ios-title1 font-bold text-center">{t("navigation.mySessions")}</h1>
           </div>
           
-          {/* iOS Segmented Control */}
-          <div className="px-ios-4 pb-ios-2">
-            <div className="bg-secondary rounded-ios-lg p-ios-1">
-              <div className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center">
-                Programmées
-              </div>
-              <div className="mt-ios-1 flex gap-ios-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSessionSource('created');
-                    setSessionPage(0);
-                  }}
-                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                    sessionSource === 'created'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  Créées
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSessionSource('joined');
-                    setSessionPage(0);
-                  }}
-                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                    sessionSource === 'joined'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  Rejointes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSessionSource('to-confirm');
-                    setSessionPage(0);
-                  }}
-                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                    sessionSource === 'to-confirm'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  À confirmer
-                </button>
-              </div>
-            </div>
-          </div>
           <div className="h-px bg-border" />
         </div>
 
