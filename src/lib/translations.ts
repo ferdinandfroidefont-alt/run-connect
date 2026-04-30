@@ -245,6 +245,9 @@ const _translationBundles: Record<string, any> = {
       feedActivity: 'Fil d\'activité',
       scrollNavHint: 'Faire défiler la navigation',
       switchNavSet: 'Changer de set de navigation',
+      homeMapPlanning: 'Planification',
+      homeMapTracking: 'Suivi',
+      homeMapRouteCreation: 'Création itinéraire',
     },
     brand: {
       tagline: 'Planifie. Bouge. Progresse.',
@@ -650,6 +653,9 @@ const _translationBundles: Record<string, any> = {
       feedActivity: 'Activity',
       scrollNavHint: 'Scroll navigation',
       switchNavSet: 'Switch navigation set',
+      homeMapPlanning: 'Planning',
+      homeMapTracking: 'Tracking',
+      homeMapRouteCreation: 'Route planner',
     },
     brand: {
       tagline: 'Plan. Move. Progress.',

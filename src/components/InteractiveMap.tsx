@@ -36,7 +36,7 @@ import { format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useShareProfile } from '@/hooks/useShareProfile';
-import { formatPlannedSessionsLine, usePlannedSessionCount } from '@/hooks/usePlannedSessionCount';
+import { useUserProfile } from '@/contexts/UserProfileContext';
 import { QRShareDialog } from './QRShareDialog';
 import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
 import { cn, formatProfileFirstLastName } from '@/lib/utils';
@@ -349,7 +349,7 @@ export const InteractiveMap = ({
   const {
     user,
   } = useAuth();
-  const plannedSessionCount = usePlannedSessionCount(user?.id);
+  const { userProfile } = useUserProfile();
   const {
     setRefreshSessions,
     setOpenCreateSession,
@@ -1793,30 +1793,39 @@ export const InteractiveMap = ({
           <header
             className={cn(
               "runconnect-home-top-header home-map-page-header pointer-events-auto relative shrink-0 bg-white dark:bg-black",
-              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
+              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[12px] after:bg-gradient-to-b after:from-white after:to-transparent dark:after:from-black dark:after:to-transparent",
             )}
           >
-            {/* En-tête maquette : titre Accueil + rappel séances | notifications + réglages */}
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
-              <div className="relative flex min-h-[3rem] items-center justify-between gap-3 px-4 pb-4 pt-2">
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-[22px] font-bold leading-tight tracking-tight text-foreground">
+              {/* Rangée 1 — maquette : Accueil + avatar circulaire | notifications + réglages */}
+              <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-2 pt-2.5">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <h1 className="min-w-0 shrink text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#000000] dark:text-foreground">
                     {t("navigation.home")}
                   </h1>
-                  {user && plannedSessionCount !== null ? (
-                    <p className="mt-0.5 text-[12px] font-medium leading-tight text-muted-foreground">
-                      {formatPlannedSessionsLine(plannedSessionCount)}
-                    </p>
+                  {user ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowProfileDialog(true)}
+                      className="shrink-0 touch-manipulation rounded-full outline-none transition-[transform,opacity] active:scale-[0.96] active:opacity-85 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      aria-label={t("navigation.profile")}
+                    >
+                      <Avatar className="h-9 w-9 border border-[#E5E5EA] shadow-sm dark:border-[#2c2c2e]">
+                        <AvatarImage src={userProfile?.avatar_url ?? undefined} alt="" />
+                        <AvatarFallback className="bg-[#E5E5EA] text-[13px] font-semibold text-[#3C3C43] dark:bg-[#2c2c2e] dark:text-foreground">
+                          {(userProfile?.username?.[0] ?? user?.email?.[0] ?? "?").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
                   ) : null}
                 </div>
-                {!user && <div className="min-w-0 flex-1" />}
 
                 <div className="home-map-header-actions flex shrink-0 items-center gap-2">
                   <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
                     <Suspense
                       fallback={
                         <div
-                          className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
+                          className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[10px] border border-[#E5E5EA] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
                           aria-hidden
                         />
                       }
@@ -1827,17 +1836,64 @@ export const InteractiveMap = ({
                   <button
                     type="button"
                     className={cn(
-                      "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
-                      "border border-transparent dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
-                      "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
-                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[10px] outline-none",
+                      "border border-[#E5E5EA] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
+                      "text-[#1A1A1A] transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:text-foreground",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     )}
-                    aria-label="Paramètres"
+                    aria-label={t("navigation.settings")}
                     onClick={() => setShowSettingsDialog(true)}
                   >
                     <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
                   </button>
                 </div>
+              </div>
+
+              {/* Rangée 2 — onglets façon maquette (Souligné bleu iOS sur l’actif) */}
+              <div
+                role="tablist"
+                aria-label={t("navigation.home")}
+                className="flex items-end gap-5 px-4 pb-3 pt-1"
+              >
+                {(
+                  [
+                    { id: "planning" as const, label: t("navigation.homeMapPlanning"), to: "/" },
+                    { id: "tracking" as const, label: t("navigation.homeMapTracking"), to: "/participants" },
+                    {
+                      id: "routes" as const,
+                      label: t("navigation.homeMapRouteCreation"),
+                      to: "/route-create",
+                    },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab.id === "planning"}
+                    className={cn(
+                      "touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold leading-tight tracking-tight transition-colors",
+                      tab.id === "planning"
+                        ? "text-[#007AFF] dark:text-[#0A84FF]"
+                        : "text-[#8E8E93] dark:text-[#8E8E93]",
+                    )}
+                    onClick={() => {
+                      if (tab.to !== location.pathname) {
+                        navigate(tab.to);
+                      }
+                    }}
+                  >
+                    <span className="relative inline-block pb-2">
+                      {tab.label}
+                      {tab.id === "planning" ? (
+                        <span
+                          className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </header>
@@ -1852,7 +1908,7 @@ export const InteractiveMap = ({
               <div className="relative z-[45] min-w-0 isolate">
                 <form
                   className={cn(
-                    "relative z-0 home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
+                    "relative z-0 home-map-search-glass flex items-center gap-2 rounded-full px-3.5",
                     "transition-[box-shadow,border-color,background-color] duration-200 ease-out motion-reduce:transition-none"
                   )}
                   onSubmit={(e) => {
@@ -1861,13 +1917,13 @@ export const InteractiveMap = ({
                   }}
                 >
                   <Search
-                    className="h-4 w-4 shrink-0 text-muted-foreground/55"
+                    className="h-[18px] w-[18px] shrink-0 text-[#8E8E93]"
                     strokeWidth={2}
                     aria-hidden
                   />
                   <Input
                     ref={searchInputRef}
-                    placeholder="Rechercher un lieu ou une séance…"
+                    placeholder="Rechercher un lieu ou une séance..."
                     value={filters.search_query}
                     onChange={(e) =>
                       setFilters((prev) => ({
@@ -1880,8 +1936,8 @@ export const InteractiveMap = ({
                     autoCorrect="off"
                     spellCheck={false}
                     className={cn(
-                      "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground/88",
-                      "shadow-none placeholder:text-muted-foreground/48",
+                      "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-[#3C3C43]",
+                      "shadow-none placeholder:text-[#8E8E93]",
                       "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
                       "focus-visible:ring-0 focus-visible:ring-offset-0"
                     )}
@@ -1939,7 +1995,9 @@ export const InteractiveMap = ({
                     (expandedFilter === 'activity' || filters.activity_types.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5 shrink-0" /> Sport: {activeActivityLabel}</span>
+                  <span className="flex items-center gap-1.5">
+                    <Activity className="h-3.5 w-3.5 shrink-0" /> Sport : {activeActivityLabel}
+                  </span>
                 </button>
                 <button
                   type="button"

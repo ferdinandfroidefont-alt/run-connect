@@ -638,8 +638,8 @@ export const NotificationCenter = ({
           type="button"
           className={cn(
             /* Pas h-10 w-10 : sur iOS WebKit, index.css force .h-10.w-10 à 2rem et décale le badge */
-            "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
-            "shadow-[0_1px_3px_rgba(0,0,0,0.06)] outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
+            "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] border border-[#E5E5EA] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
+            "outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           )}
           aria-label="Notifications"
@@ -648,9 +648,9 @@ export const NotificationCenter = ({
           {unreadCount > 0 && (
             <span
               className={cn(
-                "absolute right-0 top-0 z-[1] min-h-[18px] -translate-y-1/2 translate-x-1/2 rounded-md bg-[#FF3B30] px-1",
+                "absolute right-0 top-0 z-[1] min-h-[18px] min-w-[18px] -translate-y-1/2 translate-x-1/2 rounded-full bg-[#FF3B30] px-1",
                 "text-center text-[10px] font-semibold leading-[18px] tracking-tight text-white shadow-sm",
-                badgeLabel.length <= 1 ? "min-w-[18px]" : badgeLabel.length <= 2 ? "min-w-[22px] px-1.5" : "min-w-[28px] px-1"
+                badgeLabel.length <= 1 ? "px-0" : badgeLabel.length <= 2 ? "min-w-[20px] px-1" : "min-w-[26px] px-1"
               )}
             >
               {badgeLabel}
