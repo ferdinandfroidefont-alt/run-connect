@@ -28,7 +28,6 @@ import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
@@ -70,7 +69,6 @@ const Auth = () => {
   const [acceptSignupTerms, setAcceptSignupTerms] = useState(false);
   const captchaRef = useRef<CaptchaWidgetRef>(null);
   const { toast } = useToast();
-  const { t } = useLanguage();
 
   const waitForSessionAndNavigateHome = async (opts?: { timeoutMs?: number; source?: string }) => {
     const timeoutMs = opts?.timeoutMs ?? 6000;
@@ -840,8 +838,8 @@ const Auth = () => {
       <div className="min-h-[40px] flex-1" />
 
       <AuthBrandMark
-        title={t("brand.wordmark")}
-        subtitle={`${t("brand.tagline")} ${t("auth.landingSubtitle")}`}
+        title="Bougez ensemble avec RunConnect"
+        subtitle="Créez votre compte pour découvrir, organiser et rejoindre des séances autour de vous."
       />
 
       {/* Action buttons */}

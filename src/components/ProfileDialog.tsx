@@ -26,7 +26,6 @@ import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog"
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
 import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Profile {
   username: string;
@@ -71,15 +70,11 @@ const HIGHLIGHT_GRID_MOVE_CANCEL_PX = 16;
 interface ProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Contenu pleine page (onglet Profil) : pas de portail ni voile modal. */
-  variant?: "modal" | "page";
 }
 export const ProfileDialog = ({
   open,
-  onOpenChange,
-  variant = "modal",
+  onOpenChange
 }: ProfileDialogProps) => {
-  const isPageVariant = variant === "page";
   const {
     user,
   } = useAuth();
@@ -87,7 +82,6 @@ export const ProfileDialog = ({
   const { isPreviewMode, previewIdentity } = useAppPreview();
   const { userProfile } = useUserProfile();
   const navigate = useNavigate();
-  const { t } = useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -191,7 +185,7 @@ export const ProfileDialog = ({
     loading: cameraLoading
   } = useCamera();
   useEffect(() => {
-    if (!user || (!open && !isPageVariant)) return;
+    if (!user || !open) return;
     setLoading(true);
     if (isPreviewMode && userProfile && previewIdentity) {
       const data = userProfile as unknown as Profile;
@@ -238,7 +232,7 @@ export const ProfileDialog = ({
     void fetchFollowCounts();
     void fetchReliabilityStats();
     void fetchStoriesAndHighlights();
-  }, [user, open, isPageVariant, isPreviewMode, userProfile, previewIdentity]);
+  }, [user, open, isPreviewMode, userProfile, previewIdentity]);
   const fetchStoriesAndHighlights = async () => {
     if (!user) return;
     const [{ data: stories }, { data: highlights }] = await Promise.all([
@@ -623,15 +617,8 @@ export const ProfileDialog = ({
     }
   };
   /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
-  const profileDialogShellClassName = cn(
-    "flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary",
-    isPageVariant ? "h-full max-h-full" : "z-[116] h-[100dvh] max-h-[100dvh]"
-  );
-
-  const handleProfileBack = () => {
-    if (isPageVariant) navigate("/");
-    else onOpenChange(false);
-  };
+  const profileDialogShellClassName =
+    "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
 
   const hasActiveOwnStory = ownStories.some((story) => {
     const expiresAtMs = Date.parse(story.expires_at);
@@ -656,8 +643,15 @@ export const ProfileDialog = ({
     isPremiumUser ? "Premium" : null,
   ].filter(Boolean) as string[];
 
-  const profileShellBody = (
-    <>
+  return <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        {open ? (
+        <DialogContent
+          data-tutorial="tutorial-profile-page"
+          hideCloseButton
+          fullScreen
+          className={profileDialogShellClassName}
+        >
           {loading ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
             <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
@@ -672,18 +666,13 @@ export const ProfileDialog = ({
             <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
               <button
                 type="button"
-                onClick={() => handleProfileBack()}
+                onClick={() => onOpenChange(false)}
                 className="flex min-w-0 max-w-[42%] items-center gap-1 text-primary"
               >
                 <ArrowLeft className="h-5 w-5 shrink-0" />
                 <span className="truncate text-[17px]">Retour</span>
               </button>
-              <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-1">
-                <h1 className="w-full truncate text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
-                <p className="mt-0.5 max-w-[220px] text-center text-[11px] font-medium leading-tight text-primary/80">
-                  {t("brand.tagline")}
-                </p>
-              </div>
+              <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
               <button
                 type="button"
                 onClick={() => setShowSettingsDialog(true)}
@@ -697,12 +686,7 @@ export const ProfileDialog = ({
            <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-secondary">
              <div className="box-border min-w-0 max-w-full">
                 {/* Profile Header - Instagram layout: avatar + stats side by side */}
-                <div className="relative overflow-hidden bg-card border-b border-border">
-                  <div
-                    className="pointer-events-none absolute inset-x-0 top-0 h-[7.5rem] bg-gradient-to-br from-primary/[0.18] via-primary/[0.08] to-transparent"
-                    aria-hidden
-                  />
-                  <div className="relative px-4 pt-5 pb-4">
+                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
                   <div className="flex items-center gap-5">
                     {/* Avatar */}
                     <button type="button" className="relative shrink-0" onClick={handleAvatarPress}>
@@ -838,7 +822,6 @@ export const ProfileDialog = ({
                       Partager
                     </Button>
                   </div>
-                </div>
                 </div>
 
               {/* Stories à la une - cercles style Instagram */}
@@ -1056,48 +1039,29 @@ export const ProfileDialog = ({
                 </>
               )}
             </div>
-          </div>
 
-          <div className="shrink-0 border-t border-border bg-card px-4 pt-2 pb-[max(14px,env(safe-area-inset-bottom,0px))]">
-            <div className="mx-auto w-full max-w-md">
-              <Button
-                type="button"
-                className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold shadow-md shadow-black/[0.07] ring-1 ring-black/[0.05] dark:shadow-black/30 dark:ring-white/[0.08]"
-                onClick={() => {
-                  onOpenChange(false);
-                  navigate("/stories/create");
-                }}
-              >
-                <Video className="h-4 w-4 shrink-0" />
-                Créer une story
-              </Button>
+            {/* Bouton créer une story — inline (non sticky) pour éviter le chevauchement avec la tab bar */}
+            <div className="px-4 pt-3 pb-[calc(var(--bottom-nav-offset,72px)+env(safe-area-inset-bottom,0px)+12px)]">
+              <div className="mx-auto w-full max-w-md">
+                <Button
+                  type="button"
+                  className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold shadow-md shadow-black/[0.07] ring-1 ring-black/[0.05] dark:shadow-black/30 dark:ring-white/[0.08]"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate("/stories/create");
+                  }}
+                >
+                  <Video className="h-4 w-4 shrink-0" />
+                  Créer une story
+                </Button>
+              </div>
             </div>
           </div>
           </div>
           )}
-    </>
-  );
-
-  return (
-    <>
-      {isPageVariant ? (
-        <div data-tutorial="tutorial-profile-page" className={profileDialogShellClassName}>
-          {profileShellBody}
-        </div>
-      ) : (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-          {open ? (
-            <DialogContent
-              data-tutorial="tutorial-profile-page"
-              hideCloseButton
-              fullScreen
-              className={profileDialogShellClassName}
-            >
-              {profileShellBody}
-            </DialogContent>
-          ) : null}
-        </Dialog>
-      )}
+        </DialogContent>
+        ) : null}
+      </Dialog>
 
       <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} />
 
@@ -1377,6 +1341,5 @@ export const ProfileDialog = ({
         username={profile?.username?.trim() || "Profil"}
         stackNested
       />
-    </>
-  );
+    </>;
 };

@@ -735,12 +735,11 @@ const Messages = () => {
     navigate(`/?${params.toString()}`);
   };
 
-  // Long press handlers
+  // Long press handlers — open quick camera instead of selection mode
   const handleLongPressStart = (conversation: Conversation) => {
     const timer = setTimeout(() => {
-      setIsSelectionMode(true);
-      setSelectedConversations(new Set([conversation.id]));
-    }, 1000); // 1000ms for long press (doubled from 500ms)
+      handleQuickCameraForConversation(conversation);
+    }, 500); // 500ms long press to open camera
     setLongPressTimer(timer);
   };
 
@@ -2990,10 +2989,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <div className="flex flex-col items-center justify-center gap-0.5 text-center px-10">
-                  <h1 className="text-ios-title1 font-bold">{t("navigation.messages")}</h1>
-                  <p className="text-[11px] font-medium text-primary/80 leading-tight">{t("brand.tagline")}</p>
-                </div>
+                <h1 className="text-ios-title1 font-bold text-center">{t("navigation.messages")}</h1>
                 <div className="absolute right-ios-4 flex items-center gap-ios-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}
@@ -3009,65 +3005,7 @@ const Messages = () => {
           </div>
           }
         >
-        <div className="space-y-ios-3 pb-ios-2">
-          {/* Quick Search Buttons */}
-          <div className="ios-card p-ios-3 !mt-0 !rounded-t-none border-t-0">
-            <div className="grid grid-cols-5 gap-ios-2">
-              <button
-                onClick={() => navigate('/search?tab=profiles')}
-                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Profils</span>
-              </button>
-              
-              <button
-                onClick={() => navigate('/search?tab=contacts')}
-                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Contacts</span>
-              </button>
-              
-              <button
-                onClick={() => navigate('/search?tab=clubs')}
-                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Clubs</span>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => navigate("/search?tab=strava")}
-                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-[#FC4C02] flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor" aria-hidden>
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L8.443 0 2.335 12.172h4.171" />
-                  </svg>
-                </div>
-                <span className="text-[11px] text-muted-foreground">Strava</span>
-              </button>
-
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
-                  <Plus className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Club</span>
-              </button>
-            </div>
-          </div>
-
+        <div className="space-y-ios-3 pb-ios-2 pt-ios-3">
           {/* Search Conversations */}
           <div className="relative px-ios-4">
             <Search className="absolute left-ios-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

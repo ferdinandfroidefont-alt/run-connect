@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn, formatProfileFirstLastName } from '@/lib/utils';
 import { StreakBadge } from '@/components/StreakBadge';
 import { formatPlannedSessionsLine, usePlannedSessionCount } from '@/hooks/usePlannedSessionCount';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 const NotificationCenter = lazy(() =>
   import('@/components/NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -38,7 +37,6 @@ export const FeedHeader = ({
   onBrandClick,
 }: FeedHeaderProps) => {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const plannedSessionCount = usePlannedSessionCount(user?.id);
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null; display_name: string | null }>({
@@ -132,7 +130,6 @@ export const FeedHeader = ({
                   {formatPlannedSessionsLine(plannedSessionCount)}
                 </p>
               )}
-              <p className="text-[11px] font-medium leading-tight text-primary/80">{t('brand.tagline')}</p>
             </div>
           </div>
         )}

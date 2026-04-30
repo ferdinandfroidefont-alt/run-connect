@@ -346,6 +346,7 @@ export const InteractiveMap = ({
   highlightSessionId,
   isActive = true,
 }: InteractiveMapProps = {}) => {
+  const HOME_PROFILE_CACHE_KEY = "runconnect_home_profile_cache_v1";
   const {
     user,
   } = useAuth();
@@ -401,6 +402,11 @@ export const InteractiveMap = ({
     level: null
   });
   const [mapboxMap, setMapboxMap] = useState<Map | null>(null);
+  const [userProfile, setUserProfile] = useState<{
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   /** Incrémenté à chaque `createMarkers` pour ignorer les invocations async obsolètes (courses au clavier). */
   const markersRunIdRef = useRef(0);
@@ -658,6 +664,49 @@ export const InteractiveMap = ({
       { replace: true },
     );
   }, [isActive, searchParams, setSearchParams]);
+
+  // Load user profile
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Affichage immédiat depuis cache local pour éviter le "trou" avatar au boot.
+    try {
+      const cachedRaw = localStorage.getItem(`${HOME_PROFILE_CACHE_KEY}_${user.id}`);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw) as {
+          username?: string;
+          display_name?: string;
+          avatar_url?: string | null;
+        };
+        if (cached?.username || cached?.display_name || cached?.avatar_url) {
+          setUserProfile({
+            username: cached.username || '',
+            display_name: cached.display_name || '',
+            avatar_url: cached.avatar_url ?? null,
+          });
+        }
+      }
+    } catch {
+      /* ignore cache parse */
+    }
+
+    const loadUserProfile = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, display_name, avatar_url')
+        .eq('user_id', user.id)
+        .single();
+      if (profile) {
+        setUserProfile(profile);
+        try {
+          localStorage.setItem(`${HOME_PROFILE_CACHE_KEY}_${user.id}`, JSON.stringify(profile));
+        } catch {
+          /* ignore cache write */
+        }
+      }
+    };
+    void loadUserProfile();
+  }, [user]);
 
   // Function to mark a session as new with 5 second pulse animation
   const markSessionAsNew = (sessionId: string) => {
@@ -1796,29 +1845,69 @@ export const InteractiveMap = ({
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[12px] after:bg-gradient-to-b after:from-white after:to-transparent dark:after:from-black dark:after:to-transparent",
             )}
           >
+            {/* Même rangée que Feed : avatar + salutation | cloche + paramètres */}
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
-              {/* Rangée 1 — maquette : Accueil + avatar circulaire | notifications + réglages */}
-              <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-2 pt-2.5">
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <h1 className="min-w-0 shrink text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#000000] dark:text-foreground">
-                    {t("navigation.home")}
-                  </h1>
-                  {user ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowProfileDialog(true)}
-                      className="shrink-0 touch-manipulation rounded-full outline-none transition-[transform,opacity] active:scale-[0.96] active:opacity-85 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                      aria-label={t("navigation.profile")}
-                    >
-                      <Avatar className="h-9 w-9 border border-[#E5E5EA] shadow-sm dark:border-[#2c2c2e]">
-                        <AvatarImage src={userProfile?.avatar_url ?? undefined} alt="" />
-                        <AvatarFallback className="bg-[#E5E5EA] text-[13px] font-semibold text-[#3C3C43] dark:bg-[#2c2c2e] dark:text-foreground">
-                          {(userProfile?.username?.[0] ?? user?.email?.[0] ?? "?").toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  ) : null}
-                </div>
+              <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
+                {user && (
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    {userProfile && (
+                      <div
+                        className="map-header-profile-anchor flex shrink-0 [isolation:isolate]"
+                        data-tutorial="profile-avatar"
+                      >
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setShowProfileDialog(true)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setShowProfileDialog(true);
+                            }
+                          }}
+                          className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
+                        >
+                          <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+                            <AvatarImage
+                              src={userProfile.avatar_url || undefined}
+                              alt={userProfile.username || userProfile.display_name}
+                              className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
+                            />
+                            <AvatarFallback className="map-header-profile-fallback text-2xl font-semibold">
+                              {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {user && (
+                            <div className="absolute -bottom-1 -right-1 scale-75">
+                              <StreakBadge userId={user.id} variant="compact" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <p className="select-none text-lg font-semibold leading-tight tracking-tight text-foreground">
+                        <span className="line-clamp-2 break-words text-primary">
+                          {userProfile
+                            ? formatProfileFirstLastName(userProfile.display_name, userProfile.username)
+                            : null}
+                        </span>
+                      </p>
+                      {plannedSessionCount !== null && (
+                        <p className="text-[12px] font-medium leading-tight text-muted-foreground">
+                          {formatPlannedSessionsLine(plannedSessionCount)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!user && (
+                  <div className="min-w-0 flex-1">
+                    <h1 className="min-w-0 shrink text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#000000] dark:text-foreground">
+                      {t("navigation.home")}
+                    </h1>
+                  </div>
+                )}
 
                 <div className="home-map-header-actions flex shrink-0 items-center gap-2">
                   <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">

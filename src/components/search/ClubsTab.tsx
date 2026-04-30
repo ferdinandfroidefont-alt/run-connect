@@ -1,14 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, Check, Filter, ChevronsUpDown } from "lucide-react";
-import { ClubResultRow } from "@/components/search/ClubResultRow";
-import { searchClubsByText, type ClubSearchHit } from "@/components/search/searchQueries";
+import { useNavigate } from "react-router-dom";
+import { Users, UserPlus, Copy, Check, Filter, ChevronsUpDown } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Club {
+  id: string;
+  group_name: string;
+  group_description: string | null;
+  group_avatar_url: string | null;
+  club_code: string;
+  created_by: string;
+  location?: string | null;
+  member_count?: number;
+  is_member?: boolean;
+}
 
 const departments = [
   "01 - Ain",
@@ -114,14 +128,15 @@ const departments = [
 
 export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
   const { user } = useAuth();
-  const [clubs, setClubs] = useState<ClubSearchHit[]>([]);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [clubs, setClubs] = useState<Club[]>([]);
   const [loading, setLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [departmentSearchOpen, setDepartmentSearchOpen] = useState(false);
 
-  const q = searchQuery.trim();
-  const codeQuery = q.toUpperCase();
-  const isLikelyCode = q.length >= 4 && q === codeQuery && /^[A-Z0-9]+$/.test(codeQuery);
+  const codeQuery = searchQuery.trim().toUpperCase();
 
   const searchClubsByCode = useCallback(async () => {
     if (!codeQuery) {
@@ -172,7 +187,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
         })
       );
 
-      setClubs(clubsWithStats as ClubSearchHit[]);
+      setClubs(clubsWithStats);
     } catch (error) {
       console.error("Error searching clubs:", error);
       setClubs([]);
@@ -182,7 +197,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
   }, [codeQuery, user?.id]);
 
   const loadPublicClubs = useCallback(async () => {
-    if (q) {
+    if (codeQuery) {
       return;
     }
     try {
@@ -236,7 +251,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
             };
           })
         );
-        setClubs(clubsWithStats as ClubSearchHit[]);
+        setClubs(clubsWithStats);
       } else {
         setClubs([]);
       }
@@ -246,52 +261,82 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
     } finally {
       setLoading(false);
     }
-  }, [q, user?.id, selectedDepartment]);
+  }, [codeQuery, user?.id, selectedDepartment]);
 
   useEffect(() => {
-    if (q.length >= 2 && !isLikelyCode) return;
-    if (isLikelyCode) {
+    if (codeQuery) {
       void searchClubsByCode();
-      return;
-    }
-    if (!q) {
+    } else {
       void loadPublicClubs();
-      return;
     }
-    setClubs([]);
-    setLoading(false);
-  }, [q, isLikelyCode, loadPublicClubs, searchClubsByCode]);
+  }, [codeQuery, loadPublicClubs, searchClubsByCode]);
 
-  useEffect(() => {
-    if (q.length < 2 || isLikelyCode) return;
-    let cancelled = false;
-    setLoading(true);
-    void searchClubsByText(supabase, user?.id, q)
-      .then((data) => {
-        if (!cancelled) setClubs(data);
-      })
-      .catch(() => {
-        if (!cancelled) setClubs([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+  const handleJoinClub = async (club: Club) => {
+    if (!user || club.is_member) return;
+
+    try {
+      const { error } = await supabase.from("group_members").insert([
+        {
+          conversation_id: club.id,
+          user_id: user.id,
+          is_admin: false,
+        },
+      ]);
+
+      if (error) throw error;
+
+      setClubs((prev) =>
+        prev.map((c) =>
+          c.id === club.id ? { ...c, is_member: true, member_count: (c.member_count || 0) + 1 } : c
+        )
+      );
+
+      toast({
+        title: "Succès !",
+        description: `Vous avez rejoint le club "${club.group_name}"`,
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [q, isLikelyCode, user?.id]);
+
+      navigate(`/messages?conversation=${club.id}`);
+    } catch (error) {
+      console.error("Error joining club:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de rejoindre le club",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyClubCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+      toast({
+        title: "Code copié !",
+        description: "Le code du club a été copié dans le presse-papiers",
+      });
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible de copier le code",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading && clubs.length === 0) {
     return (
-      <div className="divide-y divide-border">
+      <div className="p-ios-3 space-y-ios-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3">
-            <Skeleton className="h-12 w-12 shrink-0 rounded-ios-lg" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-24" />
+          <div key={i} className="ios-card p-ios-4">
+            <div className="flex items-center gap-ios-3">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
             </div>
-            <Skeleton className="h-9 w-20 shrink-0 rounded-lg" />
           </div>
         ))}
       </div>
@@ -299,9 +344,9 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {!q && (
-        <div className="space-y-3 px-ios-4 pt-ios-3">
+    <div className="p-ios-3 space-y-ios-3">
+      <div className="space-y-3">
+        {!codeQuery && (
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Popover open={departmentSearchOpen} onOpenChange={setDepartmentSearchOpen}>
@@ -310,7 +355,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                   variant="outline"
                   role="combobox"
                   aria-expanded={departmentSearchOpen}
-                  className="ios-surface w-full justify-between rounded-ios-md"
+                  className="w-full justify-between ios-surface rounded-ios-md"
                 >
                   <span className="truncate text-left">
                     {selectedDepartment || "Filtrer par département (optionnel)"}
@@ -357,44 +402,96 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
               </PopoverContent>
             </Popover>
           </div>
-          {clubs.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              Clubs publics
-              {selectedDepartment ? ` · ${selectedDepartment.split(" - ")[0]}` : ""}
-            </p>
-          )}
+        )}
+      </div>
+
+      {!codeQuery && clubs.length > 0 && (
+        <div className="ios-card p-ios-3">
+          <p className="text-sm text-muted-foreground">
+            Clubs publics
+            {selectedDepartment ? ` · ${selectedDepartment.split(" - ")[0]}` : ""}
+          </p>
         </div>
       )}
 
-      {isLikelyCode && (
-        <div className="px-ios-4 pt-ios-3">
+      {codeQuery && (
+        <div className="ios-card p-ios-3">
           <p className="text-sm text-muted-foreground">
-            Code club : <span className="font-mono font-semibold text-foreground">{codeQuery}</span>
+            Recherche par code exact : <span className="font-mono font-semibold text-foreground">{codeQuery}</span>
           </p>
         </div>
       )}
 
       {!loading && clubs.length === 0 && (
-        <div className="flex flex-col items-center px-6 py-12 text-center">
-          <Users className="mb-4 h-14 w-14 text-muted-foreground/70" />
-          <h3 className="mb-2 text-[17px] font-semibold">
-            {isLikelyCode ? "Aucun club" : q.length >= 2 ? "Aucun club" : "Aucun club public"}
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <Users className="mb-4 h-16 w-16 text-muted-foreground" />
+          <h3 className="mb-2 text-lg font-semibold">
+            {codeQuery ? "Aucun club trouvé" : "Aucun club public disponible"}
           </h3>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            {isLikelyCode
-              ? `Pas de club avec le code « ${codeQuery} ».`
-              : q.length >= 2
-                ? `Aucun résultat pour « ${q} ».`
-                : selectedDepartment
-                  ? `Rien dans ce département (${selectedDepartment.split(" - ")[0]}).`
-                  : "Saisis un nom de club, un code ou parcours les clubs publics ci-dessous."}
+          <p className="text-sm text-muted-foreground">
+            {codeQuery
+              ? `Aucun club avec le code « ${codeQuery} ». Vérifie le code ou demande un code à l’organisateur.`
+              : selectedDepartment
+                ? `Aucun club public ne correspond au département sélectionné (${selectedDepartment.split(" - ")[0]}).`
+                : "Utilise la barre de recherche en haut pour un code de club, ou choisis un département."}
           </p>
         </div>
       )}
 
-      <div className="divide-y divide-border">
-        {!loading && clubs.map((club) => <ClubResultRow key={club.id} club={club} />)}
-      </div>
+      {!loading &&
+        clubs.map((club) => (
+          <div key={club.id} className="ios-card p-ios-4">
+            <div className="flex items-start gap-ios-3">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={club.group_avatar_url || undefined} />
+                <AvatarFallback>
+                  <Users className="h-6 w-6" />
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="min-w-0 flex-1">
+                <h4 className="truncate font-semibold">{club.group_name}</h4>
+                {club.group_description && (
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{club.group_description}</p>
+                )}
+                {club.location && (
+                  <p className="mt-1 text-xs text-muted-foreground">📍 {club.location}</p>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {club.member_count || 0} membres
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyClubCode(club.club_code)}
+                    className="h-7 px-2"
+                  >
+                    {copiedCode === club.club_code ? (
+                      <Check className="mr-1 h-3 w-3" />
+                    ) : (
+                      <Copy className="mr-1 h-3 w-3" />
+                    )}
+                    <span className="font-mono text-xs">{club.club_code}</span>
+                  </Button>
+                </div>
+              </div>
+
+              {!club.is_member && user && (
+                <Button size="sm" onClick={() => handleJoinClub(club)} className="shrink-0">
+                  <UserPlus className="mr-1 h-4 w-4" />
+                  Rejoindre
+                </Button>
+              )}
+              {club.is_member && <Badge className="shrink-0">Membre</Badge>}
+              {!user && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  Connecte-toi pour rejoindre
+                </Badge>
+              )}
+            </div>
+          </div>
+        ))}
     </div>
   );
 };

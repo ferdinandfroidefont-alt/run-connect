@@ -198,9 +198,9 @@ export function AthleteMyPlanView(props: Props) {
   }, []);
 
   return (
-    <div className="rc-page-shell pb-28 pt-2">
-      <section className="rc-page-container pb-3">
-        <div className="rc-card flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3">
+    <div className="bg-secondary pb-28 pt-2">
+      <section className="px-4 pb-3">
+        <div className="ios-card flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-[15px] font-semibold text-foreground">Exporte tes entraînements</p>
             <p className="truncate text-[13px] text-muted-foreground">Vers Garmin et les autres apps compatibles.</p>
@@ -230,8 +230,7 @@ export function AthleteMyPlanView(props: Props) {
         showLegend
       />
 
-      <div className="rc-page-container">
-        <div className="rc-card flex flex-col border-t border-border bg-card">
+      <div className="flex flex-col border-t border-border bg-card">
         {loading ? (
           <div className="m-4 h-24 animate-pulse rounded-xl bg-muted" />
         ) : (
@@ -302,7 +301,6 @@ export function AthleteMyPlanView(props: Props) {
             );
           })
         )}
-        </div>
       </div>
 
       <AthletePlanSessionDetailSheet
