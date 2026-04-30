@@ -1901,13 +1901,7 @@ export const InteractiveMap = ({
                     </div>
                   </div>
                 )}
-                {!user && (
-                  <div className="min-w-0 flex-1">
-                    <h1 className="min-w-0 shrink text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#000000] dark:text-foreground">
-                      {t("navigation.home")}
-                    </h1>
-                  </div>
-                )}
+                {!user && <div className="min-w-0 flex-1" />}
 
                 <div className="home-map-header-actions flex shrink-0 items-center gap-2">
                   <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
