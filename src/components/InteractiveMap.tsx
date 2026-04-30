@@ -402,7 +402,7 @@ export const InteractiveMap = ({
     level: null
   });
   const [mapboxMap, setMapboxMap] = useState<Map | null>(null);
-  const [userProfile, setUserProfile] = useState<{
+  const [headerUserProfile, setHeaderUserProfile] = useState<{
     username: string;
     display_name: string;
     avatar_url: string | null;
@@ -679,7 +679,7 @@ export const InteractiveMap = ({
           avatar_url?: string | null;
         };
         if (cached?.username || cached?.display_name || cached?.avatar_url) {
-          setUserProfile({
+          setHeaderUserProfile({
             username: cached.username || '',
             display_name: cached.display_name || '',
             avatar_url: cached.avatar_url ?? null,
@@ -697,7 +697,7 @@ export const InteractiveMap = ({
         .eq('user_id', user.id)
         .single();
       if (profile) {
-        setUserProfile(profile);
+        setHeaderUserProfile(profile);
         try {
           localStorage.setItem(`${HOME_PROFILE_CACHE_KEY}_${user.id}`, JSON.stringify(profile));
         } catch {
@@ -1845,70 +1845,19 @@ export const InteractiveMap = ({
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[12px] after:bg-gradient-to-b after:from-white after:to-transparent dark:after:from-black dark:after:to-transparent",
             )}
           >
-            {/* Même rangée que Feed : avatar + salutation | cloche + paramètres */}
+            {/* Header navigation épuré : titre + actions */}
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
-              <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
-                {user && (
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    {userProfile && (
-                      <div
-                        className="map-header-profile-anchor flex shrink-0 [isolation:isolate]"
-                        data-tutorial="profile-avatar"
-                      >
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setShowProfileDialog(true)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setShowProfileDialog(true);
-                            }
-                          }}
-                          className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
-                        >
-                          <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
-                            <AvatarImage
-                              src={userProfile.avatar_url || undefined}
-                              alt={userProfile.username || userProfile.display_name}
-                              className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
-                            />
-                            <AvatarFallback className="map-header-profile-fallback text-2xl font-semibold">
-                              {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          {user && (
-                            <div className="absolute -bottom-1 -right-1 scale-75">
-                              <StreakBadge userId={user.id} variant="compact" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <p className="select-none text-lg font-semibold leading-tight tracking-tight text-foreground">
-                        <span className="line-clamp-2 break-words text-primary">
-                          {userProfile
-                            ? formatProfileFirstLastName(userProfile.display_name, userProfile.username)
-                            : null}
-                        </span>
-                      </p>
-                      {plannedSessionCount !== null && (
-                        <p className="text-[12px] font-medium leading-tight text-muted-foreground">
-                          {formatPlannedSessionsLine(plannedSessionCount)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {!user && <div className="min-w-0 flex-1" />}
+              <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
+                <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
+                  Accueil
+                </h1>
 
                 <div className="home-map-header-actions flex shrink-0 items-center gap-2">
                   <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
                     <Suspense
                       fallback={
                         <div
-                          className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[10px] border border-[#E5E5EA] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
+                          className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[12px] border border-[#E5E5EA] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
                           aria-hidden
                         />
                       }
@@ -1919,8 +1868,8 @@ export const InteractiveMap = ({
                   <button
                     type="button"
                     className={cn(
-                      "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[10px] outline-none",
-                      "border border-[#E5E5EA] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
+                      "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] outline-none",
+                      "border border-[#E5E5EA] bg-white shadow-none dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
                       "text-[#1A1A1A] transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:text-foreground",
                       "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     )}
@@ -1936,15 +1885,15 @@ export const InteractiveMap = ({
               <div
                 role="tablist"
                 aria-label={t("navigation.home")}
-                className="flex items-end gap-5 px-4 pb-3 pt-1"
+                className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]"
               >
                 {(
                   [
-                    { id: "planning" as const, label: t("navigation.homeMapPlanning"), to: "/" },
-                    { id: "tracking" as const, label: t("navigation.homeMapTracking"), to: "/participants" },
+                    { id: "planning" as const, label: "Planification", to: "/" },
+                    { id: "tracking" as const, label: "Suivi", to: "/participants" },
                     {
                       id: "routes" as const,
-                      label: t("navigation.homeMapRouteCreation"),
+                      label: "Création itinéraire",
                       to: "/route-create",
                     },
                   ] as const
@@ -1981,8 +1930,8 @@ export const InteractiveMap = ({
             </div>
           </header>
 
-          {/* Recherche + filtres : même gouttière que la pile FAB (left-4 / px-4), pleine largeur entre marges — pas de max-w qui décale le centre */}
-          <div className="pointer-events-none relative z-[35] box-border w-full -mt-[6px] px-4 pb-1.5 sm:-mt-2">
+          {/* Recherche + filtres sous les tabs : navigation clean avec espacement régulier */}
+          <div className="pointer-events-none relative z-[35] box-border w-full px-4 pb-1.5 pt-3">
             <div className="pointer-events-auto relative z-[36] min-w-0 w-full max-w-full">
               {/*
                 Ancêtre positionné limité à la barre de recherche + liste : sinon top-[100%] du dropdown
@@ -2074,7 +2023,7 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
                   className={cn(
-                    "home-map-filter-chip snap-start",
+                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
                     (expandedFilter === 'activity' || filters.activity_types.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
@@ -2086,7 +2035,7 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
                   className={cn(
-                    "home-map-filter-chip snap-start",
+                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
                     (expandedFilter === 'time' || filters.time_slot) && "home-map-filter-chip-active"
                   )}
                 >
@@ -2103,64 +2052,12 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'friends' ? null : 'friends'))}
                   className={cn(
-                    "home-map-filter-chip snap-start",
+                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
                     (expandedFilter === 'friends' || filters.friends_only) && "home-map-filter-chip-active"
                   )}
                 >
                   <span className="flex items-center gap-1.5">
                     <PersonStanding className="h-3.5 w-3.5 shrink-0" /> Amis uniquement
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpandedFilter((prev) => (prev === 'club' ? null : 'club'))}
-                  className={cn(
-                    "home-map-filter-chip snap-start",
-                    (expandedFilter === 'club' || filters.selected_club_ids.length > 0) && "home-map-filter-chip-active"
-                  )}
-                >
-                  <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 shrink-0" /> Club{filters.selected_club_ids.length > 0 ? ` (${filters.selected_club_ids.length})` : ''}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpandedFilter((prev) => (prev === 'sessionType' ? null : 'sessionType'))}
-                  className={cn(
-                    "home-map-filter-chip snap-start",
-                    (expandedFilter === 'sessionType' || filters.session_types.length > 0) && "home-map-filter-chip-active"
-                  )}
-                >
-                  <span className="flex items-center gap-1.5"><Route className="h-3.5 w-3.5 shrink-0" /> Type: {activeSessionTypeLabel}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpandedFilter((prev) => (prev === 'day' ? null : 'day'))}
-                  className={cn(
-                    "home-map-filter-chip snap-start",
-                    (expandedFilter === 'day' ||
-                      !isSameDay(startOfDay(filters.selected_date), startOfDay(new Date()))) &&
-                      "home-map-filter-chip-active"
-                  )}
-                >
-                  <span className="flex min-w-0 max-w-[10rem] items-center gap-1.5">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate capitalize">
-                      {format(filters.selected_date, "EEE d MMM", { locale: fr })}
-                    </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpandedFilter((prev) => (prev === 'level' ? null : 'level'))}
-                  className={cn(
-                    "home-map-filter-chip snap-start",
-                    (expandedFilter === 'level' || filters.level != null) && "home-map-filter-chip-active"
-                  )}
-                >
-                  <span className="flex min-w-0 max-w-[8.5rem] items-center gap-1.5">
-                    <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">
-                      {filters.level != null ? `Niv. ${filters.level}` : "Niveau séance"}
-                    </span>
                   </span>
                 </button>
                 </div>
