@@ -3073,8 +3073,8 @@ const Messages = () => {
                   >
                     <div
                       className={cn(
-                        "ios-list-row relative flex items-center gap-ios-3 rounded-[16px] border border-[#E8EEF6] bg-white px-3.5 py-2.5 shadow-[0_6px_16px_-14px_rgba(15,23,42,0.4)]",
-                        selectedConversations.has(conversation.id) && "bg-primary/5 border-primary/30"
+                        "ios-list-row relative flex items-center gap-ios-3 bg-white px-3.5 py-2.5",
+                        selectedConversations.has(conversation.id) && "bg-primary/5"
                       )}
                       onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
                       onTouchEnd={handleLongPressEnd}
@@ -3237,7 +3237,12 @@ const Messages = () => {
                         )}
                       </div>
                       
-                      {index < filteredAndSortedConversations.length - 1 && <div className="h-px" aria-hidden />}
+                      {index < filteredAndSortedConversations.length - 1 && (
+                        <div
+                          className="pointer-events-none absolute bottom-0 left-[76px] right-3.5 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
+                          aria-hidden
+                        />
+                      )}
                     </div>
                   </SwipeableConversationItem>
                 ))}

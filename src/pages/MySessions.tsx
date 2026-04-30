@@ -117,7 +117,7 @@ function SwipeConfirmCard({
   const [isDragging, setIsDragging] = useState(false);
 
   return (
-    <div className="relative overflow-hidden rounded-ios-lg">
+    <div className="relative overflow-hidden">
       <div
         className={`absolute inset-y-0 right-0 flex w-[148px] items-center justify-center bg-primary px-3 transition-opacity ${
           opened || isDragging ? "opacity-100" : "pointer-events-none opacity-0"
@@ -695,7 +695,7 @@ export default function MySessions() {
     
     return (
       <>
-        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
           {/* iOS Header */}
           <div className="z-50 shrink-0 bg-card pt-[var(--safe-area-top)]">
             <div className="flex items-center justify-between px-4 py-2">
@@ -1062,7 +1062,7 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-my-sessions">
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card">
           <MainTopHeader
@@ -1171,7 +1171,7 @@ export default function MySessions() {
                   )}
                 </div>
               ) : (
-                <div className="ios-list-stack">
+                <div className="bg-white">
                   {/* Flèche haut */}
                   {sessionPage > 0 && (
                     <button
@@ -1184,7 +1184,7 @@ export default function MySessions() {
 
                   {filteredSessions
                     .slice(sessionPage * SESSIONS_PER_PAGE, (sessionPage + 1) * SESSIONS_PER_PAGE)
-                    .map((session) => {
+                    .map((session, index, arr) => {
                       const isUpcoming = session.scheduled_at >= now;
                       const orgProfile = sessionSource === 'joined' && session.organizer_id
                         ? organizerProfiles.get(session.organizer_id)
@@ -1196,7 +1196,7 @@ export default function MySessions() {
                         >
                           <div
                             onClick={() => handleSessionClick(session)}
-                            className="ios-list-row border border-white dark:border-white/10"
+                            className="relative cursor-pointer bg-white px-ios-3 py-3 transition-colors active:bg-secondary/50"
                           >
                             <div className="flex items-start gap-ios-2">
                               <SportWhiteIcon activityType={session.activity_type} size="md" />
@@ -1251,6 +1251,12 @@ export default function MySessions() {
                                 <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                               </div>
                             </div>
+                            {index < arr.length - 1 && (
+                              <div
+                                className="pointer-events-none absolute bottom-0 left-[68px] right-0 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
+                                aria-hidden
+                              />
+                            )}
                           </div>
                         </SwipeConfirmCard>
                       );
