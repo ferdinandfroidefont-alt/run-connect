@@ -39,7 +39,8 @@ import { useShareProfile } from '@/hooks/useShareProfile';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { QRShareDialog } from './QRShareDialog';
 import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
-import { cn, formatProfileFirstLastName } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { MainTopHeader } from '@/components/layout/MainTopHeader';
 import {
   createSessionPinButton,
   resolveSessionPinVariant,
@@ -1843,87 +1844,45 @@ export const InteractiveMap = ({
             )}
           >
             {/* Header navigation épuré : titre + actions */}
-            <div className="relative z-[1] pt-[var(--safe-area-top)]">
-              <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
-                <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
-                  Accueil
-                </h1>
-
-                <div className="home-map-header-actions flex shrink-0 items-center gap-2">
-                  <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
-                    <Suspense
-                      fallback={
-                        <div
-                          className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[12px] border border-[#E5E5EA] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
-                          aria-hidden
-                        />
-                      }
+            <div className="relative z-[1]">
+              <MainTopHeader
+                title="Accueil"
+                tabsAriaLabel={t("navigation.home")}
+                tabs={[
+                  { id: "planning", label: "Planification", active: true },
+                  { id: "tracking", label: "Suivi", active: false, onClick: () => navigate("/participants") },
+                  { id: "routes", label: "Création itinéraire", active: false, onClick: () => navigate("/route-create") },
+                ]}
+                right={
+                  <>
+                    <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
+                      <Suspense
+                        fallback={
+                          <div
+                            className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[12px] border border-[#E5E5EA] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
+                            aria-hidden
+                          />
+                        }
+                      >
+                        <NotificationCenter onSessionUpdated={loadSessions} />
+                      </Suspense>
+                    </div>
+                    <button
+                      type="button"
+                      className={cn(
+                        "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] outline-none",
+                        "border border-[#E5E5EA] bg-white shadow-none dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
+                        "text-[#1A1A1A] transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:text-foreground",
+                        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      )}
+                      aria-label={t("navigation.settings")}
+                      onClick={() => setShowSettingsDialog(true)}
                     >
-                      <NotificationCenter onSessionUpdated={loadSessions} />
-                    </Suspense>
-                  </div>
-                  <button
-                    type="button"
-                    className={cn(
-                      "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] outline-none",
-                      "border border-[#E5E5EA] bg-white shadow-none dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
-                      "text-[#1A1A1A] transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:text-foreground",
-                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    )}
-                    aria-label={t("navigation.settings")}
-                    onClick={() => setShowSettingsDialog(true)}
-                  >
-                    <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Rangée 2 — onglets façon maquette (Souligné bleu iOS sur l’actif) */}
-              <div
-                role="tablist"
-                aria-label={t("navigation.home")}
-                className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]"
-              >
-                {(
-                  [
-                    { id: "planning" as const, label: "Planification", to: "/" },
-                    { id: "tracking" as const, label: "Suivi", to: "/participants" },
-                    {
-                      id: "routes" as const,
-                      label: "Création itinéraire",
-                      to: "/route-create",
-                    },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab.id === "planning"}
-                    className={cn(
-                      "touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold leading-tight tracking-tight transition-colors",
-                      tab.id === "planning"
-                        ? "text-[#007AFF] dark:text-[#0A84FF]"
-                        : "text-[#8E8E93] dark:text-[#8E8E93]",
-                    )}
-                    onClick={() => {
-                      if (tab.to !== location.pathname) {
-                        navigate(tab.to);
-                      }
-                    }}
-                  >
-                    <span className="relative inline-block pb-2">
-                      {tab.label}
-                      {tab.id === "planning" ? (
-                        <span
-                          className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]"
-                          aria-hidden
-                        />
-                      ) : null}
-                    </span>
-                  </button>
-                ))}
-              </div>
+                      <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
+                    </button>
+                  </>
+                }
+              />
             </div>
           </header>
 

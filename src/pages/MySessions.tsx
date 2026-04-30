@@ -3,7 +3,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Share2, Settings } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -39,6 +39,8 @@ import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
+import { NotificationCenter } from '@/components/NotificationCenter';
+import { MainTopHeader } from '@/components/layout/MainTopHeader';
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
@@ -1063,39 +1065,29 @@ export default function MySessions() {
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card">
-          <div className="pt-[var(--safe-area-top)]">
-            <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
-              <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
-                Mes séances
-              </h1>
-            </div>
-            <div
-              role="tablist"
-              aria-label="Navigation Mes séances"
-              className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={true}
-                className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#007AFF] dark:text-[#0A84FF]"
-              >
-                <span className="relative inline-block pb-2">
-                  Liste
-                  <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]" aria-hidden />
-                </span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={false}
-                className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
-                onClick={() => navigate('/messages')}
-              >
-                <span className="relative inline-block pb-2">Commentaire</span>
-              </button>
-            </div>
-          </div>
+          <MainTopHeader
+            title="Mes séances"
+            tabsAriaLabel="Navigation Mes séances"
+            tabs={[
+              { id: "list", label: "Liste", active: true },
+              { id: "comment", label: "Commentaire", active: false, onClick: () => navigate('/messages') },
+            ]}
+            right={
+              <>
+                <div className="flex shrink-0 items-center justify-center">
+                  <NotificationCenter />
+                </div>
+                <button
+                  type="button"
+                  className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                  aria-label="Paramètres"
+                  onClick={() => navigate('/profile/edit')}
+                >
+                  <Settings className="h-[20px] w-[20px]" />
+                </button>
+              </>
+            }
+          />
           <div className="h-px bg-border" />
         </div>
 

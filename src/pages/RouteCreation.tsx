@@ -61,6 +61,7 @@ import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
 import { NotificationCenter } from '@/components/NotificationCenter';
+import { MainTopHeader } from '@/components/layout/MainTopHeader';
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -1079,12 +1080,16 @@ export const RouteCreation = () => {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-background">
       <div className="relative z-20 shrink-0 bg-white/95 backdrop-blur-md">
-        <div className="pt-[var(--safe-area-top)]">
-          <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
-            <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
-              Création itinéraire
-            </h1>
-            <div className="flex items-center gap-2">
+        <MainTopHeader
+          title="Création itinéraire"
+          tabsAriaLabel="Navigation accueil"
+          tabs={[
+            { id: "planning", label: "Planification", active: false, onClick: () => navigate("/") },
+            { id: "tracking", label: "Suivi", active: false, onClick: () => navigate("/participants") },
+            { id: "routes", label: "Création itinéraire", active: true },
+          ]}
+          right={
+            <>
               <div className="flex shrink-0 items-center justify-center">
                 <NotificationCenter />
               </div>
@@ -1096,40 +1101,9 @@ export const RouteCreation = () => {
               >
                 <Settings className="h-[20px] w-[20px]" />
               </button>
-            </div>
-          </div>
-          <div role="tablist" aria-label="Navigation accueil" className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={false}
-              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
-              onClick={() => navigate('/')}
-            >
-              <span className="relative inline-block pb-2">Planification</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={false}
-              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
-              onClick={() => navigate('/participants')}
-            >
-              <span className="relative inline-block pb-2">Suivi</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={true}
-              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#007AFF] dark:text-[#0A84FF]"
-            >
-              <span className="relative inline-block pb-2">
-                Création itinéraire
-                <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]" aria-hidden />
-              </span>
-            </button>
-          </div>
-        </div>
+            </>
+          }
+        />
       </div>
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
