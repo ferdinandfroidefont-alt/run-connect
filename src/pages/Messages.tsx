@@ -171,7 +171,7 @@ const Messages = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  const { setBottomNavSuppressed } = useAppContext();
+  const { setBottomNavSuppressed, openCreateSession } = useAppContext();
   const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
@@ -245,6 +245,7 @@ const Messages = () => {
   const [composerHeight, setComposerHeight] = useState(0);
   const viewportBaseHeightRef = useRef(0);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
+  const isFromMySessions = searchParams.get("from") === "my-sessions";
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
 
@@ -2990,6 +2991,16 @@ const Messages = () => {
                   Supprimer
                 </Button>
               </div>
+            ) : isFromMySessions ? (
+              <MainTopHeader
+                title="Mes séances"
+                tabsAriaLabel="Navigation Mes séances"
+                tabs={[
+                  { id: "list", label: "Liste", active: false, onClick: () => navigate("/my-sessions") },
+                  { id: "create", label: "Création", active: false, onClick: () => openCreateSession() },
+                  { id: "comment", label: "Commentaire", active: true },
+                ]}
+              />
             ) : (
               <MainTopHeader
                 title="Messages"

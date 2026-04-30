@@ -41,7 +41,7 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
     <>
       <div
         className={cn(
-          "ios-card w-full overflow-hidden border-l-4 cursor-pointer active:bg-secondary/80 transition-colors",
+          "relative w-full overflow-hidden border-l-4 cursor-pointer bg-white transition-colors active:bg-secondary/50",
           session.visibility_state === "boosted" && "ring-2 ring-primary/25",
           getActivityBorderLeftClass(session.activity_type)
         )}
@@ -161,6 +161,10 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
             </Button>
           </div>
         </div>
+        <div
+          className="pointer-events-none h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
+          aria-hidden
+        />
       </div>
 
       <ProfilePreviewDialog 

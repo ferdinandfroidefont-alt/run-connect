@@ -266,7 +266,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-[300px] space-y-0 bg-secondary px-0 py-ios-3">
+      <div className="min-h-[300px] space-y-0 bg-white px-0 py-ios-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-14 ios-card rounded-ios-lg border border-border animate-pulse" />
         ))}
@@ -282,7 +282,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   ];
 
   return (
-    <div className="min-h-[400px] overflow-x-hidden bg-secondary pb-ios-8 pt-ios-2">
+    <div className="min-h-[400px] overflow-x-hidden bg-white pb-ios-8 pt-ios-2">
       {/* Week label */}
       <p className="mb-ios-3 px-ios-4 text-center text-ios-footnote text-muted-foreground">
         Semaine du {weekLabel}

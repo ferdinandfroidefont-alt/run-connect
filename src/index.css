@@ -388,6 +388,62 @@ html, body {
     @apply divide-y divide-border;
   }
 
+  /* Coaching: flat white pages with simple line separators */
+  .coaching-flat {
+    background: #ffffff;
+  }
+
+  .coaching-flat .ios-card,
+  .coaching-flat .ios-inset-group {
+    @apply bg-white border-0 rounded-none;
+    box-shadow: none;
+  }
+
+  .coaching-flat .ios-list-row {
+    @apply bg-white rounded-none border-0;
+    box-shadow: none;
+  }
+
+  .coaching-flat .ios-list-stack {
+    @apply divide-y-0;
+  }
+
+  .coaching-flat .ios-list-stack > * {
+    position: relative;
+  }
+
+  .coaching-flat .ios-list-stack > *::after {
+    content: "";
+    position: absolute;
+    left: 68px;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.08) 8%,
+      rgba(0, 0, 0, 0.08) 92%,
+      rgba(0, 0, 0, 0)
+    );
+    pointer-events: none;
+  }
+
+  .coaching-flat .ios-list-stack > *:last-child::after {
+    display: none;
+  }
+
+  /* Feed: white background and flatter rows */
+  .feed-flat {
+    background: #ffffff;
+  }
+
+  .feed-flat .ios-card,
+  .feed-flat .ios-inset-group {
+    @apply bg-white border-0 rounded-none;
+    box-shadow: none;
+  }
+
   /**
    * Boutons flottants carte : même esprit que ios-list-row-icon (carré coloré + picto blanc),
    * taille tactile 40×40, ombre type FAB iOS.

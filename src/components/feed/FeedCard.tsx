@@ -133,7 +133,7 @@ export const FeedCard = ({
 
   return (
     <div
-      className="bg-card w-full overflow-hidden animate-fade-in border-y border-border"
+      className="relative w-full overflow-hidden animate-fade-in bg-white"
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: "both" }}
     >
       <button type="button" className="w-full text-left" onClick={handleOpenDetails}>
@@ -253,6 +253,10 @@ export const FeedCard = ({
           onViewAll={() => setShowComments(true)}
         />
       )}
+      <div
+        className="pointer-events-none h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
+        aria-hidden
+      />
     </div>
   );
 };

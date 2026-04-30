@@ -2580,7 +2580,7 @@ export function CoachPlanningExperience() {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-coaching">
+      <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-coaching">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0 border-b border-border bg-card"
@@ -2627,7 +2627,7 @@ export function CoachPlanningExperience() {
               ]}
             />
           }
-          scrollClassName="bg-secondary"
+          scrollClassName="bg-white"
           footer={
             activeMenuKey === "planning" && !effectiveAthleteMode ? (
               <div className="border-t border-border bg-card px-4 py-3">

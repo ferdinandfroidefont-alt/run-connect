@@ -143,7 +143,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-secondary/80 dark:bg-black/85">
+    <div className="feed-flat flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
       <FeedHeader
         layoutVariant="sheet"
         sheetSnap={sheetSnap}
@@ -155,7 +155,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
       />
 
       {mode === "discover" && (
-        <div className="shrink-0 border-b border-border/40 bg-secondary/80 dark:bg-black/85">
+        <div className="shrink-0 border-b border-border/40 bg-white">
           <DiscoverFilters
             maxDistance={maxDistance}
             setMaxDistance={setMaxDistance}
@@ -220,7 +220,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                   <FeedEmptyState />
                 </div>
               ) : (
-                <div className="space-y-ios-3 pb-ios-2 pt-ios-1 sm:mx-auto sm:max-w-2xl">
+                <div className="pb-ios-2 pt-ios-1 sm:mx-auto sm:max-w-2xl">
                   {feedItems.map((session, index) => (
                     <FeedCard
                       key={session.id}
@@ -273,7 +273,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
               <DiscoverEmptyState hasLocation={hasLocation} onResetFilters={resetFilters} />
             </div>
           ) : (
-            <div className="space-y-ios-3 sm:mx-auto sm:max-w-2xl">
+            <div className="sm:mx-auto sm:max-w-2xl">
               {discoverSessions.map((session, index) => (
                 <DiscoverCard
                   key={session.id}
