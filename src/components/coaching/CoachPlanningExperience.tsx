@@ -2258,22 +2258,6 @@ export function CoachPlanningExperience() {
     (user?.user_metadata?.display_name as string | undefined) ||
     (user?.user_metadata?.full_name as string | undefined) ||
     (user?.email ? user.email.split("@")[0] : "Coach");
-  const sectionTitle =
-    activeMenuKey === "my-plan"
-      ? "Mon plan"
-      : activeMenuKey === "planning"
-      ? "Planification"
-      : activeMenuKey === "tracking"
-      ? "Suivi athlète"
-      : activeMenuKey === "templates"
-      ? "Modèles"
-      : activeMenuKey === "club"
-      ? "Gérer le club"
-      : activeMenuKey === "dashboard"
-      ? "Tableau de bord"
-      : activeMenuKey === "groups"
-      ? "Brouillons"
-      : "Coaching";
   const [showCoachRequiredDialog, setShowCoachRequiredDialog] = useState(false);
   const hasCreateDraftWork = useMemo(
     () => Boolean(draft.title.trim()) || draft.blocks.length > 0,
@@ -2603,12 +2587,44 @@ export function CoachPlanningExperience() {
           header={
             <PlanningHeader
               onOpenMenu={() => setDrawerOpen(true)}
-              title={sectionTitle}
+              title="Coaching"
               subtitle={
                 activeMenuKey === "my-plan"
                   ? `Semaine du ${format(weekAnchor, "d", { locale: fr })} au ${format(addDays(weekAnchor, 6), "d MMMM", { locale: fr })}`
                   : undefined
               }
+              tabs={[
+                {
+                  id: "planning",
+                  label: "Planification",
+                  active: activeMenuKey === "planning",
+                  onClick: () => {
+                    setActiveMenuKey("planning");
+                    setViewAsAthlete(false);
+                    setCoachingTab("planning");
+                  },
+                },
+                {
+                  id: "tracking",
+                  label: "Suivi athlète",
+                  active: activeMenuKey === "tracking",
+                  onClick: () => {
+                    setActiveMenuKey("tracking");
+                    setTrackingSelectedAthleteId(null);
+                    setCoachingTab("planning");
+                  },
+                },
+                {
+                  id: "my-plan",
+                  label: "Mon plan",
+                  active: activeMenuKey === "my-plan",
+                  onClick: () => {
+                    setActiveMenuKey("my-plan");
+                    setViewAsAthlete(true);
+                    setCoachingTab("planning");
+                  },
+                },
+              ]}
             />
           }
           scrollClassName="bg-secondary"

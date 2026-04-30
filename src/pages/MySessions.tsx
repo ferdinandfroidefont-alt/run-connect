@@ -10,7 +10,6 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -164,7 +163,6 @@ function SwipeConfirmCard({
 
 export default function MySessions() {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1064,11 +1062,40 @@ export default function MySessions() {
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
         {/* iOS Header */}
-        <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
-            <h1 className="text-ios-title1 font-bold text-center">{t("navigation.mySessions")}</h1>
+        <div className="z-50 shrink-0 border-b border-border bg-card">
+          <div className="pt-[var(--safe-area-top)]">
+            <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
+              <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
+                Mes séances
+              </h1>
+            </div>
+            <div
+              role="tablist"
+              aria-label="Navigation Mes séances"
+              className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={true}
+                className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#007AFF] dark:text-[#0A84FF]"
+              >
+                <span className="relative inline-block pb-2">
+                  Liste
+                  <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]" aria-hidden />
+                </span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={false}
+                className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
+                onClick={() => navigate('/messages')}
+              >
+                <span className="relative inline-block pb-2">Commentaire</span>
+              </button>
+            </div>
           </div>
-          
           <div className="h-px bg-border" />
         </div>
 

@@ -3,7 +3,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { applyWebChromeForTheme } from "@/lib/iosStatusBarTheme";
 import { useSendNotification } from "@/hooks/useSendNotification";
@@ -163,7 +162,6 @@ interface Message {
 const Messages = () => {
   const { user } = useAuth();
   const { isPreviewMode } = useAppPreview();
-  const { t } = useLanguage();
   const { resolvedTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -241,6 +239,7 @@ const Messages = () => {
   const [keyboardInsetBottom, setKeyboardInsetBottom] = useState(0);
   const [composerHeight, setComposerHeight] = useState(0);
   const viewportBaseHeightRef = useRef(0);
+  const conversationSearchInputRef = useRef<HTMLInputElement>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
@@ -2963,14 +2962,14 @@ const Messages = () => {
           className="min-h-0 flex-1"
           headerWrapperClassName="z-50 bg-card"
           header={
-          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[60px]">
+          <div className="pt-[var(--safe-area-top)]">
             {isSelectionMode ? (
-              <>
+              <div className="relative flex min-h-[3.25rem] items-center justify-center px-4 pb-2 pt-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={exitSelectionMode}
-                  className="text-primary p-0 h-auto font-normal absolute left-ios-4"
+                  className="text-primary p-0 h-auto font-normal absolute left-4"
                 >
                   Annuler
                 </Button>
@@ -2982,25 +2981,66 @@ const Messages = () => {
                   size="sm"
                   variant="ghost"
                   disabled={selectedConversations.size === 0}
-                  className="text-destructive p-0 h-auto font-normal absolute right-ios-4"
+                  className="text-destructive p-0 h-auto font-normal absolute right-4"
                 >
                   Supprimer
                 </Button>
-              </>
+              </div>
             ) : (
-              <>
-                <h1 className="text-ios-title1 font-bold text-center">{t("navigation.messages")}</h1>
-                <div className="absolute right-ios-4 flex items-center gap-ios-2">
+              <div>
+                <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
+                  <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
+                    Messages
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateGroup(true)}
+                      className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                      aria-label="Créer un club"
+                    >
+                      <Users className="h-5 w-5" />
+                    </button>
                   <Button
                     onClick={() => setShowNewConversation(true)}
-                    size="icon"
+                    size="sm"
                     variant="ghost"
-                    className="h-9 w-9"
+                    className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                    aria-label="Nouvelle conversation"
                   >
-                    <Plus className="h-6 w-6 text-primary" />
+                    <Plus className="h-5 w-5" />
                   </Button>
+                  </div>
                 </div>
-              </>
+                <div role="tablist" aria-label="Navigation messages" className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]">
+                  <button type="button" role="tab" aria-selected={true} className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#007AFF] dark:text-[#0A84FF]">
+                    <span className="relative inline-block pb-2">
+                      Conversations
+                      <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]" aria-hidden />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={false}
+                    className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
+                    onClick={() => {
+                      conversationSearchInputRef.current?.focus();
+                    }}
+                  >
+                    <span className="relative inline-block pb-2">Recherche</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={false}
+                    className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
+                    onClick={() => setShowCreateGroup(true)}
+                  >
+                    <span className="relative inline-block pb-2">Créer un club</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
           }
@@ -3010,6 +3050,7 @@ const Messages = () => {
           <div className="relative px-ios-4">
             <Search className="absolute left-ios-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={conversationSearchInputRef}
               placeholder="Rechercher une conversation..."
               value={conversationSearch}
               onChange={(e) => setConversationSearch(e.target.value)}
