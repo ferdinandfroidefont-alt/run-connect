@@ -2,13 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useAppContext, type HomeFeedSheetSnap } from "@/contexts/AppContext";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
-import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
+import { HomeActivitySheetContent } from "./HomeActivitySheetContent";
 
 /** Sync avec `index.css` → `--home-feed-sheet-peek` (colonne carte). */
-const PEEK_HEIGHT_PX = 74;
+const PEEK_HEIGHT_PX = 68;
 
 const SPRING = { type: "spring" as const, stiffness: 440, damping: 36, mass: 0.85 };
 
@@ -63,7 +62,6 @@ type DragRef = { startY: number; startH: number; pointerId: number };
  * glisser depuis la poignée, snap ressort.
  */
 export function HomeFeedBottomSheet() {
-  const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
   const ih = useInnerHeight();
   const safeTop = useSafeAreaTopPx();
@@ -71,7 +69,7 @@ export function HomeFeedBottomSheet() {
   const { homeFeedSheetRequest, clearHomeFeedSheetRequest, setHomeFeedSheetSnap } = useAppContext();
 
   const heights = useMemo(() => {
-    const full = Math.max(PEEK_HEIGHT_PX + 120, ih - safeTop - 10);
+    const full = Math.max(PEEK_HEIGHT_PX + 120, ih - safeTop - 84);
     const half = Math.round(
       Math.min(full - 32, Math.max(PEEK_HEIGHT_PX + 140, Math.round(ih * 0.46))),
     );
@@ -155,13 +153,11 @@ export function HomeFeedBottomSheet() {
     [endDrag],
   );
 
-  /** Tap poignée / flèche : ouvrir tout de suite en quasi plein écran (pas seulement mi-hauteur). */
+  /** Tap poignée / flèche : ouvre le bottom sheet d'activité sans plein écran. */
   const peekActivate = useCallback(() => {
     if (dragMovedRef.current) return;
-    if (snap === 0 || snap === 1) setSnap(2);
+    if (snap === 0) setSnap(1);
   }, [snap]);
-
-  const sheetSnapForContent: 1 | 2 = snap >= 2 ? 2 : 1;
 
   return (
     <div
@@ -176,7 +172,7 @@ export function HomeFeedBottomSheet() {
         type="button"
         tabIndex={-1}
         aria-hidden={snap === 0}
-        aria-label={snap === 0 ? undefined : t("tutorial.feedSheetScrimAria")}
+        aria-label={snap === 0 ? undefined : "Fermer le fil d'activite"}
         className={cn(
           "absolute inset-x-0 top-0 border-0 p-0 bg-black/25 dark:bg-black/35",
           snap === 0 ? "pointer-events-none" : "pointer-events-auto cursor-default",
@@ -195,7 +191,7 @@ export function HomeFeedBottomSheet() {
         data-home-feed-sheet
         role={snap >= 1 ? "dialog" : "region"}
         aria-modal={snap >= 1}
-        aria-label={t("navigation.feed")}
+        aria-label="Fil d'activite"
         className={cn(
           "pointer-events-auto relative flex min-h-0 w-full flex-col overflow-hidden",
           "rounded-t-[1.25rem] border border-border/50 bg-background/92 shadow-[0_-12px_48px_rgba(0,0,0,0.18)]",
@@ -223,10 +219,10 @@ export function HomeFeedBottomSheet() {
               onPointerCancel={onPointerUp}
               onClick={peekActivate}
               aria-expanded={false}
-              aria-label={t("navigation.feed")}
+              aria-label="Fil d'activite"
             >
               <span className="text-[15px] font-semibold leading-none tracking-tight text-foreground/90">
-                {t("navigation.feed")}
+                Fil d'activite
               </span>
               <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground/85" aria-hidden />
             </button>
@@ -246,14 +242,14 @@ export function HomeFeedBottomSheet() {
                 onPointerCancel={onPointerUp}
                 onClick={peekActivate}
                 aria-expanded
-                aria-label={t("navigation.feed")}
+                aria-label="Fil d'activite"
               >
                 <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
               </button>
               <button
                 type="button"
                 className="absolute right-3 top-2 flex touch-manipulation items-center justify-center rounded-lg p-2 outline-none active:opacity-70"
-                aria-label={t("tutorial.feedSheetScrimAria")}
+                aria-label="Fermer le fil d'activite"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -265,11 +261,7 @@ export function HomeFeedBottomSheet() {
             </div>
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <HomeFeedSheetContent
-                sheetSnap={sheetSnapForContent}
-                onBrandClick={() => setSnap(0)}
-                scrollClassName="pb-2"
-              />
+              <HomeActivitySheetContent />
             </div>
           </>
         )}

@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Radio } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -1543,9 +1543,6 @@ export const InteractiveMap = ({
     console.log('🗺️ InteractiveMap handleCreateRoute called - navigating to route creation');
     navigate('/route-create');
   };
-  const handleOpenLiveTracking = () => {
-    navigate('/participants');
-  };
   const createDirectionsRoute = async () => {
     if (waypoints.current.length < 2) return;
     const path = await fetchMapboxDirectionsPath(waypoints.current, 'walking');
@@ -2295,26 +2292,6 @@ export const InteractiveMap = ({
             className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             <MapPin className="h-[17px] w-[17px]" strokeWidth={2} />
-          </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          <button
-            type="button"
-            title="Créer un itinéraire"
-            aria-label="Créer un itinéraire"
-            onClick={handleCreateRoute}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            <Brush className="h-[17px] w-[17px]" strokeWidth={2} />
-          </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          <button
-            type="button"
-            title="Suivre les participants"
-            aria-label="Suivre les participants"
-            onClick={handleOpenLiveTracking}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            <Radio className="h-[17px] w-[17px]" strokeWidth={2} />
           </button>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           <button

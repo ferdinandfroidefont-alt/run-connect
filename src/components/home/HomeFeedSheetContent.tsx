@@ -10,9 +10,6 @@ import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import { DiscoverCard } from "@/components/feed/DiscoverCard";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
-import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
-import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
-import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import type { FeedSession } from "@/hooks/useFeed";
 
@@ -35,7 +32,6 @@ type Props = {
  * Contenu Feed dans la bottom sheet accueil (même logique que l’ancienne page /feed).
  */
 export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName }: Props) {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState<FeedMode>("friends");
@@ -48,8 +44,6 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
   );
   const [selectedFriendsSession, setSelectedFriendsSession] = useState<Record<string, unknown> | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
-  const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
-  const [storiesRefreshToken, setStoriesRefreshToken] = useState(0);
   const touchStartY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -85,12 +79,8 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
       openProfileDialog?: boolean;
       openSettingsDialog?: boolean;
       settingsFocus?: string;
-      refreshStories?: boolean;
     } | null;
-    if (st?.refreshStories) {
-      setStoriesRefreshToken((t) => t + 1);
-    }
-    if (!st?.openProfileDialog && !st?.openSettingsDialog && !st?.refreshStories) return;
+    if (!st?.openProfileDialog && !st?.openSettingsDialog) return;
     if (st.openProfileDialog) setShowProfileDialog(true);
     if (st.openSettingsDialog) {
       setShowSettingsDialog(true);
@@ -204,30 +194,6 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
         <div className="w-full min-w-0 pb-ios-4">
           {mode === "friends" ? (
             <>
-              <div className="ios-card w-full overflow-hidden border border-border/60 border-x-0 rounded-none sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border-x">
-                <div className="flex items-center justify-between px-ios-3 pt-3">
-                  <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Stories
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void refreshFriends();
-                      setStoriesRefreshToken((t) => t + 1);
-                    }}
-                    className="text-[12px] font-medium text-primary"
-                  >
-                    Actualiser
-                  </button>
-                </div>
-                <SessionStoriesStrip
-                  currentUserId={user?.id ?? null}
-                  refreshToken={storiesRefreshToken}
-                  onOpenStory={(authorId) => setStoryAuthorId(authorId)}
-                  onCreateStory={() => navigate("/stories/create")}
-                />
-              </div>
-
               {loading && feedItems.length === 0 ? (
                 <div className="space-y-ios-3 px-ios-3 pt-ios-2 sm:mx-auto sm:max-w-2xl">
                   {[...Array(3)].map((_, i) => (
@@ -359,15 +325,6 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
         session={selectedFriendsSession as any}
         onClose={() => setSelectedFriendsSession(null)}
         onSessionUpdated={() => refreshFriends()}
-      />
-
-      <SessionStoryDialog
-        open={!!storyAuthorId}
-        onOpenChange={(open) => {
-          if (!open) setStoryAuthorId(null);
-        }}
-        authorId={storyAuthorId}
-        viewerUserId={user?.id ?? null}
       />
     </div>
   );

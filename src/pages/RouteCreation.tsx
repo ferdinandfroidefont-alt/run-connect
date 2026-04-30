@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers, FileText } from 'lucide-react';
+import { Undo, Redo, Trash2, Navigation, Route, MapPin, Check, Layers, FileText, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -60,6 +60,7 @@ import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
+import { NotificationCenter } from '@/components/NotificationCenter';
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -946,10 +947,6 @@ export const RouteCreation = () => {
     }
   }, [ensureUserLocationMarker, getCurrentPosition]);
 
-  const handleCancel = () => {
-    requestExitWithRouteDraft('/');
-  };
-
   const handleFinish = async () => {
     if (waypoints.current.length < 2) {
       toast.error('Veuillez tracer un parcours avec au moins 2 points');
@@ -1081,38 +1078,56 @@ export const RouteCreation = () => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-background">
-      <div className="relative z-20 shrink-0 bg-background/95 backdrop-blur-md border-b border-border/30 pt-[var(--safe-area-top)]">
-        <div className="flex h-11 items-center justify-between px-ios-2">
-          <button
-            onClick={handleCancel}
-            className="flex items-center gap-ios-1 px-ios-2 py-ios-1 text-primary active:opacity-60"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-ios-headline">Retour</span>
-          </button>
-          <h1 className="absolute left-1/2 -translate-x-1/2 text-ios-headline font-semibold text-foreground">
-            {isEditMode ? 'Modifier' : 'Itinéraire'}
-          </h1>
-          <div className="flex items-center gap-ios-1">
-            <Button
-              onClick={handleFinish}
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9 rounded-full text-primary active:scale-95"
-              title="Valider"
+      <div className="relative z-20 shrink-0 bg-white/95 backdrop-blur-md">
+        <div className="pt-[var(--safe-area-top)]">
+          <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
+            <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
+              Création itinéraire
+            </h1>
+            <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center justify-center">
+                <NotificationCenter />
+              </div>
+              <button
+                type="button"
+                className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                aria-label="Paramètres"
+                onClick={() => navigate('/profile/edit')}
+              >
+                <Settings className="h-[20px] w-[20px]" />
+              </button>
+            </div>
+          </div>
+          <div role="tablist" aria-label="Navigation accueil" className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={false}
+              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
+              onClick={() => navigate('/')}
             >
-              <Check className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleClear}
-              disabled={waypoints.current.length === 0}
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9 rounded-full text-destructive active:scale-95 disabled:opacity-30"
-              title="Supprimer"
+              <span className="relative inline-block pb-2">Planification</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={false}
+              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
+              onClick={() => navigate('/participants')}
             >
-              <Trash2 className="h-5 w-5" />
-            </Button>
+              <span className="relative inline-block pb-2">Suivi</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={true}
+              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#007AFF] dark:text-[#0A84FF]"
+            >
+              <span className="relative inline-block pb-2">
+                Création itinéraire
+                <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]" aria-hidden />
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -1181,9 +1196,19 @@ export const RouteCreation = () => {
 
       <div
         className={cn(
-          'absolute right-ios-4 top-[calc(env(safe-area-inset-top)+7.75rem)] z-10 flex flex-col gap-ios-2'
+          'absolute right-ios-4 top-[calc(env(safe-area-inset-top)+9.75rem)] z-10 flex flex-col gap-ios-2'
         )}
       >
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={handleFinish}
+          className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg"
+          title="Valider"
+        >
+          <Check className="w-4 h-4" />
+        </Button>
+
         <Button
           size="icon"
           variant="outline"

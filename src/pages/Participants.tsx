@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Calendar, ChevronLeft, ChevronRight, Clock, Expand, Minimize2, Navigation, Search, Users } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, Expand, Minimize2, Navigation, Search, Settings, Users } from "lucide-react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
-import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { MapIosColoredFab } from "@/components/map/MapIosColoredFab";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -519,23 +519,61 @@ export default function Participants() {
       </div>
       {!mapReady ? <div className="pointer-events-none absolute inset-0 z-[2] bg-muted/60" aria-hidden /> : null}
 
-      <div className="absolute left-0 right-0 top-0 z-20 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-        <IosPageHeaderBar
-          left={
+      <div className="absolute left-0 right-0 top-0 z-20 bg-white/95 backdrop-blur-md">
+        <div className="pt-[var(--safe-area-top)]">
+          <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2 pt-2">
+            <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
+              Suivi
+            </h1>
+            <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center justify-center">
+                <NotificationCenter />
+              </div>
+              <button
+                type="button"
+                className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                aria-label="Paramètres"
+                onClick={() => navigate("/profile/edit")}
+              >
+                <Settings className="h-[20px] w-[20px]" />
+              </button>
+            </div>
+          </div>
+          <div role="tablist" aria-label="Navigation accueil" className="flex items-end gap-8 border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 dark:border-[#1f1f1f]">
             <button
               type="button"
-              onClick={() => navigate(-1)}
-              className="text-[17px] font-medium text-primary"
+              role="tab"
+              aria-selected={false}
+              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
+              onClick={() => navigate("/")}
             >
-              ← Retour
+              <span className="relative inline-block pb-2">Planification</span>
             </button>
-          }
-          title="Participants"
-          right={<div className="h-6 w-6" />}
-        />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={true}
+              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#007AFF] dark:text-[#0A84FF]"
+            >
+              <span className="relative inline-block pb-2">
+                Suivi
+                <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]" aria-hidden />
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={false}
+              className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
+              onClick={() => navigate("/route-create")}
+            >
+              <span className="relative inline-block pb-2">Création itinéraire</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="absolute left-0 right-0 top-[calc(var(--safe-area-top)+56px)] z-20 px-4">
+      <div className="absolute left-0 right-0 top-[calc(var(--safe-area-top)+104px)] z-20 px-4">
         <div
           className={cn(
             "rounded-2xl border px-4 py-3 shadow-[0_10px_24px_-20px_rgba(0,0,0,0.45)] backdrop-blur-sm",

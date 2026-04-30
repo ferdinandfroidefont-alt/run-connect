@@ -68,6 +68,8 @@ import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
 import { CoachingMessageCard } from "@/components/coaching/CoachingMessageCard";
 import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
 import { SignedImage } from "@/components/SignedImage";
+import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
+import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 
 const NewConversationView = lazy(() =>
   import("@/components/NewConversationView").then((m) => ({ default: m.NewConversationView }))
@@ -223,6 +225,8 @@ const Messages = () => {
   const [showCoachCreate, setShowCoachCreate] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
+  const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
+  const [storiesRefreshToken, setStoriesRefreshToken] = useState(0);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Conversation settings states
@@ -239,7 +243,6 @@ const Messages = () => {
   const [keyboardInsetBottom, setKeyboardInsetBottom] = useState(0);
   const [composerHeight, setComposerHeight] = useState(0);
   const viewportBaseHeightRef = useRef(0);
-  const conversationSearchInputRef = useRef<HTMLInputElement>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
@@ -3025,7 +3028,7 @@ const Messages = () => {
                     aria-selected={false}
                     className="touch-manipulation pb-1 pt-0.5 text-[15px] font-semibold text-[#8E8E93]"
                     onClick={() => {
-                      conversationSearchInputRef.current?.focus();
+                      navigate("/search");
                     }}
                   >
                     <span className="relative inline-block pb-2">Recherche</span>
@@ -3046,15 +3049,24 @@ const Messages = () => {
           }
         >
         <div className="space-y-ios-3 pb-ios-2 pt-ios-3">
-          {/* Search Conversations */}
-          <div className="relative px-ios-4">
-            <Search className="absolute left-ios-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={conversationSearchInputRef}
-              placeholder="Rechercher une conversation..."
-              value={conversationSearch}
-              onChange={(e) => setConversationSearch(e.target.value)}
-              className="pl-ios-6 h-[44px] bg-secondary border-0 rounded-ios-md text-ios-subheadline placeholder:text-muted-foreground"
+          <div className="ios-card w-full overflow-hidden border border-border/60 border-x-0 rounded-none sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border-x">
+            <div className="flex items-center justify-between px-ios-3 pt-3">
+              <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Stories
+              </p>
+              <button
+                type="button"
+                onClick={() => setStoriesRefreshToken((t) => t + 1)}
+                className="text-[12px] font-medium text-primary"
+              >
+                Actualiser
+              </button>
+            </div>
+            <SessionStoriesStrip
+              currentUserId={user?.id ?? null}
+              refreshToken={storiesRefreshToken}
+              onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+              onCreateStory={() => navigate("/stories/create")}
             />
           </div>
 
@@ -3401,6 +3413,15 @@ const Messages = () => {
             username={selectedAvatarData?.username || "Utilisateur"}
           />
         </Suspense>
+
+        <SessionStoryDialog
+          open={!!storyAuthorId}
+          onOpenChange={(open) => {
+            if (!open) setStoryAuthorId(null);
+          }}
+          authorId={storyAuthorId}
+          viewerUserId={user?.id ?? null}
+        />
 
         {conversationDeleteDialogs}
       </div>
