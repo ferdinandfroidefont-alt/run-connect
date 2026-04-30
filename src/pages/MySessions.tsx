@@ -644,23 +644,28 @@ export default function MySessions() {
     return true;
   });
 
-  /** Points calendrier : agrège créées + rejointes pour la vue mensuelle (style « Mon plan »). */
-  const monthDots: MonthSessionDot[] = useMemo(() => {
+  /** Résumé séances par jour pour le sélecteur hebdo (style « Mon plan » / Planification). */
+  const sessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
     const merged = [...sessions, ...joinedSessions];
     const seen = new Set<string>();
-    const dots: MonthSessionDot[] = [];
+    const map: Record<string, DaySessionSummary> = {};
     for (const s of merged) {
       if (seen.has(s.id)) continue;
       seen.add(s.id);
-      dots.push({
-        id: s.id,
-        scheduled_at: s.scheduled_at,
-        objective: (s as any).objective ?? null,
-        title: s.title ?? '',
-        activity_type: (s as any).activity_type ?? '',
-      });
+      const at = (s as any).activity_type ?? '';
+      const lower = String(at).toLowerCase();
+      const sport: DaySessionSummary['sport'] = lower.includes('bike') || lower.includes('cycl') || lower.includes('vélo') || lower.includes('velo')
+        ? 'cycling'
+        : lower.includes('swim') || lower.includes('natation')
+          ? 'swimming'
+          : lower.includes('strength') || lower.includes('renfo') || lower.includes('muscu')
+            ? 'strength'
+            : 'running';
+      const key = format(new Date(s.scheduled_at), 'yyyy-MM-dd');
+      if (!map[key]) map[key] = { sport, value: '1' };
+      else map[key] = { sport: map[key].sport, value: String(parseInt(map[key].value, 10) + 1) };
     }
-    return dots;
+    return map;
   }, [sessions, joinedSessions]);
 
   const openConfirmDialog = (session: UserSession) => {
