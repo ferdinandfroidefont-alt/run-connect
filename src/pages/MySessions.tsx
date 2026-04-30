@@ -1075,13 +1075,16 @@ export default function MySessions() {
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
               <>
-              {/* Calendrier mensuel — même rendu que « Mon plan » coaching */}
-              <div className="px-ios-4 mb-ios-3">
-                <MonthlyCalendarView
-                  monthDate={calendarMonth}
-                  sessions={monthDots}
-                  onPrevMonth={() => setCalendarMonth((d) => subMonths(d, 1))}
-                  onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
+              {/* Sélecteur de semaine — même rendu que Planification / Mon plan */}
+              <div className="mb-ios-3">
+                <WeekSelectorPremium
+                  weekStart={weekAnchor}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  onPreviousWeek={() => setWeekAnchor((d) => subWeeks(d, 1))}
+                  onNextWeek={() => setWeekAnchor((d) => addWeeks(d, 1))}
+                  sessionSummaryByDate={sessionSummaryByDate}
+                  showLegend
                 />
               </div>
 
