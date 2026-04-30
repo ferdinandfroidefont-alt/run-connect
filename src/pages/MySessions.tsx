@@ -34,6 +34,8 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
+import { MonthlyCalendarView, type MonthSessionDot } from '@/components/coaching/MonthlyCalendarView';
+import { addMonths, subMonths } from 'date-fns';
 import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
@@ -170,6 +172,7 @@ export default function MySessions() {
   const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => new Date());
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
   const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
@@ -640,6 +643,25 @@ export default function MySessions() {
     return true;
   });
 
+  /** Points calendrier : agrège créées + rejointes pour la vue mensuelle (style « Mon plan »). */
+  const monthDots: MonthSessionDot[] = useMemo(() => {
+    const merged = [...sessions, ...joinedSessions];
+    const seen = new Set<string>();
+    const dots: MonthSessionDot[] = [];
+    for (const s of merged) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      dots.push({
+        id: s.id,
+        scheduled_at: s.scheduled_at,
+        objective: (s as any).objective ?? null,
+        title: s.title ?? '',
+        activity_type: (s as any).activity_type ?? '',
+      });
+    }
+    return dots;
+  }, [sessions, joinedSessions]);
+
   const openConfirmDialog = (session: UserSession) => {
     setConfirmTarget({
       sessionId: session.id,
@@ -1041,89 +1063,20 @@ export default function MySessions() {
             <h1 className="text-ios-title1 font-bold text-center">{t("navigation.mySessions")}</h1>
           </div>
           
-          {/* iOS Segmented Control */}
-          <div className="px-ios-4 pb-ios-2">
-            <div className="bg-secondary rounded-ios-lg p-ios-1">
-              <div className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center">
-                Programmées
-              </div>
-              <div className="mt-ios-1 flex gap-ios-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSessionSource('created');
-                    setSessionPage(0);
-                  }}
-                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                    sessionSource === 'created'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  Créées
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSessionSource('joined');
-                    setSessionPage(0);
-                  }}
-                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                    sessionSource === 'joined'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  Rejointes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSessionSource('to-confirm');
-                    setSessionPage(0);
-                  }}
-                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                    sessionSource === 'to-confirm'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  À confirmer
-                </button>
-              </div>
-            </div>
-          </div>
           <div className="h-px bg-border" />
         </div>
 
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
-              {sessionSource === "to-confirm" ? (
-                <div className="min-h-0 px-ios-4 pb-ios-6">
-                  <ConfirmPresencePage embedded />
-                </div>
-              ) : (
-                <>
-              {/* List/Calendar toggle */}
-              <div className="flex px-ios-4 mb-ios-1">
-                <div className="flex ios-card rounded-ios-lg p-ios-1 shrink-0">
-                  <button
-                    onClick={() => setSessionsDisplayMode('list')}
-                    className={`p-ios-1 rounded-ios-sm transition-colors ${
-                      sessionsDisplayMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <List className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setSessionsDisplayMode('calendar')}
-                    className={`p-ios-1 rounded-ios-sm transition-colors ${
-                      sessionsDisplayMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                  </button>
-                </div>
+              <>
+              {/* Calendrier mensuel — même rendu que « Mon plan » coaching */}
+              <div className="px-ios-4 mb-ios-3">
+                <MonthlyCalendarView
+                  monthDate={calendarMonth}
+                  sessions={monthDots}
+                  onPrevMonth={() => setCalendarMonth((d) => subMonths(d, 1))}
+                  onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
+                />
               </div>
 
               {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
@@ -1148,14 +1101,7 @@ export default function MySessions() {
               </div>
 
               {/* Sessions Display */}
-              {sessionsDisplayMode === 'calendar' ? (
-                <div className="box-border min-w-0 w-full max-w-full px-4">
-                  <SessionCalendarView
-                    sessions={filteredSessions}
-                    onSessionClick={handleSessionClick}
-                  />
-                </div>
-              ) : loading ? (
+              {loading ? (
                 <div className="space-y-px">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="bg-card p-ios-3 animate-pulse">
@@ -1310,7 +1256,6 @@ export default function MySessions() {
                 </div>
               )}
                 </>
-              )}
           </>
         </div>
       </div>
