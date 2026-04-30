@@ -1256,7 +1256,6 @@ export default function MySessions() {
                 </div>
               )}
                 </>
-              )}
           </>
         </div>
       </div>
