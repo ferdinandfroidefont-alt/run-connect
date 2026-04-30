@@ -2961,7 +2961,7 @@ const Messages = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-messages">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-messages">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="z-50 bg-card"
@@ -3025,7 +3025,7 @@ const Messages = () => {
           </div>
           }
         >
-        <div className="space-y-ios-3 pb-ios-2 pt-ios-3">
+        <div className="space-y-2.5 bg-white pb-ios-2 pt-2.5">
           <div className="w-full overflow-hidden border-x-0 rounded-none sm:mx-auto sm:max-w-2xl">
             <SessionStoriesStrip
               currentUserId={user?.id ?? null}
@@ -3073,7 +3073,7 @@ const Messages = () => {
                   >
                     <div
                       className={cn(
-                        "ios-list-row relative flex items-center gap-ios-3 rounded-[18px] border border-[#E6ECF5] bg-white px-3.5 py-3 shadow-[0_8px_20px_-16px_rgba(15,23,42,0.45)]",
+                        "ios-list-row relative flex items-center gap-ios-3 rounded-[16px] border border-[#E8EEF6] bg-white px-3.5 py-2.5 shadow-[0_6px_16px_-14px_rgba(15,23,42,0.4)]",
                         selectedConversations.has(conversation.id) && "bg-primary/5 border-primary/30"
                       )}
                       onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
@@ -3107,7 +3107,7 @@ const Messages = () => {
                             <Check className="h-5 w-5 text-primary-foreground" />
                           </div>
                         ) : (
-                          <Avatar className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] aspect-square avatar-fixed">
+                          <Avatar className="h-[50px] w-[50px] min-w-[50px] min-h-[50px] aspect-square avatar-fixed">
                             {conversation.is_group ? (
                               <>
                                 <AvatarImage src={conversation.group_avatar_url || ""} />
@@ -3147,7 +3147,7 @@ const Messages = () => {
                             {pinnedConversations.has(conversation.id) && (
                               <span className="text-[13px] flex-shrink-0">📌</span>
                             )}
-                            <p className="truncate text-[17px] font-semibold text-[#0F172A]">
+                            <p className="truncate text-[16px] font-semibold text-[#0F172A]">
                               {conversation.is_group 
                                 ? conversation.group_name 
                                 : (conversation.other_participant?.username || "Utilisateur")
@@ -3156,7 +3156,7 @@ const Messages = () => {
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`truncate text-[15px] ${
+                          <p className={`truncate text-[14px] ${
                             conversation.unread_count > 0 
                               ? 'text-[#334155] font-medium' 
                               : 'text-[#64748B]'

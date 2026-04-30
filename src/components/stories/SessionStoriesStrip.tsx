@@ -113,25 +113,25 @@ export function SessionStoriesStrip({
   const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
   return (
-    <div className="overflow-x-auto px-4 pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="flex min-w-max items-start gap-3.5">
+    <div className="overflow-x-auto bg-white px-4 pb-1.5 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-max items-start gap-3">
         <button
           type="button"
           onClick={hasMyStory ? () => onOpenStory(currentUserId!) : onCreateStory}
-          className="flex min-w-[74px] flex-col items-center gap-1.5"
+          className="flex min-w-[70px] flex-col items-center gap-1.5"
         >
-          <div className="relative rounded-full bg-white p-[3px] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.45)]">
-            <Avatar className="h-[66px] w-[66px] border-2 border-[#DBEAFE]">
+          <div className="relative rounded-full bg-white p-[2.5px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]">
+            <Avatar className="h-[62px] w-[62px] border-2 border-[#DBEAFE]">
               <AvatarImage src={myStoryAvatarUrl ?? ""} />
               <AvatarFallback className="bg-[#DBEAFE] text-[#2563EB]">MOI</AvatarFallback>
             </Avatar>
             {!hasMyStory && (
-              <span className="absolute bottom-0.5 right-0.5 rounded-full bg-[#2563EB] p-1 text-white shadow-sm">
-                <Plus className="h-3.5 w-3.5" />
+              <span className="absolute bottom-0.5 right-0.5 rounded-full bg-[#2563EB] p-[3px] text-white shadow-sm">
+                <Plus className="h-3 w-3" />
               </span>
             )}
           </div>
-          <span className="max-w-[74px] truncate text-[12px] font-medium text-[#0F172A]">Votre story</span>
+          <span className="max-w-[70px] truncate text-[11px] font-medium text-[#0F172A]">Votre story</span>
         </button>
 
         {authors
@@ -141,23 +141,23 @@ export function SessionStoriesStrip({
               key={author.author_id}
               type="button"
               onClick={() => onOpenStory(author.author_id)}
-              className="flex min-w-[74px] flex-col items-center gap-1.5"
+              className="flex min-w-[70px] flex-col items-center gap-1.5"
             >
               <div
                 className={
                   author.viewed
-                    ? "rounded-full bg-[#E2E8F0] p-[2.5px] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.45)]"
-                    : "rounded-full bg-[linear-gradient(135deg,#2563EB_0%,#60A5FA_52%,#93C5FD_100%)] p-[2.5px] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.45)]"
+                    ? "rounded-full bg-[#E2E8F0] p-[2px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]"
+                    : "rounded-full bg-[linear-gradient(135deg,#2563EB_0%,#60A5FA_52%,#93C5FD_100%)] p-[2px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]"
                 }
               >
-                <Avatar className="h-16 w-16 border-2 border-white">
+                <Avatar className="h-[60px] w-[60px] border-2 border-white">
                   <AvatarImage src={author.avatar_url ?? ""} />
                   <AvatarFallback className="bg-[#E2E8F0] text-[#334155]">
                     {(author.username ?? "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <span className="max-w-[74px] truncate text-[12px] font-medium text-[#0F172A]">
+              <span className="max-w-[70px] truncate text-[11px] font-medium text-[#0F172A]">
                 {author.display_name || author.username || "Membre"}
               </span>
             </button>
