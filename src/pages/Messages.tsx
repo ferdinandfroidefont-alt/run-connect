@@ -162,6 +162,14 @@ interface Message {
   } | null;
 }
 
+interface PastSessionCommentTarget {
+  id: string;
+  title: string;
+  scheduled_at: string;
+  location_name: string | null;
+  activity_type: string | null;
+}
+
 const Messages = () => {
   const { user } = useAuth();
   const { isPreviewMode } = useAppPreview();
@@ -247,6 +255,11 @@ const Messages = () => {
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
+  const isCommentsTab = tabParam === "comments";
+  const [pastSessions, setPastSessions] = useState<PastSessionCommentTarget[]>([]);
+  const [commentsBySession, setCommentsBySession] = useState<Record<string, string>>({});
+  const [isLoadingPastSessions, setIsLoadingPastSessions] = useState(false);
+  const [submittingSessionId, setSubmittingSessionId] = useState<string | null>(null);
 
   const visibleMessages = useMemo(() => {
     const q = threadSearch.trim().toLowerCase();
@@ -2017,6 +2030,99 @@ const Messages = () => {
     }
   }, [tabParam, setSearchParams]);
 
+  useEffect(() => {
+    if (!user || !isCommentsTab) return;
+    let cancelled = false;
+
+    const loadPastSessions = async () => {
+      setIsLoadingPastSessions(true);
+      try {
+        const { data: joinedRows, error: joinedError } = await supabase
+          .from("session_participants")
+          .select("session_id")
+          .eq("user_id", user.id);
+
+        if (joinedError) throw joinedError;
+
+        const joinedIds = (joinedRows || [])
+          .map((row) => row.session_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+        const clauses = [`organizer_id.eq.${user.id}`];
+        if (joinedIds.length > 0) {
+          clauses.push(`id.in.(${Array.from(new Set(joinedIds)).join(",")})`);
+        }
+
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from("sessions")
+          .select("id,title,scheduled_at,location_name,activity_type")
+          .lt("scheduled_at", new Date().toISOString())
+          .or(clauses.join(","))
+          .order("scheduled_at", { ascending: false })
+          .limit(30);
+
+        if (sessionsError) throw sessionsError;
+        if (cancelled) return;
+
+        const uniqueSessions = Array.from(
+          new Map((sessionsData || []).map((session) => [session.id, session])).values()
+        ) as PastSessionCommentTarget[];
+
+        setPastSessions(uniqueSessions);
+      } catch (error) {
+        console.error("Error loading past sessions for comments:", error);
+        if (!cancelled) {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger vos séances passées.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) setIsLoadingPastSessions(false);
+      }
+    };
+
+    void loadPastSessions();
+    return () => {
+      cancelled = true;
+    };
+  }, [isCommentsTab, toast, user]);
+
+  const submitSessionComment = useCallback(
+    async (sessionId: string) => {
+      if (!user) return;
+      const content = commentsBySession[sessionId]?.trim();
+      if (!content) return;
+
+      setSubmittingSessionId(sessionId);
+      try {
+        const { error } = await supabase.from("session_comments").insert({
+          session_id: sessionId,
+          user_id: user.id,
+          content,
+        });
+        if (error) throw error;
+
+        setCommentsBySession((prev) => ({ ...prev, [sessionId]: "" }));
+        toast({
+          title: "Commentaire publié",
+          description: "Ton commentaire a bien été ajouté à la séance.",
+        });
+      } catch (error) {
+        console.error("Error posting session comment:", error);
+        toast({
+          title: "Erreur",
+          description: "Le commentaire n'a pas pu être publié.",
+          variant: "destructive",
+        });
+      } finally {
+        setSubmittingSessionId(null);
+      }
+    },
+    [commentsBySession, toast, user]
+  );
+
   // Deep link : /messages?createClub=1 → ouvre directement la création de club
   useEffect(() => {
     if (searchParams.get("createClub") === "1") {
@@ -2111,7 +2217,7 @@ const Messages = () => {
     );
   }
 
-  if (selectedConversation) {
+  if (selectedConversation && !isCommentsTab) {
     const isDirectMessage = !selectedConversation.is_group;
     
     return (
@@ -2959,6 +3065,96 @@ const Messages = () => {
     );
   }
 
+  if (isCommentsTab) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-messages-comments">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="z-50 bg-card"
+          header={
+            <MainTopHeader
+              title="Mes séances"
+              tabsAriaLabel="Navigation Mes séances"
+              tabs={[
+                { id: "list", label: "Liste", active: false, onClick: () => navigate("/my-sessions") },
+                { id: "create", label: "Création", active: false, onClick: () => navigate("/my-sessions") },
+                { id: "comment", label: "Commentaire", active: true },
+              ]}
+            />
+          }
+        >
+          <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto bg-white px-ios-4 pb-ios-6 pt-ios-3">
+            {isLoadingPastSessions ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="ios-card animate-pulse px-ios-3 py-ios-3">
+                    <div className="mb-2 h-4 w-2/3 rounded bg-secondary" />
+                    <div className="mb-3 h-3 w-1/2 rounded bg-secondary" />
+                    <div className="h-20 w-full rounded bg-secondary" />
+                  </div>
+                ))}
+              </div>
+            ) : pastSessions.length === 0 ? (
+              <div className={emptyStateSx.shell}>
+                <div className={emptyStateSx.iconCircle}>
+                  <MessageCircle className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <div className={emptyStateSx.textBlock}>
+                  <h3 className="text-ios-title3 font-semibold text-foreground">Aucune séance passée</h3>
+                  <p className="max-w-xs text-ios-subheadline leading-relaxed text-muted-foreground">
+                    Reviens ici après tes prochaines séances pour laisser un commentaire.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="ios-list-stack">
+                {pastSessions.map((session) => {
+                  const draft = commentsBySession[session.id] || "";
+                  const disabled = submittingSessionId === session.id || !draft.trim();
+                  return (
+                    <div key={session.id} className="ios-card space-y-3 px-ios-3 py-ios-3">
+                      <div>
+                        <h3 className="truncate text-ios-headline font-semibold text-foreground">{session.title}</h3>
+                        <p className="mt-1 text-[13px] text-muted-foreground">
+                          {format(new Date(session.scheduled_at), "EEE d MMM • HH:mm", { locale: fr })}
+                          {session.location_name ? ` • ${session.location_name}` : ""}
+                        </p>
+                      </div>
+
+                      <textarea
+                        value={draft}
+                        onChange={(event) =>
+                          setCommentsBySession((prev) => ({ ...prev, [session.id]: event.target.value }))
+                        }
+                        placeholder="Écrire un commentaire sur cette séance..."
+                        className="min-h-[92px] w-full resize-none rounded-[14px] border border-border bg-white px-3 py-2 text-[15px] outline-none transition-colors focus:border-primary"
+                        maxLength={800}
+                      />
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] text-muted-foreground">{draft.length}/800</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => submitSessionComment(session.id)}
+                          disabled={disabled}
+                          className="gap-1.5"
+                        >
+                          <Send className="h-4 w-4" />
+                          Publier
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </IosFixedPageHeaderShell>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-messages">
@@ -2993,6 +3189,12 @@ const Messages = () => {
             ) : (
               <MainTopHeader
                 title="Messages"
+                tabsAriaLabel="Navigation messages"
+                tabs={[
+                  { id: "conversations", label: "Conversations", active: true },
+                  { id: "search", label: "Recherche", active: false, onClick: () => navigate("/search") },
+                  { id: "create-club", label: "Créer un club", active: false, onClick: () => setShowCreateGroup(true) },
+                ]}
                 right={
                   <>
                     <button

@@ -1071,7 +1071,7 @@ export default function MySessions() {
             tabs={[
               { id: "list", label: "Liste", active: true },
               { id: "create", label: "Création", active: false, onClick: () => openCreateSession() },
-              { id: "comment", label: "Commentaire", active: false, onClick: () => navigate('/messages') },
+              { id: "comment", label: "Commentaire", active: false, onClick: () => navigate('/messages?tab=comments') },
             ]}
           />
           <div className="h-px bg-border" />

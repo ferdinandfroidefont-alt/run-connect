@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Search as SearchIcon } from 'lucide-react';
+import { Search as SearchIcon } from 'lucide-react';
 import { SearchTabs } from '@/components/SearchTabs';
 import { ProfilesTab } from '@/components/search/ProfilesTab';
 import { ClubsTab } from '@/components/search/ClubsTab';
@@ -8,7 +8,7 @@ import { StravaTab } from '@/components/search/StravaTab';
 import { ContactsTab } from '@/components/search/ContactsTab';
 import { Input } from '@/components/ui/input';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
-import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
+import { MainTopHeader } from '@/components/layout/MainTopHeader';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
@@ -31,14 +31,8 @@ export default function Search() {
     }
   }, [searchParams]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isClosing, setIsClosing] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [settingsFocus, setSettingsFocus] = useState<string>("");
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => navigate(-1), 250);
-  };
 
   // Placeholder adaptatif selon l'onglet actif
   const getPlaceholder = () => {
@@ -79,7 +73,7 @@ export default function Search() {
   return (
     <>
       <div 
-        className={`fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-secondary ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className="fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-secondary animate-slide-up"
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
@@ -87,20 +81,14 @@ export default function Search() {
           header={
             <>
               <header className="shrink-0 border-b border-border bg-card px-ios-4 pb-ios-3 pt-ios-4">
-                <IosPageHeaderBar
-                  className="px-0 py-0 min-h-[44px]"
-                  titleClassName="text-ios-headline"
-                  left={
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="flex min-w-0 items-center gap-ios-1 text-primary active:opacity-70"
-                    >
-                      <ChevronLeft className="h-6 w-6 shrink-0" />
-                      <span className="truncate text-ios-headline">Retour</span>
-                    </button>
-                  }
-                title="Rechercher"
+                <MainTopHeader
+                  title="Messages"
+                  tabsAriaLabel="Navigation messages"
+                  tabs={[
+                    { id: "conversations", label: "Conversations", active: false, onClick: () => navigate("/messages") },
+                    { id: "search", label: "Recherche", active: true },
+                    { id: "create-club", label: "Créer un club", active: false, onClick: () => navigate("/messages?createClub=1") },
+                  ]}
                 />
                 <div className="relative mt-ios-3">
                   <SearchIcon className="absolute left-ios-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
