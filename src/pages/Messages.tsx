@@ -3454,68 +3454,20 @@ const Messages = () => {
               </div>
             </>
           ) : activeRootTab === "search" ? (
-            <div className="px-3.5 pb-ios-2">
-              <div className="ios-card overflow-hidden">
-                <div className="relative px-3.5 py-3">
-                  <Search className="pointer-events-none absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={conversationSearch}
-                    onChange={(event) => setConversationSearch(event.target.value)}
-                    placeholder="Rechercher une conversation..."
-                    className="pl-9"
-                  />
-                </div>
-                {filteredAndSortedConversations.length === 0 ? (
-                  <div className="px-ios-4 pb-ios-4 pt-ios-2 text-[14px] text-muted-foreground">
-                    Aucune conversation ne correspond à votre recherche.
-                  </div>
-                ) : (
-                  <div className="ios-list-stack">
-                    {filteredAndSortedConversations.map((conversation) => (
-                      <button
-                        key={conversation.id}
-                        type="button"
-                        className="ios-list-row flex w-full items-center gap-ios-3 bg-white px-3.5 py-3 text-left"
-                        onClick={() => {
-                          setActiveRootTab("conversations");
-                          setSelectedConversation(conversation);
-                          loadMessages(conversation.id);
-                          markMessagesAsReadOnOpen(conversation.id);
-                        }}
-                      >
-                        <Avatar className="h-11 w-11">
-                          {conversation.is_group ? (
-                            <>
-                              <AvatarImage src={conversation.group_avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary">
-                                <Users className="h-5 w-5 text-muted-foreground" />
-                              </AvatarFallback>
-                            </>
-                          ) : (
-                            <>
-                              <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary text-[15px] font-semibold">
-                                {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </>
-                          )}
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-semibold text-foreground">
-                            {conversation.is_group
-                              ? conversation.group_name
-                              : (conversation.other_participant?.username || "Utilisateur")}
-                          </p>
-                          <p className="truncate text-[13px] text-muted-foreground">
-                            {conversation.last_message?.content || "Aucun message"}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <Suspense fallback={<div className="h-40 bg-white" />}>
+              <NewConversationView
+                onBack={() => setActiveRootTab("conversations")}
+                onStartConversation={(...args) => {
+                  setActiveRootTab("conversations");
+                  return startConversation(...args);
+                }}
+                onCreateClub={() => {
+                  setActiveRootTab("conversations");
+                  setShowCreateGroup(true);
+                }}
+                onAvatarClick={handleAvatarClick}
+              />
+            </Suspense>
           ) : (
             <div className="px-3.5 pb-ios-2">
               <div className="ios-card px-ios-4 py-ios-4">
