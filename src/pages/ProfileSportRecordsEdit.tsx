@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, ArrowLeft, Bike, Check, Footprints, Loader2, Plus, Trash2, Waves, Zap, type LucideIcon } from "lucide-react";
+import { Activity, Bike, Check, Footprints, Loader2, Plus, Trash2, Waves, Zap, type LucideIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 import {
@@ -126,6 +126,11 @@ export default function ProfileSportRecordsEdit() {
   const [speedWhole, setSpeedWhole] = useState("25");
   const [speedDec, setSpeedDec] = useState("0");
   const [wattsDraft, setWattsDraft] = useState("220");
+  const profileHeaderTabs = [
+    { id: "profile", label: "Profil", active: false, onClick: () => navigate("/profile") },
+    { id: "records", label: "Record", active: true },
+    { id: "story", label: "Créer une story", active: false, onClick: () => navigate("/stories/create") },
+  ];
 
   const openDurationPicker = () => {
     const h = Math.floor(durationSec / 3600);
@@ -302,16 +307,11 @@ export default function ProfileSportRecordsEdit() {
       contentScroll
       scrollClassName="min-h-0 bg-secondary"
       header={
-        <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-          <IosPageHeaderBar
-            left={
-              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full" onClick={() => navigate(-1)}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            }
-            title="Créer un record"
-          />
-        </div>
+        <MainTopHeader
+          title="Mon profil"
+          tabs={profileHeaderTabs}
+          tabsAriaLabel="Navigation du profil"
+        />
       }
     >
       <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">

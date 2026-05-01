@@ -3175,13 +3175,13 @@ export function CoachPlanningExperience() {
                     <div className="min-w-0">
                       <div className="rounded-[16px] border border-border/65 bg-background px-2 py-2">
                         <div className="flex min-w-0 gap-2">
-                          <div className="flex h-14 shrink-0 flex-col justify-between py-0.5 text-[10px] font-semibold text-muted-foreground">
-                            <span>Z6</span>
-                            <span>Z5</span>
-                            <span>Z4</span>
-                            <span>Z3</span>
-                            <span>Z2</span>
-                            <span>Z1</span>
+                          <div className="flex h-[72px] shrink-0 flex-col justify-between py-0.5 text-[10px] font-semibold">
+                            <span className="text-[#BF5AF2]">Z6</span>
+                            <span className="text-[#FF453A]">Z5</span>
+                            <span className="text-[#FF9F0A]">Z4</span>
+                            <span className="text-[#FFD60A]">Z3</span>
+                            <span className="text-[#30D158]">Z2</span>
+                            <span className="text-[#4FA3FF]">Z1</span>
                           </div>
                           <div
                             ref={schemaPreviewRef}
@@ -3195,10 +3195,20 @@ export function CoachPlanningExperience() {
                             )}
                             title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                           >
+                            <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col-reverse rounded-[10px] overflow-hidden">
+                              <div className="flex-1 bg-[#4FA3FF]/[0.06]" />
+                              <div className="flex-1 bg-[#30D158]/[0.06]" />
+                              <div className="flex-1 bg-[#FFD60A]/[0.06]" />
+                              <div className="flex-1 bg-[#FF9F0A]/[0.06]" />
+                              <div className="flex-1 bg-[#FF453A]/[0.06]" />
+                              <div className="flex-1 bg-[#BF5AF2]/[0.06]" />
+                            </div>
                             <MiniWorkoutProfile
                               blocks={previewBars}
                               variant="premiumCompact"
                               barHeightScale={3}
+                              zoneBandMode
+                              interBlockGapPx={3}
                               selectedBlockIndex={selectedSchemaPreviewIndex}
                               onBlockTap={({ index }) => {
                                 if (!draft.blocks.length) return;
@@ -3209,7 +3219,7 @@ export function CoachPlanningExperience() {
                                 const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
                                 if (block) setSelectedBlockId(block.id);
                               }}
-                              className="h-[72px] w-full"
+                              className="relative z-[2] h-[72px] w-full border-l border-b border-border/70 bg-white/70"
                             />
                             {schemaDropRatio != null ? (
                               <div
@@ -3249,7 +3259,7 @@ export function CoachPlanningExperience() {
                     </div>
 
                     <p className="mb-2 mt-5 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
-                    <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="grid grid-cols-4 gap-2">
                       {(
                         [
                           {
@@ -3306,7 +3316,12 @@ export function CoachPlanningExperience() {
                               addQuickSchemaBlock(card.key);
                             }
                           }}
-                          className="group flex aspect-square w-[4.75rem] shrink-0 cursor-grab flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing sm:w-20"
+                          className={cn(
+                            "group flex cursor-grab flex-col overflow-hidden rounded-2xl border select-none touch-none transition active:cursor-grabbing",
+                            card.key === "pyramid"
+                              ? "border-2 border-[#007AFF] bg-[#E8F0FF]"
+                              : "border-slate-200/90 bg-[#F2F2F7] hover:border-[#2563EB]/45"
+                          )}
                         >
                           <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
                             {card.mini}
@@ -3333,7 +3348,7 @@ export function CoachPlanningExperience() {
                             addQuickSchemaBlock("variation");
                           }
                         }}
-                        className="group flex aspect-square w-[4.75rem] shrink-0 cursor-grab flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing sm:w-20"
+                        className="group flex cursor-grab flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-[#F2F2F7] select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing"
                       >
                         <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
                           <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>

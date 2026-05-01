@@ -27,6 +27,7 @@ import { buildSessionSharePayload } from "@/lib/sessionSharePayload";
 import { getSessionPublicUrl } from "@/lib/appLinks";
 import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { generateSessionShareImage } from "@/services/sessionShareService";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import {
   ArrowLeft, Camera, Image, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
@@ -164,6 +165,11 @@ export default function StoryCreate() {
   const { isPreviewMode } = useAppPreview();
   const { toast } = useToast();
   const { takePicture, checkPermissions, requestPermissions } = useCamera();
+  const profileHeaderTabs = [
+    { id: "profile", label: "Profil", active: false, onClick: () => navigate("/profile") },
+    { id: "records", label: "Record", active: false, onClick: () => navigate("/profile/records") },
+    { id: "story", label: "Créer une story", active: true },
+  ];
 
   // Flow
   const [step, setStep] = useState<StoryStep>("entry");
@@ -2151,21 +2157,12 @@ export default function StoryCreate() {
     return (
       <>
       <div className="relative flex min-h-0 flex-1 flex-col bg-background">
-        <div className="fixed inset-x-0 top-0 z-30 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
-          <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
-            <button
-              type="button"
-              onClick={() => void requestExitWithDraftPrompt("back")}
-              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
-            </button>
-            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
-            <div aria-hidden />
-          </div>
-        </div>
-        <div className="flex min-h-0 flex-1 items-center justify-center px-5 pt-[calc(env(safe-area-inset-top,0px)+52px)]">
+        <MainTopHeader
+          title="Mon profil"
+          tabs={profileHeaderTabs}
+          tabsAriaLabel="Navigation du profil"
+        />
+        <div className="flex min-h-0 flex-1 items-center justify-center px-5">
           <div className="w-full max-w-sm space-y-3">
             <button
               type="button"
@@ -2272,21 +2269,11 @@ export default function StoryCreate() {
   if (step === "capture") {
     return (
       <div className="relative flex min-h-0 flex-1 flex-col bg-black">
-        {/* Top bar */}
-        <div className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
-          <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
-            <button
-              type="button"
-              onClick={() => void requestExitWithDraftPrompt("back")}
-              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
-            </button>
-            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
-            <div aria-hidden />
-          </div>
-        </div>
+        <MainTopHeader
+          title="Mon profil"
+          tabs={profileHeaderTabs}
+          tabsAriaLabel="Navigation du profil"
+        />
 
         {/* Camera viewfinder */}
         {sourceMode === "camera" ? (
@@ -2412,6 +2399,28 @@ export default function StoryCreate() {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-black">
+      <MainTopHeader
+        title="Mon profil"
+        tabs={profileHeaderTabs}
+        tabsAriaLabel="Navigation du profil"
+        right={
+          <Button
+            type="button"
+            size="sm"
+            disabled={sharing || (editorMode === "idle" && !mediaFile)}
+            onClick={() => {
+              if (editorMode !== "idle") {
+                closeEditorMode();
+                return;
+              }
+              setPublishConfirmOpen(true);
+            }}
+            className="h-9 rounded-full px-4 text-xs font-semibold"
+          >
+            {sharing ? "Envoi…" : "Publier"}
+          </Button>
+        }
+      />
       {/* Preview fullscreen */}
       <div
         className="relative flex-1 overflow-hidden"
@@ -2738,68 +2747,8 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {/* Barre du haut : boutons flottants, sans bandeau opaque (type Instagram) */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-30 pt-[max(8px,env(safe-area-inset-top,8px))]">
-          <div className="pointer-events-auto flex items-center justify-between gap-2 px-3">
-            <button
-              type="button"
-              onClick={() => void requestExitWithDraftPrompt("back")}
-              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full bg-transparent px-2.5 py-2 text-[15px] font-medium text-primary transition active:scale-[0.97] active:opacity-85"
-            >
-              <ArrowLeft className="h-5 w-5 shrink-0" />
-              <span className="pr-0.5">Retour</span>
-            </button>
-            {selectedMusic && (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTool("music");
-                  setEditorMode("music");
-                  setShowMusicPicker(true);
-                  setMusicSheetTab("forYou");
-                  setPendingMusic(selectedMusic);
-                  triggerHaptic("light");
-                }}
-                className="pointer-events-auto inline-flex max-w-[190px] items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1.5 text-white shadow-[0_4px_18px_rgba(0,0,0,0.3)] backdrop-blur-xl transition active:scale-[0.97]"
-              >
-                <Music className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate text-xs font-medium">
-                  {selectedMusic.title}
-                  {selectedMusic.artist ? ` · ${selectedMusic.artist}` : ""}
-                </span>
-                <span
-                  role="button"
-                  aria-label="Retirer la musique"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedMusic(null);
-                    triggerHaptic("light");
-                  }}
-                  className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-white"
-                >
-                  ×
-                </span>
-              </button>
-            )}
-            <Button
-              type="button"
-              disabled={sharing || (editorMode === "idle" && !mediaFile)}
-              onClick={() => {
-                if (editorMode !== "idle") {
-                  closeEditorMode();
-                  return;
-                }
-                setPublishConfirmOpen(true);
-              }}
-              className="h-10 shrink-0 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition active:scale-[0.98]"
-            >
-              {sharing ? "Envoi…" : "Publier"}
-            </Button>
-          </div>
-        </div>
-
         {/* Outils à droite : intégration type éditeur natif */}
-        <div className="absolute right-[max(12px,env(safe-area-inset-right,0px))] top-[max(4.5rem,calc(env(safe-area-inset-top)+3.75rem))] z-20 flex flex-col gap-2.5">
+        <div className="absolute right-[max(12px,env(safe-area-inset-right,0px))] top-[max(12px,env(safe-area-inset-top,0px))] z-20 flex flex-col gap-2.5">
           {[
             {
               id: "text",
