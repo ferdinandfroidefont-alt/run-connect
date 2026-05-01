@@ -2588,11 +2588,6 @@ export function CoachPlanningExperience() {
             <PlanningHeader
               onOpenMenu={() => setDrawerOpen(true)}
               title="Coaching"
-              subtitle={
-                activeMenuKey === "my-plan"
-                  ? `Semaine du ${format(weekAnchor, "d", { locale: fr })} au ${format(addDays(weekAnchor, 6), "d MMMM", { locale: fr })}`
-                  : undefined
-              }
               tabs={[
                 {
                   id: "planning",
@@ -3034,7 +3029,7 @@ export function CoachPlanningExperience() {
       />
 
       {coachingTab === "create" && (
-        <div className="fixed inset-0 z-[120] flex min-h-0 flex-col overflow-hidden bg-secondary">
+        <div className="coaching-create-flat fixed inset-0 z-[120] flex min-h-0 flex-col overflow-hidden bg-white">
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
             headerWrapperClassName="shrink-0 border-b border-border bg-card"
@@ -3101,7 +3096,7 @@ export function CoachPlanningExperience() {
                 </div>
               </div>
             }
-            scrollClassName="bg-secondary pb-24"
+            scrollClassName="bg-white pb-24"
             footer={
               editorTab === "build" && (
                 <div className="border-t border-border bg-card px-4 py-3 pb-[max(0.9rem,var(--safe-area-bottom))]">
@@ -3127,9 +3122,9 @@ export function CoachPlanningExperience() {
             }
           >
             {editorTab === "build" ? (
-              <div className="space-y-4 px-4 pb-6">
+              <div className="space-y-3 px-4 pb-6">
                 <div
-                  className="ios-card -mx-4 overflow-hidden border-x-0 border-border/70 bg-secondary/35 shadow-[var(--shadow-card)] sm:mx-0 sm:rounded-2xl sm:border-x"
+                  className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
                 >
                   <div className="space-y-3 px-4 py-3">
                     <Input
@@ -3164,7 +3159,7 @@ export function CoachPlanningExperience() {
                 </div>
 
                 <div
-                  className="ios-card -mx-4 overflow-hidden border-x-0 border-border/70 bg-secondary/35 shadow-[var(--shadow-card)] sm:mx-0 sm:rounded-2xl sm:border-x"
+                  className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
                 >
                   <div className="space-y-3 px-4 py-3">
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
@@ -3355,7 +3350,7 @@ export function CoachPlanningExperience() {
                             <div
                               data-block-id={block.id}
                               className={cn(
-                                "ios-card relative rounded-none border-x-0 border-border/80 bg-card pl-12 pr-3 py-3 shadow-[var(--shadow-card)] transition-all sm:rounded-[20px] sm:border-x",
+                                "relative rounded-none border-x-0 border-border/80 bg-white pl-12 pr-3 py-3 transition-all",
                                 isDropTarget || isSelected ? "border-[#2563EB]/60 bg-[#2563EB]/[0.04]" : "",
                                 isDragged && "opacity-70"
                               )}
@@ -3379,9 +3374,9 @@ export function CoachPlanningExperience() {
                               </button>
                               <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-100", accents.tint)} />
                               {index < draft.blocks.length - 1 ? (
-                                <span
+                                <div
                                   aria-hidden
-                                  className="absolute -bottom-8 left-1/2 h-8 w-[3px] -translate-x-1/2 rounded-full bg-[#2563EB]/55"
+                                  className="pointer-events-none absolute bottom-0 left-[52px] right-0 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
                                 />
                               ) : null}
 

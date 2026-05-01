@@ -170,6 +170,8 @@ interface PastSessionCommentTarget {
   activity_type: string | null;
 }
 
+type MessagesRootTab = "conversations" | "search" | "create-club";
+
 const Messages = () => {
   const { user } = useAuth();
   const { isPreviewMode } = useAppPreview();
@@ -185,6 +187,7 @@ const Messages = () => {
   /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
   const [conversationsHydrated, setConversationsHydrated] = useState(false);
   const [conversationSearch, setConversationSearch] = useState("");
+  const [activeRootTab, setActiveRootTab] = useState<MessagesRootTab>("conversations");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -2031,6 +2034,18 @@ const Messages = () => {
   }, [tabParam, setSearchParams]);
 
   useEffect(() => {
+    if (isCommentsTab) return;
+    if (tabParam === "search") {
+      setActiveRootTab("search");
+      return;
+    }
+    if (tabParam === "create-club") {
+      setActiveRootTab("create-club");
+      return;
+    }
+  }, [isCommentsTab, tabParam]);
+
+  useEffect(() => {
     if (!user || !isCommentsTab) return;
     let cancelled = false;
 
@@ -3163,288 +3178,366 @@ const Messages = () => {
           headerWrapperClassName="z-50 bg-card"
           header={
           <div className="pt-[var(--safe-area-top)]">
-            {isSelectionMode ? (
-              <div className="relative flex min-h-[3.25rem] items-center justify-center px-4 pb-2 pt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={exitSelectionMode}
-                  className="text-primary p-0 h-auto font-normal absolute left-4"
-                >
-                  Annuler
-                </Button>
-                <h1 className="text-[17px] font-semibold text-center">
-                  {selectedConversations.size} sélectionné(s)
-                </h1>
-                <Button
-                  onClick={confirmBulkDelete}
-                  size="sm"
-                  variant="ghost"
-                  disabled={selectedConversations.size === 0}
-                  className="text-destructive p-0 h-auto font-normal absolute right-4"
-                >
-                  Supprimer
-                </Button>
-              </div>
-            ) : (
-              <MainTopHeader
-                title="Messages"
-                tabsAriaLabel="Navigation messages"
-                tabs={[
-                  { id: "conversations", label: "Conversations", active: true },
-                  { id: "search", label: "Recherche", active: false, onClick: () => navigate("/search") },
-                  { id: "create-club", label: "Créer un club", active: false, onClick: () => setShowCreateGroup(true) },
-                ]}
-                right={
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateGroup(true)}
-                      className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
-                      aria-label="Créer un club"
-                    >
-                      <Users className="h-5 w-5" />
-                    </button>
-                    <Button
-                      onClick={() => setShowNewConversation(true)}
-                      size="sm"
-                      variant="ghost"
-                      className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
-                      aria-label="Nouvelle conversation"
-                    >
-                      <Plus className="h-5 w-5" />
-                    </Button>
-                  </>
-                }
-              />
-            )}
+            <MainTopHeader
+              title="Messages"
+              tabsAriaLabel="Navigation messages"
+              tabs={[
+                {
+                  id: "conversations",
+                  label: "Conversations",
+                  active: activeRootTab === "conversations",
+                  onClick: () => setActiveRootTab("conversations"),
+                },
+                {
+                  id: "search",
+                  label: "Recherche",
+                  active: activeRootTab === "search",
+                  onClick: () => setActiveRootTab("search"),
+                },
+                {
+                  id: "create-club",
+                  label: "Créer un club",
+                  active: activeRootTab === "create-club",
+                  onClick: () => setActiveRootTab("create-club"),
+                },
+              ]}
+              right={
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateGroup(true)}
+                    className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                    aria-label="Créer un club"
+                  >
+                    <Users className="h-5 w-5" />
+                  </button>
+                  <Button
+                    onClick={() => setShowNewConversation(true)}
+                    size="sm"
+                    variant="ghost"
+                    className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                    aria-label="Nouvelle conversation"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </>
+              }
+            />
           </div>
           }
         >
         <div className="space-y-2.5 bg-white pb-ios-2 pt-2.5">
-          <div className="w-full overflow-hidden border-x-0 rounded-none sm:mx-auto sm:max-w-2xl">
-            <SessionStoriesStrip
-              currentUserId={user?.id ?? null}
-              refreshToken={storiesRefreshToken}
-              onOpenStory={(authorId) => setStoryAuthorId(authorId)}
-              onCreateStory={() => navigate("/stories/create")}
-            />
-          </div>
-
-          {/* Conversations List */}
-          <div className={conversations.length === 0 ? "ios-card overflow-hidden" : "ios-list-stack"}>
-            {conversations.length === 0 ? (
-              <div className={emptyStateSx.shell}>
-                <div className={emptyStateSx.iconCircle}>
-                  <MessageCircle className="h-12 w-12 text-muted-foreground" />
-                </div>
-                <div className={emptyStateSx.textBlock}>
-                  <h3 className="text-ios-title3 font-semibold text-foreground">
-                    Aucune conversation
-                  </h3>
-                  <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
-                    Envoyez un message à un ami ou créez un club pour commencer à échanger.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setShowNewConversation(true)}
-                  className="w-full max-w-xs"
-                >
-                  <Plus className="h-5 w-5 mr-ios-2" />
-                  Nouvelle conversation
-                </Button>
+          {activeRootTab === "conversations" ? (
+            <>
+              <div className="w-full overflow-hidden border-x-0 rounded-none sm:mx-auto sm:max-w-2xl">
+                <SessionStoriesStrip
+                  currentUserId={user?.id ?? null}
+                  refreshToken={storiesRefreshToken}
+                  onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+                  onCreateStory={() => navigate("/stories/create")}
+                />
               </div>
-            ) : (
-              <div>
-                {filteredAndSortedConversations.map((conversation, index) => (
-                  <SwipeableConversationItem
-                    key={conversation.id}
-                    isPinned={pinnedConversations.has(conversation.id)}
-                    disabled={isSelectionMode}
-                    onSwipeLeft={() => {
-                      setConversationToDelete(conversation);
-                      confirmDeleteConversation(conversation);
-                    }}
-                    onSwipeRight={() => togglePinConversation(conversation.id)}
-                  >
-                    <div
-                      className={cn(
-                        "ios-list-row relative flex items-center gap-ios-3 bg-white px-3.5 py-2.5",
-                        selectedConversations.has(conversation.id) && "bg-primary/5"
-                      )}
-                      onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
-                      onTouchEnd={handleLongPressEnd}
-                      onTouchCancel={handleLongPressEnd}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setConversationToDelete(conversation);
-                        confirmDeleteConversation(conversation);
-                      }}
+
+              {/* Conversations List */}
+              <div className={conversations.length === 0 ? "ios-card overflow-hidden" : "ios-list-stack"}>
+                {conversations.length === 0 ? (
+                  <div className={emptyStateSx.shell}>
+                    <div className={emptyStateSx.iconCircle}>
+                      <MessageCircle className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                    <div className={emptyStateSx.textBlock}>
+                      <h3 className="text-ios-title3 font-semibold text-foreground">
+                        Aucune conversation
+                      </h3>
+                      <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
+                        Envoyez un message à un ami ou créez un club pour commencer à échanger.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowNewConversation(true)}
+                      className="w-full max-w-xs"
                     >
-                      <button
-                        type="button"
-                        className="relative shrink-0 rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isSelectionMode) {
-                            toggleConversationSelection(conversation.id);
-                          }
+                      <Plus className="h-5 w-5 mr-ios-2" />
+                      Nouvelle conversation
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    {filteredAndSortedConversations.map((conversation, index) => (
+                      <SwipeableConversationItem
+                        key={conversation.id}
+                        isPinned={pinnedConversations.has(conversation.id)}
+                        disabled={isSelectionMode}
+                        onSwipeLeft={() => {
+                          setConversationToDelete(conversation);
+                          confirmDeleteConversation(conversation);
                         }}
-                        aria-label={
-                          isSelectionMode
-                            ? selectedConversations.has(conversation.id)
-                              ? "Désélectionner la conversation"
-                              : "Sélectionner la conversation"
-                            : "Avatar"
-                        }
+                        onSwipeRight={() => togglePinConversation(conversation.id)}
                       >
-                        {isSelectionMode && selectedConversations.has(conversation.id) ? (
-                          <div className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] rounded-full border-2 border-primary bg-primary flex items-center justify-center">
-                            <Check className="h-5 w-5 text-primary-foreground" />
-                          </div>
-                        ) : (
-                          <Avatar className="h-[50px] w-[50px] min-w-[50px] min-h-[50px] aspect-square avatar-fixed">
-                            {conversation.is_group ? (
-                              <>
-                                <AvatarImage src={conversation.group_avatar_url || ""} />
-                                <AvatarFallback className="bg-secondary">
-                                  <Users className="h-6 w-6 text-muted-foreground" />
-                                </AvatarFallback>
-                              </>
-                            ) : (
-                              <>
-                                <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                                <AvatarFallback className="bg-secondary text-[17px] font-semibold">
-                                  {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </>
-                            )}
-                          </Avatar>
-                        )}
-                        {!conversation.is_group && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
-                          <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
-                        )}
-                      </button>
-                      
-                      <div 
-                        className="flex-1 min-w-0"
-                        onClick={() => {
-                          if (isSelectionMode) {
-                            toggleConversationSelection(conversation.id);
-                          } else {
-                            setSelectedConversation(conversation);
-                            loadMessages(conversation.id);
-                            markMessagesAsReadOnOpen(conversation.id);
-                          }
-                        }}
-                      >
-                        <div className="mb-ios-1 flex items-center justify-between">
-                          <div className="flex items-center gap-ios-2 min-w-0">
-                            {pinnedConversations.has(conversation.id) && (
-                              <span className="text-[13px] flex-shrink-0">📌</span>
-                            )}
-                            <p className="truncate text-[16px] font-semibold text-[#0F172A]">
-                              {conversation.is_group 
-                                ? conversation.group_name 
-                                : (conversation.other_participant?.username || "Utilisateur")
-                              }
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className={`truncate text-[14px] ${
-                            conversation.unread_count > 0 
-                              ? 'text-[#334155] font-medium' 
-                              : 'text-[#64748B]'
-                          }`}>
-                            {conversation.last_message ? (
-                              <>
-                                {conversation.last_message.message_type === 'image' && (
-                                  <span className="inline-flex items-center gap-ios-2">
-                                    {conversation.last_message.file_url ? (
-                                      <SignedImage
-                                        fileUrl={conversation.last_message.file_url}
-                                        className="h-4 w-4 rounded-ios-sm object-cover inline-block"
-                                      />
-                                    ) : null}
-                                    Photo
-                                  </span>
-                                )}
-                                {conversation.last_message.message_type === 'file' && 'Fichier'}
-                                {conversation.last_message.message_type === 'voice' && 'Message vocal'}
-                                {conversation.last_message.message_type === 'session' && 'Session partagée'}
-                                {conversation.last_message.message_type === 'poll' && '📊 Sondage'}
-                                {conversation.last_message.message_type === 'coaching_session' && '🎓 Séance coach'}
-                                {conversation.last_message.message_type === 'system' && (
-                                  <span className="italic text-muted-foreground">
-                                    {conversation.last_message.content}
-                                  </span>
-                                )}
-                                {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
-                                  (conversation.last_message.content?.length > 40 
-                                    ? conversation.last_message.content.substring(0, 40) + '…' 
-                                    : conversation.last_message.content || 'Message supprimé'
-                                  )
-                                }
-                              </>
-                            ) : (
-                              conversation.is_group 
-                                ? `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? 's' : ''}`
-                                : 'Aucun message'
-                            )}
-                          </p>
-                          {conversation.unread_count > 0 && (
-                            <div className="h-5 min-w-5 px-ios-1 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-ios-2 animate-[pulse_2s_ease-in-out_infinite]">
-                              <span className="text-[11px] font-semibold text-primary-foreground">
-                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                              </span>
-                            </div>
+                        <div
+                          className={cn(
+                            "ios-list-row relative flex items-center gap-ios-3 bg-white px-3.5 py-2.5",
+                            selectedConversations.has(conversation.id) && "bg-primary/5"
                           )}
-                        </div>
-                      </div>
-                      
-                      {/* Right column: time + camera */}
-                      <div className="ml-ios-2 flex flex-shrink-0 items-start justify-center gap-ios-2">
-                        <span className="text-[13px] text-[#64748B]">
-                          {(() => {
-                            const date = new Date(conversation.last_message_date || conversation.updated_at);
-                            const now = new Date();
-                            const diffMs = now.getTime() - date.getTime();
-                            const diffMin = Math.floor(diffMs / 60000);
-                            const diffH = Math.floor(diffMs / 3600000);
-                            const diffD = Math.floor(diffMs / 86400000);
-                            if (diffMin < 1) return "à l'instant";
-                            if (diffMin < 60) return `${diffMin} min`;
-                            if (diffH < 24) return `${diffH}h`;
-                            if (diffD < 7) return format(date, 'EEEE', { locale: fr });
-                            return format(date, 'dd/MM', { locale: fr });
-                          })()}
-                        </span>
-                        {!isSelectionMode && (
+                          onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
+                          onTouchEnd={handleLongPressEnd}
+                          onTouchCancel={handleLongPressEnd}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setConversationToDelete(conversation);
+                            confirmDeleteConversation(conversation);
+                          }}
+                        >
                           <button
-                            className="p-ios-1 rounded-full active:bg-secondary transition-colors"
+                            type="button"
+                            className="relative shrink-0 rounded-full"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleQuickCameraForConversation(conversation);
+                              if (isSelectionMode) {
+                                toggleConversationSelection(conversation.id);
+                              }
+                            }}
+                            aria-label={
+                              isSelectionMode
+                                ? selectedConversations.has(conversation.id)
+                                  ? "Désélectionner la conversation"
+                                  : "Sélectionner la conversation"
+                                : "Avatar"
+                            }
+                          >
+                            {isSelectionMode && selectedConversations.has(conversation.id) ? (
+                              <div className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] rounded-full border-2 border-primary bg-primary flex items-center justify-center">
+                                <Check className="h-5 w-5 text-primary-foreground" />
+                              </div>
+                            ) : (
+                              <Avatar className="h-[50px] w-[50px] min-w-[50px] min-h-[50px] aspect-square avatar-fixed">
+                                {conversation.is_group ? (
+                                  <>
+                                    <AvatarImage src={conversation.group_avatar_url || ""} />
+                                    <AvatarFallback className="bg-secondary">
+                                      <Users className="h-6 w-6 text-muted-foreground" />
+                                    </AvatarFallback>
+                                  </>
+                                ) : (
+                                  <>
+                                    <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                                    <AvatarFallback className="bg-secondary text-[17px] font-semibold">
+                                      {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                  </>
+                                )}
+                              </Avatar>
+                            )}
+                            {!conversation.is_group && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
+                              <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
+                            )}
+                          </button>
+                          
+                          <div 
+                            className="flex-1 min-w-0"
+                            onClick={() => {
+                              if (isSelectionMode) {
+                                toggleConversationSelection(conversation.id);
+                              } else {
+                                setSelectedConversation(conversation);
+                                loadMessages(conversation.id);
+                                markMessagesAsReadOnOpen(conversation.id);
+                              }
                             }}
                           >
-                            <Camera className="h-5 w-5 text-muted-foreground" />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {index < filteredAndSortedConversations.length - 1 && (
-                        <div
-                          className="pointer-events-none absolute bottom-0 left-[76px] right-3.5 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
-                          aria-hidden
-                        />
-                      )}
-                    </div>
-                  </SwipeableConversationItem>
-                ))}
+                            <div className="mb-ios-1 flex items-center justify-between">
+                              <div className="flex items-center gap-ios-2 min-w-0">
+                                {pinnedConversations.has(conversation.id) && (
+                                  <span className="text-[13px] flex-shrink-0">📌</span>
+                                )}
+                                <p className="truncate text-[16px] font-semibold text-[#0F172A]">
+                                  {conversation.is_group 
+                                    ? conversation.group_name 
+                                    : (conversation.other_participant?.username || "Utilisateur")
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <p className={`truncate text-[14px] ${
+                                conversation.unread_count > 0 
+                                  ? 'text-[#334155] font-medium' 
+                                  : 'text-[#64748B]'
+                              }`}>
+                                {conversation.last_message ? (
+                                  <>
+                                    {conversation.last_message.message_type === 'image' && (
+                                      <span className="inline-flex items-center gap-ios-2">
+                                        {conversation.last_message.file_url ? (
+                                          <SignedImage
+                                            fileUrl={conversation.last_message.file_url}
+                                            className="h-4 w-4 rounded-ios-sm object-cover inline-block"
+                                          />
+                                        ) : null}
+                                        Photo
+                                      </span>
+                                    )}
+                                    {conversation.last_message.message_type === 'file' && 'Fichier'}
+                                    {conversation.last_message.message_type === 'voice' && 'Message vocal'}
+                                    {conversation.last_message.message_type === 'session' && 'Session partagée'}
+                                    {conversation.last_message.message_type === 'poll' && '📊 Sondage'}
+                                    {conversation.last_message.message_type === 'coaching_session' && '🎓 Séance coach'}
+                                    {conversation.last_message.message_type === 'system' && (
+                                      <span className="italic text-muted-foreground">
+                                        {conversation.last_message.content}
+                                      </span>
+                                    )}
+                                    {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
+                                      (conversation.last_message.content?.length > 40 
+                                        ? conversation.last_message.content.substring(0, 40) + '…' 
+                                        : conversation.last_message.content || 'Message supprimé'
+                                      )
+                                    }
+                                  </>
+                                ) : (
+                                  conversation.is_group 
+                                    ? `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? 's' : ''}`
+                                    : 'Aucun message'
+                                )}
+                              </p>
+                              {conversation.unread_count > 0 && (
+                                <div className="h-5 min-w-5 px-ios-1 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-ios-2 animate-[pulse_2s_ease-in-out_infinite]">
+                                  <span className="text-[11px] font-semibold text-primary-foreground">
+                                    {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Right column: time + camera */}
+                          <div className="ml-ios-2 flex flex-shrink-0 items-start justify-center gap-ios-2">
+                            <span className="text-[13px] text-[#64748B]">
+                              {(() => {
+                                const date = new Date(conversation.last_message_date || conversation.updated_at);
+                                const now = new Date();
+                                const diffMs = now.getTime() - date.getTime();
+                                const diffMin = Math.floor(diffMs / 60000);
+                                const diffH = Math.floor(diffMs / 3600000);
+                                const diffD = Math.floor(diffMs / 86400000);
+                                if (diffMin < 1) return "à l'instant";
+                                if (diffMin < 60) return `${diffMin} min`;
+                                if (diffH < 24) return `${diffH}h`;
+                                if (diffD < 7) return format(date, 'EEEE', { locale: fr });
+                                return format(date, 'dd/MM', { locale: fr });
+                              })()}
+                            </span>
+                            {!isSelectionMode && (
+                              <button
+                                className="p-ios-1 rounded-full active:bg-secondary transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickCameraForConversation(conversation);
+                                }}
+                              >
+                                <Camera className="h-5 w-5 text-muted-foreground" />
+                              </button>
+                            )}
+                          </div>
+                          
+                          {index < filteredAndSortedConversations.length - 1 && (
+                            <div
+                              className="pointer-events-none absolute bottom-0 left-[76px] right-3.5 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
+                              aria-hidden
+                            />
+                          )}
+                        </div>
+                      </SwipeableConversationItem>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : activeRootTab === "search" ? (
+            <div className="px-3.5 pb-ios-2">
+              <div className="ios-card overflow-hidden">
+                <div className="relative px-3.5 py-3">
+                  <Search className="pointer-events-none absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={conversationSearch}
+                    onChange={(event) => setConversationSearch(event.target.value)}
+                    placeholder="Rechercher une conversation..."
+                    className="pl-9"
+                  />
+                </div>
+                {filteredAndSortedConversations.length === 0 ? (
+                  <div className="px-ios-4 pb-ios-4 pt-ios-2 text-[14px] text-muted-foreground">
+                    Aucune conversation ne correspond à votre recherche.
+                  </div>
+                ) : (
+                  <div className="ios-list-stack">
+                    {filteredAndSortedConversations.map((conversation) => (
+                      <button
+                        key={conversation.id}
+                        type="button"
+                        className="ios-list-row flex w-full items-center gap-ios-3 bg-white px-3.5 py-3 text-left"
+                        onClick={() => {
+                          setActiveRootTab("conversations");
+                          setSelectedConversation(conversation);
+                          loadMessages(conversation.id);
+                          markMessagesAsReadOnOpen(conversation.id);
+                        }}
+                      >
+                        <Avatar className="h-11 w-11">
+                          {conversation.is_group ? (
+                            <>
+                              <AvatarImage src={conversation.group_avatar_url || ""} />
+                              <AvatarFallback className="bg-secondary">
+                                <Users className="h-5 w-5 text-muted-foreground" />
+                              </AvatarFallback>
+                            </>
+                          ) : (
+                            <>
+                              <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                              <AvatarFallback className="bg-secondary text-[15px] font-semibold">
+                                {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </>
+                          )}
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-semibold text-foreground">
+                            {conversation.is_group
+                              ? conversation.group_name
+                              : (conversation.other_participant?.username || "Utilisateur")}
+                          </p>
+                          <p className="truncate text-[13px] text-muted-foreground">
+                            {conversation.last_message?.content || "Aucun message"}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="px-3.5 pb-ios-2">
+              <div className="ios-card px-ios-4 py-ios-4">
+                <h3 className="text-ios-title3 font-semibold text-foreground">Créer un club</h3>
+                <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
+                  Créez votre club pour organiser vos échanges et vos séances avec votre groupe.
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <Button onClick={() => setShowCreateGroup(true)}>
+                    <Users className="mr-2 h-4 w-4" />
+                    Ouvrir la création
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveRootTab("conversations")}
+                  >
+                    Retour conversations
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         </IosFixedPageHeaderShell>
 

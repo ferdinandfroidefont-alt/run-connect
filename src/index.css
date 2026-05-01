@@ -444,6 +444,18 @@ html, body {
     box-shadow: none;
   }
 
+  /* Coaching create session: flat white editor with soft separators */
+  .coaching-create-flat .ios-card,
+  .coaching-create-flat .ios-inset-group {
+    @apply bg-white border-0 rounded-none;
+    box-shadow: none;
+  }
+
+  .coaching-create-flat .ios-list-row {
+    @apply bg-white border-0 rounded-none;
+    box-shadow: none;
+  }
+
   /**
    * Boutons flottants carte : même esprit que ios-list-row-icon (carré coloré + picto blanc),
    * taille tactile 40×40, ombre type FAB iOS.

@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Settings, LogOut, Crown, BadgeCheck, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
+import { Settings, LogOut, Crown, BadgeCheck, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronDown, Video } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -29,6 +29,7 @@ import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { ProfileSportsCard } from "@/components/profile/ProfileSportsCard";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
@@ -124,6 +125,21 @@ const Profile = () => {
   const {
     t
   } = useLanguage();
+  const profileHeaderTabs = [{
+    id: "profile",
+    label: "Profil",
+    active: true
+  }, {
+    id: "records",
+    label: "Record",
+    active: false,
+    onClick: () => navigate("/profile/records")
+  }, {
+    id: "story",
+    label: "Créer une story",
+    active: false,
+    onClick: () => navigate("/stories/create")
+  }];
 
   // Vérifier si on arrive avec un message d'erreur
   useEffect(() => {
@@ -618,7 +634,21 @@ const Profile = () => {
       className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
-      {/* Aligné hub Paramètres (SettingsDialog) : pas de w-full + mx-auto sur le même bloc ; gouttières px-4 / ios-shell:px-2 */}
+      <MainTopHeader
+        title="Mon profil"
+        tabs={profileHeaderTabs}
+        tabsAriaLabel="Navigation du profil"
+        right={
+          <button
+            type="button"
+            onClick={() => setShowSettingsDialog(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
+            aria-label="Ouvrir les paramètres"
+          >
+            <Settings className="h-5 w-5" />
+          </button>
+        }
+      />
       <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full">
       {/* Couverture pleine largeur — pas de max-w-2xl ici (évite flex/scroll WebKit + recentrage qui coupent les cartes). */}
       <div className="relative w-full min-w-0 max-w-full overflow-x-hidden">
@@ -636,27 +666,11 @@ const Profile = () => {
           {/* Overlay gradient for readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           
-          {/* Top bar buttons */}
-          <div className="absolute left-0 right-0 top-0 z-10 flex min-w-0 items-center justify-between px-4 pt-[max(0.75rem,var(--safe-area-top))] ios-shell:px-2">
-            {isViewingOtherUser ? (
-              <button onClick={() => navigate(-1)} className="flex items-center gap-ios-1 text-white drop-shadow-lg">
-                <ChevronLeft className="h-5 w-5" />
-                <span className="text-ios-headline">Retour</span>
-              </button>
-            ) : <div className="w-16" />}
-            <div className="flex items-center gap-ios-2">
-              {!isViewingOtherUser && (
-                <>
-                  <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
-                    <Camera className="h-4 w-4 text-white" />
-                    <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
-                  </label>
-                  <button onClick={() => setShowSettingsDialog(true)} className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                    <Settings className="h-4 w-4 text-white" />
-                  </button>
-                </>
-              )}
-            </div>
+          <div className="absolute right-0 top-0 z-10 px-4 pt-3 ios-shell:px-2">
+            <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
+              <Camera className="h-4 w-4 text-white" />
+              <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+            </label>
           </div>
           
           {coverUploading && (
@@ -920,6 +934,17 @@ const Profile = () => {
 
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
+        </div>
+
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+          <Button
+            type="button"
+            className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold shadow-md shadow-black/[0.07] ring-1 ring-black/[0.05] dark:shadow-black/30 dark:ring-white/[0.08]"
+            onClick={() => navigate("/stories/create")}
+          >
+            <Video className="h-4 w-4 shrink-0" />
+            Créer une story
+          </Button>
         </div>
 
         {/* Follow Dialog */}

@@ -1081,7 +1081,7 @@ export const RouteCreation = () => {
     <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-background">
       <div className="relative z-20 shrink-0 bg-white/95 backdrop-blur-md">
         <MainTopHeader
-          title="Création itinéraire"
+          title="Accueil"
           tabsAriaLabel="Navigation accueil"
           tabs={[
             { id: "planning", label: "Planification", active: false, onClick: () => navigate("/") },

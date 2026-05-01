@@ -28,7 +28,7 @@ import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Feed = lazy(() => import("./pages/Feed"));
-const ProfileEntry = lazy(() => import("./pages/ProfileEntry"));
+const Profile = lazy(() => import("./pages/Profile"));
 const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
 const ProfileSportRecordsEdit = lazy(() => import("./pages/ProfileSportRecordsEdit"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
@@ -351,7 +351,7 @@ const App = () => {
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
                   <Route path="/referral" element={<Layout><PageTransition><PageSuspense><Referral /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />

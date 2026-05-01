@@ -139,10 +139,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const tabBarHidden = hideBottomNav || isProfileRoute;
 
   const handleNavClick = async (path: string) => {
-    if (path === "/profile") {
-      navigate("/", { state: { openProfileDialog: true } });
-      return;
-    }
     if (path === "/messages") {
       navigate("/messages", { state: { resetConversation: true, fromBottomTab: true, ts: Date.now() } });
       return;

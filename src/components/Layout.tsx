@@ -32,15 +32,10 @@ export const Layout = ({ children }: LayoutProps) => {
   const [searchParams] = useSearchParams();
 
   const isHome = location.pathname === '/';
-  const normalizedPath =
-    (location.pathname || '/').replace(/\/+$/, '') || '/';
-  const isProfileRoute =
-    normalizedPath === '/profile' || normalizedPath.startsWith('/profile/');
   const [homeMapPrimed, setHomeMapPrimed] = useState(isHome);
 
   /** Padding bas du <main> : stable dès le 1er rendu (pas de useEffect) — évite reflow / « remontée » de la zone utile. */
-  const layoutBottomInset =
-    isProfileRoute || removeMainBottomInset ? "0px" : "var(--bottom-nav-offset)";
+  const layoutBottomInset = removeMainBottomInset ? "0px" : "var(--bottom-nav-offset)";
 
   useEffect(() => {
     if (isHome) setHomeMapPrimed(true);
@@ -233,7 +228,7 @@ export const Layout = ({ children }: LayoutProps) => {
         Tab bar toujours montée (pas de mount/unmount par route) : visibilité gérée dans BottomNavigation.
         FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock.
       */}
-      <BottomNavigation isProfileRoute={isProfileRoute} />
+      <BottomNavigation />
     </div>
   );
 };

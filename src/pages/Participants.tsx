@@ -522,7 +522,7 @@ export default function Participants() {
 
       <div className="absolute left-0 right-0 top-0 z-20 bg-white/95 backdrop-blur-md">
         <MainTopHeader
-          title="Suivi"
+          title="Accueil"
           tabsAriaLabel="Navigation accueil"
           tabs={[
             { id: "planning", label: "Planification", active: false, onClick: () => navigate("/") },
