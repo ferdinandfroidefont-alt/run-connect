@@ -679,14 +679,9 @@ export const ProfileDialog = ({
           className={profileDialogShellClassName}
         >
           {loading ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
-            <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
-            <div className="flex flex-1 items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          </div>
-          ) : (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+...
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
           <MainTopHeader
             title="Mon profil"
             tabs={profileHeaderTabs}
