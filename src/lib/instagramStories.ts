@@ -16,6 +16,19 @@ import { Capacitor } from '@capacitor/core';
 const FACEBOOK_APP_ID: string =
   (import.meta.env.VITE_FACEBOOK_APP_ID as string) || '';
 
+let warnedMissingFacebookAppId = false;
+function warnIfMissingFacebookAppId(): void {
+  if (FACEBOOK_APP_ID || warnedMissingFacebookAppId) return;
+  warnedMissingFacebookAppId = true;
+  // Sans Facebook App ID enregistré côté Meta + associé à l'Universal Link
+  // de l'app, Instagram ignore le `content_url` et n'affiche pas le lien
+  // d'attribution « Ouvrir avec RunConnect ». La story devient alors une
+  // simple image (comportement signalé par les utilisateurs).
+  console.warn(
+    '[instagramStories] VITE_FACEBOOK_APP_ID est vide — Instagram ne pourra pas afficher le lien d\'attribution « Ouvrir avec RunConnect ». Renseigner l\'App ID Meta dans .env.'
+  );
+}
+
 export type InstagramStoryShareResult =
   | { ok: true; method: 'native_ios' | 'native_android' | 'share_sheet' | 'download' }
   | { ok: false; reason: string };
@@ -58,6 +71,8 @@ export async function shareToInstagramStory(opts: ShareOptions): Promise<Instagr
   if (!imageDataUrl) {
     return { ok: false, reason: 'no_image' };
   }
+
+  warnIfMissingFacebookAppId();
 
   // --- Native iOS: Capacitor plugin ---
   if (Capacitor.isNativePlatform() && isIOS()) {

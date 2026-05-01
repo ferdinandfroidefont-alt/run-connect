@@ -10,12 +10,13 @@ import { getSessionPublicUrl } from '@/lib/appLinks';
 import { buildSessionStaticMapUrl } from '@/lib/mapboxStaticImage';
 import {
   generateSessionShareImage,
-  shareSessionImageToSystem,
   shareSessionToChannel,
+  type SessionShareChannel,
 } from '@/services/sessionShareService';
 import { SessionShareArtboard } from './SessionShareArtboard';
 import { SessionSharePreviewCarousel } from './SessionSharePreviewCarousel';
-import { ChevronLeft, Loader2, Share2 } from 'lucide-react';
+import { SessionShareActionsGrid } from './SessionShareActionsGrid';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SessionLike = Parameters<typeof buildSessionSharePayload>[0];
@@ -117,18 +118,30 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
     }
   }, [payload, templateId]);
 
-  const handleSystemShare = async () => {
-    if (!session || !payload) return;
-    const imageDataUrl = (await runExport()) ?? lastImage;
-    if (imageDataUrl) {
-      await shareSessionImageToSystem(imageDataUrl, session.title);
-      return;
-    }
-    await shareSessionToChannel('more', {
-      sessionTitle: session.title,
-      publicUrl,
-    });
-  };
+  const handleChannel = useCallback(
+    async (channel: SessionShareChannel) => {
+      if (!session || !payload) return;
+      const needsImage =
+        channel === 'instagram_story' ||
+        channel === 'instagram_messages' ||
+        channel === 'save_image' ||
+        channel === 'copy_image';
+      let imageDataUrl: string | null = lastImage;
+      if (needsImage || channel === 'more') {
+        imageDataUrl = (await runExport()) ?? lastImage;
+      }
+      await shareSessionToChannel(channel, {
+        sessionTitle: session.title,
+        publicUrl,
+        imageDataUrl,
+      });
+    },
+    [session, payload, publicUrl, lastImage, runExport]
+  );
+
+  // Tap sur la carte preview = action principale (Instagram Story avec content_url
+  // → Instagram affiche le lien d'attribution « Ouvrir avec RunConnect » sous la story).
+  const handleCardTap = () => void handleChannel('instagram_story');
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -160,20 +173,17 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
                 qrDataUrl={qrDataUrl}
                 activeTemplateId={templateId}
                 onTemplateChange={(id) => setTemplateId(id)}
-                onCardClick={() => void handleSystemShare()}
+                onCardClick={handleCardTap}
                 disabled={exporting}
               />
             )}
 
-            <Button
-              type="button"
-              className="mt-8 h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#1d4ed8_0%,#2563eb_48%,#0b63ff_100%)] text-[16px] font-semibold text-primary-foreground shadow-[0_14px_34px_rgba(37,99,235,0.38)] transition-transform active:scale-[0.996] hover:brightness-[1.03]"
-              onClick={() => void handleSystemShare()}
-              disabled={!payload || exporting}
-            >
-              <Share2 className="mr-2 h-5 w-5" />
-              Partager ma séance
-            </Button>
+            <div className="mt-6">
+              <SessionShareActionsGrid
+                busy={exporting || !payload}
+                onChannel={(c) => void handleChannel(c)}
+              />
+            </div>
 
             {onOpenConversationShare && (
               <Button

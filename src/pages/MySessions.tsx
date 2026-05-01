@@ -33,8 +33,6 @@ const SportWhiteIcon = ({ activityType, size = "md" }: { activityType: string; s
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
-import { WeekSelectorPremium, type DaySessionSummary } from '@/components/coaching/planning/WeekSelectorPremium';
-import { addWeeks, subWeeks, startOfWeek, isSameDay } from 'date-fns';
 import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
@@ -172,8 +170,6 @@ export default function MySessions() {
   const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
-  const [weekAnchor, setWeekAnchor] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
   const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
@@ -644,30 +640,6 @@ export default function MySessions() {
     return true;
   });
 
-  /** Résumé séances par jour pour le sélecteur hebdo (style « Mon plan » / Planification). */
-  const sessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
-    const merged = [...sessions, ...joinedSessions];
-    const seen = new Set<string>();
-    const map: Record<string, DaySessionSummary> = {};
-    for (const s of merged) {
-      if (seen.has(s.id)) continue;
-      seen.add(s.id);
-      const at = (s as any).activity_type ?? '';
-      const lower = String(at).toLowerCase();
-      const sport: DaySessionSummary['sport'] = lower.includes('bike') || lower.includes('cycl') || lower.includes('vélo') || lower.includes('velo')
-        ? 'cycling'
-        : lower.includes('swim') || lower.includes('natation')
-          ? 'swimming'
-          : lower.includes('strength') || lower.includes('renfo') || lower.includes('muscu')
-            ? 'strength'
-            : 'running';
-      const key = format(new Date(s.scheduled_at), 'yyyy-MM-dd');
-      if (!map[key]) map[key] = { sport, value: '1' };
-      else map[key] = { sport: map[key].sport, value: String(parseInt(map[key].value, 10) + 1) };
-    }
-    return map;
-  }, [sessions, joinedSessions]);
-
   const openConfirmDialog = (session: UserSession) => {
     setConfirmTarget({
       sessionId: session.id,
@@ -1080,19 +1052,6 @@ export default function MySessions() {
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
               <>
-              {/* Sélecteur de semaine — même rendu que Planification / Mon plan */}
-              <div className="mb-ios-3">
-                <WeekSelectorPremium
-                  weekStart={weekAnchor}
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  onPreviousWeek={() => setWeekAnchor((d) => subWeeks(d, 1))}
-                  onNextWeek={() => setWeekAnchor((d) => addWeeks(d, 1))}
-                  sessionSummaryByDate={sessionSummaryByDate}
-                  showLegend
-                />
-              </div>
-
               {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
               <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-3">
                 {[
@@ -1182,7 +1141,7 @@ export default function MySessions() {
                         >
                           <div
                             onClick={() => handleSessionClick(session)}
-                            className="relative cursor-pointer bg-white px-ios-3 py-3 transition-colors active:bg-secondary/50"
+                            className="relative cursor-pointer bg-white px-ios-3 py-4 transition-colors active:bg-secondary/50"
                           >
                             <div className="flex items-start gap-ios-2">
                               <SportWhiteIcon activityType={session.activity_type} size="md" />

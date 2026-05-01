@@ -69,6 +69,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     if (bottomNavSuppressors["_legacy"]) return true;
     return Boolean(
       bottomNavSuppressors["coaching-create"] ||
+        bottomNavSuppressors["home-overlays"] ||
         bottomNavSuppressors["route-creation"] ||
         bottomNavSuppressors["messages-thread"]
     );

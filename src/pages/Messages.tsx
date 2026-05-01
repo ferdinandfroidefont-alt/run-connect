@@ -170,7 +170,7 @@ interface PastSessionCommentTarget {
   activity_type: string | null;
 }
 
-type MessagesRootTab = "conversations" | "search" | "create-club";
+type MessagesRootTab = "conversations" | "create-club";
 
 const Messages = () => {
   const { user } = useAuth();
@@ -2036,14 +2036,14 @@ const Messages = () => {
   useEffect(() => {
     if (isCommentsTab) return;
     if (tabParam === "search") {
-      setActiveRootTab("search");
+      navigate("/search", { replace: true });
       return;
     }
     if (tabParam === "create-club") {
       setActiveRootTab("create-club");
       return;
     }
-  }, [isCommentsTab, tabParam]);
+  }, [isCommentsTab, navigate, tabParam]);
 
   useEffect(() => {
     if (!user || !isCommentsTab) return;
@@ -3191,8 +3191,8 @@ const Messages = () => {
                 {
                   id: "search",
                   label: "Recherche",
-                  active: activeRootTab === "search",
-                  onClick: () => setActiveRootTab("search"),
+                  active: false,
+                  onClick: () => navigate("/search"),
                 },
                 {
                   id: "create-club",
@@ -3410,7 +3410,7 @@ const Messages = () => {
                             </div>
                           </div>
                           
-                          {/* Right column: time + camera */}
+                          {/* Right column: time + arrow */}
                           <div className="ml-ios-2 flex flex-shrink-0 items-start justify-center gap-ios-2">
                             <span className="text-[13px] text-[#64748B]">
                               {(() => {
@@ -3428,15 +3428,7 @@ const Messages = () => {
                               })()}
                             </span>
                             {!isSelectionMode && (
-                              <button
-                                className="p-ios-1 rounded-full active:bg-secondary transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleQuickCameraForConversation(conversation);
-                                }}
-                              >
-                                <Camera className="h-5 w-5 text-muted-foreground" />
-                              </button>
+                              <ChevronRight className="h-5 w-5 text-[#007AFF]" />
                             )}
                           </div>
                           
@@ -3453,21 +3445,6 @@ const Messages = () => {
                 )}
               </div>
             </>
-          ) : activeRootTab === "search" ? (
-            <Suspense fallback={<div className="h-40 bg-white" />}>
-              <NewConversationView
-                onBack={() => setActiveRootTab("conversations")}
-                onStartConversation={(...args) => {
-                  setActiveRootTab("conversations");
-                  return startConversation(...args);
-                }}
-                onCreateClub={() => {
-                  setActiveRootTab("conversations");
-                  setShowCreateGroup(true);
-                }}
-                onAvatarClick={handleAvatarClick}
-              />
-            </Suspense>
           ) : (
             <div className="px-3.5 pb-ios-2">
               <div className="ios-card px-ios-4 py-ios-4">

@@ -13,9 +13,9 @@ interface ReliabilityDetailsDialogProps {
   totalSessionsCompleted: number;
 }
 
-/** Plein écran mobile (comme Profil / Paramètres) ; z-[118] pour passer au-dessus du dialogue profil si empilé. */
+/** Plein écran mobile (comme Profil / Paramètres) ; z-[126] pour passer au-dessus du dialogue profil (z~125) si empilé. */
 const RELIABILITY_FULLSCREEN_SHELL =
-  "fixed inset-0 left-0 right-0 top-0 z-[118] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[115] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-[20px] sm:border sm:border-border/60 sm:bg-card sm:shadow-[var(--shadow-card)]";
+  "fixed inset-0 left-0 right-0 top-0 z-[126] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[125] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-[20px] sm:border sm:border-border/60 sm:bg-card sm:shadow-[var(--shadow-card)]";
 
 export const ReliabilityDetailsDialog = ({
   open,

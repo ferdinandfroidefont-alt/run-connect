@@ -358,6 +358,7 @@ export const InteractiveMap = ({
     setOpenCreateRoute,
     setHomeMapImmersive,
     homeFeedSheetSnap,
+    setBottomNavSuppressed,
   } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
@@ -433,6 +434,19 @@ export const InteractiveMap = ({
     setHomeMapImmersive(isActive && isImmersiveMode);
     return () => setHomeMapImmersive(false);
   }, [isActive, isImmersiveMode, setHomeMapImmersive]);
+
+  useEffect(() => {
+    const hideChrome =
+      isActive && (isCreateDialogOpen || showSettingsDialog || showProfileDialog);
+    setBottomNavSuppressed("home-overlays", hideChrome);
+    return () => setBottomNavSuppressed("home-overlays", false);
+  }, [
+    isActive,
+    isCreateDialogOpen,
+    showSettingsDialog,
+    showProfileDialog,
+    setBottomNavSuppressed,
+  ]);
 
   useEffect(() => {
     const openSettings = () => setShowSettingsDialog(true);

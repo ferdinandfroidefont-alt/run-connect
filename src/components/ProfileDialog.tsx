@@ -619,7 +619,7 @@ export const ProfileDialog = ({
   };
   /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
   const profileDialogShellClassName =
-    "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-background p-0 !bg-background h-[100dvh] max-h-[100dvh]";
+    "z-[125] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-background p-0 !bg-background h-[100dvh] max-h-[100dvh]";
 
   const hasActiveOwnStory = ownStories.some((story) => {
     const expiresAtMs = Date.parse(story.expires_at);
@@ -990,7 +990,7 @@ export const ProfileDialog = ({
               )}
             </div>
 
-            <div className="pb-[calc(var(--bottom-nav-offset,72px)+env(safe-area-inset-bottom,0px)+12px)]" />
+            <div className="pb-[calc(env(safe-area-inset-bottom,0px)+12px)]" />
           </div>
           </div>
           )}

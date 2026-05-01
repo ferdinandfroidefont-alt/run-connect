@@ -3038,7 +3038,7 @@ export function CoachPlanningExperience() {
       />
 
       {coachingTab === "create" && (
-        <div className="coaching-create-flat fixed inset-0 z-[120] flex min-h-0 flex-col overflow-hidden bg-white">
+        <div className="coaching-create-flat fixed inset-0 z-[125] flex min-h-0 flex-col overflow-hidden bg-white">
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
             headerWrapperClassName="shrink-0 border-b border-border bg-card"
@@ -3371,7 +3371,7 @@ export function CoachPlanningExperience() {
                     </div>
                     {schemaDraggingTool && schemaDragPointer ? (
                       <div
-                        className="pointer-events-none fixed z-[120] rounded-full border border-[#2563EB]/45 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
+                        className="pointer-events-none fixed z-[125] rounded-full border border-[#2563EB]/45 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
                         style={{ left: schemaDragPointer.x + 10, top: schemaDragPointer.y + 10 }}
                       >
                         {schemaDragToolLabel(schemaDraggingTool)}

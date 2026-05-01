@@ -16,7 +16,7 @@ const DialogOverlay = React.forwardRef<
     <DialogPrimitive.Overlay
       ref={ref}
       className={cn(
-        "fixed inset-0 z-[115] bg-black/45 dark:bg-black/65 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "fixed inset-0 z-[125] bg-black/45 dark:bg-black/65 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
       {...props}
@@ -33,7 +33,7 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
   /** Classes additionnelles sur le bouton fermer (ex. décalage horizontal iPhone). */
   closeButtonClassName?: string;
   /**
-   * Au-dessus de Paramètres / Mon profil (z~116) : ouvert depuis un autre dialog.
+   * Au-dessus du chrome app (tab bar z~120) : ouvert depuis un autre dialog.
    * Monte overlay + contenu en z-[130] pour que les clics et le voile passent devant.
    */
   stackNested?: boolean;
@@ -53,14 +53,14 @@ const DialogContent = React.forwardRef<
           fullScreen
             ? cn(
                 "fixed inset-0 flex flex-col bg-background w-full h-full",
-                stackNested ? "z-[130]" : "z-[115]"
+                stackNested ? "z-[130]" : "z-[125]"
               )
             : cn(
                 "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 bg-background duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 rounded-ios-lg max-h-[90vh] overflow-y-auto ios-surface",
                 noZoom
                   ? ""
                   : "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-                stackNested ? "z-[130]" : "z-[115]"
+                stackNested ? "z-[130]" : "z-[125]"
               ),
           className
         )}
