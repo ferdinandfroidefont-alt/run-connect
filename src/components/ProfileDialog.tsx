@@ -990,22 +990,7 @@ export const ProfileDialog = ({
               )}
             </div>
 
-            {/* Bouton créer une story — inline (non sticky) pour éviter le chevauchement avec la tab bar */}
-            <div className="px-4 pt-3 pb-[calc(var(--bottom-nav-offset,72px)+env(safe-area-inset-bottom,0px)+12px)]">
-              <div className="mx-auto w-full max-w-md">
-                <Button
-                  type="button"
-                  className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold shadow-md shadow-black/[0.07] ring-1 ring-black/[0.05] dark:shadow-black/30 dark:ring-white/[0.08]"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate("/stories/create");
-                  }}
-                >
-                  <Video className="h-4 w-4 shrink-0" />
-                  Créer une story
-                </Button>
-              </div>
-            </div>
+            <div className="pb-[calc(var(--bottom-nav-offset,72px)+env(safe-area-inset-bottom,0px)+12px)]" />
           </div>
           </div>
           )}
