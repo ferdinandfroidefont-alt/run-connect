@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useId, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Flame, Zap, Activity, Snowflake } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Flame, Zap, Activity, Snowflake } from 'lucide-react';
 import { SessionBlock, BlockType, BLOCK_TYPES } from './types';
 import { SessionBlockComponent } from './SessionBlock';
 import { SessionStructurePreview } from './SessionStructurePreview';
@@ -41,9 +40,9 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
   activityType,
   onBlocksChange,
 }) => {
-  const [menuAnchor, setMenuAnchor] = React.useState<'top' | number | null>(null);
+  const [menuAnchor, setMenuAnchor] = React.useState<number | null>(null);
+  const [selectedPreset, setSelectedPreset] = React.useState<'continu' | 'intervalle' | 'pyramide' | 'variation'>('pyramide');
   const rootRef = useRef<HTMLDivElement>(null);
-  const addMenuId = useId();
   const showAddMenu = menuAnchor !== null;
 
   const closeMenu = useCallback(() => setMenuAnchor(null), []);
@@ -70,10 +69,6 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [showAddMenu, closeMenu]);
-
-  const openTopMenu = () => {
-    setMenuAnchor((current) => (current === 'top' ? null : 'top'));
-  };
 
   const openInsertMenu = (insertIndex: number) => {
     setMenuAnchor((current) => (current === insertIndex ? null : insertIndex));
@@ -116,10 +111,19 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
   };
 
   const quickSuggestions = getQuickAddSuggestions();
+  const presetCards: Array<{
+    key: 'continu' | 'intervalle' | 'pyramide' | 'variation';
+    label: string;
+    type: BlockType;
+  }> = [
+    { key: 'continu', label: 'Continu', type: 'steady' },
+    { key: 'intervalle', label: 'Intervalle', type: 'interval' },
+    { key: 'pyramide', label: 'Pyramide', type: 'interval' },
+    { key: 'variation', label: 'Variation', type: 'interval' },
+  ];
 
   const renderAddMenu = (insertIndex?: number) => (
     <motion.div
-      id={insertIndex === undefined ? addMenuId : undefined}
       role="menu"
       aria-label="Types de blocs"
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -161,50 +165,131 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
 
       {blocks.length > 0 && (
         <div className="relative">
-          <div className="mb-3 flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={openTopMenu}
-              aria-expanded={menuAnchor === 'top'}
-              aria-controls={menuAnchor === 'top' ? addMenuId : undefined}
-              aria-haspopup="menu"
-              className="h-8 rounded-full px-3 text-xs font-semibold text-primary"
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              Ajouter un bloc
-            </Button>
-          </div>
-
           <SessionStructurePreview blocks={blocks} />
-
-          <AnimatePresence>
-            {menuAnchor === 'top' && (
-              <div className="absolute left-0 right-0 top-full z-20 mt-2">
-                {renderAddMenu()}
-              </div>
-            )}
-          </AnimatePresence>
+          <div className="mt-4 space-y-2">
+            <p className="text-base font-semibold text-foreground">Ajouter un bloc</p>
+            <div className="grid grid-cols-4 gap-2">
+              {presetCards.map((preset) => {
+                const selected = selectedPreset === preset.key;
+                return (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPreset(preset.key);
+                      addBlock(preset.type);
+                    }}
+                    className={cn(
+                      "min-w-0 rounded-2xl px-2 py-3 text-center transition-colors",
+                      selected
+                        ? "border-2 border-[#007AFF] bg-[#e8f0ff]"
+                        : "border border-transparent bg-secondary/50 hover:bg-secondary"
+                    )}
+                  >
+                    <div className="mx-auto mb-2 flex h-7 items-end justify-center gap-1">
+                      {preset.key === 'continu' && (
+                        <span className="h-2.5 w-11 rounded-t-[3px] bg-[#4fa3ff]" />
+                      )}
+                      {preset.key === 'intervalle' && (
+                        <>
+                          <span className="h-5 w-2.5 rounded-t-[3px] bg-[#30d158]" />
+                          <span className="h-2.5 w-2.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                          <span className="h-5 w-2.5 rounded-t-[3px] bg-[#30d158]" />
+                          <span className="h-2.5 w-2.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                        </>
+                      )}
+                      {preset.key === 'pyramide' && (
+                        <>
+                          <span className="h-2 w-1.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                          <span className="h-4 w-1.5 rounded-t-[3px] bg-[#ffd60a]" />
+                          <span className="h-6.5 w-1.5 rounded-t-[3px] bg-[#ff453a]" />
+                          <span className="h-4 w-1.5 rounded-t-[3px] bg-[#ffd60a]" />
+                          <span className="h-2 w-1.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                        </>
+                      )}
+                      {preset.key === 'variation' && (
+                        <>
+                          <span className="h-2 w-1.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                          <span className="h-5 w-1.5 rounded-t-[3px] bg-[#ff9f0a]" />
+                          <span className="h-3 w-1.5 rounded-t-[3px] bg-[#30d158]" />
+                          <span className="h-6.5 w-1.5 rounded-t-[3px] bg-[#ff453a]" />
+                          <span className="h-4 w-1.5 rounded-t-[3px] bg-[#ffd60a]" />
+                        </>
+                      )}
+                    </div>
+                    <span className={cn("block truncate text-sm font-semibold", selected ? "text-[#007AFF]" : "text-foreground")}>
+                      {preset.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
       {blocks.length === 0 && (
         <div className="space-y-3">
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => addBlock('warmup')}
-              className="h-8 rounded-full px-3 text-xs font-semibold text-primary"
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              Ajouter un bloc
-            </Button>
-          </div>
-
           <SessionStructurePreview blocks={blocks} />
+          <div className="mt-1 space-y-2">
+            <p className="text-base font-semibold text-foreground">Ajouter un bloc</p>
+            <div className="grid grid-cols-4 gap-2">
+              {presetCards.map((preset) => {
+                const selected = selectedPreset === preset.key;
+                return (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPreset(preset.key);
+                      addBlock(preset.type);
+                    }}
+                    className={cn(
+                      "min-w-0 rounded-2xl px-2 py-3 text-center transition-colors",
+                      selected
+                        ? "border-2 border-[#007AFF] bg-[#e8f0ff]"
+                        : "border border-transparent bg-secondary/50 hover:bg-secondary"
+                    )}
+                  >
+                    <div className="mx-auto mb-2 flex h-7 items-end justify-center gap-1">
+                      {preset.key === 'continu' && (
+                        <span className="h-2.5 w-11 rounded-t-[3px] bg-[#4fa3ff]" />
+                      )}
+                      {preset.key === 'intervalle' && (
+                        <>
+                          <span className="h-5 w-2.5 rounded-t-[3px] bg-[#30d158]" />
+                          <span className="h-2.5 w-2.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                          <span className="h-5 w-2.5 rounded-t-[3px] bg-[#30d158]" />
+                          <span className="h-2.5 w-2.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                        </>
+                      )}
+                      {preset.key === 'pyramide' && (
+                        <>
+                          <span className="h-2 w-1.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                          <span className="h-4 w-1.5 rounded-t-[3px] bg-[#ffd60a]" />
+                          <span className="h-6.5 w-1.5 rounded-t-[3px] bg-[#ff453a]" />
+                          <span className="h-4 w-1.5 rounded-t-[3px] bg-[#ffd60a]" />
+                          <span className="h-2 w-1.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                        </>
+                      )}
+                      {preset.key === 'variation' && (
+                        <>
+                          <span className="h-2 w-1.5 rounded-t-[3px] bg-[#4fa3ff]" />
+                          <span className="h-5 w-1.5 rounded-t-[3px] bg-[#ff9f0a]" />
+                          <span className="h-3 w-1.5 rounded-t-[3px] bg-[#30d158]" />
+                          <span className="h-6.5 w-1.5 rounded-t-[3px] bg-[#ff453a]" />
+                          <span className="h-4 w-1.5 rounded-t-[3px] bg-[#ffd60a]" />
+                        </>
+                      )}
+                    </div>
+                    <span className={cn("block truncate text-sm font-semibold", selected ? "text-[#007AFF]" : "text-foreground")}>
+                      {preset.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 

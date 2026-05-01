@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, BadgeCheck, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map as MapIcon, Video, Gift } from "lucide-react";
+import { User, Crown, BadgeCheck, Camera, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map as MapIcon, Video, Gift } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -26,6 +26,7 @@ import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog"
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
 import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
 import { cn } from "@/lib/utils";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 
 interface Profile {
   username: string;
@@ -642,6 +643,31 @@ export const ProfileDialog = ({
     (profile?.instagram_connected && profile?.instagram_verified_at) ? "Instagram" : null,
     isPremiumUser ? "Premium" : null,
   ].filter(Boolean) as string[];
+  const profileHeaderTabs = [
+    {
+      id: "profile",
+      label: "Profil",
+      active: true,
+    },
+    {
+      id: "records",
+      label: "Record",
+      active: false,
+      onClick: () => {
+        onOpenChange(false);
+        navigate("/profile/records");
+      },
+    },
+    {
+      id: "story",
+      label: "Créer une story",
+      active: false,
+      onClick: () => {
+        onOpenChange(false);
+        navigate("/stories/create");
+      },
+    },
+  ];
 
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -661,27 +687,22 @@ export const ProfileDialog = ({
           </div>
           ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
-          {/* iOS Header */}
-          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
-            <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="flex min-w-0 max-w-[42%] items-center gap-1 text-primary"
-              >
-                <ArrowLeft className="h-5 w-5 shrink-0" />
-                <span className="truncate text-[17px]">Retour</span>
-              </button>
-              <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
+          <MainTopHeader
+            title="Mon profil"
+            tabs={profileHeaderTabs}
+            tabsAriaLabel="Navigation du profil"
+            right={
               <button
                 type="button"
                 onClick={() => setShowSettingsDialog(true)}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
+                aria-label="Ouvrir les paramètres"
               >
                 <Settings className="h-5 w-5" />
               </button>
-            </div>
-          </div>
+            }
+            className="shrink-0 border-b border-border bg-card"
+          />
           
            <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-secondary">
              <div className="box-border min-w-0 max-w-full">

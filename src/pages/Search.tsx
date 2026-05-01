@@ -37,7 +37,7 @@ export default function Search() {
   // Placeholder adaptatif selon l'onglet actif
   const getPlaceholder = () => {
     switch (activeTab) {
-      case 'profiles': return 'Rechercher un utilisateur...';
+      case 'profiles': return 'Rechercher une conversation...';
       case 'clubs': return 'Code du club ou laissez vide...';
       case 'strava': return 'Amis Strava connectés...';
       case 'contacts': return 'Rechercher dans vos contacts...';

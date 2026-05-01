@@ -16,11 +16,6 @@ interface Profile {
   avatar_url: string | null;
 }
 
-interface ProfileMeta {
-  country: string | null;
-  followersCount: number;
-}
-
 interface ProfileSuggestion {
   user_id: string;
   username: string;
@@ -75,8 +70,6 @@ export const NewConversationView = ({
   const [selectedPreviewUserId, setSelectedPreviewUserId] = useState<string | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [friendsSet, setFriendsSet] = useState<Set<string>>(new Set());
-  const [profileMetaById, setProfileMetaById] = useState<Record<string, ProfileMeta>>({});
-  const [followLoadingIds, setFollowLoadingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const loadRecentFriends = async () => {
@@ -230,79 +223,8 @@ export const NewConversationView = ({
     loadSuggestions();
   }, [user]);
 
-  useEffect(() => {
-    const hydrateMeta = async () => {
-      if (!user) return;
-      const ids = Array.from(
-        new Set([
-          ...allFriends.map((p) => p.user_id),
-          ...suggestions.map((s) => s.user_id),
-          ...searchResults.map((p) => p.user_id),
-        ])
-      ).filter(Boolean);
-
-      if (ids.length === 0) return;
-
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("user_id, country")
-        .in("user_id", ids);
-
-      const { data: followRows } = await supabase
-        .from("user_follows")
-        .select("following_id")
-        .in("following_id", ids)
-        .eq("status", "accepted");
-
-      const followerCountById = new Map<string, number>();
-      (followRows || []).forEach((row) => {
-        const key = row.following_id;
-        if (!key) return;
-        followerCountById.set(key, (followerCountById.get(key) || 0) + 1);
-      });
-
-      const next: Record<string, ProfileMeta> = {};
-      (profileRows || []).forEach((row) => {
-        if (!row.user_id) return;
-        next[row.user_id] = {
-          country: row.country ?? null,
-          followersCount: followerCountById.get(row.user_id) || 0,
-        };
-      });
-      setProfileMetaById(next);
-    };
-
-    void hydrateMeta();
-  }, [user, allFriends, suggestions, searchResults]);
-
   const startConversationFromRow = (userId: string) => {
     onStartConversation(userId);
-  };
-
-  const followUser = async (targetUserId: string) => {
-    if (!user || targetUserId === user.id || followLoadingIds.has(targetUserId)) return;
-    const nextLoading = new Set(followLoadingIds);
-    nextLoading.add(targetUserId);
-    setFollowLoadingIds(nextLoading);
-    try {
-      const { error } = await supabase.from("user_follows").upsert(
-        {
-          follower_id: user.id,
-          following_id: targetUserId,
-          status: "pending",
-        },
-        { onConflict: "follower_id,following_id" }
-      );
-      if (!error) {
-        setFriendsSet((prev) => new Set(prev).add(targetUserId));
-      }
-    } finally {
-      setFollowLoadingIds((prev) => {
-        const copy = new Set(prev);
-        copy.delete(targetUserId);
-        return copy;
-      });
-    }
   };
 
   const dismissSuggestion = async (userId: string, e: React.MouseEvent) => {
@@ -444,11 +366,11 @@ export const NewConversationView = ({
                           animate={{ opacity: 1 }}
                           transition={{ delay: index * 0.02 }}
                           onClick={() => startConversationFromRow(friend.user_id)}
-                          className="relative flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/60 cursor-pointer transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 active:bg-secondary/80 cursor-pointer transition-colors border-b border-border/40 last:border-b-0"
                         >
                           <div className="relative">
                             <Avatar 
-                              className="h-9 w-9"
+                              className="h-11 w-11"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onAvatarClick(friend.avatar_url, friend.username || friend.display_name || "Utilisateur");
@@ -462,36 +384,17 @@ export const NewConversationView = ({
                             <OnlineStatus userId={friend.user_id} className="w-3 h-3" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-semibold text-foreground">
+                            <p className="truncate text-[15px] font-semibold text-foreground">
                               {friend.display_name || friend.username}
                             </p>
-                            <p className="truncate text-[12px] text-muted-foreground">
-                              Athlète · {profileMetaById[friend.user_id]?.country || "Ville à renseigner"}
+                            <p className="truncate text-[13px] text-muted-foreground">
+                              @{friend.username}
                             </p>
-                            <p className="truncate text-[11px] text-muted-foreground/90">
-                              {profileMetaById[friend.user_id]?.followersCount || 0} abonné{(profileMetaById[friend.user_id]?.followersCount || 0) > 1 ? "s" : ""}
+                            <p className="truncate text-[12px] text-muted-foreground/80">
+                              Ami
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (friendsSet.has(friend.user_id)) {
-                                startConversationFromRow(friend.user_id);
-                              } else {
-                                void followUser(friend.user_id);
-                              }
-                            }}
-                            className="shrink-0 rounded-full border border-[#D1D5DB] px-3 py-1 text-[12px] font-semibold text-primary active:opacity-70"
-                          >
-                            {friendsSet.has(friend.user_id) ? "Ouvrir" : (followLoadingIds.has(friend.user_id) ? "..." : "Suivre")}
-                          </button>
-                          {index < displayedFriends.length - 1 && (
-                            <div
-                              className="pointer-events-none absolute bottom-0 left-[62px] right-4 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
-                              aria-hidden
-                            />
-                          )}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                         </motion.div>
                       ))}
                     </div>
@@ -655,10 +558,10 @@ export const NewConversationView = ({
                             animate={{ opacity: 1 }}
                             transition={{ delay: index * 0.02 }}
                             onClick={() => startConversationFromRow(friend.user_id)}
-                            className="relative flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/60 cursor-pointer transition-colors"
+                            className="flex items-center gap-3 px-4 py-3 active:bg-secondary/80 cursor-pointer transition-colors border-b border-border/40 last:border-b-0"
                           >
                             <div className="relative">
-                              <Avatar className="h-9 w-9">
+                              <Avatar className="h-11 w-11">
                                 <AvatarImage src={friend.avatar_url || ""} />
                                 <AvatarFallback className="bg-secondary text-foreground text-[15px]">
                                   {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
@@ -667,32 +570,14 @@ export const NewConversationView = ({
                               <OnlineStatus userId={friend.user_id} className="w-3 h-3" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[14px] font-semibold text-foreground">
+                              <p className="truncate text-[15px] font-semibold text-foreground">
                                 {friend.display_name || friend.username}
                               </p>
-                              <p className="truncate text-[12px] text-muted-foreground">
-                                Athlète · {profileMetaById[friend.user_id]?.country || "Ville à renseigner"}
-                              </p>
-                              <p className="truncate text-[11px] text-muted-foreground/90">
-                                {profileMetaById[friend.user_id]?.followersCount || 0} abonné{(profileMetaById[friend.user_id]?.followersCount || 0) > 1 ? "s" : ""}
+                              <p className="truncate text-[13px] text-muted-foreground">
+                                @{friend.username}
                               </p>
                             </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                startConversationFromRow(friend.user_id);
-                              }}
-                              className="shrink-0 rounded-full border border-[#D1D5DB] px-3 py-1 text-[12px] font-semibold text-primary active:opacity-70"
-                            >
-                              Ouvrir
-                            </button>
-                            {index < allFriends.length - 1 && (
-                              <div
-                                className="pointer-events-none absolute bottom-0 left-[62px] right-4 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
-                                aria-hidden
-                              />
-                            )}
+                            <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                           </motion.div>
                         ))}
                       </div>
