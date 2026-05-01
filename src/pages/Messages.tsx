@@ -3456,7 +3456,6 @@ const Messages = () => {
           ) : activeRootTab === "search" ? (
             <Suspense fallback={<div className="h-40 bg-white" />}>
               <NewConversationView
-                embedded
                 onBack={() => setActiveRootTab("conversations")}
                 onStartConversation={(...args) => {
                   setActiveRootTab("conversations");
