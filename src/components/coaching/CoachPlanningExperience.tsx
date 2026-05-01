@@ -1460,7 +1460,7 @@ export function CoachPlanningExperience() {
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(previewSegments),
+    () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
     [previewSegments]
   );
   const selectedSchemaPreviewIndex = useMemo(() => {
@@ -3165,54 +3165,68 @@ export function CoachPlanningExperience() {
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
                     <div className="min-w-0">
                       <div className="rounded-[16px] border border-border/65 bg-background px-2 py-2">
-                        <div
-                          ref={schemaPreviewRef}
-                          onPointerMove={handleSchemaPreviewPointerMove}
-                          onPointerDown={(event) => {
-                            if (event.target !== event.currentTarget) return;
-                          }}
-                          className={cn(
-                            "relative",
-                            schemaDraggingTool ? "cursor-copy rounded-md ring-2 ring-[#2563EB]/35" : ""
-                          )}
-                          title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
-                        >
-                          <MiniWorkoutProfile
-                            blocks={previewBars}
-                            variant="premiumCompact"
-                            compact
-                            selectedBlockIndex={selectedSchemaPreviewIndex}
-                            onBlockTap={({ index }) => {
-                              if (!draft.blocks.length) return;
-                              const mappedDraftIndex =
-                                draft.blocks.length <= 1 || previewBars.length <= 1
-                                  ? 0
-                                  : Math.round((index / Math.max(1, previewBars.length - 1)) * (draft.blocks.length - 1));
-                              const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
-                              if (block) setSelectedBlockId(block.id);
+                        <div className="flex min-w-0 gap-2">
+                          <div className="flex h-14 shrink-0 flex-col justify-between py-0.5 text-[10px] font-semibold text-muted-foreground">
+                            <span>Z6</span>
+                            <span>Z5</span>
+                            <span>Z4</span>
+                            <span>Z3</span>
+                            <span>Z2</span>
+                            <span>Z1</span>
+                          </div>
+                          <div
+                            ref={schemaPreviewRef}
+                            onPointerMove={handleSchemaPreviewPointerMove}
+                            onPointerDown={(event) => {
+                              if (event.target !== event.currentTarget) return;
                             }}
-                            className="h-9 w-full"
-                          />
-                          {schemaDropRatio != null ? (
-                            <div
-                              aria-hidden
-                              className="pointer-events-none absolute inset-y-2.5 w-0.5 rounded-full bg-[#2563EB]/45"
-                              style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 1px)` }}
-                            />
-                          ) : null}
-                          {schemaDropRatio != null && schemaDraggingTool ? (
-                            <div
-                              aria-hidden
-                              className="pointer-events-none absolute z-30 rounded-xl border border-[#2563EB]/35 bg-white/95 px-1.5 py-1 shadow-[0_14px_30px_-18px_rgba(37,99,235,0.65)] backdrop-blur-[2px]"
-                              style={{
-                                left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}%)`,
-                                top: "50%",
-                                transform: "translate(-50%, -50%)",
+                            className={cn(
+                              "relative min-w-0 flex-1",
+                              schemaDraggingTool ? "cursor-copy rounded-md ring-2 ring-[#2563EB]/35" : ""
+                            )}
+                            title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
+                          >
+                            <MiniWorkoutProfile
+                              blocks={previewBars}
+                              variant="premiumCompact"
+                              compact
+                              zoneBandMode
+                              selectedBlockIndex={selectedSchemaPreviewIndex}
+                              onBlockTap={({ index }) => {
+                                if (!draft.blocks.length) return;
+                                const mappedDraftIndex =
+                                  draft.blocks.length <= 1 || previewBars.length <= 1
+                                    ? 0
+                                    : Math.round((index / Math.max(1, previewBars.length - 1)) * (draft.blocks.length - 1));
+                                const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
+                                if (block) setSelectedBlockId(block.id);
                               }}
-                            >
-                              <SchemaDragToolMini tool={schemaDraggingTool} />
-                            </div>
-                          ) : null}
+                              className="h-14 w-full"
+                            />
+                            {schemaDropRatio != null ? (
+                              <div
+                                aria-hidden
+                                className="pointer-events-none absolute inset-y-2.5 w-0.5 rounded-full bg-[#2563EB]/45"
+                                style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 1px)` }}
+                              />
+                            ) : null}
+                            {schemaDropRatio != null && schemaDraggingTool ? (
+                              <div
+                                aria-hidden
+                                className="pointer-events-none absolute z-30 rounded-xl border border-[#2563EB]/35 bg-white/95 px-1.5 py-1 shadow-[0_14px_30px_-18px_rgba(37,99,235,0.65)] backdrop-blur-[2px]"
+                                style={{
+                                  left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}%)`,
+                                  top: "50%",
+                                  transform: "translate(-50%, -50%)",
+                                }}
+                              >
+                                <SchemaDragToolMini tool={schemaDraggingTool} />
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="mt-1 pl-[2.2rem] text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Temps
                         </div>
                       </div>
                     </div>
