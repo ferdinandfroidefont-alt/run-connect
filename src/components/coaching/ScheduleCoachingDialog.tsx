@@ -19,6 +19,7 @@ import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderS
 import { MapPin, Calendar, Clock, Send, Map } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { getActivityConfig } from "@/lib/activityIcons";
 
 interface CoachingSessionInfo {
   id: string;
@@ -200,6 +201,16 @@ export const ScheduleCoachingDialog = ({
       setLoading(false);
     }
   };
+  const selectedActivity = ACTIVITY_TYPES.find((type) => type.value === activityType) ?? ACTIVITY_TYPES[0];
+
+  const SportWhiteIcon = ({ activity }: { activity: string }) => {
+    const Icon = getActivityConfig(activity).icon;
+    return (
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white shadow-sm">
+        <Icon className="h-4 w-4 text-[#5B7CFF]" strokeWidth={2.2} />
+      </span>
+    );
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -250,11 +261,21 @@ export const ScheduleCoachingDialog = ({
                   <Label className="text-xs">Sport</Label>
                   <Select value={activityType} onValueChange={setActivityType}>
                     <SelectTrigger className="h-11 rounded-xl border-border bg-card">
-                      <SelectValue />
+                      <SelectValue>
+                        <span className="flex items-center gap-2">
+                          <SportWhiteIcon activity={selectedActivity.value} />
+                          <span>{selectedActivity.label.replace(/^[^\s]+\s+/, "")}</span>
+                        </span>
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {ACTIVITY_TYPES.map(t => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        <SelectItem key={t.value} value={t.value}>
+                          <span className="flex items-center gap-2">
+                            <SportWhiteIcon activity={t.value} />
+                            <span>{t.label.replace(/^[^\s]+\s+/, "")}</span>
+                          </span>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

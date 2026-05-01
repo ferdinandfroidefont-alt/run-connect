@@ -327,15 +327,16 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   if (loading && clubs.length === 0) {
     return (
-      <div className="p-ios-3 space-y-ios-3">
+      <div className="bg-white">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="ios-card p-ios-4">
-            <div className="flex items-center gap-ios-3">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
+          <div key={i} className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-32" />
                 <Skeleton className="h-3 w-24" />
               </div>
+              <Skeleton className="h-7 w-16 rounded-full" />
             </div>
           </div>
         ))}
@@ -344,8 +345,8 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
   }
 
   return (
-    <div className="p-ios-3 space-y-ios-3">
-      <div className="space-y-3">
+    <div className="bg-white">
+      <div className="space-y-3 px-4 py-3">
         {!codeQuery && (
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -406,7 +407,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       </div>
 
       {!codeQuery && clubs.length > 0 && (
-        <div className="ios-card p-ios-3">
+        <div className="px-4 pb-2">
           <p className="text-sm text-muted-foreground">
             Clubs publics
             {selectedDepartment ? ` · ${selectedDepartment.split(" - ")[0]}` : ""}
@@ -415,7 +416,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       )}
 
       {codeQuery && (
-        <div className="ios-card p-ios-3">
+        <div className="px-4 pb-2">
           <p className="text-sm text-muted-foreground">
             Recherche par code exact : <span className="font-mono font-semibold text-foreground">{codeQuery}</span>
           </p>
@@ -439,57 +440,57 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       )}
 
       {!loading &&
-        clubs.map((club) => (
-          <div key={club.id} className="ios-card p-ios-4">
-            <div className="flex items-start gap-ios-3">
-              <Avatar className="h-12 w-12">
+        clubs.map((club, index) => (
+          <div key={club.id} className="relative">
+            <div className="flex items-center gap-2.5 px-4 py-2.5">
+              <Avatar className="h-9 w-9">
                 <AvatarImage src={club.group_avatar_url || undefined} />
                 <AvatarFallback>
-                  <Users className="h-6 w-6" />
+                  <Users className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
 
               <div className="min-w-0 flex-1">
-                <h4 className="truncate font-semibold">{club.group_name}</h4>
-                {club.group_description && (
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{club.group_description}</p>
-                )}
-                {club.location && (
-                  <p className="mt-1 text-xs text-muted-foreground">📍 {club.location}</p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {club.member_count || 0} membres
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => copyClubCode(club.club_code)}
-                    className="h-7 px-2"
-                  >
-                    {copiedCode === club.club_code ? (
-                      <Check className="mr-1 h-3 w-3" />
-                    ) : (
-                      <Copy className="mr-1 h-3 w-3" />
-                    )}
-                    <span className="font-mono text-xs">{club.club_code}</span>
-                  </Button>
-                </div>
+                <p className="truncate text-[14px] font-semibold text-foreground">{club.group_name}</p>
+                <p className="truncate text-[12px] text-muted-foreground">
+                  Club · {club.location || "Ville a renseigner"}
+                </p>
+                <p className="text-[11px] text-muted-foreground/90">{club.member_count || 0} abonnes</p>
               </div>
 
-              {!club.is_member && user && (
-                <Button size="sm" onClick={() => handleJoinClub(club)} className="shrink-0">
-                  <UserPlus className="mr-1 h-4 w-4" />
-                  Rejoindre
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => copyClubCode(club.club_code)}
+                  className="h-7 px-2 text-[11px]"
+                >
+                  {copiedCode === club.club_code ? (
+                    <Check className="mr-1 h-3 w-3" />
+                  ) : (
+                    <Copy className="mr-1 h-3 w-3" />
+                  )}
+                  <span className="font-mono text-[10px]">{club.club_code}</span>
                 </Button>
-              )}
-              {club.is_member && <Badge className="shrink-0">Membre</Badge>}
-              {!user && (
-                <Badge variant="outline" className="shrink-0 text-xs">
-                  Connecte-toi pour rejoindre
-                </Badge>
-              )}
+
+                {!club.is_member && user && (
+                  <Button size="sm" onClick={() => handleJoinClub(club)} className="h-7 rounded-full px-3 text-[11px]">
+                    <UserPlus className="mr-1 h-3.5 w-3.5" />
+                    Suivre
+                  </Button>
+                )}
+                {club.is_member && (
+                  <span className="rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-foreground">Ouvrir</span>
+                )}
+              </div>
             </div>
+
+            {index < clubs.length - 1 && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-[62px] right-4 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_10%,rgba(0,0,0,0.08)_90%,rgba(0,0,0,0))]"
+              />
+            )}
           </div>
         ))}
     </div>

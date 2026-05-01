@@ -73,14 +73,14 @@ export default function Search() {
   return (
     <>
       <div 
-        className="fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-secondary animate-slide-up"
+        className="fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-white animate-slide-up"
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0"
           header={
             <>
-              <header className="shrink-0 border-b border-border bg-card px-ios-4 pb-ios-3 pt-ios-4">
+              <header className="shrink-0 border-b border-border bg-white px-ios-4 pb-ios-3 pt-ios-4">
                 <MainTopHeader
                   title="Messages"
                   tabsAriaLabel="Navigation messages"
@@ -100,14 +100,14 @@ export default function Search() {
                       setSearchQuery(activeTab === "clubs" ? v.toUpperCase() : v);
                     }}
                     placeholder={getPlaceholder()}
-                    className="h-[44px] rounded-ios-md border-0 bg-secondary pl-ios-6 text-ios-subheadline"
+                    className="h-[44px] rounded-ios-md border-0 bg-[#F1F5F9] pl-ios-6 text-ios-subheadline"
                   />
                 </div>
               </header>
               <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
             </>
           }
-          scrollClassName="flex min-h-0 flex-col bg-secondary"
+          scrollClassName="flex min-h-0 flex-col bg-white"
         >
           <div className="flex min-h-0 flex-1 flex-col">
             {activeTab === 'profiles' && (

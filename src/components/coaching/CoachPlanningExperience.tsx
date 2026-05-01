@@ -1460,9 +1460,18 @@ export function CoachPlanningExperience() {
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
+    () => renderWorkoutMiniProfile(previewSegments),
     [previewSegments]
   );
+  const sessionTimeAxisLabels = useMemo(() => {
+    const duration = Math.max(0, Math.round(previewMetrics.durationMin));
+    const end = Math.max(60, Math.ceil(Math.max(1, duration) / 15) * 15);
+    const labels: string[] = [];
+    for (let minute = 0; minute <= end; minute += 15) {
+      labels.push(`${Math.floor(minute / 60)}:${String(minute % 60).padStart(2, "0")}`);
+    }
+    return labels;
+  }, [previewMetrics.durationMin]);
   const selectedSchemaPreviewIndex = useMemo(() => {
     if (!selectedBlockId || !draft.blocks.length || !previewBars.length) return null;
     const selectedDraftIndex = draft.blocks.findIndex((block) => block.id === selectedBlockId);
@@ -3189,8 +3198,7 @@ export function CoachPlanningExperience() {
                             <MiniWorkoutProfile
                               blocks={previewBars}
                               variant="premiumCompact"
-                              compact
-                              zoneBandMode
+                              barHeightScale={3}
                               selectedBlockIndex={selectedSchemaPreviewIndex}
                               onBlockTap={({ index }) => {
                                 if (!draft.blocks.length) return;
@@ -3201,7 +3209,7 @@ export function CoachPlanningExperience() {
                                 const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
                                 if (block) setSelectedBlockId(block.id);
                               }}
-                              className="h-14 w-full"
+                              className="h-[72px] w-full"
                             />
                             {schemaDropRatio != null ? (
                               <div
@@ -3225,8 +3233,17 @@ export function CoachPlanningExperience() {
                             ) : null}
                           </div>
                         </div>
-                        <div className="mt-1 pl-[2.2rem] text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Temps
+                        <div className="mt-1.5 overflow-x-auto pl-[2.2rem]">
+                          <div className="flex min-w-full items-center justify-between gap-1 text-[10px] font-medium text-muted-foreground">
+                            {sessionTimeAxisLabels.map((label) => (
+                              <span key={`axis-${label}`} className="shrink-0 text-center">
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                          <p className="mt-0.5 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Temps
+                          </p>
                         </div>
                       </div>
                     </div>
