@@ -302,10 +302,10 @@ export default function ProfileSportRecordsEdit() {
 
   return (
     <IosFixedPageHeaderShell
-      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-background"
       headerWrapperClassName="shrink-0"
       contentScroll
-      scrollClassName="min-h-0 bg-secondary"
+      scrollClassName="min-h-0 bg-background"
       header={
         <MainTopHeader
           title="Mon profil"
