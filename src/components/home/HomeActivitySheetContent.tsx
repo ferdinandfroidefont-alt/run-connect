@@ -29,7 +29,7 @@ export function HomeActivitySheetContent() {
   const items = useMemo(() => feedItems.slice(0, 6), [feedItems]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary/80 px-ios-3 pb-ios-3 dark:bg-black/85">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background px-ios-3 pb-ios-3">
       <div className="flex items-center justify-between px-ios-1 pb-ios-2 pt-ios-1">
         <h2 className="text-[20px] font-semibold leading-none tracking-tight text-foreground">Fil d'activite</h2>
         <button
