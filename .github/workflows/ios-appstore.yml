@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
 
     steps:
@@ -20,7 +20,12 @@ jobs:
       - name: 🧰 Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "16.2"
+          xcode-version: "latest-stable"
+
+      - name: 🧪 Verify Xcode / iOS SDK
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
 
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
