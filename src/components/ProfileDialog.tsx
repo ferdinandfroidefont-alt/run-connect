@@ -619,7 +619,7 @@ export const ProfileDialog = ({
   };
   /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
   const profileDialogShellClassName =
-    "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
+    "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-background p-0 !bg-background h-[100dvh] max-h-[100dvh]";
 
   const hasActiveOwnStory = ownStories.some((story) => {
     const expiresAtMs = Date.parse(story.expires_at);
@@ -679,14 +679,14 @@ export const ProfileDialog = ({
           className={profileDialogShellClassName}
         >
           {loading ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
             <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
             <div className="flex flex-1 items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           </div>
           ) : (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
           <MainTopHeader
             title="Mon profil"
             tabs={profileHeaderTabs}
@@ -695,25 +695,25 @@ export const ProfileDialog = ({
               <button
                 type="button"
                 onClick={() => setShowSettingsDialog(true)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-background"
                 aria-label="Ouvrir les paramètres"
               >
                 <Settings className="h-5 w-5" />
               </button>
             }
-            className="shrink-0 border-b border-border bg-card"
+            className="shrink-0 border-b border-border/50 bg-card"
           />
           
-           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-secondary">
+           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-background">
              <div className="box-border min-w-0 max-w-full">
                 {/* Profile Header - Instagram layout: avatar + stats side by side */}
-                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
+                <div className="bg-card border-b border-border/50 px-4 pt-5 pb-4">
                   <div className="flex items-center gap-5">
                     {/* Avatar */}
                     <button type="button" className="relative shrink-0" onClick={handleAvatarPress}>
                       <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
                         <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                        <AvatarFallback className="text-2xl bg-secondary">
+                        <AvatarFallback className="text-2xl bg-background">
                           {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -846,7 +846,7 @@ export const ProfileDialog = ({
                 </div>
 
               {/* Stories à la une - cercles style Instagram */}
-              <div className="bg-card border-b border-border px-4 py-3">
+              <div className="bg-card border-b border-border/50 px-4 py-3">
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {storyHighlights.map((item) => {
                     const titleSafe = String(item.title ?? "").trim() || "Sans titre";
@@ -990,22 +990,7 @@ export const ProfileDialog = ({
               )}
             </div>
 
-            {/* Bouton créer une story — inline (non sticky) pour éviter le chevauchement avec la tab bar */}
-            <div className="px-4 pt-3 pb-[calc(var(--bottom-nav-offset,72px)+env(safe-area-inset-bottom,0px)+12px)]">
-              <div className="mx-auto w-full max-w-md">
-                <Button
-                  type="button"
-                  className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold shadow-md shadow-black/[0.07] ring-1 ring-black/[0.05] dark:shadow-black/30 dark:ring-white/[0.08]"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate("/stories/create");
-                  }}
-                >
-                  <Video className="h-4 w-4 shrink-0" />
-                  Créer une story
-                </Button>
-              </div>
-            </div>
+            <div className="pb-[calc(var(--bottom-nav-offset,72px)+env(safe-area-inset-bottom,0px)+12px)]" />
           </div>
           </div>
           )}
