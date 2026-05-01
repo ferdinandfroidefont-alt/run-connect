@@ -2993,12 +2993,6 @@ const Messages = () => {
             ) : (
               <MainTopHeader
                 title="Messages"
-                tabsAriaLabel="Navigation messages"
-                tabs={[
-                  { id: "conversations", label: "Conversations", active: true },
-                  { id: "search", label: "Recherche", active: false, onClick: () => navigate("/search") },
-                  { id: "create-club", label: "Créer un club", active: false, onClick: () => setShowCreateGroup(true) },
-                ]}
                 right={
                   <>
                     <button
