@@ -45,6 +45,7 @@ import {
   createSessionPinButton,
   resolveSessionPinVariant,
 } from '@/lib/mapSessionPin';
+import { formatMapPinScheduleLine } from '@/lib/formatMapPinSchedule';
 import {
   getPersistedHomeMapPosition,
   HOME_HOT_PREFETCH_MAX_AGE_MS,
@@ -188,17 +189,12 @@ const formatPinDistanceLabel = (distanceMeters: number): string => {
   return Number.isInteger(rounded) ? `${rounded}km` : `${rounded.toFixed(1)}km`;
 };
 
-const updatePinDistanceBadge = (pin: HTMLButtonElement, distanceLabel: string) => {
+const updatePinMetaDistance = (pin: HTMLButtonElement, distanceLabel: string) => {
   if (!distanceLabel) return;
-  const existingBadge = pin.querySelector<HTMLElement>('.rc-session-pin__distance-badge');
-  if (existingBadge) {
-    existingBadge.textContent = distanceLabel;
-    return;
-  }
-  const distanceBadge = document.createElement('span');
-  distanceBadge.className = 'rc-session-pin__distance-badge';
-  distanceBadge.textContent = distanceLabel;
-  pin.appendChild(distanceBadge);
+  const distEl = pin.querySelector<HTMLElement>('.rc-session-pin__meta-distance');
+  if (!distEl) return;
+  distEl.textContent = `à ${distanceLabel}`;
+  distEl.classList.remove('is-empty');
 };
 interface Filter {
   activity_types: string[];
@@ -965,11 +961,24 @@ export const InteractiveMap = ({
         wrap.style.height = '1px';
         wrap.style.overflow = 'visible';
 
+        const scheduleLine = (() => {
+          const trimmed = formatMapPinScheduleLine(session.scheduled_at).trim();
+          if (trimmed) return trimmed;
+          const d = new Date(session.scheduled_at);
+          if (!Number.isNaN(d.getTime())) {
+            const t = format(d, "HH:mm").replace(":", "h");
+            return `${format(d, "d MMM", { locale: fr })} ${t}`;
+          }
+          return "Séance";
+        })();
         const pin = createSessionPinButton({
           avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
           ariaLabel: session.title || 'Séance',
           variant: resolveSessionPinVariant(),
-          distanceLabel,
+          meta: {
+            scheduleLine,
+            distanceLine: distanceLabel ? `à ${distanceLabel}` : undefined,
+          },
         });
 
         if (userLocation) {
@@ -983,7 +992,7 @@ export const InteractiveMap = ({
             const nextLabel = formatPinDistanceLabel(routedDistance);
             if (!nextLabel) return;
             routeDistanceLabelCacheRef.current.set(cacheKey, nextLabel);
-            updatePinDistanceBadge(pin, nextLabel);
+            updatePinMetaDistance(pin, nextLabel);
           }).catch(() => {
             // Keep fallback distance label when routed distance lookup fails.
           });

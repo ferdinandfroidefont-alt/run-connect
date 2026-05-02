@@ -840,7 +840,7 @@ const Auth = () => {
     >
       <AuthLandingOnboarding className="min-h-0 flex-1" />
 
-      <div className="relative z-20 mx-auto w-full max-w-[340px] shrink-0 space-y-3 px-6 pt-1">
+      <div className="relative z-20 mx-auto w-full max-w-[340px] shrink-0 space-y-3 px-6 pt-10">
         <button
           type="button"
           onClick={() => setView("email-signup")}
@@ -858,9 +858,6 @@ const Auth = () => {
         >
           Se connecter
         </button>
-        <div className="pt-1">
-          <AuthLegalFooter />
-        </div>
       </div>
     </div>
   );
@@ -1105,6 +1102,8 @@ const Auth = () => {
       >
         Problème de connexion ? Nettoyer la session
       </button>
+
+      <AuthLegalFooter className="pt-4" />
       </div>
     </IosFixedPageHeaderShell>
   );
@@ -1225,6 +1224,8 @@ const Auth = () => {
       >
         Déjà inscrit ? Se connecter
       </button>
+
+      <AuthLegalFooter className="pt-4" />
       </div>
     </IosFixedPageHeaderShell>
   );
@@ -1294,6 +1295,8 @@ const Auth = () => {
           <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
         </button>
       </div>
+
+      <AuthLegalFooter className="pt-4" />
       </div>
     </IosFixedPageHeaderShell>
   );
@@ -1370,6 +1373,8 @@ const Auth = () => {
           </Button>
         </form>
       </div>
+
+      <AuthLegalFooter className="pt-4" />
       </div>
     </IosFixedPageHeaderShell>
   );

@@ -1018,6 +1018,18 @@ html, body {
   top: 0;
   transform: translate(-50%, -100%);
   transform-origin: center bottom;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  background: transparent;
 }
 
 .rc-session-pin-pop .rc-session-pin__shape {
@@ -1032,15 +1044,69 @@ html, body {
   filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.45));
 }
 
-.rc-session-pin__shape {
+/* Boîtier visuel carte (pastille + photo + pointe), largeur inchangée pour l’ancre map */
+.rc-session-pin__marker-visual {
   position: relative;
-  display: block;
+  flex-shrink: 0;
   width: 58px;
   height: 78px;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  background: transparent;
+}
+
+.rc-session-pin__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  max-width: min(152px, 46vw);
+  padding: 6px 11px;
+  border-radius: 16px;
+  background: #fff;
+  color: #0f172a;
+  pointer-events: none;
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.75) inset,
+    0 8px 22px rgba(15, 23, 42, 0.14),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.dark .rc-session-pin__meta {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border) / 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 8px 22px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.rc-session-pin__meta-schedule {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-session-pin__meta-distance {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.dark .rc-session-pin__meta-distance {
+  color: hsl(var(--muted-foreground));
+}
+
+.rc-session-pin__meta-distance.is-empty {
+  display: none;
 }
 
 /* Ombre au sol (profondeur, lisible sur fond clair) */
@@ -1146,35 +1212,16 @@ html, body {
   height: 46px;
   transform: translateX(-50%);
   border-radius: 999px;
-  border: 0;
+  border: 2.5px solid rgba(255, 255, 255, 0.96);
   overflow: hidden;
   background: hsl(var(--muted));
-  box-shadow: none;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.16);
 }
 
 .rc-session-pin__avatar {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.rc-session-pin__distance-badge {
-  position: absolute;
-  left: 50%;
-  top: -18px;
-  z-index: 3;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  padding: 3px 8px;
-  background: #fff;
-  color: #111827;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
-  pointer-events: none;
 }
 
 .rc-session-pin__cluster-badge {
