@@ -228,7 +228,7 @@ export const Layout = ({ children }: LayoutProps) => {
         Tab bar toujours montée (pas de mount/unmount par route) : visibilité gérée dans BottomNavigation.
         FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock.
       */}
-      <BottomNavigation isProfileRoute={isProfileShellRoute} />
+      <BottomNavigation />
     </div>
   );
 };
