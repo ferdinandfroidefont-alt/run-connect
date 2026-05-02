@@ -34,13 +34,8 @@ export const Layout = ({ children }: LayoutProps) => {
   const isHome = location.pathname === '/';
   const [homeMapPrimed, setHomeMapPrimed] = useState(isHome);
 
-  /** Mon profil / sous-pages sans dock : tab bar masquée dans BottomNavigation — pas réserver de bande basse. */
-  const isProfileShellRoute =
-    location.pathname === '/profile' || location.pathname.startsWith('/profile/records');
-
   /** Padding bas du <main> : stable dès le 1er rendu (pas de useEffect) — évite reflow / « remontée » de la zone utile. */
-  const layoutBottomInset =
-    removeMainBottomInset || isProfileShellRoute ? '0px' : 'var(--bottom-nav-offset)';
+  const layoutBottomInset = removeMainBottomInset ? '0px' : 'var(--bottom-nav-offset)';
 
   useEffect(() => {
     if (isHome) setHomeMapPrimed(true);
