@@ -670,7 +670,7 @@ export const ProfileDialog = ({
   ];
 
   return <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
         {open ? (
         <DialogContent
           data-tutorial="tutorial-profile-page"
