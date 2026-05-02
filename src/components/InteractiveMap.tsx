@@ -432,15 +432,13 @@ export const InteractiveMap = ({
   }, [isActive, isImmersiveMode, setHomeMapImmersive]);
 
   useEffect(() => {
-    const hideChrome =
-      isActive && (isCreateDialogOpen || showSettingsDialog || showProfileDialog);
+    const hideChrome = isActive && (isCreateDialogOpen || showSettingsDialog);
     setBottomNavSuppressed("home-overlays", hideChrome);
     return () => setBottomNavSuppressed("home-overlays", false);
   }, [
     isActive,
     isCreateDialogOpen,
     showSettingsDialog,
-    showProfileDialog,
     setBottomNavSuppressed,
   ]);
 
