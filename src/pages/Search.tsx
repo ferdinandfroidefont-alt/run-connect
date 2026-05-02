@@ -1,11 +1,12 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search as SearchIcon } from 'lucide-react';
+import { Plus, Search as SearchIcon, Users } from 'lucide-react';
 import { SearchTabs } from '@/components/SearchTabs';
 import { ProfilesTab } from '@/components/search/ProfilesTab';
 import { ClubsTab } from '@/components/search/ClubsTab';
 import { StravaTab } from '@/components/search/StravaTab';
 import { ContactsTab } from '@/components/search/ContactsTab';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { MainTopHeader } from '@/components/layout/MainTopHeader';
@@ -77,21 +78,45 @@ export default function Search() {
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="shrink-0"
+          headerWrapperClassName="z-50 shrink-0 bg-card"
           header={
             <>
-              <header className="shrink-0 border-b border-border bg-white px-ios-4 pb-ios-3 pt-ios-4">
+              <div className="pt-[var(--safe-area-top)]">
                 <MainTopHeader
                   title="Messages"
                   tabsAriaLabel="Navigation messages"
                   tabs={[
                     { id: "conversations", label: "Conversations", active: false, onClick: () => navigate("/messages") },
                     { id: "search", label: "Recherche", active: true },
-                    { id: "create-club", label: "Créer un club", active: false, onClick: () => navigate("/messages?createClub=1") },
+                    { id: "create-club", label: "Créer un club", active: false, onClick: () => navigate("/messages?tab=create-club") },
                   ]}
+                  right={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/messages?tab=create-club")}
+                        className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                        aria-label="Créer un club"
+                      >
+                        <Users className="h-5 w-5" />
+                      </button>
+                      <Button
+                        type="button"
+                        onClick={() => navigate("/messages", { state: { openNewConversation: true } })}
+                        size="sm"
+                        variant="ghost"
+                        className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                        aria-label="Nouvelle conversation"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                    </>
+                  }
                 />
-                <div className="relative mt-ios-3">
-                  <SearchIcon className="absolute left-ios-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+              <div className="border-b border-[#ECECEE] bg-card px-4 pb-3 pt-2.5 dark:border-[#1f1f1f]">
+                <div className="relative">
+                  <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     ref={inputRef}
                     value={searchQuery}
@@ -100,10 +125,10 @@ export default function Search() {
                       setSearchQuery(activeTab === "clubs" ? v.toUpperCase() : v);
                     }}
                     placeholder={getPlaceholder()}
-                    className="h-[44px] rounded-ios-md border-0 bg-[#F1F5F9] pl-ios-6 text-ios-subheadline"
+                    className="h-[44px] rounded-ios-md border-0 bg-[#F1F5F9] pl-10 text-ios-subheadline"
                   />
                 </div>
-              </header>
+              </div>
               <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
             </>
           }

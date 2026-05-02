@@ -81,8 +81,8 @@ const CreatePollDialog = lazy(() =>
 const ConversationInfoSheet = lazy(() =>
   import("@/components/ConversationInfoSheet").then((m) => ({ default: m.ConversationInfoSheet }))
 );
-const CreateClubDialogPremium = lazy(() =>
-  import("@/components/CreateClubDialogPremium").then((m) => ({ default: m.CreateClubDialogPremium }))
+const CreateClubFormPanel = lazy(() =>
+  import("@/components/CreateClubDialogPremium").then((m) => ({ default: m.CreateClubFormPanel }))
 );
 const ClubInfoDialog = lazy(() =>
   import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
@@ -195,7 +195,6 @@ const Messages = () => {
   const [searchUsers, setSearchUsers] = useState("");
   const [availableUsers, setAvailableUsers] = useState<Profile[]>([]);
   const [showNewConversation, setShowNewConversation] = useState(false);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showClubProfile, setShowClubProfile] = useState(false);
@@ -323,6 +322,15 @@ const Messages = () => {
     setBottomNavSuppressed("messages-thread", false);
     navigate("/messages", { replace: true, state: {} });
   }, [location.state, navigate, selectedConversation, setBottomNavSuppressed]);
+
+  /** Ouverture « Nouvelle conversation » depuis un autre écran (ex. header identique sur /search). */
+  useEffect(() => {
+    if (location.pathname !== "/messages") return;
+    const open = (location.state as { openNewConversation?: boolean } | null)?.openNewConversation;
+    if (!open) return;
+    setShowNewConversation(true);
+    navigate({ pathname: "/messages", search: location.search }, { replace: true, state: {} });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   const isLoading = loading || cameraLoading;
 
@@ -2138,10 +2146,10 @@ const Messages = () => {
     [commentsBySession, toast, user]
   );
 
-  // Deep link : /messages?createClub=1 → ouvre directement la création de club
+  // Deep link : /messages?createClub=1 → même vue que l’onglet « Créer un club »
   useEffect(() => {
     if (searchParams.get("createClub") === "1") {
-      setShowCreateGroup(true);
+      setActiveRootTab("create-club");
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.delete("createClub");
@@ -2222,7 +2230,7 @@ const Messages = () => {
             onStartConversation={startConversation}
             onCreateClub={() => {
               setShowNewConversation(false);
-              setShowCreateGroup(true);
+              setActiveRootTab("create-club");
             }}
             onAvatarClick={handleAvatarClick}
           />
@@ -2345,7 +2353,7 @@ const Messages = () => {
                   <DropdownMenuItem 
                     onClick={() => {
                       setSelectedConversation(null);
-                      setShowCreateGroup(true);
+                      setActiveRootTab("create-club");
                     }}
                     className="py-ios-3"
                   >
@@ -3186,7 +3194,14 @@ const Messages = () => {
                   id: "conversations",
                   label: "Conversations",
                   active: activeRootTab === "conversations",
-                  onClick: () => setActiveRootTab("conversations"),
+                  onClick: () => {
+                    setActiveRootTab("conversations");
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      if (next.get("tab") === "create-club") next.delete("tab");
+                      return next;
+                    }, { replace: true });
+                  },
                 },
                 {
                   id: "search",
@@ -3198,14 +3213,21 @@ const Messages = () => {
                   id: "create-club",
                   label: "Créer un club",
                   active: activeRootTab === "create-club",
-                  onClick: () => setActiveRootTab("create-club"),
+                  onClick: () => {
+                    setActiveRootTab("create-club");
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.set("tab", "create-club");
+                      return next;
+                    }, { replace: true });
+                  },
                 },
               ]}
               right={
                 <>
                   <button
                     type="button"
-                    onClick={() => setShowCreateGroup(true)}
+                    onClick={() => setActiveRootTab("create-club")}
                     className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
                     aria-label="Créer un club"
                   >
@@ -3226,7 +3248,14 @@ const Messages = () => {
           </div>
           }
         >
-        <div className="space-y-2.5 bg-white pb-ios-2 pt-2.5">
+        <div
+          className={cn(
+            "pb-ios-2 pt-2.5",
+            activeRootTab === "create-club"
+              ? "min-h-0 flex-1 bg-secondary"
+              : "space-y-2.5 bg-white"
+          )}
+        >
           {activeRootTab === "conversations" ? (
             <>
               <div className="w-full overflow-hidden border-x-0 rounded-none sm:mx-auto sm:max-w-2xl">
@@ -3446,41 +3475,18 @@ const Messages = () => {
               </div>
             </>
           ) : (
-            <div className="px-3.5 pb-ios-2">
-              <div className="ios-card px-ios-4 py-ios-4">
-                <h3 className="text-ios-title3 font-semibold text-foreground">Créer un club</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-                  Créez votre club pour organiser vos échanges et vos séances avec votre groupe.
-                </p>
-                <div className="mt-4 flex gap-2">
-                  <Button onClick={() => setShowCreateGroup(true)}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Ouvrir la création
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveRootTab("conversations")}
-                  >
-                    Retour conversations
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <Suspense fallback={<div className="min-h-[50vh] bg-secondary" />}>
+              <CreateClubFormPanel
+                active={activeRootTab === "create-club"}
+                onSuccess={() => {
+                  void loadConversations();
+                  setActiveRootTab("conversations");
+                }}
+              />
+            </Suspense>
           )}
         </div>
         </IosFixedPageHeaderShell>
-
-        {/* Create Club Dialog */}
-        <Suspense fallback={null}>
-          <CreateClubDialogPremium
-            isOpen={showCreateGroup}
-            onClose={() => setShowCreateGroup(false)}
-            onGroupCreated={(groupId) => {
-              loadConversations();
-              setShowCreateGroup(false);
-            }}
-          />
-        </Suspense>
 
         {/* Club Info Dialog */}
         <Suspense fallback={null}>

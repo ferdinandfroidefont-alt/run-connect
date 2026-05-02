@@ -261,7 +261,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
             <AlertDialogAction
               onClick={() => {
                 setShowNoClubDialog(false);
-                navigate("/messages?createClub=1");
+                navigate("/messages?tab=create-club");
               }}
             >
               Créer un club

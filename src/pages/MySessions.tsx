@@ -33,6 +33,8 @@ const SportWhiteIcon = ({ activityType, size = "md" }: { activityType: string; s
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
+import { WeekSelectorPremium, type DaySessionSummary } from '@/components/coaching/planning/WeekSelectorPremium';
+import { addDays, addWeeks, subWeeks, startOfWeek } from 'date-fns';
 import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
@@ -170,6 +172,8 @@ export default function MySessions() {
   const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
+  const [weekAnchor, setWeekAnchor] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
   const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
@@ -640,6 +644,50 @@ export default function MySessions() {
     return true;
   });
 
+  /** Résumé par jour pour le sélecteur hebdo : comme la planification, jour sans séance → lune + « Repos ». */
+  const sessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
+    const merged = [...sessions, ...joinedSessions];
+    const seen = new Set<string>();
+    const unique: UserSession[] = [];
+    for (const s of merged) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      unique.push(s);
+    }
+
+    const sessionsByDay = new Map<string, UserSession[]>();
+    for (const s of unique) {
+      const key = format(new Date(s.scheduled_at), 'yyyy-MM-dd');
+      if (!sessionsByDay.has(key)) sessionsByDay.set(key, []);
+      sessionsByDay.get(key)!.push(s);
+    }
+
+    const activityToSport = (activityType: string): DaySessionSummary['sport'] => {
+      const lower = String(activityType ?? '').toLowerCase();
+      if (lower.includes('bike') || lower.includes('cycl') || lower.includes('vélo') || lower.includes('velo')) return 'cycling';
+      if (lower.includes('swim') || lower.includes('natation')) return 'swimming';
+      if (lower.includes('strength') || lower.includes('renfo') || lower.includes('muscu')) return 'strength';
+      return 'running';
+    };
+
+    const map: Record<string, DaySessionSummary> = {};
+    for (let i = 0; i < 7; i++) {
+      const day = addDays(weekAnchor, i);
+      const key = format(day, 'yyyy-MM-dd');
+      const daySessions = sessionsByDay.get(key) ?? [];
+      if (daySessions.length === 0) {
+        map[key] = { sport: 'rest', value: 'Repos' };
+        continue;
+      }
+      for (const s of daySessions) {
+        const sport = activityToSport((s as { activity_type?: string }).activity_type ?? '');
+        if (!map[key]) map[key] = { sport, value: '1' };
+        else map[key] = { sport: map[key].sport, value: String(parseInt(map[key].value, 10) + 1) };
+      }
+    }
+    return map;
+  }, [sessions, joinedSessions, weekAnchor]);
+
   const openConfirmDialog = (session: UserSession) => {
     setConfirmTarget({
       sessionId: session.id,
@@ -1052,6 +1100,19 @@ export default function MySessions() {
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
               <>
+              {/* Calendrier de la semaine — au-dessus des filtres et des cards */}
+              <div className="mb-ios-3">
+                <WeekSelectorPremium
+                  weekStart={weekAnchor}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  onPreviousWeek={() => setWeekAnchor((d) => subWeeks(d, 1))}
+                  onNextWeek={() => setWeekAnchor((d) => addWeeks(d, 1))}
+                  sessionSummaryByDate={sessionSummaryByDate}
+                  showLegend
+                />
+              </div>
+
               {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
               <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-3">
                 {[
@@ -1193,7 +1254,7 @@ export default function MySessions() {
                                     Confirmée
                                   </span>
                                 )}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                                <ChevronRight className="h-4 w-4 text-primary" />
                               </div>
                             </div>
                             {index < arr.length - 1 && (

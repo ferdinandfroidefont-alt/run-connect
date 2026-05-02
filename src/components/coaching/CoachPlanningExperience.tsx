@@ -2979,7 +2979,7 @@ export function CoachPlanningExperience() {
             <AlertDialogAction
               onClick={() => {
                 setShowCoachRequiredDialog(false);
-                navigate("/messages?createClub=1");
+                navigate("/messages?tab=create-club");
               }}
             >
               Créer un club
