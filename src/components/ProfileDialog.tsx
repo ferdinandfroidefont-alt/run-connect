@@ -619,7 +619,7 @@ export const ProfileDialog = ({
   };
   /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
   const profileDialogShellClassName =
-    "z-[125] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-background p-0 !bg-background h-[100dvh] max-h-[100dvh]";
+    "z-[110] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-background p-0 !bg-background !h-[calc(100dvh-var(--bottom-nav-offset))] !max-h-[calc(100dvh-var(--bottom-nav-offset))]";
 
   const hasActiveOwnStory = ownStories.some((story) => {
     const expiresAtMs = Date.parse(story.expires_at);
@@ -676,6 +676,7 @@ export const ProfileDialog = ({
           data-tutorial="tutorial-profile-page"
           hideCloseButton
           fullScreen
+          overlayClassName="hidden"
           className={profileDialogShellClassName}
         >
           {loading ? (
