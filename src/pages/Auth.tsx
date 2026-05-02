@@ -835,7 +835,6 @@ const Auth = () => {
     <div
       className="relative flex min-h-[100dvh] flex-col bg-background"
       style={{
-        paddingTop: "max(env(safe-area-inset-top, 0px), 10px)",
         paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
       }}
     >
