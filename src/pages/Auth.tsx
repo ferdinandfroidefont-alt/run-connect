@@ -23,6 +23,7 @@ import {
   AuthLegalFooter,
   authCardShadowStyle,
 } from "@/components/auth/AuthChrome";
+import { AuthLandingOnboarding } from "@/components/auth/AuthLandingOnboarding";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
@@ -831,69 +832,36 @@ const Auth = () => {
   // ██  LANDING VIEW  ██
   // ══════════════════════════════════════════════
   const renderLanding = () => (
-    <div className="relative flex min-h-full flex-col items-center justify-between px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
-      <AuthAmbientBackground />
+    <div
+      className="relative flex min-h-[100dvh] flex-col bg-background"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top, 0px), 10px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+      }}
+    >
+      <AuthLandingOnboarding className="min-h-0 flex-1" />
 
-      {/* Top spacer */}
-      <div className="min-h-[40px] flex-1" />
-
-      <AuthBrandMark
-        title="Bougez ensemble avec RunConnect"
-        subtitle="Créez votre compte pour découvrir, organiser et rejoindre des séances autour de vous."
-      />
-
-      {/* Action buttons */}
-      <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
-        {/* Google */}
+      <div className="relative z-20 mx-auto w-full max-w-[340px] shrink-0 space-y-3 px-6 pt-1">
         <button
           type="button"
-          onClick={handleGoogleAuth}
+          onClick={() => setView("email-signup")}
           disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-card text-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.08), 0 0 0 1px hsl(0 0% 0% / 0.06)' }}
+          className="flex h-[52px] w-full items-center justify-center rounded-[14px] bg-primary text-[17px] font-semibold text-primary-foreground transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: "0 2px 8px hsl(var(--primary) / 0.28)" }}
         >
-          <FcGoogle className="h-5 w-5" />
-          Continuer avec Google
+          Inscrivez-vous gratuitement
         </button>
-
-        {/* Apple */}
         <button
           type="button"
-          onClick={handleAppleAuth}
+          onClick={() => setView("email-signin")}
           disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+          className="flex h-[48px] w-full items-center justify-center rounded-[14px] bg-transparent text-[16px] font-semibold text-primary transition-colors active:bg-primary/5 disabled:opacity-50"
         >
-          <AppleIcon />
-          Continuer avec Apple
+          Se connecter
         </button>
-
-        {/* Email */}
-        <button
-          type="button"
-          onClick={() => setView('email-signup')}
-          disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-primary text-primary-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)' }}
-        >
-          <Mail className="h-5 w-5" />
-          Continuer avec e-mail
-        </button>
-      </div>
-
-      {/* Bottom spacer */}
-      <div className="flex-1 min-h-[24px]" />
-
-      {/* Legal + link */}
-      <div className="w-full max-w-[340px] space-y-4 relative z-10">
-        <button
-          type="button"
-          onClick={() => setView('email-signin')}
-          className="w-full text-center text-[14px] text-primary font-medium py-2 active:opacity-70 transition-opacity"
-        >
-          Déjà inscrit ? Se connecter
-        </button>
-        <AuthLegalFooter />
+        <div className="pt-1">
+          <AuthLegalFooter />
+        </div>
       </div>
     </div>
   );

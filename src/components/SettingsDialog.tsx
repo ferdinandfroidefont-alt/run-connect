@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import {
   Settings,
@@ -115,9 +116,12 @@ function getMatchingItems(items: string[], query: string): string[] {
   return items.filter(item => item.toLowerCase().includes(q));
 }
 
+const SETTINGS_BOTTOM_NAV_SUPPRESSOR_ID = "settings-dialog";
+
 export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { setBottomNavSuppressed } = useAppContext();
   const [currentPage, setCurrentPage] = useState<SettingsDialogPage>("hub");
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [loading, setLoading] = useState(false);
@@ -146,6 +150,11 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
       setCurrentPage(initialPage);
     }
   }, [open, initialPage]);
+
+  useEffect(() => {
+    setBottomNavSuppressed(SETTINGS_BOTTOM_NAV_SUPPRESSOR_ID, open);
+    return () => setBottomNavSuppressed(SETTINGS_BOTTOM_NAV_SUPPRESSOR_ID, false);
+  }, [open, setBottomNavSuppressed]);
 
   // Reset to hub when dialog closes
   const handleOpenChange = (next: boolean) => {

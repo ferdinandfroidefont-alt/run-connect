@@ -49,30 +49,36 @@ export function CreateClubFormPanel({ active, onSuccess }: CreateClubFormPanelPr
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
-  const searchUsers = async () => {
-    if (!searchQuery.trim()) {
+  useEffect(() => {
+    if (!active) {
       setSearchResults([]);
       return;
     }
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("user_id, username, display_name, avatar_url")
-        .neq("user_id", user?.id)
-        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-        .limit(10);
-      if (error) throw error;
-      setSearchResults(data || []);
-    } catch (error) {
-      console.error("Error searching users:", error);
-    }
-  };
+    const uid = user?.id;
+    if (!uid) return;
 
-  useEffect(() => {
-    if (!active) return;
-    const timeout = setTimeout(searchUsers, 300);
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("user_id, username, display_name, avatar_url")
+          .neq("user_id", uid)
+          .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
+          .limit(10);
+        if (error) throw error;
+        setSearchResults(data || []);
+      } catch (error) {
+        console.error("Error searching users:", error);
+      }
+    }, 300);
     return () => clearTimeout(timeout);
-  }, [searchQuery, active]);
+  }, [active, searchQuery, user?.id]);
 
   const searchLocation = async (query: string) => {
     if (!query.trim() || query.length < 3) {
