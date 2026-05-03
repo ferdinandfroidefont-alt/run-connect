@@ -36,8 +36,8 @@ export function MainTopHeader({
         {right ? <div className="flex items-center gap-2">{right}</div> : null}
       </div>
 
-      {/* Large title — Apple iOS Settings.app/Mail.app */}
-      <div className="px-4 pb-2 pt-1">
+      {/* Large title — Apple iOS Settings.app/Mail.app spec : marginTop 6 / marginBottom 6 */}
+      <div className="px-4 pt-1.5 pb-1.5">
         <h1 className="font-display select-none text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
           {title}
         </h1>

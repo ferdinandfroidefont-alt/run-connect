@@ -112,26 +112,43 @@ export function SessionStoriesStrip({
   );
   const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
+  // Refonte Apple stories rail (mockup 17 ScreenMessages) :
+  // - 64×64 anneau conic-gradient blue (non vu) / gris (vu)
+  // - Avatar 54×54 dedans, padding 2.5
+  // - Toi : avatar gris + bouton + bleu en bas-droit
+  // - Label 11px sous l'avatar
   return (
-    <div className="overflow-x-auto bg-white px-4 pb-1.5 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="overflow-x-auto bg-card px-4 pt-1.5 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="flex min-w-max items-start gap-3">
         <button
           type="button"
           onClick={hasMyStory ? () => onOpenStory(currentUserId!) : onCreateStory}
           className="flex min-w-[70px] flex-col items-center gap-1.5"
         >
-          <div className="relative rounded-full bg-white p-[2.5px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]">
-            <Avatar className="h-[62px] w-[62px] border-2 border-[#DBEAFE]">
-              <AvatarImage src={myStoryAvatarUrl ?? ""} />
-              <AvatarFallback className="bg-[#DBEAFE] text-[#2563EB]">MOI</AvatarFallback>
-            </Avatar>
+          <div
+            className="relative h-16 w-16 rounded-full p-[2.5px]"
+            style={{ background: "rgba(120,120,128,0.18)" }}
+          >
+            <div className="h-full w-full rounded-full bg-secondary p-[2px]">
+              <Avatar className="h-full w-full">
+                <AvatarImage src={myStoryAvatarUrl ?? ""} />
+                <AvatarFallback className="bg-[hsl(var(--muted))] text-foreground/70 font-semibold text-[18px]">
+                  {hasMyStory ? "MOI" : "+"}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             {!hasMyStory && (
-              <span className="absolute bottom-0.5 right-0.5 rounded-full bg-[#2563EB] p-[3px] text-white shadow-sm">
-                <Plus className="h-3 w-3" />
+              <span
+                className="absolute -bottom-0.5 -right-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-primary text-white"
+                style={{ border: "2.5px solid hsl(var(--background))" }}
+              >
+                <Plus className="h-3 w-3" strokeWidth={2.4} />
               </span>
             )}
           </div>
-          <span className="max-w-[70px] truncate text-[11px] font-medium text-[#0F172A]">Votre story</span>
+          <span className="max-w-[70px] truncate text-[11px] font-medium text-muted-foreground">
+            Votre story
+          </span>
         </button>
 
         {authors
@@ -144,20 +161,23 @@ export function SessionStoriesStrip({
               className="flex min-w-[70px] flex-col items-center gap-1.5"
             >
               <div
-                className={
-                  author.viewed
-                    ? "rounded-full bg-[#E2E8F0] p-[2px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]"
-                    : "rounded-full bg-[linear-gradient(135deg,#2563EB_0%,#60A5FA_52%,#93C5FD_100%)] p-[2px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]"
-                }
+                className="h-16 w-16 rounded-full p-[2.5px]"
+                style={{
+                  background: author.viewed
+                    ? "rgba(120,120,128,0.24)"
+                    : "conic-gradient(from 200deg, hsl(var(--primary)) 0%, hsl(var(--primary-on-dark, 211 100% 52%)) 50%, hsl(var(--primary)) 100%)",
+                }}
               >
-                <Avatar className="h-[60px] w-[60px] border-2 border-white">
-                  <AvatarImage src={author.avatar_url ?? ""} />
-                  <AvatarFallback className="bg-[#E2E8F0] text-[#334155]">
-                    {(author.username ?? "U").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="h-full w-full rounded-full bg-secondary p-[2px]">
+                  <Avatar className="h-full w-full">
+                    <AvatarImage src={author.avatar_url ?? ""} />
+                    <AvatarFallback className="bg-[hsl(var(--muted))] text-foreground font-semibold text-[18px]">
+                      {(author.username ?? "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
               </div>
-              <span className="max-w-[70px] truncate text-[11px] font-medium text-[#0F172A]">
+              <span className="max-w-[70px] truncate text-[11px] font-medium text-foreground">
                 {author.display_name || author.username || "Membre"}
               </span>
             </button>

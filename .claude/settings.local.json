@@ -6,7 +6,8 @@
       "Bash(unzip -o \"/c/Users/ordi2322802/Downloads/App RunConnect IOS-handoff.zip\")",
       "Bash(npx tsc *)",
       "Bash(npx eslint *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(echo \"ESLINT-EXIT=$?\")"
     ]
   }
 }

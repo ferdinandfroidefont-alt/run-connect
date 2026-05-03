@@ -40,7 +40,6 @@ import { useUserProfile } from '@/contexts/UserProfileContext';
 import { QRShareDialog } from './QRShareDialog';
 import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
 import { cn } from '@/lib/utils';
-import { MainTopHeader } from '@/components/layout/MainTopHeader';
 import {
   createSessionPinButton,
   resolveSessionPinVariant,
@@ -1848,73 +1847,24 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Bandeau supérieur opaque + barre de recherche flottante (hors header) — masqué en mode immersif */}
+      {/* Refonte Apple Discover (mockup 04) :
+          - PAS de barre header opaque (mockup spec : "plus de barre du système en haut")
+          - Floating search pill + avatar 44×44 + NotificationCenter au top y=safe+8
+          - Filter chips row 6 catégories en dessous
+          - Suspense + handlers existants 100% préservés (NotificationCenter, settings) */}
       {!isImmersiveMode && (
         <div
           ref={homeMapTopStackRef}
           className="pointer-events-none absolute left-0 right-0 top-0 z-[30]"
         >
-          {/*
-            Une seule couche d’inset : le header intègre la safe-area.
-            (StatusBar overlay: false → bande h-[safe-area] + pt header doublait la zone système.)
-          */}
-          <header
-            className={cn(
-              "runconnect-home-top-header home-map-page-header pointer-events-auto relative shrink-0 bg-white dark:bg-black",
-              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[12px] after:bg-gradient-to-b after:from-white after:to-transparent dark:after:from-black dark:after:to-transparent",
-            )}
+          {/* Bloc flottant : padding safe-area-top + 8px */}
+          <div
+            className="pointer-events-auto box-border w-full px-3"
+            style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
           >
-            {/* Header navigation épuré : titre + actions */}
-            <div className="relative z-[1]">
-              <MainTopHeader
-                title="Accueil"
-                tabsAriaLabel={t("navigation.home")}
-                tabs={[
-                  { id: "planning", label: "Planification", active: true },
-                  { id: "tracking", label: "Suivi", active: false, onClick: () => navigate("/participants") },
-                  { id: "routes", label: "Création itinéraire", active: false, onClick: () => navigate("/route-create") },
-                ]}
-                right={
-                  <>
-                    <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
-                      <Suspense
-                        fallback={
-                          <div
-                            className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[12px] border border-[#E5E5EA] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
-                            aria-hidden
-                          />
-                        }
-                      >
-                        <NotificationCenter onSessionUpdated={loadSessions} />
-                      </Suspense>
-                    </div>
-                    <button
-                      type="button"
-                      className={cn(
-                        "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] outline-none",
-                        "border border-[#E5E5EA] bg-white shadow-none dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
-                        "text-[#1A1A1A] transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:text-foreground",
-                        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      )}
-                      aria-label={t("navigation.settings")}
-                      onClick={() => setShowSettingsDialog(true)}
-                    >
-                      <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
-                    </button>
-                  </>
-                }
-              />
-            </div>
-          </header>
-
-          {/* Recherche + filtres sous les tabs : navigation clean avec espacement régulier */}
-          <div className="pointer-events-none relative z-[35] box-border w-full px-4 pb-1.5 pt-3">
-            <div className="pointer-events-auto relative z-[36] min-w-0 w-full max-w-full">
-              {/*
-                Ancêtre positionné limité à la barre de recherche + liste : sinon top-[100%] du dropdown
-                se calcule sur toute la colonne (recherche + filtres) et le panneau se mélange aux filtres.
-              */}
-              <div className="relative z-[45] min-w-0 isolate">
+            <div className="flex items-center gap-2">
+              {/* Search pill flottante (mockup spec : h-44, rounded-22, white blurred 92% + shadow) */}
+              <div className="relative z-[45] min-w-0 isolate flex-1">
                 <form
                   className={cn(
                     "relative z-0 home-map-search-glass flex items-center gap-2 rounded-full px-3.5",
@@ -1932,7 +1882,7 @@ export const InteractiveMap = ({
                   />
                   <Input
                     ref={searchInputRef}
-                    placeholder="Rechercher un lieu ou une séance..."
+                    placeholder="Rechercher un lieu, un ami…"
                     value={filters.search_query}
                     onChange={(e) =>
                       setFilters((prev) => ({
@@ -1945,7 +1895,7 @@ export const InteractiveMap = ({
                     autoCorrect="off"
                     spellCheck={false}
                     className={cn(
-                      "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-[#3C3C43]",
+                      "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-[#3C3C43] dark:text-foreground",
                       "shadow-none placeholder:text-[#8E8E93]",
                       "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
                       "focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -1992,8 +1942,39 @@ export const InteractiveMap = ({
                 )}
               </div>
 
-              {/* Filtres : sous le bloc recherche — z-index plus bas que le panneau suggestions */}
-              <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
+              {/* NotificationCenter (44×44 round white blurred) — mockup spec — handlers existants préservés */}
+              <div data-tutorial="notifications" className="flex h-11 w-11 shrink-0 items-center justify-center [&>*]:h-11 [&>*]:w-11 [&>*]:rounded-full">
+                <Suspense
+                  fallback={
+                    <div
+                      className="h-11 w-11 shrink-0 rounded-full border-[0.5px] border-black/[0.06] bg-[rgba(255,255,255,0.92)] shadow-[0_4px_14px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)]"
+                      aria-hidden
+                    />
+                  }
+                >
+                  <NotificationCenter onSessionUpdated={loadSessions} />
+                </Suspense>
+              </div>
+
+              {/* Settings/avatar 44×44 round (mockup) — ouvre SettingsDialog existant */}
+              <button
+                type="button"
+                onClick={() => setShowSettingsDialog(true)}
+                aria-label={t("navigation.settings")}
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                  "border-[0.5px] border-black/[0.06] bg-[rgba(255,255,255,0.92)]",
+                  "text-[#1A1A1A] shadow-[0_4px_14px_rgba(0,0,0,0.06)]",
+                  "transition-transform duration-150 active:scale-[0.95]",
+                  "dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)] dark:text-foreground"
+                )}
+              >
+                <Settings className="h-[18px] w-[18px]" strokeWidth={1.85} />
+              </button>
+            </div>
+
+            {/* Filtres : 6 chips mockup spec (Sport / Horaire / Amis / Clubs / Niveau) */}
+            <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
@@ -2240,7 +2221,6 @@ export const InteractiveMap = ({
                 </HomeMapFilterGroupedList>
               )}
             </HomeMapFilterSheet>
-              </div>
             </div>
           </div>
         </div>
@@ -2261,10 +2241,8 @@ export const InteractiveMap = ({
             "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
           )}
         >
-          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
-            <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
-          </div>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          {/* Refonte Apple Discover (mockup 04) — rail vertical avec :
+              Localiser / Suivi (NEW) / Palette (existant, ouvre BottomStyleSheet iOS) / Plein écran */}
           <button
             type="button"
             title="Me localiser"
@@ -2273,6 +2251,27 @@ export const InteractiveMap = ({
           >
             <MapPin className="h-[17px] w-[17px]" strokeWidth={2} />
           </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          {/* Suivi — ouvre la page de suivi des participants (live tracking) */}
+          <button
+            type="button"
+            title="Suivi en direct"
+            aria-label="Suivre les participants en direct"
+            onClick={() => navigate('/participants')}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            {/* SF Symbols-style "location.viewfinder" pour le suivi live */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+              <path d="M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" />
+            </svg>
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          {/* Palette — MapStyleSelector existant, ouvre déjà BottomStyleSheet iOS-style */}
+          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
+            <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
+          </div>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           <button
             type="button"
