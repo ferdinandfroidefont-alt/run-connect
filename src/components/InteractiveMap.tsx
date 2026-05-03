@@ -2277,7 +2277,7 @@ export const InteractiveMap = ({
           </button>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           {/* Palette — MapStyleSelector existant, ouvre déjà BottomStyleSheet iOS-style */}
-          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
+          <div className="flex h-9 w-9 items-center justify-center [&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground [&_svg]:h-[15px] [&_svg]:w-[15px]">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
