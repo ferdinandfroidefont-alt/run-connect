@@ -840,13 +840,13 @@ const Auth = () => {
     >
       <AuthLandingOnboarding className="min-h-0 flex-1" />
 
-      <div className="relative z-20 mx-auto w-full max-w-[340px] shrink-0 space-y-3 px-6 pt-10">
+      {/* Refonte Apple : pillule Action Blue + lien texte (style splash mockup 01) */}
+      <div className="relative z-20 mx-auto w-full max-w-[340px] shrink-0 space-y-3.5 px-6 pt-10">
         <button
           type="button"
           onClick={() => setView("email-signup")}
           disabled={isLoading}
-          className="flex h-[52px] w-full items-center justify-center rounded-[14px] bg-primary text-[17px] font-semibold text-primary-foreground transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: "0 2px 8px hsl(var(--primary) / 0.28)" }}
+          className="apple-pill apple-pill-large w-full disabled:opacity-50"
         >
           Inscrivez-vous gratuitement
         </button>
@@ -854,9 +854,9 @@ const Auth = () => {
           type="button"
           onClick={() => setView("email-signin")}
           disabled={isLoading}
-          className="flex h-[48px] w-full items-center justify-center rounded-[14px] bg-transparent text-[16px] font-semibold text-primary transition-colors active:bg-primary/5 disabled:opacity-50"
+          className="flex h-[44px] w-full items-center justify-center rounded-full bg-transparent text-[15px] font-normal text-primary transition-colors active:bg-primary/5 disabled:opacity-50"
         >
-          Se connecter
+          J&apos;ai déjà un compte
         </button>
       </div>
     </div>
@@ -891,18 +891,17 @@ const Auth = () => {
 
       <AuthBrandMark title="Connexion" subtitle="Content de vous revoir !" />
 
-      {/* Action buttons */}
-      <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
+      {/* Action buttons — refonte Apple sign-in (mockup 02 SignIn) */}
+      <div className="w-full max-w-[340px] space-y-2.5 relative z-10">
         {/* Google */}
         <button
           type="button"
           onClick={handleGoogleAuth}
           disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-card text-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.08), 0 0 0 1px hsl(0 0% 0% / 0.06)' }}
+          className="apple-social-btn apple-social-btn-google disabled:opacity-50"
         >
           <FcGoogle className="h-5 w-5" />
-          Se connecter avec Google
+          Continuer avec Google
         </button>
 
         {/* Apple */}
@@ -910,11 +909,10 @@ const Auth = () => {
           type="button"
           onClick={handleAppleAuth}
           disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+          className="apple-social-btn apple-social-btn-apple disabled:opacity-50"
         >
           <AppleIcon />
-          Se connecter avec Apple
+          Continuer avec Apple
         </button>
 
         {/* Email */}
@@ -922,11 +920,10 @@ const Auth = () => {
           type="button"
           onClick={() => setView('email-signin-form')}
           disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-primary text-primary-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)' }}
+          className="apple-social-btn apple-social-btn-email disabled:opacity-50"
         >
           <Mail className="h-5 w-5" />
-          Se connecter avec e-mail
+          Continuer avec e-mail
         </button>
       </div>
 

@@ -167,8 +167,9 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 z-[120] w-full border-t border-border bg-background overflow-visible",
-        "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
+        "fixed inset-x-0 z-[120] w-full overflow-visible",
+        // Refonte Apple : blur + bord supérieur fin (apple-tabbar dans index.css)
+        "apple-tabbar",
         tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
         "[transition:none] motion-reduce:transition-none"
       )}
@@ -183,7 +184,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}
-      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-0.5 pb-0">
+      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-1 pb-0">
         <div
           className="mx-auto flex max-w-full items-stretch justify-center"
           style={{
@@ -205,7 +206,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
                 data-tutorial={tutorialId}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 rounded-xl",
+                  "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-[2px] rounded-xl",
                   "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]"
                 )}
               >
@@ -214,23 +215,26 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
                     size={26}
                     className={cn(
                       "transition-colors duration-300 ease-ios",
-                      isActive ? "text-primary" : "text-muted-foreground dark:text-tab-icon-inactive"
+                      // Apple iOS : icône active = system blue, inactive = ink60 (rgba(60,60,67,0.6))
+                      isActive
+                        ? "text-primary"
+                        : "text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
                     )}
-                    strokeWidth={isActive ? 2.4 : 1.65}
+                    strokeWidth={isActive ? 2.2 : 1.7}
                     aria-hidden
                   />
                   {showBadge && (
-                    <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-background bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow-sm">
+                    <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[11px] font-bold text-white">
                       {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                     </span>
                   )}
                 </div>
                 <span
                   className={cn(
-                    "w-full truncate text-center text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
+                    "w-full truncate text-center text-[10px] leading-none tracking-[-0.1px] transition-colors duration-300 ease-ios",
                     isActive
-                      ? "font-semibold text-primary"
-                      : "font-medium text-muted-foreground dark:text-tab-icon-inactive"
+                      ? "font-medium text-primary"
+                      : "font-medium text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
                   )}
                 >
                   {label}

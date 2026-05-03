@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"/tmp/handoff\")",
+      "Read(//tmp/**)",
+      "Bash(unzip -o \"/c/Users/ordi2322802/Downloads/App RunConnect IOS-handoff.zip\")",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(npx vite *)"
+    ]
+  }
+}
