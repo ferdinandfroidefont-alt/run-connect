@@ -494,9 +494,9 @@ html, body {
   }
 
   .home-map-search-glass:focus-within {
-    border-color: rgba(0, 0, 0, 0.08);
-    background: #ebebf0;
-    box-shadow: none;
+    border-color: rgba(0, 0, 0, 0.14);
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
   .dark .home-map-search-glass {
