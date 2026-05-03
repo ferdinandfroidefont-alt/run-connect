@@ -1975,29 +1975,38 @@ export const InteractiveMap = ({
             {/* Filtres : 6 chips mockup spec (Sport / Horaire / Amis / Clubs / Niveau) */}
             <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
-                <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
+                <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
+                  className="home-map-filter-chip snap-start shadow-none !bg-black !text-white !border-black"
+                >
+                  <span className="flex items-center gap-1">
+                    <SlidersHorizontal className="h-3 w-3 shrink-0" /> Filtres
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'activity' || filters.activity_types.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Activity className="h-3.5 w-3.5 shrink-0" /> Sport : {activeActivityLabel}
+                  <span className="flex items-center gap-1">
+                    <Activity className="h-3 w-3 shrink-0" /> Sport : {activeActivityLabel}
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'time' || filters.time_slot) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1.5">
-                    <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1">
+                    <Clock3 className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                       {filters.time_slot
                         ? (TIME_SLOTS.find((s) => s.id === filters.time_slot)?.label ?? "Horaire")
@@ -2009,12 +2018,12 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'friends' ? null : 'friends'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'friends' || filters.friends_only) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <PersonStanding className="h-3.5 w-3.5 shrink-0" /> Amis uniquement
+                  <span className="flex items-center gap-1">
+                    <PersonStanding className="h-3 w-3 shrink-0" /> Amis
                   </span>
                 </button>
                 </div>
