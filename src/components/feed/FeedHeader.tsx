@@ -1,16 +1,11 @@
-import { Settings } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { cn, formatProfileFirstLastName } from '@/lib/utils';
 import { StreakBadge } from '@/components/StreakBadge';
 import { formatPlannedSessionsLine, usePlannedSessionCount } from '@/hooks/usePlannedSessionCount';
-
-const NotificationCenter = lazy(() =>
-  import('@/components/NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
-);
 
 export type FeedMode = 'friends' | 'discover';
 
