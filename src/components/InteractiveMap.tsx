@@ -1946,63 +1946,67 @@ export const InteractiveMap = ({
                 )}
               </div>
 
-              {/* NotificationCenter (44×44 round white blurred) — mockup spec — handlers existants préservés */}
-              <div data-tutorial="notifications" className="flex h-11 w-11 shrink-0 items-center justify-center [&>*]:h-11 [&>*]:w-11 [&>*]:rounded-full">
-                <Suspense
-                  fallback={
-                    <div
-                      className="h-11 w-11 shrink-0 rounded-full border-[0.5px] border-black/[0.06] bg-[rgba(255,255,255,0.92)] shadow-[0_4px_14px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)]"
-                      aria-hidden
-                    />
-                  }
-                >
-                  <NotificationCenter onSessionUpdated={loadSessions} />
-                </Suspense>
-              </div>
-
-              {/* Settings/avatar 44×44 round (mockup) — ouvre SettingsDialog existant */}
+              {/* Avatar profil — remplace cloche + paramètres ; ouvre ProfileDialog */}
               <button
                 type="button"
-                onClick={() => setShowSettingsDialog(true)}
-                aria-label={t("navigation.settings")}
+                onClick={() => setShowProfileDialog(true)}
+                aria-label="Mon profil"
                 className={cn(
-                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full overflow-hidden",
                   "border-[0.5px] border-black/[0.06] bg-[rgba(255,255,255,0.92)]",
-                  "text-[#1A1A1A] shadow-[0_4px_14px_rgba(0,0,0,0.06)]",
+                  "shadow-[0_4px_14px_rgba(0,0,0,0.06)]",
                   "transition-transform duration-150 active:scale-[0.95]",
-                  "dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)] dark:text-foreground"
+                  "dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)]"
                 )}
               >
-                <Settings className="h-[18px] w-[18px]" strokeWidth={1.85} />
+                <Avatar className="h-11 w-11">
+                  <AvatarImage
+                    src={userProfile?.avatar_url || undefined}
+                    alt={userProfile?.username || "Profil"}
+                    className="h-full w-full object-cover"
+                  />
+                  <AvatarFallback className="text-sm font-semibold">
+                    {(userProfile?.username || userProfile?.display_name || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               </button>
             </div>
 
             {/* Filtres : 6 chips mockup spec (Sport / Horaire / Amis / Clubs / Niveau) */}
             <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
-                <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
+                <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
+                  className="home-map-filter-chip snap-start shadow-none !bg-black !text-white !border-black"
+                >
+                  <span className="flex items-center gap-1">
+                    <SlidersHorizontal className="h-3 w-3 shrink-0" /> Filtres
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'activity' || filters.activity_types.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Activity className="h-3.5 w-3.5 shrink-0" /> Sport : {activeActivityLabel}
+                  <span className="flex items-center gap-1">
+                    <Activity className="h-3 w-3 shrink-0" /> Sport : {activeActivityLabel}
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'time' || filters.time_slot) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1.5">
-                    <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1">
+                    <Clock3 className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                       {filters.time_slot
                         ? (TIME_SLOTS.find((s) => s.id === filters.time_slot)?.label ?? "Horaire")
@@ -2014,12 +2018,12 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'friends' ? null : 'friends'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'friends' || filters.friends_only) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <PersonStanding className="h-3.5 w-3.5 shrink-0" /> Amis uniquement
+                  <span className="flex items-center gap-1">
+                    <PersonStanding className="h-3 w-3 shrink-0" /> Amis
                   </span>
                 </button>
                 </div>
@@ -2251,9 +2255,9 @@ export const InteractiveMap = ({
             type="button"
             title="Me localiser"
             onClick={handleLocateMe}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
-            <MapPin className="h-[17px] w-[17px]" strokeWidth={2} />
+            <MapPin className="h-[15px] w-[15px]" strokeWidth={2} />
           </button>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           {/* Suivi — ouvre la page de suivi des participants (live tracking) */}
@@ -2262,10 +2266,10 @@ export const InteractiveMap = ({
             title="Suivi en direct"
             aria-label="Suivre les participants en direct"
             onClick={() => navigate('/participants')}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             {/* SF Symbols-style "location.viewfinder" pour le suivi live */}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <circle cx="12" cy="12" r="3" />
               <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
               <path d="M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" />
@@ -2273,7 +2277,7 @@ export const InteractiveMap = ({
           </button>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           {/* Palette — MapStyleSelector existant, ouvre déjà BottomStyleSheet iOS-style */}
-          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
+          <div className="flex h-9 w-9 items-center justify-center [&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground [&_svg]:h-[15px] [&_svg]:w-[15px]">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
@@ -2282,12 +2286,12 @@ export const InteractiveMap = ({
             title={isImmersiveMode ? "Quitter le plein écran" : "Carte plein écran"}
             aria-label={isImmersiveMode ? "Quitter le plein écran" : "Afficher la carte en plein écran"}
             onClick={toggleImmersiveMode}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             {isImmersiveMode ? (
-              <Minimize2 className="h-[17px] w-[17px]" strokeWidth={2} />
+              <Minimize2 className="h-[15px] w-[15px]" strokeWidth={2} />
             ) : (
-              <Expand className="h-[17px] w-[17px]" strokeWidth={2} />
+              <Expand className="h-[15px] w-[15px]" strokeWidth={2} />
             )}
           </button>
         </div>

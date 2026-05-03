@@ -483,20 +483,20 @@ html, body {
    */
   .home-map-search-glass {
     box-sizing: border-box;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    background: #f2f2f7;
-    border: 1px solid transparent;
+    height: 50px;
+    min-height: 50px;
+    max-height: 50px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    box-shadow: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
   .home-map-search-glass:focus-within {
-    border-color: rgba(0, 0, 0, 0.08);
-    background: #ebebf0;
-    box-shadow: none;
+    border-color: rgba(0, 0, 0, 0.14);
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
   .dark .home-map-search-glass {
@@ -513,7 +513,7 @@ html, body {
   }
 
   .home-map-filter-chip {
-    @apply flex h-9 shrink-0 items-center justify-center gap-1.5 px-3.5 text-[13px] font-bold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.98] motion-reduce:transition-none;
+    @apply flex h-7 shrink-0 items-center justify-center gap-1 px-2.5 text-[12px] font-semibold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.98] motion-reduce:transition-none;
     border-radius: 9999px;
     color: #1c1c1e;
     background: #ffffff;
