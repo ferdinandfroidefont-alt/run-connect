@@ -63,9 +63,13 @@ html, body {
     --popover: 0 0% 100%;
     --popover-foreground: 221 39% 11%;
 
-    /* RunConnect primary blue */
-    --primary: 212 100% 50%;           /* #007AFF */
+    /* Apple Action Blue (refonte handoff) — #0066CC light, #0A84FF dark */
+    --primary: 212 100% 40%;           /* #0066CC - Apple Action Blue */
     --primary-foreground: 0 0% 100%;
+    /* Sky link blue — utilisé pour les liens sur surfaces sombres (mode sombre) */
+    --primary-on-dark: 211 100% 52%;   /* #0A84FF */
+    /* Focus blue — anneau focus clavier (légèrement plus vif) */
+    --primary-focus: 211 100% 47%;     /* #0071E3 */
 
     --secondary: 240 5% 96%;
     --secondary-foreground: 240 6% 12%;
@@ -153,8 +157,11 @@ html, body {
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 211 100% 55%;
+    /* Apple System Blue dark mode — #0A84FF */
+    --primary: 211 100% 52%;
     --primary-foreground: 0 0% 100%;
+    --primary-on-dark: 211 100% 52%;
+    --primary-focus: 211 100% 60%;
 
     /* Surfaces inactives (chips, filtres, boutons secondaires) */
     --secondary: 0 0% 6.7%;
@@ -646,6 +653,166 @@ html, body {
     letter-spacing: -0.022em;
   }
 
+  /* ─────────────────────────────────────────────
+     Apple refonte (handoff) — primitives partagées
+     - Pill button signature (Action Blue)
+     - Cell / Group iOS Settings.app
+     - SearchBar iOS (#f2f2f7)
+     - NavBar large title
+     - SocialButton (Apple/Google sign-in)
+     ───────────────────────────────────────────── */
+
+  /* Surface "grouped" iOS exact (#f2f2f7 light / #000 dark) */
+  .apple-grouped-bg { background: #f2f2f7; }
+  .dark .apple-grouped-bg { background: #000; }
+
+  /* Cellule blanche/cell iOS */
+  .apple-cell-bg { background: #ffffff; }
+  .dark .apple-cell-bg { background: #1c1c1e; }
+
+  /* PillButton — bouton Action Blue plein-pill (rounded-pill = 9999) */
+  .apple-pill {
+    @apply inline-flex h-[36px] items-center justify-center rounded-full px-[18px] text-[15px] font-normal tracking-[-0.3px] transition-transform duration-150 active:scale-[0.96];
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .apple-pill-large {
+    @apply h-[50px] px-7 text-[17px];
+  }
+  .apple-pill-secondary {
+    background: transparent;
+    border: 1px solid hsl(var(--primary));
+    color: hsl(var(--primary));
+  }
+  .apple-pill-dark {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+  .apple-pill:focus-visible {
+    outline: 2px solid hsl(var(--primary-focus));
+    outline-offset: 2px;
+  }
+  .apple-pill[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Groupe iOS inset-grouped (Section title + cellules + footer) */
+  .apple-group {
+    @apply mb-6 px-4;
+  }
+  .apple-group-title {
+    @apply px-4 pb-1.5 text-[13px] uppercase tracking-[0.3px] text-muted-foreground;
+  }
+  .apple-group-footer {
+    @apply mt-1.5 px-4 text-[13px] leading-snug text-muted-foreground;
+  }
+  .apple-group-stack {
+    @apply overflow-hidden rounded-[10px];
+    background: hsl(var(--card));
+  }
+
+  /* Cellule iOS Settings.app (icône carrée + titre + accessoire) */
+  .apple-cell {
+    @apply flex min-h-[44px] items-center gap-3 px-4 py-[11px];
+    border-bottom: 0.5px solid rgba(60, 60, 67, 0.12);
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
+  .dark .apple-cell {
+    border-bottom-color: rgba(84, 84, 88, 0.4);
+  }
+  .apple-cell-last { border-bottom: none; }
+  .apple-cell-icon {
+    @apply flex h-[29px] w-[29px] shrink-0 items-center justify-center rounded-[6.5px] text-white;
+    background: hsl(var(--primary));
+    font-size: 15px;
+  }
+  .apple-cell-title {
+    @apply min-w-0 flex-1 truncate text-[17px] tracking-[-0.4px] text-foreground;
+    line-height: 1.2;
+  }
+  .apple-cell-subtitle {
+    @apply mt-0.5 text-[13px] leading-snug text-muted-foreground;
+  }
+  .apple-cell-value {
+    @apply text-[17px] tracking-[-0.3px] text-muted-foreground;
+  }
+  .apple-cell-chevron {
+    @apply h-3 w-3 shrink-0 text-muted-foreground/60;
+  }
+
+  /* SearchBar iOS pill (#f2f2f7 fill, h36) */
+  .apple-search {
+    @apply flex h-9 items-center gap-1.5 rounded-[10px] px-2 text-[17px] text-muted-foreground;
+    background: rgba(118, 118, 128, 0.12);
+  }
+  .dark .apple-search {
+    background: rgba(118, 118, 128, 0.24);
+  }
+
+  /* Tab bar Apple (blur + bord supérieur fin) */
+  .apple-tabbar {
+    background: rgba(249, 249, 249, 0.94);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 0.33px solid rgba(60, 60, 67, 0.18);
+  }
+  .dark .apple-tabbar {
+    background: rgba(28, 28, 30, 0.86);
+    border-top-color: rgba(84, 84, 88, 0.65);
+  }
+
+  /* NavBar large title (Settings.app style) */
+  .apple-navbar-large {
+    @apply px-4 pt-1 text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, sans-serif;
+  }
+  .apple-navbar-title {
+    @apply text-[17px] font-semibold tracking-[-0.4px] text-foreground;
+  }
+
+  /* Bouton social Apple/Google (50px, rounded-12) */
+  .apple-social-btn {
+    @apply flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] text-[17px] font-medium tracking-[-0.4px] transition-transform duration-150 active:scale-[0.98];
+    -webkit-tap-highlight-color: transparent;
+  }
+  .apple-social-btn-apple {
+    background: #000;
+    color: #fff;
+  }
+  .apple-social-btn-google {
+    background: #fff;
+    color: hsl(var(--foreground));
+    border: 0.5px solid rgba(60, 60, 67, 0.18);
+  }
+  .dark .apple-social-btn-google {
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border-color: rgba(84, 84, 88, 0.4);
+  }
+  .apple-social-btn-email {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* Field row iOS (label gauche + value droite) */
+  .apple-field-row {
+    @apply flex min-h-[44px] items-center px-4 py-[11px];
+    border-bottom: 0.5px solid rgba(60, 60, 67, 0.12);
+  }
+  .dark .apple-field-row {
+    border-bottom-color: rgba(84, 84, 88, 0.4);
+  }
+  .apple-field-row-last { border-bottom: none; }
+  .apple-field-label {
+    @apply w-[110px] text-[17px] tracking-[-0.4px] text-foreground;
+  }
+  .apple-field-value {
+    @apply flex-1 bg-transparent text-[17px] tracking-[-0.4px] text-foreground placeholder:text-muted-foreground;
+    outline: none;
+  }
 }
 
 /* Shimmer animation for skeleton loaders */
