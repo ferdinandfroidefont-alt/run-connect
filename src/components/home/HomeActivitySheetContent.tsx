@@ -1,26 +1,26 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, isToday } from "date-fns";
-import { fr } from "date-fns/locale";
+import { format } from "date-fns";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
+import { ActivityIcon } from "@/lib/activityIcons";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { cn } from "@/lib/utils";
 
-function formatScheduleLabel(value: string) {
-  const date = new Date(value);
-  // "a" est réservé (AM/PM) en date-fns ; on l'échappe avec des guillemets simples pour le littéral "à".
-  const when = isToday(date)
-    ? `Aujourd'hui à ${format(date, "HH:mm", { locale: fr })}`
-    : format(date, "EEE d MMM 'à' HH:mm", { locale: fr });
-  return when;
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatDistanceKm(session: FeedSession) {
-  const raw = session.title.match(/(\d+(?:[.,]\d+)?)\s?km/i)?.[1];
-  if (!raw) return null;
-  return `${raw.replace(",", ".")} km`;
+function formatDistance(km: number | null) {
+  if (km == null || !Number.isFinite(km)) return null;
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
 }
 
 export function HomeActivitySheetContent() {
