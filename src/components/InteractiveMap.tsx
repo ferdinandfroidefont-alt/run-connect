@@ -1946,34 +1946,29 @@ export const InteractiveMap = ({
                 )}
               </div>
 
-              {/* NotificationCenter (44×44 round white blurred) — mockup spec — handlers existants préservés */}
-              <div data-tutorial="notifications" className="flex h-11 w-11 shrink-0 items-center justify-center [&>*]:h-11 [&>*]:w-11 [&>*]:rounded-full">
-                <Suspense
-                  fallback={
-                    <div
-                      className="h-11 w-11 shrink-0 rounded-full border-[0.5px] border-black/[0.06] bg-[rgba(255,255,255,0.92)] shadow-[0_4px_14px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)]"
-                      aria-hidden
-                    />
-                  }
-                >
-                  <NotificationCenter onSessionUpdated={loadSessions} />
-                </Suspense>
-              </div>
-
-              {/* Settings/avatar 44×44 round (mockup) — ouvre SettingsDialog existant */}
+              {/* Avatar profil — remplace cloche + paramètres ; ouvre ProfileDialog */}
               <button
                 type="button"
-                onClick={() => setShowSettingsDialog(true)}
-                aria-label={t("navigation.settings")}
+                onClick={() => setShowProfileDialog(true)}
+                aria-label="Mon profil"
                 className={cn(
-                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full overflow-hidden",
                   "border-[0.5px] border-black/[0.06] bg-[rgba(255,255,255,0.92)]",
-                  "text-[#1A1A1A] shadow-[0_4px_14px_rgba(0,0,0,0.06)]",
+                  "shadow-[0_4px_14px_rgba(0,0,0,0.06)]",
                   "transition-transform duration-150 active:scale-[0.95]",
-                  "dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)] dark:text-foreground"
+                  "dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)]"
                 )}
               >
-                <Settings className="h-[18px] w-[18px]" strokeWidth={1.85} />
+                <Avatar className="h-11 w-11">
+                  <AvatarImage
+                    src={userProfile?.avatar_url || undefined}
+                    alt={userProfile?.username || "Profil"}
+                    className="h-full w-full object-cover"
+                  />
+                  <AvatarFallback className="text-sm font-semibold">
+                    {(userProfile?.username || userProfile?.display_name || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               </button>
             </div>
 
