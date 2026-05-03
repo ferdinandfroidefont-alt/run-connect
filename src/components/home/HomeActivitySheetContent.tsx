@@ -26,14 +26,11 @@ function formatDistance(km: number | null) {
 export function HomeActivitySheetContent() {
   const navigate = useNavigate();
   const { feedItems, loading, refresh } = useFeed();
+  const { position } = useGeolocation();
   const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
 
   const items = useMemo(() => feedItems.slice(0, 6), [feedItems]);
 
-  // Refonte Apple Discover bottom sheet (mockup 04) :
-  // - Title display 22/700/-0.4
-  // - Subtitle 12 ink60
-  // - "Voir tout" blue link 15/500 sans flèche (mockup)
   const subtitleCount = items.length;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-transparent px-3 pb-3">
@@ -57,18 +54,16 @@ export function HomeActivitySheetContent() {
 
       <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-2">
         {loading && items.length === 0 ? (
-          // Skeletons : même pattern apple-group-stack qu'à l'état chargé pour éviter le saut visuel.
           <div className="apple-group-stack mx-1 overflow-hidden">
             {[...Array(3)].map((_, i) => (
               <div
                 key={i}
                 className={cn("apple-cell animate-pulse", i === 2 && "apple-cell-last")}
               >
-                <div className="h-11 w-11 shrink-0 rounded-full bg-muted" />
+                <div className="h-11 w-11 shrink-0 rounded-[10px] bg-muted" />
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="h-4 w-2/3 rounded-full bg-muted" />
                   <div className="h-3 w-1/2 rounded-full bg-muted" />
-                  <div className="h-3 w-1/3 rounded-full bg-muted" />
                 </div>
               </div>
             ))}
@@ -85,15 +80,17 @@ export function HomeActivitySheetContent() {
             </button>
           </div>
         ) : (
-          // Mockup ScreenDiscover bottom sheet : un seul Group inset rounded-12 contenant les SessionRow
-          // empilées avec séparateurs hairline 0.5px (apple-cell). Avatar 44×44 ronde, titre 16/600,
-          // sous-titre 13 muted, chevron à droite (legacy : pas de pill REJOINDRE pour ne pas modifier
-          // le flux d'ouverture du dialog).
           <div className="apple-group-stack mx-1 overflow-hidden">
             {items.map((session, idx) => {
-              const distance = formatDistanceKm(session);
               const displayName = session.organizer.display_name || session.organizer.username || "Utilisateur";
               const isLast = idx === items.length - 1;
+              const date = new Date(session.scheduled_at);
+              const dateStr = format(date, "dd/MM/yy");
+              const timeStr = format(date, "HH:mm");
+              const distKm = position
+                ? haversineKm(position.lat, position.lng, session.location_lat, session.location_lng)
+                : null;
+              const distStr = formatDistance(distKm);
               return (
                 <button
                   key={session.id}
@@ -116,23 +113,16 @@ export function HomeActivitySheetContent() {
                     isLast && "apple-cell-last"
                   )}
                 >
-                  <Avatar className="h-11 w-11 shrink-0">
-                    <AvatarImage src={session.organizer.avatar_url || undefined} alt={displayName} />
-                    <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                  <ActivityIcon activityType={session.activity_type} size="md" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[16px] font-semibold leading-tight tracking-[-0.4px] text-foreground">
-                      {displayName} a programmé une séance
+                    <p className="truncate text-[16px] font-semibold leading-tight tracking-[-0.2px] text-foreground">
+                      {session.title}
                     </p>
                     <p className="mt-0.5 truncate text-[13px] leading-snug text-muted-foreground">
-                      {formatScheduleLabel(session.scheduled_at)}
-                      {distance ? ` · ${distance}` : ""}
-                    </p>
-                    <p className="mt-0.5 truncate text-[13px] leading-snug text-muted-foreground">
-                      📍 {session.location_name || "Lieu à définir"}
+                      {displayName} · {dateStr} · {timeStr}
+                      {distStr ? ` · ${distStr}` : ""}
                     </p>
                   </div>
-                  <ChevronGlyph className="apple-cell-chevron" />
                 </button>
               );
             })}
