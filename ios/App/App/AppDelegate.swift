@@ -51,6 +51,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         } else {
             print("[PUSH][IOS] Missing GoogleService-Info.plist — add from Firebase Console (bundle com.ferdi.runconnect)")
         }
+
+        // Info.plist uses UIStatusBarHidden + UIViewControllerBasedStatusBarAppearance = NO for the static launch screen;
+        // restore the status bar once the real UI takes over (UIApplication APIs apply while VC-based appearance is off).
+        DispatchQueue.main.async {
+            application.isStatusBarHidden = false
+        }
+
         return true
     }
 

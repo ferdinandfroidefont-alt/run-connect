@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   RUCONNECT_SPLASH_BACKGROUND,
   RUCONNECT_SPLASH_ICON_URL,
-  RUCONNECT_SPLASH_PRIMARY,
   applyRuconnectSplashNativeChrome,
   applyRuconnectSplashWebChrome,
   restoreChromeAfterRuconnectSplash,
@@ -107,7 +106,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                     <motion.span
                       key={wave}
                       className="absolute rounded-full border"
-                      style={{ borderColor: RUCONNECT_SPLASH_PRIMARY, inset: 0 }}
+                      style={{ borderColor: "rgba(255,255,255,0.45)", inset: 0 }}
                       animate={{ scale: [1, 1.8], opacity: [0.28, 0] }}
                       transition={{
                         duration: 1.5,
@@ -125,21 +124,21 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   />
                 </div>
 
-                <h1 className="text-[28px] font-bold tracking-[0.08em]" style={{ color: RUCONNECT_SPLASH_PRIMARY }}>
+                <h1 className="text-[28px] font-bold tracking-[0.08em] text-white">
                   RUNCONNECT
                 </h1>
-                <p className="mt-2 text-[12px] font-medium tracking-[0.24em] text-foreground/45">
+                <p className="mt-2 text-[12px] font-medium tracking-[0.24em] text-white/70">
                   TROUVE. CONNECTE. PARTAGE.
                 </p>
-                <p className="mt-5 text-[12px] text-foreground/40">Connexion en cours...</p>
+                <p className="mt-5 text-[12px] text-white/55">Connexion en cours...</p>
               </motion.div>
             </div>
 
             <div className="pb-[max(8px,env(safe-area-inset-bottom,0px))]">
-              <div className="relative h-[3px] w-full overflow-hidden rounded-full bg-[#2563EB]/10">
+              <div className="relative h-[3px] w-full overflow-hidden rounded-full bg-white/15">
                 <motion.div
                   className="absolute inset-y-0 w-[40%] rounded-full"
-                  style={{ backgroundColor: RUCONNECT_SPLASH_PRIMARY }}
+                  style={{ backgroundColor: "#FFFFFF" }}
                   animate={{ x: ["-45%", "250%"] }}
                   transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
                 />

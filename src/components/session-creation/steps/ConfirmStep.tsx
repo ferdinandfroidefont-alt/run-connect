@@ -1,14 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Check,
   MapPin,
-  Calendar,
-  Users,
-  Ruler,
   EyeOff,
-  Building2,
-  Globe,
   Repeat,
   Radio,
   MapPinned,
@@ -24,11 +20,10 @@ import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { VisibilitySelector } from '../VisibilitySelector';
 import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
-import {
-  DEFAULT_SESSION_CALENDAR_DURATION_MIN,
-  estimateSessionDurationMinutes,
-} from '@/lib/estimateSessionDurationMinutes';
+
 import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
+import { Group, Cell } from '@/components/apple';
+import { useToast } from '@/hooks/use-toast';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -44,19 +39,6 @@ interface ConfirmStepProps {
   embedInFinalize?: boolean;
   hideFooter?: boolean;
 }
-
-const getVisibilityIcon = (type: VisibilityType) => {
-  switch (type) {
-    case 'friends':
-      return Users;
-    case 'club':
-      return Building2;
-    case 'public':
-      return Globe;
-    default:
-      return Users;
-  }
-};
 
 export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   formData,
@@ -77,24 +59,6 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
     activity_type: formData.activity_type,
     locationName: selectedLocation?.name ?? '',
   });
-  const estimatedDurationMin = estimateSessionDurationMinutes({
-    session_blocks: formData.blocks,
-    distance_km: formData.distance_km
-      ? Number.parseFloat(formData.distance_km)
-      : null,
-    interval_distance: formData.interval_distance
-      ? Number.parseFloat(formData.interval_distance)
-      : null,
-    interval_count: formData.interval_count
-      ? Number.parseInt(formData.interval_count, 10)
-      : null,
-    interval_pace: formData.interval_pace || null,
-    pace_general: formData.pace_general || null,
-  });
-  const calendarDurationMin = estimatedDurationMin ?? DEFAULT_SESSION_CALENDAR_DURATION_MIN;
-  const estimatedEndTime = formData.scheduled_at
-    ? new Date(new Date(formData.scheduled_at).getTime() + calendarDurationMin * 60_000)
-    : null;
 
   const handleVisibilityChange = (type: VisibilityType) => {
     onFormDataChange({ visibility_type: type });
@@ -113,7 +77,11 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
     onFormDataChange({ recurrence_count: count });
   };
 
-  const VisibilityIcon = getVisibilityIcon(formData.visibility_type);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const activityShort =
+    activity?.label?.replace(/^[^\s]+\s/, '').toUpperCase() ?? 'SÉANCE';
 
   return (
     <motion.div
@@ -138,7 +106,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             subtitle={
               isCoachingMode
                 ? 'Vérifie les détails pré-remplis par le coach.'
-                : 'Vérifie le récapitulatif puis publie ta séance.'
+                : 'Booste pour multiplier ta visibilité.'
             }
           />
         )}
@@ -149,92 +117,120 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
 
         {/* Hero recap card — Apple product tile aesthetic */}
         {!embedInFinalize && (
-          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card">
-            {imagePreview ? (
-              <div className="relative h-36 w-full">
-                <img
-                  src={imagePreview}
-                  alt="Aperçu"
-                  className="h-full w-full object-cover"
+          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card shadow-[var(--shadow-card)]">
+            {/* Maquette 12 — carte avec carte (aperçu lieu) */}
+            <div className="relative h-40 w-full overflow-hidden bg-[#c5d9e8] dark:bg-[#1a3550]">
+              <svg
+                className="absolute inset-0 h-full w-full opacity-35 dark:opacity-25"
+                viewBox="0 0 320 140"
+                preserveAspectRatio="xMidYMid slice"
+                aria-hidden
+              >
+                <path
+                  d="M0 90 Q60 70 120 85 T240 75 L320 95 V140 H0 Z"
+                  fill="rgba(255,255,255,0.55)"
+                  className="dark:fill-white/10"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <div className="absolute bottom-3 left-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white">
-                  {activity?.label?.replace(/^[^\s]+\s/, '') || 'Séance'}
-                </div>
+                <path
+                  d="M0 60 Q80 40 160 55 T320 45"
+                  stroke="rgba(255,255,255,0.7)"
+                  strokeWidth="2"
+                  fill="none"
+                  className="dark:stroke-white/25"
+                />
+                <path
+                  d="M40 30 Q100 100 200 80 T300 100"
+                  stroke="rgba(0,102,204,0.35)"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
+              </svg>
+              <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent dark:from-black/20" />
+              <div className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-primary-foreground shadow-[0_6px_16px_rgba(0,102,204,0.35)]">
+                <MapPin className="h-5 w-5" strokeWidth={2.2} />
               </div>
-            ) : null}
-            <div className="space-y-3 p-5">
-              {!imagePreview && (
-                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  {activity?.label?.replace(/^[^\s]+\s/, '') || 'Séance'}
-                  {formData.distance_km ? ` · ${formData.distance_km} km` : ''}
-                </div>
-              )}
-              <h3 className="text-[24px] font-semibold leading-[1.15] tracking-[-0.5px] text-foreground">
-                {previewTitle}
-              </h3>
+            </div>
 
-              <div className="space-y-2 pt-1">
-                {selectedLocation && (
-                  <div className="flex items-start gap-2.5">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span className="min-w-0 truncate text-[15px] tracking-tight text-foreground">
-                      {selectedLocation.name}
-                    </span>
-                  </div>
-                )}
-                {formData.scheduled_at && (
-                  <div className="flex items-start gap-2.5">
-                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <div className="min-w-0 text-[15px] tracking-tight text-foreground">
-                      {new Date(formData.scheduled_at).toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                      })}{' '}
-                      ·{' '}
-                      {new Date(formData.scheduled_at).toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                      {estimatedEndTime ? (
-                        <span className="text-muted-foreground">
-                          {' '}
-                          → {estimatedEndTime.toLocaleTimeString('fr-FR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                )}
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-2 text-[13px] text-muted-foreground">
-                  {formData.max_participants && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" />
-                      {formData.max_participants} max
-                    </span>
-                  )}
-                  {formData.distance_km && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Ruler className="h-3.5 w-3.5" />
-                      {formData.distance_km} km
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-1.5">
-                    <VisibilityIcon className="h-3.5 w-3.5" />
-                    {formData.visibility_type === 'public'
-                      ? 'Public'
-                      : formData.visibility_type === 'club'
-                      ? 'Club'
-                      : 'Amis'}
-                  </span>
-                </div>
+            <div className="space-y-1 px-4 pb-5 pt-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.4px] text-primary">
+                {activityShort}
+                {formData.distance_km
+                  ? ` · ${String(formData.distance_km).replace(',', '.')} km`
+                  : ''}
               </div>
+              <h3 className="font-display text-[24px] font-semibold leading-[1.12] tracking-[-0.5px] text-foreground">
+                {formData.scheduled_at
+                  ? `${new Date(formData.scheduled_at).toLocaleDateString('fr-FR', {
+                      weekday: 'long',
+                    })} · ${new Date(formData.scheduled_at).toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : previewTitle}
+              </h3>
+              <p className="text-[15px] leading-snug text-muted-foreground">
+                {selectedLocation
+                  ? `${selectedLocation.name}${
+                      formData.max_participants
+                        ? ` · ${formData.max_participants} places`
+                        : ''
+                    }`
+                  : previewTitle}
+                {formData.visibility_type === 'friends'
+                  ? ' · Amis invités'
+                  : formData.visibility_type === 'public'
+                    ? ' · Visible publiquement'
+                    : formData.visibility_type === 'club'
+                      ? ' · Club'
+                      : ''}
+              </p>
             </div>
           </div>
         )}
+
+        {/* Maquette 12 — section Booster */}
+        {!embedInFinalize && !isCoachingMode ? (
+          <Group inset={false} className="mb-0" title="Booster">
+            <Cell
+              icon={<span className="text-[15px]">⚡</span>}
+              iconBg="#0066CC"
+              title="Visibilité globale"
+              subtitle="Affiché en tête de la carte"
+              onClick={() => {
+                if (!isPremium) {
+                  navigate('/subscription');
+                  return;
+                }
+                onFormDataChange({ visibility_type: 'public', friends_only: false });
+                toast({
+                  title: 'Visibilité globale',
+                  description: 'La séance est visible en mode public.',
+                });
+              }}
+            />
+            <Cell
+              icon={<span className="text-[15px]">📺</span>}
+              iconBg="#ff9500"
+              title="Regarder une vidéo · 15s"
+              subtitle="Pour activer le boost gratuitement"
+              onClick={() =>
+                toast({
+                  title: 'Bientôt disponible',
+                  description: 'Le boost vidéo arrive dans une prochaine version.',
+                })
+              }
+            />
+            <Cell
+              icon={<span className="text-[15px]">✨</span>}
+              iconBg="#af52de"
+              title="Passer Premium"
+              subtitle="Boost illimité"
+              accent
+              last
+              onClick={() => navigate('/subscription')}
+            />
+          </Group>
+        ) : null}
 
         {/* Live tracking — recap row */}
         <AppleGroup>
@@ -339,7 +335,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   ? 'Programmer ma séance'
                   : formData.recurrence_type === 'weekly'
                   ? `Créer ${formData.recurrence_count} séances`
-                  : 'Programmer & publier'}
+                  : 'Programmer & booster'}
               </span>
             )}
           </button>

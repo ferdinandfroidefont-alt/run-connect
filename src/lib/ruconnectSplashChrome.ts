@@ -6,13 +6,11 @@ import {
 } from '@/lib/iosStatusBarTheme';
 
 /**
- * Splash RunConnect (style iOS premium) :
- * - fond blanc
- * - accent bleu marque
- * À garder aligné avec capacitor.config.ts (ios.backgroundColor) et index.html (body initial).
+ * Splash RunConnect : même bleu Action (#0066CC) que le Launch Screen iOS natif.
+ * À garder aligné avec `capacitor.config.ts` (ios.backgroundColor) et `index.html` (body initial).
  */
-export const RUCONNECT_SPLASH_BACKGROUND = '#FFFFFF';
-export const RUCONNECT_SPLASH_PRIMARY = '#2563EB';
+export const RUCONNECT_SPLASH_BACKGROUND = '#0066CC';
+export const RUCONNECT_SPLASH_PRIMARY = '#0066CC';
 
 /** Icône seule (cartes de chargement, fallback boot, etc.). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';

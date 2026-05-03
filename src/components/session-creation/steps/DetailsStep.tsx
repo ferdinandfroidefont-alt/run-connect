@@ -1,14 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Users,
   Ruler,
-  ImagePlus,
   X,
   Mountain,
-  Radio,
   Building2,
-  ChevronRight,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +24,7 @@ import {
   TERRAIN_TYPES,
   SessionBlock,
   SessionMode,
+  VisibilityType,
   isEnduranceActivity,
   isRunningActivity,
   isCyclingActivity,
@@ -56,9 +53,12 @@ import {
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import {
   normalizeBlocksForStorage,
-  resolveSessionTotals,
 } from '@/lib/sessionBlockCalculations';
 import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
+import { Group, Cell } from '@/components/apple';
+import { SessionSchemaMiniChart, sessionSchemaLegend } from '../SessionSchemaMiniChart';
+import { VisibilitySelector } from '../VisibilitySelector';
+import { useToast } from '@/hooks/use-toast';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -86,6 +86,9 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onBack,
   hideNavigation = false,
 }) => {
+  const { toast } = useToast();
+  const builderRef = useRef<HTMLDivElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
   const [openPicker, setOpenPicker] = useState<
     null | 'pace' | 'distance' | 'elevation' | 'participants'
@@ -223,6 +226,13 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     setOpenPicker('participants');
   };
 
+  const setVisibility = (t: VisibilityType) => {
+    if (t === 'club' && !formData.club_id) return;
+    onFormDataChange({ visibility_type: t, friends_only: t === 'friends' });
+  };
+
+  const legend = sessionSchemaLegend(resolvedBlocks);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 12 }}
@@ -242,6 +252,45 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             title="Compose ta séance"
             subtitle="Glisse les blocs pour structurer l'effort."
           />
+        )}
+
+        {/* Maquette 11 — carte schéma (bandeau + Modifier + éditeur) */}
+        {showEnduranceFields && (
+          <div
+            id="session-schema-card"
+            className="rounded-[14px] border border-border/60 bg-card p-4 shadow-[var(--shadow-card)]"
+          >
+            <div className="mb-2.5 flex items-baseline justify-between gap-3">
+              <span className="text-[13px] font-medium text-muted-foreground">
+                SCHÉMA · {resolvedBlocks.length} bloc{resolvedBlocks.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                className="shrink-0 text-[15px] font-medium text-primary active:opacity-60"
+                onClick={() =>
+                  builderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              >
+                Modifier
+              </button>
+            </div>
+            <SessionSchemaMiniChart blocks={resolvedBlocks} />
+            <div className="mt-1 flex justify-between gap-2 text-[11px] text-muted-foreground">
+              <span className="min-w-0 truncate">{legend.left}</span>
+              <span className="min-w-0 truncate text-center">{legend.mid}</span>
+              <span className="min-w-0 truncate text-right">{legend.right}</span>
+            </div>
+            <div
+              ref={builderRef}
+              className="mt-4 border-t border-[rgba(60,60,67,0.12)] pt-4 dark:border-[rgba(84,84,88,0.4)]"
+            >
+              <SessionBlockBuilder
+                blocks={resolvedBlocks}
+                activityType={formData.activity_type}
+                onBlocksChange={handleBlocksChange}
+              />
+            </div>
+          </div>
         )}
 
         {/* Identity — sport + nom */}
@@ -280,72 +329,46 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </div>
         </AppleGroup>
 
-        {/* Schéma de séance — builder */}
+        {/* Maquette 11 — Médias (Group + Cell) */}
         {showEnduranceFields && (
-          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card p-4">
-            <SessionBlockBuilder
-              blocks={resolvedBlocks}
-              activityType={formData.activity_type}
-              onBlocksChange={handleBlocksChange}
+          <Group inset={false} className="mb-0" title="Médias">
+            <Cell
+              icon={<span className="text-[15px]">📷</span>}
+              iconBg="#ff9500"
+              title="Ajouter une photo"
+              accessory="chevron"
+              onClick={() => photoInputRef.current?.click()}
             />
-          </div>
-        )}
-
-        {/* Médias / Itinéraire */}
-        {showEnduranceFields && (
-          <AppleGroup title="Itinéraire & médias">
-            <div className="px-4 py-3">
-              <RouteSelector
-                selectedRouteId={formData.route_id}
-                onRouteSelect={(route) =>
-                  onFormDataChange({ route_id: route?.id || null })
-                }
-                onAutoFill={handleRouteAutoFill}
-              />
-            </div>
-            <div className="border-t border-border/40 px-4 py-3">
-              <Label className="mb-1.5 block text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
-                Photo (optionnel)
-              </Label>
-              {!imagePreview ? (
-                <label
-                  className={cn(
-                    'flex w-full cursor-pointer items-center gap-3 rounded-xl border border-dashed border-border/70 bg-secondary/40 px-3 py-3 transition-colors',
-                    'active:bg-secondary/60'
-                  )}
-                >
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={onImageSelect}
-                    className="hidden"
-                  />
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
-                    <ImagePlus className="h-4 w-4" />
-                  </div>
-                  <span className="text-[15px] tracking-tight text-foreground">
-                    Ajouter une photo
-                  </span>
-                  <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/70" />
-                </label>
-              ) : (
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onImageSelect}
+            />
+            {imagePreview ? (
+              <div className="relative border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
                 <div className="relative overflow-hidden rounded-xl">
-                  <img
-                    src={imagePreview}
-                    alt="Aperçu"
-                    className="h-32 w-full object-cover"
-                  />
+                  <img src={imagePreview} alt="" className="h-32 w-full object-cover" />
                   <button
                     type="button"
                     onClick={onImageRemove}
                     className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-md active:scale-95"
+                    aria-label="Retirer la photo"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-              )}
+              </div>
+            ) : null}
+            <div className="border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
+              <RouteSelector
+                selectedRouteId={formData.route_id}
+                onRouteSelect={(route) => onFormDataChange({ route_id: route?.id || null })}
+                onAutoFill={handleRouteAutoFill}
+              />
             </div>
-          </AppleGroup>
+          </Group>
         )}
 
         {/* Distance, dénivelé, terrain */}
@@ -434,32 +457,81 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </AppleGroup>
         )}
 
-        {/* Participants & club */}
-        <AppleGroup title="Visibilité">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
-              <Users className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <Label
-                htmlFor="max_participants"
-                className="text-[15px] font-normal tracking-tight text-foreground"
-              >
-                Participants max
-              </Label>
-              <p className="text-[12px] text-muted-foreground">
-                Touche pour fixer une limite
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openParticipantsPicker}
-              className="text-[15px] font-medium tracking-tight text-primary"
-            >
-              {formData.max_participants || 'Illimité'}
-            </button>
+        {/* Maquette 11 — Visibilité (Cells + suivi live + aperçu) */}
+        <Group
+          inset={false}
+          className="mb-0"
+          title="Visibilité"
+          footer={
+            <>
+              Le suivi live partage ta position en temps réel pendant la séance, comme sur la page
+              « En direct ».
+            </>
+          }
+        >
+          <Cell
+            icon={<span className="text-[15px]">👥</span>}
+            iconBg="#0066CC"
+            title="Mes amis"
+            subtitle="Visible par tes amis"
+            accessory={formData.visibility_type === 'friends' ? 'check' : 'chevron'}
+            onClick={() => setVisibility('friends')}
+          />
+          <Cell
+            icon={<span className="text-[15px]">🌍</span>}
+            iconBg="hsl(var(--foreground))"
+            title="Tout le monde"
+            subtitle={
+              isPremium
+                ? 'Visibilité étendue (Premium)'
+                : 'Visible localement dans Découvrir (5 km par défaut)'
+            }
+            accessory={formData.visibility_type === 'public' ? 'check' : 'chevron'}
+            onClick={() => setVisibility('public')}
+          />
+          <Cell
+            icon={<Building2 className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
+            iconBg="#007AFF"
+            title="Club"
+            subtitle={
+              formData.club_id
+                ? 'Réservé aux membres du club'
+                : 'Sélectionne un club ci-dessous'
+            }
+            accessory={
+              formData.visibility_type === 'club'
+                ? 'check'
+                : formData.club_id
+                  ? 'chevron'
+                  : 'none'
+            }
+            last={false}
+            className={cn(!formData.club_id && 'cursor-default opacity-60')}
+            onClick={formData.club_id ? () => setVisibility('club') : undefined}
+          />
+          {formData.visibility_type === 'friends' ? (
+          <div className="border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
+            <VisibilitySelector
+              visibilityType={formData.visibility_type}
+              hiddenFromUsers={formData.hidden_from_users}
+              isPremium={isPremium}
+              onVisibilityChange={(t) =>
+                onFormDataChange({ visibility_type: t, friends_only: t === 'friends' })
+              }
+              onHiddenUsersChange={(ids) => onFormDataChange({ hidden_from_users: ids })}
+              clubId={formData.club_id}
+              friendsHiddenSectionOnly
+            />
           </div>
-          <div className="border-t border-border/40 px-4 py-3">
+          ) : null}
+          <Cell
+            title="Participants max"
+            subtitle="Limite d'inscriptions"
+            value={formData.max_participants || '20'}
+            accessory="chevron"
+            onClick={openParticipantsPicker}
+          />
+          <div className="border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
             <Label className="mb-2 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
               <Building2 className="h-3.5 w-3.5 text-blue-500" />
               Club (optionnel)
@@ -467,41 +539,61 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             <ClubSelector
               selectedClubId={formData.club_id}
               onClubSelect={(clubId) => {
-                onFormDataChange({ club_id: clubId });
+                const next: Partial<SessionFormData> = { club_id: clubId };
                 if (clubId && formData.visibility_type !== 'club') {
-                  onFormDataChange({ visibility_type: 'club' });
+                  next.visibility_type = 'club';
+                  next.friends_only = false;
                 }
+                onFormDataChange(next);
               }}
             />
           </div>
-          <div className="flex items-start gap-3 border-t border-border/40 px-4 py-3">
-            <div
-              className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]',
-                formData.live_tracking_enabled
-                  ? 'bg-emerald-500/15 text-emerald-600'
-                  : 'bg-muted text-muted-foreground'
-              )}
-            >
-              <Radio className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <Label className="text-[15px] font-normal tracking-tight text-foreground">
-                Live tracking
-              </Label>
-              <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">
-                Diffuse la position des participants pendant la séance.
-              </p>
-            </div>
+          <Cell
+            icon={<span className="text-[15px]">📡</span>}
+            iconBg="#ff3b30"
+            title="Live tracking"
+            subtitle="Diffuse ma position pendant la séance"
+            accessory="none"
+          >
             <Switch
               checked={formData.live_tracking_enabled}
               onCheckedChange={(checked) => {
                 if (checked) setLiveTrackingWarningOpen(true);
                 else onFormDataChange({ live_tracking_enabled: false });
               }}
+              className="shrink-0"
             />
+          </Cell>
+          <div className="flex items-center gap-3 border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(255,59,48,0.12)]">
+              <span
+                className="h-2 w-2 rounded-full bg-[#ff3b30]"
+                style={{ boxShadow: '0 0 0 4px rgba(255,59,48,0.18)' }}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold tracking-[-0.3px] text-foreground">
+                Aperçu live
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                Avatars visibles sur la carte · auto-stop à l'arrivée
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                toast({
+                  title: 'Aperçu',
+                  description:
+                    'Pendant la séance, les participants en live apparaissent sur la carte Découvrir.',
+                })
+              }
+              className="shrink-0 rounded-full bg-[rgba(118,118,128,0.12)] px-3.5 py-1.5 text-[13px] font-semibold tracking-[-0.2px] text-primary active:opacity-70"
+            >
+              Voir
+            </button>
           </div>
-        </AppleGroup>
+        </Group>
 
         {/* Description */}
         <AppleGroup title="Notes">

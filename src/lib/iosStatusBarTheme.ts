@@ -8,7 +8,7 @@
  *   utilisent `bg-card` ; si la barre native reprend `--background` (plus sombre), iOS montre une frange nette.
  *   Couleur native dérivée du rendu calculé du navigateur pour coller au pixel près au Web.
  *
- * Splash (voir ruconnectSplashChrome) : overlay true + fond bleu + Style.Light (icônes blanches).
+ * Splash : overlay true + fond bleu Action (#0066CC) + Style.Dark Capacitor (icônes / texte clairs sur fond sombre).
  */
 import { Capacitor } from '@capacitor/core';
 

@@ -14,7 +14,6 @@ import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import {
   RUCONNECT_SPLASH_BACKGROUND,
   RUCONNECT_SPLASH_ICON_URL,
-  RUCONNECT_SPLASH_PRIMARY,
 } from '@/lib/ruconnectSplashChrome';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
@@ -128,10 +127,10 @@ export const Layout = ({ children }: LayoutProps) => {
             draggable={false}
             className="mb-5 block h-[128px] w-[128px] select-none object-contain"
           />
-          <p className="text-[26px] font-bold tracking-[0.08em]" style={{ color: RUCONNECT_SPLASH_PRIMARY }}>
+          <p className="text-[26px] font-bold tracking-[0.08em] text-white">
             RUNCONNECT
           </p>
-          <p className="mt-2 text-[12px] font-medium tracking-[0.22em] text-foreground/45">
+          <p className="mt-2 text-[12px] font-medium tracking-[0.22em] text-white/70">
             TROUVE. CONNECTE. PARTAGE.
           </p>
         </div>

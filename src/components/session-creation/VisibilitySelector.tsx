@@ -24,6 +24,8 @@ interface VisibilitySelectorProps {
   onVisibilityChange: (type: VisibilityType) => void;
   onHiddenUsersChange: (userIds: string[]) => void;
   clubId?: string | null;
+  /** N’affiche que la section « masquer certains amis » (liste déroulante). */
+  friendsHiddenSectionOnly?: boolean;
 }
 
 const VISIBILITY_OPTIONS = [
@@ -66,6 +68,7 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
   onVisibilityChange,
   onHiddenUsersChange,
   clubId,
+  friendsHiddenSectionOnly = false,
 }) => {
   const { user } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -155,6 +158,84 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
   };
 
   const hiddenCount = hiddenFromUsers.length;
+
+  if (friendsHiddenSectionOnly) {
+    return (
+      <>
+        {visibilityType === 'friends' && (
+          <>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1 pt-1">
+              Masquer pour (optionnel)
+            </div>
+
+            <div className="overflow-hidden rounded-xl bg-card">
+              <div className="border-b border-border p-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher un ami..."
+                    className="h-10 border-0 bg-secondary pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-48 divide-y divide-border overflow-y-auto">
+                {loading ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Chargement...
+                  </div>
+                ) : filteredFriends.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {searchQuery ? 'Aucun ami trouvé' : 'Aucun ami'}
+                  </div>
+                ) : (
+                  filteredFriends.map((friend) => {
+                    const isHidden = hiddenFromUsers.includes(friend.user_id);
+                    return (
+                      <button
+                        key={friend.user_id}
+                        type="button"
+                        onClick={() => toggleHiddenUser(friend.user_id)}
+                        className="flex w-full items-center gap-3 p-3 text-left transition-colors active:bg-secondary/50"
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={friend.avatar_url || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
+                            {friend.display_name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{friend.display_name}</p>
+                          {friend.username ? (
+                            <p className="truncate text-sm text-muted-foreground">@{friend.username}</p>
+                          ) : null}
+                        </div>
+                        <Checkbox
+                          checked={isHidden}
+                          onCheckedChange={() => toggleHiddenUser(friend.user_id)}
+                          className="shrink-0"
+                        />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              {hiddenCount > 0 && (
+                <div className="border-t border-border bg-secondary/30 p-3">
+                  <p className="text-center text-sm text-muted-foreground">
+                    {hiddenCount} personne{hiddenCount > 1 ? 's' : ''} masquée{hiddenCount > 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-4">
