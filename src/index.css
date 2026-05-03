@@ -513,7 +513,7 @@ html, body {
   }
 
   .home-map-filter-chip {
-    @apply flex h-9 shrink-0 items-center justify-center gap-1.5 px-3.5 text-[13px] font-bold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.98] motion-reduce:transition-none;
+    @apply flex h-7 shrink-0 items-center justify-center gap-1 px-2.5 text-[12px] font-semibold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.98] motion-reduce:transition-none;
     border-radius: 9999px;
     color: #1c1c1e;
     background: #ffffff;
