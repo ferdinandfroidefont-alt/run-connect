@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
-import { ActivityIcon } from "@/lib/activityIcons";
+import { getActivityEmoji, getDiscoverSportTileClass } from "@/lib/discoverSessionVisual";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { cn } from "@/lib/utils";
 
@@ -85,45 +85,69 @@ export function HomeActivitySheetContent() {
               const displayName = session.organizer.display_name || session.organizer.username || "Utilisateur";
               const isLast = idx === items.length - 1;
               const date = new Date(session.scheduled_at);
-              const dateStr = format(date, "dd/MM/yy");
               const timeStr = format(date, "HH:mm");
               const distKm = position
                 ? haversineKm(position.lat, position.lng, session.location_lat, session.location_lng)
                 : null;
               const distStr = formatDistance(distKm);
+              const emoji = getActivityEmoji(session.activity_type);
+              const tileCls = getDiscoverSportTileClass(session.activity_type);
+              const locShort = session.location_name?.split(",")[0]?.trim() || session.location_name || "";
+
+              const openDetail = () =>
+                setSelectedSession({
+                  ...session,
+                  session_type: session.activity_type,
+                  intensity: "moderate",
+                  organizer_id: session.organizer.user_id,
+                  profiles: {
+                    username: session.organizer.username,
+                    display_name: session.organizer.display_name,
+                    avatar_url: session.organizer.avatar_url || undefined,
+                  },
+                });
+
               return (
-                <button
+                <div
                   key={session.id}
-                  type="button"
-                  onClick={() =>
-                    setSelectedSession({
-                      ...session,
-                      session_type: session.activity_type,
-                      intensity: "moderate",
-                      organizer_id: session.organizer.user_id,
-                      profiles: {
-                        username: session.organizer.username,
-                        display_name: session.organizer.display_name,
-                        avatar_url: session.organizer.avatar_url || undefined,
-                      },
-                    })
-                  }
                   className={cn(
-                    "apple-cell w-full appearance-none border-0 bg-transparent text-left transition-colors active:bg-muted/40",
-                    isLast && "apple-cell-last"
+                    "flex w-full items-center gap-3 bg-card/80 px-3 py-2.5",
+                    !isLast && "border-b-[0.5px] border-border"
                   )}
                 >
-                  <ActivityIcon activityType={session.activity_type} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[16px] font-semibold leading-tight tracking-[-0.2px] text-foreground">
-                      {session.title}
-                    </p>
-                    <p className="mt-0.5 truncate text-[13px] leading-snug text-muted-foreground">
-                      {displayName} · {dateStr} · {timeStr}
-                      {distStr ? ` · ${distStr}` : ""}
-                    </p>
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={openDetail}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left active:opacity-80"
+                  >
+                    <div
+                      className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[22px] leading-none text-white shadow-sm",
+                        tileCls
+                      )}
+                      aria-hidden
+                    >
+                      {emoji}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-[16px] font-semibold leading-tight tracking-[-0.4px] text-foreground">
+                        {session.title}
+                        {locShort ? ` · ${locShort}` : ""}
+                      </p>
+                      <p className="mt-0.5 truncate text-[13px] leading-snug text-muted-foreground">
+                        {displayName} · {timeStr}
+                        {distStr ? ` · ${distStr}` : ""}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openDetail}
+                    className="shrink-0 rounded-full bg-[rgba(118,118,128,0.12)] px-3.5 py-1.5 text-[13px] font-semibold tracking-[-0.2px] text-primary active:opacity-70 dark:bg-white/10"
+                  >
+                    Ouvrir
+                  </button>
+                </div>
               );
             })}
           </div>

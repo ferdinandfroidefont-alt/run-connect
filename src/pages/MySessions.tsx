@@ -33,9 +33,6 @@ const CreateSessionWizard = lazy(() =>
 const ProfilePreviewDialog = lazy(() =>
   import('@/components/ProfilePreviewDialog').then((m) => ({ default: m.ProfilePreviewDialog }))
 );
-const OrganizerStatsCard = lazy(() =>
-  import('@/components/OrganizerStatsCard').then((m) => ({ default: m.OrganizerStatsCard }))
-);
 
 interface UserSession {
   id: string;
@@ -610,7 +607,7 @@ export default function MySessions() {
     
     return (
       <>
-        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
           {/* iOS Header */}
           <div className="z-50 shrink-0 bg-card pt-[var(--safe-area-top)]">
             <div className="flex items-center justify-between px-4 py-2">
@@ -977,7 +974,7 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-my-sessions">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background" data-tutorial="tutorial-my-sessions">
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card">
           <MainTopHeader
@@ -1005,12 +1002,6 @@ export default function MySessions() {
                 <Plus className="h-7 w-7" strokeWidth={2.5} />
               </button>
             }
-            tabsAriaLabel="Navigation Séances"
-            tabs={[
-              { id: "list", label: "Liste", active: true },
-              { id: "create", label: "Création", active: false, onClick: () => openCreateSession() },
-              { id: "comment", label: "Commentaire", active: false, onClick: () => navigate('/messages?tab=comments') },
-            ]}
           />
           <div className="h-px bg-border" />
         </div>
@@ -1078,14 +1069,6 @@ export default function MySessions() {
                     organizerProfiles={organizerProfiles}
                     currentUserId={user?.id}
                   />
-                </div>
-            )}
-
-            {sessions.length > 0 && (
-                <div className="mt-ios-3 px-4 pb-ios-6">
-                  <Suspense fallback={null}>
-                    <OrganizerStatsCard weeklyOnly />
-                  </Suspense>
                 </div>
             )}
           </>

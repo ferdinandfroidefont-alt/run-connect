@@ -53,30 +53,28 @@ html, body {
     --ios-motion-duration-slow: 320ms;
     --ios-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* iOS System Colors - Pure Light Mode */
-    --background: 0 0% 100%;              /* #F5F5F5 - iOS light */
-    --foreground: 221 39% 11%;             /* #000000 - Pure black */
+    /* Fond principal : blanc iOS */
+    --background: 0 0% 100%;
+    --foreground: 221 39% 11%;
 
-    --card: 0 0% 100%;                   /* Pure white cards */
+    --card: 0 0% 100%;
     --card-foreground: 215 28% 17%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 221 39% 11%;
 
     /* Apple Action Blue (refonte handoff) — #0066CC light, #0A84FF dark */
-    --primary: 212 100% 40%;           /* #0066CC - Apple Action Blue */
+    --primary: 212 100% 40%;
     --primary-foreground: 0 0% 100%;
-    /* Sky link blue — utilisé pour les liens sur surfaces sombres (mode sombre) */
-    --primary-on-dark: 211 100% 52%;   /* #0A84FF */
-    /* Focus blue — anneau focus clavier (légèrement plus vif) */
-    --primary-focus: 211 100% 47%;     /* #0071E3 */
+    --primary-on-dark: 211 100% 52%;
+    --primary-focus: 211 100% 47%;
 
     --secondary: 240 5% 96%;
     --secondary-foreground: 240 6% 12%;
 
-    /* iOS Muted Grays */
-    --muted: 218 11% 65%;               /* #F2F2F7 */
-    --muted-foreground: 220 9% 46%;    /* #8E8E93 */
+    /* Grouped background iOS (#F2F2F7) — même teinte que apple-grouped-bg / maquettes */
+    --muted: 240 9% 97%;
+    --muted-foreground: 240 4% 46%;
 
     /* Accent complementary */
     --accent: 142 70% 45%;              /* green accent */
@@ -144,31 +142,32 @@ html, body {
     --transition-map: transform, opacity, box-shadow;
   }
 
-  /* ─── Mode sombre profond (ChatGPT / GitHub) : couches #000 / #0A0A0A / #111 / #1F1F1F ─── */
+  /* ─── Mode sombre aligné palette iOS / handoff (canvas #000, cell #1C1C1E, séparateurs 84,84,88) ─── */
   .dark {
     color-scheme: dark;
 
     --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    /* Texte proche « label » iOS (pas un blanc #fff qui crase sur OLED) */
+    --foreground: 240 4% 96%;
 
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 100%;
+    /* Surfaces élevées type Settings.app (systemGray6 dark ≈ #1C1C1E) */
+    --card: 240 2% 11%;
+    --card-foreground: 240 4% 96%;
 
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 240 2% 11%;
+    --popover-foreground: 240 4% 96%;
 
-    /* Apple System Blue dark mode — #0A84FF */
     --primary: 211 100% 52%;
     --primary-foreground: 0 0% 100%;
     --primary-on-dark: 211 100% 52%;
     --primary-focus: 211 100% 60%;
 
-    /* Surfaces inactives (chips, filtres, boutons secondaires) */
-    --secondary: 0 0% 6.7%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondaires / blocs désactivés (systemGray5 « pleine » ~#2C2C2E) */
+    --secondary: 240 2% 17%;
+    --secondary-foreground: 240 4% 96%;
 
-    --muted: 0 0% 6.7%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 240 2% 14%;
+    --muted-foreground: 240 4% 64%;
 
     --accent: 142 50% 46%;
     --accent-foreground: 0 0% 100%;
@@ -178,8 +177,8 @@ html, body {
 
     --success: 142 55% 48%;
 
-    --border: 0 0% 12.2%;
-    --input: 0 0% 6.7%;
+    --border: 240 2% 26%;
+    --input: 240 2% 17%;
     --ring: 211 100% 55%;
 
     --sidebar-background: 0 0% 0%;
@@ -452,6 +451,10 @@ html, body {
   }
 
   /* Coaching create session: flat white editor with soft separators */
+  .coaching-create-flat {
+    background: #ffffff;
+  }
+
   .coaching-create-flat .ios-card,
   .coaching-create-flat .ios-inset-group {
     @apply bg-white border-0 rounded-none;
@@ -460,6 +463,49 @@ html, body {
 
   .coaching-create-flat .ios-list-row {
     @apply bg-white border-0 rounded-none;
+    box-shadow: none;
+  }
+
+  /* Mode sombre : les feuilles « flat » ne doivent pas rester blanches — surcouche thématique */
+  .dark .coaching-flat {
+    background: hsl(var(--background));
+  }
+
+  .dark .coaching-flat .ios-card,
+  .dark .coaching-flat .ios-inset-group,
+  .dark .coaching-flat .ios-list-row {
+    @apply bg-card;
+    box-shadow: none;
+  }
+
+  .dark .coaching-flat .ios-list-stack > *::after {
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.12) 8%,
+      rgba(255, 255, 255, 0.12) 92%,
+      rgba(255, 255, 255, 0)
+    );
+  }
+
+  .dark .feed-flat {
+    background: hsl(var(--background));
+  }
+
+  .dark .feed-flat .ios-card,
+  .dark .feed-flat .ios-inset-group {
+    @apply bg-card;
+    box-shadow: none;
+  }
+
+  .dark .coaching-create-flat {
+    background: hsl(var(--background));
+  }
+
+  .dark .coaching-create-flat .ios-card,
+  .dark .coaching-create-flat .ios-inset-group,
+  .dark .coaching-create-flat .ios-list-row {
+    @apply bg-card;
     box-shadow: none;
   }
 
@@ -500,16 +546,16 @@ html, body {
   }
 
   .dark .home-map-search-glass {
-    background: #111111;
-    border: 1px solid #1f1f1f;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 
   .dark .home-map-search-glass:focus-within {
-    border-color: #2a2a2a;
-    background: #141414;
+    border-color: hsl(var(--border));
+    background: hsl(var(--secondary));
   }
 
   .home-map-filter-chip {
@@ -662,13 +708,12 @@ html, body {
      - SocialButton (Apple/Google sign-in)
      ───────────────────────────────────────────── */
 
-  /* Surface "grouped" iOS exact (#f2f2f7 light / #000 dark) */
-  .apple-grouped-bg { background: #f2f2f7; }
-  .dark .apple-grouped-bg { background: #000; }
+  /* Surface "grouped" iOS : --muted clair (#F2F2F7) / canvas sombre */
+  .apple-grouped-bg { background: hsl(var(--muted)); }
+  .dark .apple-grouped-bg { background: hsl(var(--background)); }
 
-  /* Cellule blanche/cell iOS */
-  .apple-cell-bg { background: #ffffff; }
-  .dark .apple-cell-bg { background: #1c1c1e; }
+  /* Cellule type Settings / list row — suit --card (blanc / #1C1C1E dark) */
+  .apple-cell-bg { background: hsl(var(--card)); }
 
   /* PillButton — bouton Action Blue plein-pill (rounded-pill = 9999) */
   .apple-pill {

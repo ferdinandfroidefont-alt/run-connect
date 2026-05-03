@@ -74,7 +74,7 @@ export default function Search() {
   return (
     <>
       <div 
-        className="fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-white animate-slide-up"
+        className="fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-background animate-slide-up"
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
@@ -95,7 +95,7 @@ export default function Search() {
                       <button
                         type="button"
                         onClick={() => navigate("/messages?tab=create-club")}
-                        className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                        className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-border bg-card text-foreground shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80"
                         aria-label="Créer un club"
                       >
                         <Users className="h-5 w-5" />
@@ -105,7 +105,7 @@ export default function Search() {
                         onClick={() => navigate("/messages", { state: { openNewConversation: true } })}
                         size="sm"
                         variant="ghost"
-                        className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
+                        className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-border bg-card text-foreground shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80"
                         aria-label="Nouvelle conversation"
                       >
                         <Plus className="h-5 w-5" />

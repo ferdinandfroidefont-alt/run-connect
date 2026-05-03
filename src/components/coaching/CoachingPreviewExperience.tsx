@@ -156,10 +156,10 @@ export function CoachingPreviewExperience({ identity }: Props) {
 
   return (
     <IosFixedPageHeaderShell
-      className="coaching-flat min-h-0 flex-1 bg-white"
+      className="coaching-flat min-h-0 flex-1"
       headerWrapperClassName="shrink-0"
       contentScroll
-      scrollClassName="min-h-0 bg-white"
+      scrollClassName="min-h-0 bg-background"
       header={
         <PlanningHeader
           onOpenMenu={previewAction}

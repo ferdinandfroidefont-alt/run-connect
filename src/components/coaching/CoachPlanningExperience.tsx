@@ -2589,7 +2589,7 @@ export function CoachPlanningExperience() {
 
   return (
     <>
-      <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-coaching">
+      <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden" data-tutorial="tutorial-coaching">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0 border-b border-border bg-card"
@@ -3038,7 +3038,7 @@ export function CoachPlanningExperience() {
       />
 
       {coachingTab === "create" && (
-        <div className="coaching-create-flat fixed inset-0 z-[125] flex min-h-0 flex-col overflow-hidden bg-white">
+        <div className="coaching-create-flat fixed inset-0 z-[125] flex min-h-0 flex-col overflow-hidden">
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
             headerWrapperClassName="shrink-0 border-b border-border bg-card"

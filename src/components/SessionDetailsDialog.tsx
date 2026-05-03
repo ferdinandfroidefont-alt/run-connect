@@ -12,16 +12,13 @@ import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Trash2, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, MessageCircle, Download, ChevronDown, ArrowLeft } from "lucide-react";
+import { MapPin, Trash2, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Download, ChevronDown } from "lucide-react";
 import { downloadICSFile, openGoogleCalendarLink } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { RoutePreview } from "./RoutePreview";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
 import { SessionShareScreen } from "./session-share/SessionShareScreen";
@@ -107,45 +104,8 @@ interface SessionDetailsDialogProps {
   onSessionUpdated: () => void;
 }
 
-// iOS Settings style row component
-const SettingsRow = ({ 
-  icon: Icon, 
-  iconBg, 
-  label, 
-  value, 
-  onClick,
-  showChevron = false 
-}: { 
-  icon: any; 
-  iconBg: string; 
-  label: string; 
-  value?: React.ReactNode; 
-  onClick?: () => void;
-  showChevron?: boolean;
-}) => (
-  <div 
-    className={`flex items-center gap-3 px-4 py-3 bg-background ${onClick ? 'cursor-pointer active:bg-secondary/50' : ''}`}
-    onClick={onClick}
-  >
-    <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
-      <Icon className="h-4 w-4 text-white" />
-    </div>
-    <div className="flex-1 min-w-0">
-      <span className="text-[15px] text-foreground">{label}</span>
-    </div>
-    {value && (
-      <span className="text-[15px] text-muted-foreground truncate max-w-[50%] text-right">{value}</span>
-    )}
-    {showChevron && <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />}
-  </div>
-);
-
-const SettingsSeparator = () => (
-  <div className="h-px bg-border ml-[60px]" />
-);
-
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
-  const { unit, formatKm, formatMeters, formatSpeed } = useDistanceUnits();
+  const { formatKm, formatMeters } = useDistanceUnits();
   const { user } = useAuth();
   const { isPreviewMode } = useAppPreview();
   const subscriptionInfo = useEffectiveSubscriptionInfo();
@@ -371,27 +331,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const isOrganizer = user?.id === session.organizer_id;
   const isScheduled = new Date(session.scheduled_at) > new Date();
   const isFull = session.max_participants && session.current_participants >= session.max_participants;
-
-  const getActivityLabel = (activityType: string) => {
-    const labels: Record<string, string> = {
-      'course': 'Course',
-      'velo': 'Vélo',
-      'marche': 'Marche',
-      'natation': 'Natation'
-    };
-    return labels[activityType] || activityType;
-  };
-
-  const getSessionTypeLabel = (sessionType: string) => {
-    const labels: Record<string, string> = {
-      'footing': 'Footing',
-      'sortie_longue': 'Sortie longue',
-      'fractionne': 'Fractionné',
-      'competition': 'Compétition',
-      'recuperation': 'Récupération'
-    };
-    return labels[sessionType] || sessionType;
-  };
 
   const handleRequestJoin = async () => {
     if (!user || !isScheduled) return;
@@ -652,7 +591,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     return session.title;
   };
 
-  const sessionTypeLabel = getSessionTypeLabel(session.session_type);
   const dynamicTitle = buildSessionTitle();
   const dateFmt = format(new Date(session.scheduled_at), "EEEE d MMMM yyyy", { locale: fr });
   const timeFmt = format(new Date(session.scheduled_at), "HH:mm", { locale: fr });
@@ -757,268 +695,235 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
-      <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[95vh] sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col [&>button]:hidden">
-        <ScrollArea className="flex-1 bg-white">
-          {/* Réserve sous la sticky CTA flottante (mockup 05 floating-sticky-bar :
-              ≈ 64h + 16px safe-area + 16-24px breathing room) */}
-          <div className="pb-[120px]">
-            {/* ==== HEADER MAP ==== */}
-            <div className="relative w-full h-[140px] bg-secondary overflow-hidden">
-              {headerStaticMapUrl ? (
-                <img
-                  src={headerStaticMapUrl}
-                  alt="Carte du lieu de la séance"
-                  className="absolute inset-0 h-full w-full object-cover"
-                  loading="eager"
-                />
-              ) : null}
-              <div
-                ref={headerMapRef}
-                className="absolute inset-0"
-                style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: 'opacity 220ms ease' }}
-              />
-              {/* Bottom gradient pour adoucir la transition map → contenu (typographie reste lisible). */}
-              <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none dark:from-background" />
-              {/*
-                Refonte handoff (mockup 05 ScreenSessionDetail) :
-                NavBar style iOS — chevron-back + lien bleu « Découvrir » à gauche, share bleu à droite.
-                Posés sur capsule pearl blur pour rester lisibles sur la photo de carte (mockup
-                button-icon-circular pattern adapté à un libellé textuel).
-              */}
-              <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 pt-[max(env(safe-area-inset-top),10px)]">
-                <button
-                  onClick={onClose}
-                  className="inline-flex h-9 items-center gap-0.5 rounded-full bg-white/85 pl-2 pr-3 text-[15px] font-medium tracking-[-0.3px] text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-md active:opacity-70 dark:bg-card/85"
-                  aria-label="Retour"
-                >
-                  <svg width="11" height="18" viewBox="0 0 12 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M10 2L2 10l8 8" />
-                  </svg>
-                  <span>Découvrir</span>
-                </button>
-                <button
-                  onClick={() => setShowSessionShare(true)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-md active:opacity-70 dark:bg-card/85"
-                  aria-label="Partager"
-                >
-                  <Share2 className="h-[17px] w-[17px]" strokeWidth={1.9} />
-                </button>
-              </div>
-            </div>
+      <DialogContent className="relative p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[95vh] sm:rounded-2xl border-0 overflow-hidden flex flex-col apple-grouped-bg [&>button]:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b-[0.5px] border-border apple-grouped-bg px-4 pb-2.5 pt-[max(env(safe-area-inset-top),12px)]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 items-center gap-0.5 text-[17px] font-normal tracking-[-0.2px] text-primary active:opacity-70"
+            aria-label="Retour"
+          >
+            <svg
+              width="11"
+              height="18"
+              viewBox="0 0 12 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M10 2L2 10l8 8" />
+            </svg>
+            <span>Découvrir</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSessionShare(true)}
+            className="inline-flex h-9 w-9 items-center justify-center text-primary active:opacity-70"
+            aria-label="Partager"
+          >
+            <Share2 className="h-[18px] w-[18px]" strokeWidth={1.9} />
+          </button>
+        </div>
 
-            {/* ==== TITLE BLOCK ==== */}
-            <div className="px-5 pt-4 flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium text-muted-foreground capitalize tracking-wide">
-                  {sessionTypeLabel}
-                </p>
-                <h1 className="mt-1 text-[28px] leading-tight font-bold text-foreground tracking-tight">
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="apple-grouped-bg px-4 pb-[120px] pt-3">
+            <div className="overflow-hidden rounded-[18px] bg-card shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] dark:shadow-none">
+              <div className="relative h-[180px] overflow-hidden bg-secondary">
+                {headerStaticMapUrl ? (
+                  <img
+                    src={headerStaticMapUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="eager"
+                  />
+                ) : null}
+                <div
+                  ref={headerMapRef}
+                  className="absolute inset-0"
+                  style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: "opacity 220ms ease" }}
+                />
+              </div>
+
+              <div className="p-4">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowOrganizerProfile(true)}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-80"
+                  >
+                    <Avatar className="h-9 w-9 shrink-0 rounded-full">
+                      <AvatarImage src={session.profiles.avatar_url} />
+                      <AvatarFallback className="bg-primary text-[13px] font-semibold text-primary-foreground">
+                        {(session.profiles.display_name || session.profiles.username || "?")
+                          .split(/\s+/)
+                          .map((w) => w[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] text-muted-foreground">Organisée par</p>
+                      <p className="truncate text-[15px] font-semibold text-foreground">
+                        {session.profiles.display_name || session.profiles.username}
+                      </p>
+                    </div>
+                  </button>
+                  {!isOrganizer ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowOrganizerProfile(true)}
+                      className="apple-pill shrink-0 px-3.5 py-1.5 text-[13px] font-semibold"
+                    >
+                      Suivre
+                    </button>
+                  ) : null}
+                </div>
+                <h1 className="mt-3.5 font-display text-[26px] font-semibold leading-[1.1] tracking-[-0.5px] text-foreground">
                   {dynamicTitle}
                 </h1>
+                {session.description ? (
+                  <p className="mt-2 text-[15px] leading-snug text-muted-foreground">{session.description}</p>
+                ) : null}
+                {levelBadge ? <div className="mt-3">{levelBadge}</div> : null}
               </div>
-              {levelBadge}
             </div>
 
-            {/* ==== ORGANIZER ==== */}
-            <div className="px-5 py-3 flex items-center justify-between gap-3">
+            <div className="mt-4 overflow-hidden rounded-[12px] bg-card shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] dark:shadow-none">
               <button
-                onClick={() => setShowOrganizerProfile(true)}
-                className="flex items-center gap-3 min-w-0 flex-1 active:opacity-70"
+                type="button"
+                onClick={() => {
+                  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.location_name)}`;
+                  window.open(url, "_blank");
+                }}
+                className="flex w-full items-center gap-3 border-b-[0.5px] border-border px-4 py-3 text-left active:bg-muted/50"
               >
-                <Avatar className="h-11 w-11">
-                  <AvatarImage src={session.profiles.avatar_url} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1 text-left">
-                  <div className="flex items-center gap-1">
-                    <p className="text-[15px] font-semibold text-foreground truncate">
-                      {session.profiles.username || session.profiles.display_name}
-                    </p>
-                    <BadgeCheck className="h-4 w-4 flex-shrink-0 fill-primary text-white" />
-                  </div>
-                  <p className="text-[13px] text-muted-foreground">Voir le profil ›</p>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#ff3b30] text-[20px] leading-none text-white">
+                  📍
                 </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[16px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                    {session.location_name}
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">Point de départ</p>
+                </div>
+                <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/50" aria-hidden />
+              </button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 border-b-[0.5px] border-border px-4 py-3 text-left active:bg-muted/50"
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#ff9500] text-[20px] leading-none">
+                      🕡
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[16px] font-semibold capitalize leading-tight tracking-[-0.3px] text-foreground">
+                        {dateFmt} · {timeFmt}
+                      </p>
+                      <p className="mt-0.5 text-[13px] text-muted-foreground">Durée estimée {estimatedDuration}</p>
+                    </div>
+                    <ChevronDown className="h-[18px] w-[18px] shrink-0 text-muted-foreground/50" aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[220px]">
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => openGoogleCalendarLink(calendarEvent)}>
+                    Ouvrir dans Google Calendar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => {
+                      downloadICSFile(calendarEvent);
+                      toast({ title: "Calendrier", description: "Fichier .ics téléchargé" });
+                    }}
+                  >
+                    Télécharger .ics
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (timelineBlocks.length > 0) {
+                    setShowBlocksDialog(true);
+                    return;
+                  }
+                  if (session.routes) {
+                    routeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    return;
+                  }
+                  toast({ title: "Parcours", description: "Aucun parcours détaillé pour cette séance." });
+                }}
+                className="flex w-full items-center gap-3 border-b-[0.5px] border-border px-4 py-3 text-left active:bg-muted/50"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#34c759] text-[20px] leading-none">
+                  📏
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[16px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                    {[
+                      totalDistance !== "—" ? totalDistance : null,
+                      showElevationTile && session.routes ? `D+ ${Math.round(session.routes.total_elevation_gain)} m` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">
+                    Allure {avgPace}
+                    {timelineBlocks.length > 0 ? " · Appuyer pour le découpage" : ""}
+                  </p>
+                </div>
+                <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/50" aria-hidden />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void openParticipants()}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-primary text-[20px] leading-none text-primary-foreground">
+                  👥
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[16px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                    {participantsCount} participant{participantsCount !== 1 ? "s" : ""}
+                    {session.max_participants != null ? ` · ${session.max_participants} places max` : ""}
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">Séance entre amis</p>
+                </div>
+                <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/50" aria-hidden />
               </button>
             </div>
-
-            {/* ==== DATE + LIEU CARD ==== */}
-            <div className="mx-4 mt-2 rounded-2xl border border-border bg-white p-4 shadow-sm">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Date */}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <Calendar className="h-4 w-4" />
-                    <span className="text-[11px] uppercase tracking-wide">Date</span>
-                  </div>
-                  <p className="text-[14px] font-semibold text-foreground capitalize leading-tight">{dateFmt}</p>
-                  <p className="text-[13px] text-muted-foreground">{timeFmt}</p>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-foreground active:bg-secondary"
-                      >
-                        <CalendarPlus className="h-3.5 w-3.5 text-primary" />
-                        Agenda
-                        <ChevronDown className="h-3 w-3 opacity-60" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="min-w-[220px]">
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => openGoogleCalendarLink(calendarEvent)}
-                      >
-                        Ouvrir dans Google Calendar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          downloadICSFile(calendarEvent);
-                          toast({ title: 'Calendrier', description: 'Fichier .ics téléchargé' });
-                        }}
-                      >
-                        Télécharger .ics
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                {/* Lieu */}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <MapPin className="h-4 w-4" />
-                    <span className="text-[11px] uppercase tracking-wide">Lieu</span>
-                  </div>
-                  <p className="text-[14px] font-semibold text-foreground leading-tight line-clamp-2">{session.location_name}</p>
-                  <button
-                    onClick={() => {
-                      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.location_name)}`;
-                      window.open(url, '_blank');
-                    }}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-foreground active:bg-secondary"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 text-[#34A853]" />
-                    Google Maps
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* ==== DÉTAILS DE LA SÉANCE ==== */}
-            <div className="px-5 mt-6">
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Détails de la séance
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Timeline */}
-                <button
-                  type="button"
-                  onClick={() => timelineBlocks.length > 0 && setShowBlocksDialog(true)}
-                  className={`relative text-left ${timelineBlocks.length > 0 ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
-                >
-                  {timelineBlocks.length > 0 ? (
-                    <div className="relative pl-1">
-                      <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
-                      <div className="space-y-3">
-                        {timelineBlocks.map((b, idx) => {
-                          const color =
-                            b.type === 'warmup' ? 'bg-[#34C759]' :
-                            b.type === 'cooldown' ? 'bg-[#FF9500]' :
-                            b.type === 'interval' ? 'bg-primary' : 'bg-[#007AFF]';
-                          const label =
-                            b.type === 'warmup' ? 'Échauffement' :
-                            b.type === 'cooldown' ? 'Retour au calme' :
-                            b.type === 'interval' ? 'Bloc principal' : 'Bloc constant';
-                          const detail =
-                            b.type === 'interval'
-                              ? `${b.repetitions || 1}×${b.effortDuration || 0}${b.effortType === 'time' ? 's' : 'm'}`
-                              : `${b.duration || 0}${b.durationType === 'time' ? ' min' : ' m'}`;
-                          return (
-                            <div key={b.id || idx} className="relative flex items-start gap-3">
-                              <div className={`mt-1 h-3.5 w-3.5 rounded-full ${color} ring-2 ring-white flex-shrink-0`} />
-                              <div className="min-w-0">
-                                <p className="text-[13px] font-semibold text-foreground leading-tight">{label}</p>
-                                <p className="text-[12px] text-muted-foreground">{detail}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <p className="mt-2 text-[11px] text-primary font-medium">Voir détail ›</p>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border p-3 text-[12px] text-muted-foreground">
-                      Séance simple, pas de découpage.
-                    </div>
-                  )}
-                </button>
-                {/* Stats grid */}
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    {
-                      icon: Footprints,
-                      label: 'Distance',
-                      value: totalDistance,
-                      onClick: () => {
-                        if (session.routes) {
-                          routeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          return;
-                        }
-                        toast({ title: 'Parcours indisponible', description: 'Aucun parcours associé à cette séance.' });
-                      },
-                    },
-                    {
-                      icon: Clock,
-                      label: 'Fin estimée',
-                      value: endTimeLabel,
-                      onClick: undefined,
-                    },
-                    { icon: Zap, label: 'Allure', value: avgPace, onClick: undefined },
-                    { icon: Users, label: 'Participants', value: `${participantsCount}`, onClick: openParticipants },
-                    ...(showElevationTile
-                      ? [{ icon: Mountain, label: 'D+', value: elevGain, onClick: undefined }]
-                      : []),
-                  ].map((s, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={s.onClick}
-                      disabled={!s.onClick}
-                      className={`text-left rounded-xl border border-border bg-white p-2.5 shadow-sm ${s.onClick ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
-                    >
-                      <s.icon className="h-3.5 w-3.5 text-muted-foreground mb-1" />
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
-                      <p className="text-[13px] font-bold text-foreground truncate">{s.value}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* ==== PARCOURS ==== */}
             {session.routes && (
-              <div ref={routeSectionRef} className="px-5 mt-6">
-                <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              <div
+                ref={routeSectionRef}
+                className="mt-4 overflow-hidden rounded-[12px] border border-border bg-card shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] dark:shadow-none"
+              >
+                <p className="border-b-[0.5px] border-border px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Parcours
                 </p>
-                <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
-                  <div className="grid grid-cols-5">
-                    <div ref={routeMapRef} className="col-span-3 h-32 bg-secondary" />
-                    <div className="col-span-2 p-3 flex flex-col justify-center">
-                      <p className="text-[18px] font-bold text-foreground leading-tight">
-                        {formatMeters(session.routes.total_distance)}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        D+ {Math.round(session.routes.total_elevation_gain)} m
-                      </p>
-                    </div>
+                <div className="grid grid-cols-5">
+                  <div ref={routeMapRef} className="col-span-3 h-32 bg-secondary" />
+                  <div className="col-span-2 flex flex-col justify-center p-3">
+                    <p className="text-[18px] font-bold leading-tight text-foreground">
+                      {formatMeters(session.routes.total_distance)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      D+ {Math.round(session.routes.total_elevation_gain)} m
+                    </p>
                   </div>
                 </div>
-              <div className="mt-2">
+                <div className="border-t border-border p-3">
                   <button
+                    type="button"
                     onClick={handleExportGPX}
-                    className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-border bg-white h-10 text-[13px] font-medium text-foreground active:bg-secondary"
+                    className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-background text-[13px] font-medium text-foreground active:bg-muted"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Exporter GPX
@@ -1028,37 +933,25 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             )}
 
             {session.image_url ? (
-              <div className="px-5 mt-6">
-                <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              <div className="mt-4 overflow-hidden rounded-[12px] border border-border bg-card shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] dark:shadow-none">
+                <p className="border-b-[0.5px] border-border px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Photo du lieu
                 </p>
-                <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
-                  <img
-                    src={session.image_url}
-                    alt="Photo du lieu"
-                    className="w-full h-48 object-cover"
-                    loading="lazy"
-                  />
-                </div>
+                <img
+                  src={session.image_url}
+                  alt=""
+                  className="h-48 w-full object-cover"
+                  loading="lazy"
+                />
               </div>
             ) : null}
-
-            {/* ==== DESCRIPTION ==== */}
-            {session.description && (
-              <div className="px-5 mt-6">
-                <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Description
-                </p>
-                <p className="text-[14px] text-foreground leading-relaxed">{session.description}</p>
-              </div>
-            )}
 
             {/* ==== ORGANIZER MGMT (kept for organizers / past sessions) ==== */}
             {isOrganizer && (
               <div className="px-5 mt-6 space-y-2">
                 <button
                   onClick={() => setShowEditDialog(true)}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-white h-11 text-[14px] font-medium text-foreground active:bg-secondary"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-card h-11 text-[14px] font-medium text-foreground active:bg-secondary"
                 >
                   <Pencil className="h-4 w-4" /> Modifier la séance
                 </button>
@@ -1073,7 +966,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-white h-11 text-[14px] font-medium text-destructive active:bg-destructive/5"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-card h-11 text-[14px] font-medium text-destructive active:bg-destructive/5"
                 >
                   <Trash2 className="h-4 w-4" /> Supprimer la séance
                 </button>
@@ -1192,19 +1085,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               </div>
               <button
                 type="button"
-                onClick={() => navigate(`/messages?user=${session.organizer_id}`)}
-                className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-white text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-transform duration-150 active:scale-[0.96] dark:bg-card"
-                aria-label="Message à l'organisateur"
-              >
-                <MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.9} />
-              </button>
-              <button
-                type="button"
                 onClick={handleRequestJoin}
                 disabled={loading}
                 className="apple-pill apple-pill-large shrink-0 px-5 disabled:opacity-50"
               >
-                {loading ? 'Envoi…' : 'Rejoindre'}
+                {loading ? "Envoi…" : "Rejoindre"}
               </button>
             </>
           ) : (
@@ -1367,7 +1252,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       {/* ==== Blocks Detail Dialog ==== */}
       <Dialog open={showBlocksDialog} onOpenChange={setShowBlocksDialog}>
-        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-background border-0 overflow-hidden flex flex-col max-h-[85vh]">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <button onClick={() => setShowBlocksDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
               <ChevronLeft className="h-5 w-5 text-foreground" />
@@ -1387,7 +1272,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   b.type === 'cooldown' ? 'Retour au calme' :
                   b.type === 'interval' ? 'Bloc principal (intervalles)' : 'Bloc constant';
                 return (
-                  <div key={b.id || idx} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                  <div key={b.id || idx} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`h-3 w-3 rounded-full ${color}`} />
                       <p className="text-[14px] font-semibold text-foreground">{label}</p>
@@ -1420,7 +1305,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
       {/* ==== Participants List Dialog ==== */}
       <Dialog open={showParticipantsDialog} onOpenChange={setShowParticipantsDialog}>
-        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-background border-0 overflow-hidden flex flex-col max-h-[85vh]">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <button onClick={() => setShowParticipantsDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
               <ChevronLeft className="h-5 w-5 text-foreground" />

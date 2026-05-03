@@ -3090,7 +3090,7 @@ const Messages = () => {
 
   if (isCommentsTab) {
     return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-messages-comments">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background" data-tutorial="tutorial-messages-comments">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="z-50 bg-card"
@@ -3106,7 +3106,7 @@ const Messages = () => {
             />
           }
         >
-          <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto bg-white px-ios-4 pb-ios-6 pt-ios-3">
+          <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto bg-background px-ios-4 pb-ios-6 pt-ios-3">
             {isLoadingPastSessions ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
@@ -3150,7 +3150,7 @@ const Messages = () => {
                           setCommentsBySession((prev) => ({ ...prev, [session.id]: event.target.value }))
                         }
                         placeholder="Écrire un commentaire sur cette séance..."
-                        className="min-h-[92px] w-full resize-none rounded-[14px] border border-border bg-white px-3 py-2 text-[15px] outline-none transition-colors focus:border-primary"
+                        className="min-h-[92px] w-full resize-none rounded-[14px] border border-border bg-card px-3 py-2 text-[15px] outline-none transition-colors focus:border-primary"
                         maxLength={800}
                       />
 
@@ -3180,7 +3180,7 @@ const Messages = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-messages">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background" data-tutorial="tutorial-messages">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="z-50 bg-card"

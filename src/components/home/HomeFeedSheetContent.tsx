@@ -143,7 +143,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
   return (
-    <div className="feed-flat flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
+    <div className="feed-flat flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <FeedHeader
         layoutVariant="sheet"
         sheetSnap={sheetSnap}
@@ -155,7 +155,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
       />
 
       {mode === "discover" && (
-        <div className="shrink-0 border-b border-border/40 bg-white">
+        <div className="shrink-0 border-b border-border/40 bg-card">
           <DiscoverFilters
             maxDistance={maxDistance}
             setMaxDistance={setMaxDistance}

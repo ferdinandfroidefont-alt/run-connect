@@ -5,7 +5,7 @@ export default function Feed() {
   const navigate = useNavigate();
 
   return (
-    <div className="feed-flat flex h-full min-h-0 flex-col overflow-hidden bg-white">
+    <div className="feed-flat flex h-full min-h-0 flex-col overflow-hidden">
       <HomeFeedSheetContent
         sheetSnap={2}
         onBrandClick={() => navigate("/", { replace: true })}
