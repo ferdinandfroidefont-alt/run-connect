@@ -25,27 +25,34 @@ export function MainTopHeader({
   right,
   className,
 }: MainTopHeaderProps) {
+  // Refonte Apple NavBar large title (mockup 13/17/19) :
+  // - SF Pro Display 34px / bold / -0.5px tracking (apple-navbar-large)
+  // - Compact bar 44h pour leading/trailing
+  // - Tabs underline → bord 0.5px hairline iOS
   return (
     <div className={cn("shrink-0 pt-[var(--safe-area-top)]", className)}>
-      <div className="relative flex min-h-[3.25rem] shrink-0 items-center justify-between gap-2 px-4 pb-2 pt-2">
-        <div className="min-w-0 flex-1">
-          <h1 className="select-none text-[2rem] font-bold leading-none tracking-[-0.02em] text-[#111111] dark:text-foreground">
-            {title}
-          </h1>
-          {subtitle ? (
-            <p className="mt-1 line-clamp-1 max-w-[220px] text-[12px] font-normal leading-snug text-muted-foreground">
-              {subtitle}
-            </p>
-          ) : null}
-        </div>
+      {/* Compact bar (trailing actions) */}
+      <div className="relative flex h-11 shrink-0 items-center justify-end gap-2 px-4">
         {right ? <div className="flex items-center gap-2">{right}</div> : null}
+      </div>
+
+      {/* Large title — Apple iOS Settings.app/Mail.app */}
+      <div className="px-4 pb-2 pt-1">
+        <h1 className="font-display select-none text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
+          {title}
+        </h1>
+        {subtitle ? (
+          <p className="mt-1 line-clamp-1 text-[13px] font-normal leading-snug text-muted-foreground">
+            {subtitle}
+          </p>
+        ) : null}
       </div>
 
       {tabs && tabs.length > 0 ? (
         <div
           role="tablist"
           aria-label={tabsAriaLabel ?? `Navigation ${title}`}
-          className="flex min-h-0 shrink-0 flex-nowrap items-end gap-6 overflow-x-auto overscroll-x-contain border-b border-[#ECECEE] px-4 pb-1.5 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:none] dark:border-[#1f1f1f] sm:gap-8 [&::-webkit-scrollbar]:hidden"
+          className="flex min-h-0 shrink-0 flex-nowrap items-end gap-6 overflow-x-auto overscroll-x-contain border-b-[0.5px] border-[rgba(60,60,67,0.18)] dark:border-[rgba(84,84,88,0.65)] px-4 pb-1.5 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-8 [&::-webkit-scrollbar]:hidden"
         >
           {tabs.map((tab) => (
             <button
@@ -54,8 +61,8 @@ export function MainTopHeader({
               role="tab"
               aria-selected={tab.active}
               className={cn(
-                "shrink-0 touch-manipulation whitespace-nowrap pb-1 pt-0.5 text-[15px] font-semibold leading-tight tracking-tight transition-colors",
-                tab.active ? "text-[#007AFF] dark:text-[#0A84FF]" : "text-[#8E8E93] dark:text-[#8E8E93]"
+                "shrink-0 touch-manipulation whitespace-nowrap pb-1 pt-0.5 text-[15px] font-semibold leading-tight tracking-[-0.2px] transition-colors",
+                tab.active ? "text-primary" : "text-muted-foreground"
               )}
               onClick={tab.onClick}
             >
@@ -63,7 +70,7 @@ export function MainTopHeader({
                 {tab.label}
                 {tab.active ? (
                   <span
-                    className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#007AFF] dark:bg-[#0A84FF]"
+                    className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-primary"
                     aria-hidden
                   />
                 ) : null}

@@ -194,8 +194,15 @@ export function HomeFeedBottomSheet() {
         aria-label="Fil d'activite"
         className={cn(
           "pointer-events-auto relative flex min-h-0 w-full flex-col overflow-hidden",
-          "rounded-t-[1.25rem] border border-border/50 bg-background/92 shadow-[0_-12px_48px_rgba(0,0,0,0.18)]",
-          "backdrop-blur-xl dark:border-[#2a2a2a] dark:bg-black/90 dark:shadow-[0_-16px_56px_rgba(0,0,0,0.55)]",
+          // Refonte Apple Discover bottom sheet (mockup 04) :
+          // - rounded-18 top corners
+          // - blur 28 + saturate(180%)
+          // - hairline top border 0.5
+          // - shadow profond
+          "rounded-t-[18px] border-t-[0.5px] border-black/[0.06]",
+          "bg-[rgba(255,255,255,0.96)] shadow-[0_-8px_30px_rgba(0,0,0,0.10)]",
+          "[backdrop-filter:blur(28px)_saturate(180%)] [-webkit-backdrop-filter:blur(28px)_saturate(180%)]",
+          "dark:border-[rgba(84,84,88,0.4)] dark:bg-[rgba(28,28,30,0.94)] dark:shadow-[0_-16px_56px_rgba(0,0,0,0.55)]",
         )}
         initial={false}
         animate={{ height: targetH }}
@@ -244,7 +251,8 @@ export function HomeFeedBottomSheet() {
                 aria-expanded
                 aria-label="Fil d'activite"
               >
-                <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
+                {/* Drag handle iOS Apple : 36×5, rounded-3, ink-30 (mockup spec) */}
+                <span className="h-[5px] w-9 shrink-0 rounded-[3px] bg-[rgba(60,60,67,0.25)] dark:bg-[rgba(235,235,245,0.3)]" />
               </button>
               <button
                 type="button"

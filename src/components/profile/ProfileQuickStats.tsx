@@ -102,18 +102,19 @@ export const ProfileQuickStats = ({
         colCount === 5 ? "grid-cols-5" : "grid-cols-4"
       }`}
     >
+      {/* Refonte Apple StatTile (mockup 19) — display 22/700/-0.5px + label 13 ink60 */}
       {stats.map((stat, i) => {
         const cell = (
           <>
-            <p className="truncate px-0.5 text-[15px] font-bold tabular-nums leading-none text-foreground sm:text-[16px]">
+            <p className="font-display truncate px-0.5 text-[22px] font-bold tabular-nums leading-none tracking-[-0.5px] text-foreground">
               {loading && stat.label !== "Fiabilité" ? "–" : stat.value}
             </p>
-            <p className="mt-0.5 truncate px-0.5 text-[8px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
+            <p className="mt-1 truncate px-0.5 text-[13px] font-normal text-muted-foreground">
               {stat.label}
             </p>
           </>
         );
-        const className = `min-h-[44px] min-w-0 touch-manipulation py-2.5 text-center transition-colors active:bg-secondary/60 ${
+        const className = `min-h-[60px] min-w-0 touch-manipulation py-3 text-center transition-colors active:bg-secondary/60 ${
           i < colCount - 1 ? "border-r border-border/50" : ""
         }`;
         return stat.onClick ? (

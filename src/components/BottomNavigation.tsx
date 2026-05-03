@@ -1,12 +1,18 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, GraduationCap, User } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { FloatingCreateSessionButton } from "@/components/FloatingCreateSessionButton";
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import {
+  DiscoverIcon,
+  SessionsIcon,
+  CoachingIcon,
+  MessagesIcon,
+  ProfileIcon,
+} from "@/components/apple/TabIcons";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type SVGProps } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,9 +24,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type TabIconProps = SVGProps<SVGSVGElement> & { size?: number };
+
 type NavItem = {
   path: string;
-  icon: ComponentType<Record<string, unknown>>;
+  icon: ComponentType<TabIconProps>;
   label: string;
   tutorialId?: string;
   isActive: (pathname: string) => boolean;
@@ -47,26 +55,27 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const pathname = location.pathname;
   const isHome = pathname === "/";
 
-  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages */
+  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages → Profil
+   *  Icônes SF-style (refonte handoff) : DiscoverIcon, SessionsIcon, etc. */
   const navItems = useMemo<NavItem[]>(
     () => [
-      { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
+      { path: "/", icon: DiscoverIcon, label: t("navigation.home"), isActive: (p) => p === "/" },
       {
         path: "/my-sessions",
-        icon: Calendar,
+        icon: SessionsIcon,
         label: t("navigation.mySessions"),
         tutorialId: "nav-sessions",
         isActive: (p) => p === "/my-sessions" || p.startsWith("/my-sessions/"),
       },
       {
         path: "/coaching",
-        icon: GraduationCap,
+        icon: CoachingIcon,
         label: t("navigation.coaching"),
         isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
       },
       {
         path: "/messages",
-        icon: MessageCircle,
+        icon: MessagesIcon,
         label: t("navigation.messages"),
         tutorialId: "nav-messages",
         isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
@@ -74,7 +83,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
       },
       {
         path: "/profile",
-        icon: User,
+        icon: ProfileIcon,
         label: "Profil",
         isActive: (p) => p === "/profile" || p.startsWith("/profile/"),
       },

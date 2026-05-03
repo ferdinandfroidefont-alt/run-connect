@@ -1113,8 +1113,10 @@ export default function MySessions() {
                 />
               </div>
 
-              {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
-              <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-3">
+              {/* Filter Pills — refonte Apple Discover (mockup 04) :
+                   actif = ink (#1d1d1f) blanc / inactif = white pill + hairline + ink
+                   hauteur 32, padding 12, font-semibold 13/-0.2px tracking */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1 px-4 mb-3">
                 {[
                   { key: 'all', label: 'Toutes' },
                   { key: 'upcoming', label: 'À venir' },
@@ -1123,10 +1125,10 @@ export default function MySessions() {
                   <button
                     key={f.key}
                     onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
-                    className={`px-ios-3 py-1.5 min-h-[32px] rounded-full text-[12px] leading-tight font-medium whitespace-nowrap transition-colors ${
+                    className={`h-8 rounded-full px-3 text-[13px] font-semibold tracking-[-0.2px] whitespace-nowrap transition-colors active:scale-[0.98] ${
                       filter === f.key
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card text-muted-foreground'
+                        ? 'bg-foreground text-background'
+                        : 'bg-card text-foreground border-[0.5px] border-[rgba(60,60,67,0.18)] dark:border-[rgba(84,84,88,0.65)]'
                     }`}
                   >
                     {f.label}

@@ -28,17 +28,28 @@ export function HomeActivitySheetContent() {
 
   const items = useMemo(() => feedItems.slice(0, 6), [feedItems]);
 
+  // Refonte Apple Discover bottom sheet (mockup 04) :
+  // - Title display 22/700/-0.4
+  // - Subtitle 12 ink60
+  // - "Voir tout" blue link 15/500 sans flèche (mockup)
+  const subtitleCount = items.length;
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background px-ios-3 pb-ios-3">
-      <div className="flex items-center justify-between px-ios-1 pb-ios-2 pt-ios-1">
-        <h2 className="text-[20px] font-semibold leading-none tracking-tight text-foreground">Fil d'activite</h2>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-transparent px-3 pb-3">
+      <div className="flex items-baseline justify-between px-1 pb-2 pt-1">
+        <div>
+          <h2 className="font-display text-[22px] font-bold leading-tight tracking-[-0.4px] text-foreground">
+            À la une
+          </h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            {subtitleCount > 0 ? `${subtitleCount} séances · aujourd'hui` : "Aucune séance · aujourd'hui"}
+          </p>
+        </div>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-[15px] font-semibold text-[#007AFF] active:opacity-70"
+          className="text-[15px] font-medium text-primary active:opacity-70"
           onClick={() => navigate("/feed")}
         >
           Voir tout
-          <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
 

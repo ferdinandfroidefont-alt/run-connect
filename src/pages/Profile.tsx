@@ -650,129 +650,100 @@ const Profile = () => {
         }
       />
       <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full">
-      {/* Couverture pleine largeur — pas de max-w-2xl ici (évite flex/scroll WebKit + recentrage qui coupent les cartes). */}
-      <div className="relative w-full min-w-0 max-w-full overflow-x-hidden">
-        {/* Cover Photo */}
-        <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
-          {(coverPreview || profile?.cover_image_url) ? (
-            <img 
-              src={coverPreview || profile?.cover_image_url || ''} 
-              alt="Couverture" 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
-          )}
-          {/* Overlay gradient for readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-          
-          {/* Top bar buttons */}
-          <div className="absolute left-0 right-0 top-0 z-10 flex min-w-0 items-center justify-between px-4 pt-[max(0.75rem,var(--safe-area-top))] ios-shell:px-2">
-            {isViewingOtherUser ? (
-              <button onClick={() => navigate(-1)} className="flex items-center gap-ios-1 text-white drop-shadow-lg">
-                <ChevronLeft className="h-5 w-5" />
-                <span className="text-ios-headline">Retour</span>
-              </button>
-            ) : <div className="w-16" />}
-            <div className="flex items-center gap-ios-2">
-              {!isViewingOtherUser && (
-                <>
-                  <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
-                    <Camera className="h-4 w-4 text-white" />
-                    <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
-                  </label>
-                  <button onClick={() => setShowSettingsDialog(true)} className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                    <Settings className="h-4 w-4 text-white" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {coverUploading && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-white" />
-            </div>
-          )}
-        </div>
-
-        {/* Avatar overlapping cover */}
-        <div className="relative flex justify-center" style={{ marginTop: '-50px' }}>
-          <div className="relative">
-            <Avatar className="h-24 w-24 ring-4 ring-card shadow-xl">
-              <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/20 to-primary/40">
-                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-            {profile?.is_premium && (
-              <div className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-green-500 border-3 border-card flex items-center justify-center">
-                <span className="text-white text-xs">✓</span>
-              </div>
-            )}
-            {isEditing && !isViewingOtherUser && (
-              <button 
-                type="button" 
-                onClick={async () => {
-                  try {
-                    const file = await selectFromGallery();
-                    if (file) {
-                      handleAvatarChange({ target: { files: [file] } } as any);
-                    }
-                  } catch (error) {
-                    console.error('❌ Erreur sélection galerie:', error);
-                    toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
-                  }
-                }} 
-                disabled={cameraLoading} 
-                className="absolute bottom-0 left-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
-              >
-                <Camera className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
+      {/* Refonte Apple Profil (mockup 19) — Apple-ID banner inline (carte blanche, avatar 64, nom display 22, handle line muted, chevron). */}
       {isEditing && !isViewingOtherUser && (
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      {/* Colonne cartes : pleine largeur puis max-w-2xl centré sans w-full+mx sur le même nœud (cf. SettingsDialog). */}
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
+      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden pt-3 pb-[calc(2rem+var(--safe-area-bottom))]">
         <div className="box-border min-h-0 min-w-0 max-w-full space-y-4 sm:mx-auto sm:max-w-2xl">
+        {/* Apple-ID banner (mockup 19) */}
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
-            <div className="flex flex-col items-center px-4 py-3 pb-ios-1 pt-ios-1 ios-shell:px-2.5 ios-shell:py-2.5">
-            <div className="mb-0.5 flex max-w-full items-center justify-center gap-ios-2">
-              <h2 className="max-w-full truncate text-center text-ios-title2 font-bold text-foreground">
-                {profile?.display_name || profile?.username}
-              </h2>
-              {profile?.is_admin || isAdmin ? (
-                <BadgeCheck className="h-4 w-4 fill-amber-500 text-white" />
-              ) : profile?.is_premium ? (
-                <BadgeCheck className="h-4 w-4 fill-blue-500 text-white" />
-              ) : null}
+          <div className="flex w-full min-w-0 items-center gap-3.5 rounded-[14px] border border-border/60 bg-card p-4">
+            <div className="relative shrink-0">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
+                <AvatarFallback className="bg-primary text-[24px] font-semibold tracking-[-0.3px] text-primary-foreground">
+                  {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              {isEditing && !isViewingOtherUser && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const file = await selectFromGallery();
+                      if (file) {
+                        handleAvatarChange({ target: { files: [file] } } as never);
+                      }
+                    } catch (error) {
+                      console.error('❌ Erreur sélection galerie:', error);
+                      toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
+                    }
+                  }}
+                  disabled={cameraLoading}
+                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md"
+                  aria-label="Changer l'avatar"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {coverUploading && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                </div>
+              )}
             </div>
-
-            <p className="mb-ios-1 text-ios-subheadline text-muted-foreground">
-              @{profile?.username}
-            </p>
-
-            {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-              <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-ios-2 gap-ios-2 h-8 text-ios-footnote">
-                <Crown className="h-3.5 w-3.5" />
-                Devenir Premium
-              </Button>
-            )}
-
-            {isViewingOtherUser && (
-              <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-ios-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-ios-2 h-8 text-ios-footnote">
-                <Flag className="h-3.5 w-3.5" />
-                Signaler
-              </Button>
-            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <div className="font-display text-[22px] font-semibold leading-tight tracking-[-0.4px] text-foreground truncate">
+                  {profile?.display_name || profile?.username}
+                </div>
+                {profile?.is_admin || isAdmin ? (
+                  <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-amber-500 text-white" />
+                ) : profile?.is_premium ? (
+                  <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-[hsl(var(--primary))] text-white" />
+                ) : null}
+              </div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground truncate">
+                <span>@{profile?.username}</span>
+                {profile?.country && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span className="truncate">{profile.country}</span>
+                  </>
+                )}
+                {profile?.is_premium && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span className="text-[hsl(var(--primary))]">Premium ✓</span>
+                  </>
+                )}
+              </div>
+              {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/subscription')}
+                  className="mt-2 inline-flex h-7 items-center gap-1 rounded-full bg-[hsl(var(--primary))]/10 px-3 text-[12px] font-medium text-[hsl(var(--primary))] active:opacity-70"
+                >
+                  <Crown className="h-3 w-3" />
+                  Devenir Premium
+                </button>
+              )}
+              {isViewingOtherUser && (
+                <button
+                  type="button"
+                  onClick={() => setShowReportDialog(true)}
+                  className="mt-2 inline-flex h-7 items-center gap-1 rounded-full bg-destructive/10 px-3 text-[12px] font-medium text-destructive active:opacity-70"
+                >
+                  <Flag className="h-3 w-3" />
+                  Signaler
+                </button>
+              )}
             </div>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0 text-muted-foreground/60">
+              <path d="M1 6.5h11M7.5 1.5l5 5-5 5" />
+            </svg>
           </div>
         </div>
 

@@ -17,13 +17,10 @@ import { Browser } from '@capacitor/browser';
 import { getIosSupabaseOAuthBridgeRedirectTo } from "@/lib/oauthMobile";
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import {
-  AuthAmbientBackground,
-  AuthBrandMark,
   AuthFlowProgress,
   AuthLegalFooter,
   authCardShadowStyle,
 } from "@/components/auth/AuthChrome";
-import { AuthLandingOnboarding } from "@/components/auth/AuthLandingOnboarding";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
@@ -829,32 +826,82 @@ const Auth = () => {
   );
 
   // ══════════════════════════════════════════════
-  // ██  LANDING VIEW  ██
+  // ██  LANDING VIEW — Mockup 01 (Apple Splash) ██
+  // Icon hero, hero title, 4 features list, pill CTA + link
   // ══════════════════════════════════════════════
   const renderLanding = () => (
     <div
       className="relative flex min-h-[100dvh] flex-col bg-background"
       style={{
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+        paddingTop: "max(env(safe-area-inset-top, 0px), 90px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
       }}
     >
-      <AuthLandingOnboarding className="min-h-0 flex-1" />
+      {/* Hero — icône + titre + sous-titre (centré) */}
+      <div className="px-8 text-center">
+        <div
+          className="mx-auto flex h-24 w-24 items-center justify-center rounded-[22px]"
+          style={{
+            background: "hsl(var(--primary))",
+            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
+          }}
+        >
+          <svg width="46" height="46" viewBox="0 0 46 46" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="30" cy="9" r="4" fill="#fff" stroke="none" />
+            <path d="M14 38 L20 24 L30 28 L26 38" />
+            <path d="M20 24 L32 22 L38 30" />
+            <path d="M14 30 L8 30" />
+          </svg>
+        </div>
+        <h1 className="mt-7 font-display text-[34px] font-bold leading-[1.1] tracking-[-0.6px] text-foreground">
+          Bienvenue dans
+          <br />
+          RunConnect
+        </h1>
+        <p className="mx-auto mt-2.5 max-w-[280px] text-[17px] leading-[1.4] text-muted-foreground">
+          Trouve, programme et partage tes séances de sport avec tes amis.
+        </p>
+      </div>
 
-      {/* Refonte Apple : pillule Action Blue + lien texte (style splash mockup 01) */}
-      <div className="relative z-20 mx-auto w-full max-w-[340px] shrink-0 space-y-3.5 px-6 pt-10">
+      {/* Features list — 4 lignes (icône emoji 28 + titre 17/600 + body 15/muted) */}
+      <div className="mt-8 flex flex-col gap-[18px] px-8">
+        {[
+          { icon: "📍", title: "La carte", body: "Vois où tes amis courent en temps réel." },
+          { icon: "📅", title: "Planification", body: "Programme une séance en quelques touches." },
+          { icon: "👥", title: "Communauté", body: "Rejoins des clubs, ouvre des groupes." },
+          { icon: "💬", title: "Coaching", body: "Échange avec ton coach, suis ton plan." },
+        ].map((f) => (
+          <div key={f.title} className="flex gap-3.5">
+            <div className="w-9 shrink-0 text-[28px] leading-none">{f.icon}</div>
+            <div>
+              <div className="text-[17px] font-semibold tracking-[-0.4px] text-foreground">
+                {f.title}
+              </div>
+              <div className="mt-0.5 text-[15px] leading-[1.35] text-muted-foreground">
+                {f.body}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex-1" />
+
+      {/* CTA bottom : pill Action Blue + lien (mockup spec) */}
+      <div className="mx-auto w-full max-w-[340px] px-6">
         <button
           type="button"
           onClick={() => setView("email-signup")}
           disabled={isLoading}
           className="apple-pill apple-pill-large w-full disabled:opacity-50"
         >
-          Inscrivez-vous gratuitement
+          Continuer
         </button>
         <button
           type="button"
           onClick={() => setView("email-signin")}
           disabled={isLoading}
-          className="flex h-[44px] w-full items-center justify-center rounded-full bg-transparent text-[15px] font-normal text-primary transition-colors active:bg-primary/5 disabled:opacity-50"
+          className="mt-3.5 flex h-[44px] w-full items-center justify-center rounded-full bg-transparent text-[15px] font-normal text-primary transition-colors active:bg-primary/5 disabled:opacity-50"
         >
           J&apos;ai déjà un compte
         </button>
@@ -863,48 +910,85 @@ const Auth = () => {
   );
 
   // ══════════════════════════════════════════════
-  // ██  EMAIL SIGNIN VIEW (3 buttons)  ██
+  // ██  EMAIL SIGNIN VIEW — Mockup 02 (Apple SignIn)  ██
+  // NavBar Retour, small icon hero, "Bon retour" title,
+  // CTA email puis "ou" hairline puis Apple/Google.
   // ══════════════════════════════════════════════
   const renderEmailSignin = () => (
-    <div className="relative flex min-h-full flex-col items-center justify-between px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
-      <AuthAmbientBackground />
-
-      {/* Retour hors flux : même empilement vertical que l’écran landing (pas de décalage du bloc central) */}
-      <div
-        className="pointer-events-none absolute inset-x-0 z-20 flex justify-center"
-        style={{ top: "max(env(safe-area-inset-top, 0px), 2rem)" }}
-      >
-        <div className="relative h-10 w-full max-w-[340px] shrink-0">
+    <div
+      className="relative flex min-h-full flex-col bg-background"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top, 0px), 0px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
+      }}
+    >
+      {/* NavBar iOS compact : Retour bleu à gauche, titre centré */}
+      <div className="px-4 pt-3">
+        <div className="flex h-11 items-center justify-between">
           <button
             type="button"
             onClick={() => setView("landing")}
-            className="pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 -ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+            className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
             aria-label="Retour"
           >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
+            <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+            <span>Retour</span>
           </button>
+          <div className="apple-navbar-title">Connexion</div>
+          <div className="min-w-[70px]" />
         </div>
       </div>
 
-      {/* Top spacer — identique au landing */}
-      <div className="min-h-[40px] flex-1" />
+      {/* Hero compact (mockup : icône 60×60 rounded-14 + 28px display + 15 muted) */}
+      <div className="px-4 pt-6 text-center">
+        <div
+          className="mx-auto flex h-[60px] w-[60px] items-center justify-center rounded-[14px]"
+          style={{ background: "hsl(var(--primary))" }}
+        >
+          <svg width="30" height="30" viewBox="0 0 46 46" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="30" cy="9" r="4" fill="#fff" stroke="none" />
+            <path d="M14 38 L20 24 L30 28 L26 38" />
+            <path d="M20 24 L32 22 L38 30" />
+          </svg>
+        </div>
+        <div className="mt-4 font-display text-[28px] font-semibold tracking-[-0.5px] text-foreground">
+          Bon retour
+        </div>
+        <div className="mt-1 text-[15px] text-muted-foreground">
+          Connecte-toi à ton compte RunConnect.
+        </div>
+      </div>
 
-      <AuthBrandMark title="Connexion" subtitle="Content de vous revoir !" />
-
-      {/* Action buttons — refonte Apple sign-in (mockup 02 SignIn) */}
-      <div className="w-full max-w-[340px] space-y-2.5 relative z-10">
-        {/* Google */}
+      {/* CTA principal : continuer avec e-mail */}
+      <div className="mt-8 px-8">
         <button
           type="button"
-          onClick={handleGoogleAuth}
+          onClick={() => setView("email-signin-form")}
           disabled={isLoading}
-          className="apple-social-btn apple-social-btn-google disabled:opacity-50"
+          className="apple-pill apple-pill-large w-full disabled:opacity-50"
         >
-          <FcGoogle className="h-5 w-5" />
-          Continuer avec Google
+          <Mail className="mr-2 h-4 w-4" />
+          Continuer avec e-mail
         </button>
+        <button
+          type="button"
+          onClick={() => setView("email-signup")}
+          disabled={isLoading}
+          className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60 disabled:opacity-50"
+        >
+          Pas encore de compte ? S&apos;inscrire
+        </button>
+      </div>
 
-        {/* Apple */}
+      {/* "ou" séparateur hairline (mockup 02) */}
+      <div className="flex items-center gap-3 px-8 pt-8 pb-4">
+        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
+        <div className="text-[13px] text-muted-foreground">ou</div>
+        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
+      </div>
+
+      {/* Apple + Google (50px rounded-12 — apple-social-btn) */}
+      <div className="flex flex-col gap-2.5 px-4">
         <button
           type="button"
           onClick={handleAppleAuth}
@@ -914,33 +998,20 @@ const Auth = () => {
           <AppleIcon />
           Continuer avec Apple
         </button>
-
-        {/* Email */}
         <button
           type="button"
-          onClick={() => setView('email-signin-form')}
+          onClick={handleGoogleAuth}
           disabled={isLoading}
-          className="apple-social-btn apple-social-btn-email disabled:opacity-50"
+          className="apple-social-btn apple-social-btn-google disabled:opacity-50"
         >
-          <Mail className="h-5 w-5" />
-          Continuer avec e-mail
+          <FcGoogle className="h-5 w-5" />
+          Continuer avec Google
         </button>
       </div>
 
-      {/* Bottom spacer */}
-      <div className="flex-1 min-h-[24px]" />
+      <div className="flex-1" />
 
-      {/* Bottom link */}
-      <div className="w-full max-w-[340px] space-y-4 relative z-10">
-        <button
-          type="button"
-          onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
-          className="w-full text-center text-[14px] text-primary font-medium py-2 active:opacity-70 transition-opacity"
-        >
-          Vous n'avez pas de compte ? S'inscrire
-        </button>
-        <AuthLegalFooter />
-      </div>
+      <AuthLegalFooter className="pb-2 pt-6" />
     </div>
   );
 
