@@ -1,0 +1,1 @@
+const i=["running","cycling","swimming","triathlon","walking","other"],r={running:"Course à pied",cycling:"Vélo",swimming:"Natation",triathlon:"Triathlon",walking:"Marche",other:"Autre"};function t(n){return i.includes(n)}export{i as P,r as a,t as i};

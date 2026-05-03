@@ -52,6 +52,20 @@ export function createSessionPinButton(opts: {
   const visual = document.createElement("span");
   visual.className = "rc-session-pin__marker-visual";
 
+  // Shell blanc (mockup AvatarPin) — coque autour du disque coloré + queue intégrée.
+  // Path : disque rond 64×64 centré (rayon 32) + queue en V qui descend jusqu'à y=80.
+  const shell = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shell.setAttribute("viewBox", "0 0 72 84");
+  shell.setAttribute("aria-hidden", "true");
+  shell.classList.add("rc-session-pin__shell");
+  const shellPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  shellPath.setAttribute(
+    "d",
+    "M36 80 L26 64 Q4 58 4 34 A32 32 0 1 1 68 34 Q68 58 46 64 Z"
+  );
+  shellPath.setAttribute("fill", "#ffffff");
+  shell.appendChild(shellPath);
+
   const ground = document.createElement("span");
   ground.className = "rc-session-pin__ground";
   ground.setAttribute("aria-hidden", "true");
@@ -76,6 +90,7 @@ export function createSessionPinButton(opts: {
   tip.className = "rc-session-pin__tip";
 
   visual.appendChild(ground);
+  visual.appendChild(shell);
   visual.appendChild(circle);
   visual.appendChild(avatarRing);
   visual.appendChild(tip);

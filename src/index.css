@@ -1211,12 +1211,23 @@ html, body {
   filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.45));
 }
 
-/* Boîtier visuel carte (pastille + photo + pointe), largeur inchangée pour l’ancre map */
+/* Boîtier visuel carte (pastille + photo + pointe), aligné sur le mockup AvatarPin (72×84). */
 .rc-session-pin__marker-visual {
   position: relative;
   flex-shrink: 0;
-  width: 58px;
-  height: 78px;
+  width: 72px;
+  height: 84px;
+  /* Drop-shadow porté par le filtre : toute la silhouette du pin (shell + tip + disc) reçoit l'ombre. */
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.22));
+}
+
+/* Shell blanc qui enveloppe le pin (mockup : svg path 72×84). Disque rond + queue collée dessous. */
+.rc-session-pin__shell {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
 }
 
 .rc-session-pin__meta {
@@ -1276,113 +1287,67 @@ html, body {
   display: none;
 }
 
-/* Ombre au sol (profondeur, lisible sur fond clair) */
+/* Ombre au sol — masquée : le drop-shadow porté par .rc-session-pin__marker-visual
+ * suffit maintenant (mockup AvatarPin → drop-shadow unique sur la silhouette du pin).
+ * On garde l'élément DOM pour compat ascendante. */
 .rc-session-pin__ground {
-  position: absolute;
-  left: 50%;
-  bottom: 2px;
-  z-index: 0;
-  width: 32px;
-  height: 10px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.14);
-  filter: blur(5px);
-  pointer-events: none;
+  display: none;
 }
 
+/* Disc coloré (anneau autour de l'avatar) — mockup AvatarPin : 60×60 (avatar 54×54 + bord blanc 2px). */
 .rc-session-pin__circle {
   position: absolute;
   left: 50%;
-  top: 3px;
+  top: 6px;
   z-index: 1;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   transform: translateX(-50%);
   border-radius: 999px;
   box-sizing: border-box;
   pointer-events: none;
 }
 
-/* 1 — Minimal : plat, propre, très lisible */
-.rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__circle {
-  background: hsl(var(--primary));
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.28) inset,
-    0 8px 20px rgba(15, 23, 42, 0.12);
-}
-
-.rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__tip {
-  background: hsl(var(--primary));
-  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.12));
-}
-
-/* 2 — Depth : léger relief + dégradé discret */
-.rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__circle {
-  background: linear-gradient(
-    165deg,
-    hsl(var(--primary) / 1) 0%,
-    hsl(217 91% 48%) 55%,
-    hsl(221 83% 42%) 100%
-  );
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.38) inset,
-    0 -1px 0 rgba(15, 23, 42, 0.08) inset,
-    0 10px 24px rgba(15, 23, 42, 0.16);
-}
-
-.rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__tip {
-  background: linear-gradient(180deg, hsl(217 91% 49%) 0%, hsl(221 83% 41%) 100%);
-  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.14));
-}
-
-/* 3 — Premium : profondeur + reflet très léger (style social map) */
+/* Refonte handoff App RunConnect IOS — toutes les variantes adoptent le pin Apple
+ * (mockup AvatarPin) : disque coloré plat à l'intérieur du shell blanc.
+ * Ombre globale portée par .rc-session-pin__marker-visual (drop-shadow). */
+.rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__circle,
+.rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__circle,
 .rc-session-pin__shape[data-rc-pin-variant="premium"] .rc-session-pin__circle {
-  background: linear-gradient(
-    155deg,
-    hsl(212 100% 56%) 0%,
-    hsl(var(--primary) / 1) 38%,
-    hsl(221 83% 40%) 100%
-  );
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.48) inset,
-    0 -1px 0 rgba(15, 23, 42, 0.1) inset,
-    0 12px 30px rgba(15, 23, 42, 0.2);
+  background: hsl(var(--primary));
+  box-shadow: none;
 }
 
-.rc-session-pin__shape[data-rc-pin-variant="premium"] .rc-session-pin__tip {
-  background: linear-gradient(180deg, hsl(217 91% 48%) 0%, hsl(224 76% 38%) 100%);
-  filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.16));
-}
-
-/* Pointe compacte, centrée sous le disque */
+/* Pointe (queue) — désormais portée par le shell blanc SVG ; on conserve l'élément pour les
+ * variantes "depth" / "premium" qui colorisent encore la pointe (legacy compat). */
 .rc-session-pin__tip {
   position: absolute;
   left: 50%;
-  top: 54px;
+  top: 60px;
   z-index: 1;
-  width: 18px;
-  height: 14px;
+  width: 22px;
+  height: 18px;
   transform: translateX(-50%);
   clip-path: polygon(50% 100%, 0 0, 100% 0);
   pointer-events: none;
+  display: none;
 }
 
-/* Anneau blanc + photo : pas de déformation */
+/* Avatar 54×54 + bord blanc 2px (mockup AvatarPin → 60-3-3 = 54). */
 .rc-session-pin__avatar-ring {
   position: absolute;
   left: 50%;
-  top: 8px;
+  top: 9px;
   z-index: 2;
   box-sizing: border-box;
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   transform: translateX(-50%);
   border-radius: 999px;
-  border: 2.5px solid rgba(255, 255, 255, 0.96);
+  border: 2px solid #ffffff;
   overflow: hidden;
   background: hsl(var(--muted));
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.18);
 }
 
 .rc-session-pin__avatar {
@@ -1391,33 +1356,36 @@ html, body {
   object-fit: cover;
 }
 
+/* Badge "+N" en bas-droite — mockup AvatarPin (count) : pastille noire 22h bord blanc 2px. */
 .rc-session-pin__cluster-badge {
   position: absolute;
-  right: -3px;
-  top: -2px;
-  min-width: 18px;
-  height: 18px;
+  right: -2px;
+  bottom: 18px;
+  min-width: 22px;
+  height: 22px;
   border-radius: 999px;
-  padding: 0 5px;
-  background: #111827;
+  padding: 0 6px;
+  background: #1d1d1f;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 18px;
+  line-height: 22px;
   text-align: center;
-  z-index: 2;
+  border: 2px solid #ffffff;
+  box-sizing: content-box;
+  z-index: 3;
 }
 
 .rc-session-pin__stack {
   position: absolute;
-  left: 4px;
-  bottom: 3px;
+  left: 6px;
+  bottom: 4px;
   display: flex;
 }
 
 .rc-session-pin__stack-avatar {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 999px;
   border: 1.5px solid #fff;
   object-fit: cover;

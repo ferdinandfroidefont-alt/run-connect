@@ -1867,7 +1867,7 @@ export const InteractiveMap = ({
             {/* Header navigation épuré : titre + actions */}
             <div className="relative z-[1]">
               <MainTopHeader
-                title="Accueil"
+                title={t("navigation.home")}
                 tabsAriaLabel={t("navigation.home")}
                 tabs={[
                   { id: "planning", label: "Planification", active: true },

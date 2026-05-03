@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { RateSessionDialog } from './RateSessionDialog';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+import { cn } from '@/lib/utils';
 interface SessionBlock {
   id: string;
   type: 'warmup' | 'interval' | 'cooldown' | 'steady';
@@ -758,7 +759,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     <Dialog open={!!session} onOpenChange={onClose}>
       <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[95vh] sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col [&>button]:hidden">
         <ScrollArea className="flex-1 bg-white">
-          <div className="pb-[140px]">
+          {/* Réserve sous la sticky CTA flottante (mockup 05 floating-sticky-bar :
+              ≈ 64h + 16px safe-area + 16-24px breathing room) */}
+          <div className="pb-[120px]">
             {/* ==== HEADER MAP ==== */}
             <div className="relative w-full h-[140px] bg-secondary overflow-hidden">
               {headerStaticMapUrl ? (
@@ -774,24 +777,31 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 className="absolute inset-0"
                 style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: 'opacity 220ms ease' }}
               />
-              {/* Bottom gradient */}
-              <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-              <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+              {/* Bottom gradient pour adoucir la transition map → contenu (typographie reste lisible). */}
+              <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none dark:from-background" />
+              {/*
+                Refonte handoff (mockup 05 ScreenSessionDetail) :
+                NavBar style iOS — chevron-back + lien bleu « Découvrir » à gauche, share bleu à droite.
+                Posés sur capsule pearl blur pour rester lisibles sur la photo de carte (mockup
+                button-icon-circular pattern adapté à un libellé textuel).
+              */}
+              <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 pt-[max(env(safe-area-inset-top),10px)]">
                 <button
                   onClick={onClose}
-                  className="inline-flex items-center gap-1 rounded-full bg-white/95 shadow-sm backdrop-blur px-2.5 py-1.5 text-[15px] font-medium text-foreground active:opacity-70"
+                  className="inline-flex h-9 items-center gap-0.5 rounded-full bg-white/85 pl-2 pr-3 text-[15px] font-medium tracking-[-0.3px] text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-md active:opacity-70 dark:bg-card/85"
                   aria-label="Retour"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  Retour
+                  <svg width="11" height="18" viewBox="0 0 12 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M10 2L2 10l8 8" />
+                  </svg>
+                  <span>Découvrir</span>
                 </button>
                 <button
                   onClick={() => setShowSessionShare(true)}
-                  className="inline-flex items-center gap-1 rounded-full bg-white/95 shadow-sm backdrop-blur px-2.5 py-1.5 text-[15px] font-medium text-foreground active:opacity-70"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-md active:opacity-70 dark:bg-card/85"
                   aria-label="Partager"
                 >
-                  <Share2 className="h-4 w-4" />
-                  <span>Partager</span>
+                  <Share2 className="h-[17px] w-[17px]" strokeWidth={1.9} />
                 </button>
               </div>
             </div>
@@ -1084,72 +1094,121 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           </div>
         </ScrollArea>
 
-        {/* ==== STICKY CTA ==== */}
+        {/*
+          ==== STICKY CTA — Refonte handoff mockup 05 floating-sticky-bar ====
+          Capsule flottante 64h rounded-18 sur fond parchment translucide blur 20+sat 180%,
+          posée à 12px des bords. Info (subline 12 muted + line 15/600) à gauche, action pill à droite.
+          Toute la logique métier (organizer / participant / requested / GPS / full / finished) est
+          conservée — seul le visuel change.
+        */}
         <div
-          className="absolute left-0 right-0 bottom-0 bg-white/95 backdrop-blur-md border-t border-border px-4 pt-3"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+          className={cn(
+            "absolute left-3 right-3 z-10 flex items-center gap-3 rounded-[18px] px-4",
+            "border-[0.5px] border-[rgba(60,60,67,0.18)]",
+            "bg-[rgba(245,245,247,0.85)] [backdrop-filter:blur(20px)_saturate(180%)] [-webkit-backdrop-filter:blur(20px)_saturate(180%)]",
+            "dark:border-[rgba(84,84,88,0.4)] dark:bg-[rgba(28,28,30,0.86)]"
+          )}
+          style={{
+            bottom: 'max(env(safe-area-inset-bottom), 16px)',
+            minHeight: 64,
+            paddingTop: 8,
+            paddingBottom: 8,
+          }}
         >
           {isOrganizer ? (
-            <div className="flex gap-2">
-              <Button
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] leading-snug text-muted-foreground">Ta séance</div>
+                <div className="truncate text-[15px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                  {dateFmt} · {timeFmt}
+                </div>
+              </div>
+              <button
+                type="button"
                 onClick={() => setShowSessionShare(true)}
-                className="flex-1 h-14 rounded-2xl text-[15px] font-bold"
+                className="apple-pill apple-pill-large shrink-0 px-5"
               >
-                PARTAGER LA SÉANCE
-              </Button>
-            </div>
+                Partager
+              </button>
+            </>
           ) : isParticipant ? (
-            <div className="flex gap-2">
-              {isScheduled && !gpsValidated ? (
-                <Button
+            isScheduled && !gpsValidated ? (
+              <>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] leading-snug text-muted-foreground">Sur place ?</div>
+                  <div className="truncate text-[15px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                    {dateFmt} · {timeFmt}
+                  </div>
+                </div>
+                <button
+                  type="button"
                   onClick={handleGPSValidation}
                   disabled={validatingGPS}
-                  className="flex-1 h-14 rounded-2xl text-[15px] font-bold bg-[#34C759] hover:bg-[#34C759]/90"
+                  className="inline-flex h-[50px] shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#34C759] px-5 text-[15px] font-semibold tracking-[-0.3px] text-white transition-transform duration-150 active:scale-[0.96] disabled:opacity-50"
                 >
-                  {validatingGPS ? <Loader2 className="h-5 w-5 animate-spin" /> : <><MapPin className="h-5 w-5 mr-1" /> JE SUIS ARRIVÉ</>}
-                </Button>
-              ) : (
-                <Button
+                  {validatingGPS ? <Loader2 className="h-4 w-4 animate-spin" /> : <><MapPin className="h-4 w-4" /> Je suis arrivé</>}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] leading-snug text-muted-foreground">Tu participes</div>
+                  <div className="truncate text-[15px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                    {dateFmt} · {timeFmt}
+                  </div>
+                </div>
+                <button
+                  type="button"
                   onClick={() => setShowLeaveConfirm(true)}
-                  variant="outline"
-                  className="flex-1 h-14 rounded-2xl text-[15px] font-semibold border-destructive/40 text-destructive"
+                  className="inline-flex h-[50px] shrink-0 items-center justify-center rounded-full border border-[hsl(var(--destructive))]/40 bg-transparent px-5 text-[15px] font-medium tracking-[-0.3px] text-[hsl(var(--destructive))] transition-transform duration-150 active:scale-[0.96]"
                 >
-                  Quitter la séance
-                </Button>
-              )}
-            </div>
+                  Quitter
+                </button>
+              </>
+            )
           ) : hasRequested ? (
-            <Button
-              onClick={() => setShowCancelRequestConfirm(true)}
-              variant="outline"
-              className="w-full h-14 rounded-2xl text-[15px] font-semibold"
-            >
-              Annuler ma demande
-            </Button>
-          ) : isScheduled && !isFull ? (
-            <div className="flex gap-2">
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] leading-snug text-muted-foreground">Demande envoyée</div>
+                <div className="truncate text-[15px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                  En attente de réponse
+                </div>
+              </div>
               <button
+                type="button"
+                onClick={() => setShowCancelRequestConfirm(true)}
+                className="inline-flex h-[50px] shrink-0 items-center justify-center rounded-full border border-[hsl(var(--destructive))]/40 bg-transparent px-5 text-[15px] font-medium tracking-[-0.3px] text-[hsl(var(--destructive))] transition-transform duration-150 active:scale-[0.96]"
+              >
+                Annuler
+              </button>
+            </>
+          ) : isScheduled && !isFull ? (
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] leading-snug text-muted-foreground">Tu peux te désinscrire à tout moment</div>
+                <div className="truncate text-[15px] font-semibold leading-tight tracking-[-0.3px] text-foreground">
+                  {dateFmt} · {timeFmt}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/messages?user=${session.organizer_id}`)}
+                className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-white text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-transform duration-150 active:scale-[0.96] dark:bg-card"
+                aria-label="Message à l'organisateur"
+              >
+                <MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.9} />
+              </button>
+              <button
+                type="button"
                 onClick={handleRequestJoin}
                 disabled={loading}
-                className="flex-1 h-14 rounded-2xl bg-primary text-primary-foreground active:opacity-90 disabled:opacity-50 flex flex-col items-center justify-center"
+                className="apple-pill apple-pill-large shrink-0 px-5 disabled:opacity-50"
               >
-                <span className="text-[15px] font-bold tracking-wide">
-                  {loading ? 'ENVOI…' : 'REJOINDRE LA SÉANCE'}
-                </span>
-                <span className="text-[10px] text-primary-foreground/80">
-                  Visible par les autres participants
-                </span>
+                {loading ? 'Envoi…' : 'Rejoindre'}
               </button>
-              <button
-                onClick={() => navigate(`/messages?user=${session.organizer_id}`)}
-                className="h-14 w-14 rounded-2xl border border-border bg-white flex items-center justify-center active:bg-secondary"
-                aria-label="Message"
-              >
-                <MessageCircle className="h-5 w-5 text-foreground" />
-              </button>
-            </div>
+            </>
           ) : (
-            <div className="w-full h-14 rounded-2xl bg-secondary flex items-center justify-center text-[14px] text-muted-foreground font-medium">
+            <div className="flex h-[50px] w-full items-center justify-center text-[14px] font-medium text-muted-foreground">
               {isFull ? 'Séance complète' : 'Séance terminée'}
             </div>
           )}

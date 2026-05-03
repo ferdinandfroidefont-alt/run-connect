@@ -1,0 +1,1 @@
+import{j as o}from"./react-vendor-DD4lZBJA.js";import{d as s,N as t}from"./router-B8eTZhSm.js";import"./mapbox-CYryokTv.js";function a(){const{sessionId:e=""}=s();return o.jsx(t,{to:`/open/session/${encodeURIComponent(e)}`,replace:!0})}export{a as default};

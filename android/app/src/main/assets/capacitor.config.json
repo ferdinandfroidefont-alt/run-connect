@@ -16,6 +16,10 @@
 		"StatusBar": {
 			"style": "LIGHT",
 			"backgroundColor": "#FFFFFF"
+		},
+		"Keyboard": {
+			"resize": "body",
+			"resizeOnFullScreen": true
 		}
 	},
 	"android": {
