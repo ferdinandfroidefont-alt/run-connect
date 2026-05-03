@@ -1,16 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, Gauge, Mountain, Radio } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import {
+  Users,
+  Ruler,
+  ImagePlus,
+  X,
+  Mountain,
+  Radio,
+  Building2,
+  ChevronRight,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  SessionFormData, 
-  SelectedLocation, 
-  ACTIVITY_TYPES, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  SessionFormData,
+  SelectedLocation,
+  ACTIVITY_TYPES,
   TERRAIN_TYPES,
   SessionBlock,
   SessionMode,
@@ -19,7 +33,7 @@ import {
   isCyclingActivity,
   isSwimmingActivity,
   getPacePlaceholder,
-  getDistanceUnit
+  getDistanceUnit,
 } from '../types';
 import { ClubSelector } from '@/components/ClubSelector';
 import {
@@ -35,9 +49,16 @@ import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
 import { cn } from '@/lib/utils';
 import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
-import { computeBlocksDistanceKm, formatDistanceForInput } from '../utils/computeBlocksDistance';
+import {
+  computeBlocksDistanceKm,
+  formatDistanceForInput,
+} from '../utils/computeBlocksDistance';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
-import { normalizeBlocksForStorage, resolveSessionTotals, zoneLabel } from '@/lib/sessionBlockCalculations';
+import {
+  normalizeBlocksForStorage,
+  resolveSessionTotals,
+} from '@/lib/sessionBlockCalculations';
+import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -66,13 +87,16 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   hideNavigation = false,
 }) => {
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
-  const [openPicker, setOpenPicker] = useState<null | 'pace' | 'distance' | 'elevation' | 'participants'>(null);
-  const [draftPaceMin, setDraftPaceMin] = useState("5");
-  const [draftPaceSec, setDraftPaceSec] = useState("30");
-  const [draftDistanceWhole, setDraftDistanceWhole] = useState("10");
-  const [draftDistanceMeters, setDraftDistanceMeters] = useState("0");
-  const [draftElevation, setDraftElevation] = useState("150");
-  const [draftParticipants, setDraftParticipants] = useState("20");
+  const [openPicker, setOpenPicker] = useState<
+    null | 'pace' | 'distance' | 'elevation' | 'participants'
+  >(null);
+  const [draftPaceMin, setDraftPaceMin] = useState('5');
+  const [draftPaceSec, setDraftPaceSec] = useState('30');
+  const [draftDistanceWhole, setDraftDistanceWhole] = useState('10');
+  const [draftDistanceMeters, setDraftDistanceMeters] = useState('0');
+  const [draftElevation, setDraftElevation] = useState('150');
+  const [draftParticipants, setDraftParticipants] = useState('20');
+
   // Auto-generate title suggestion
   useEffect(() => {
     if (!formData.title && formData.activity_type && selectedLocation) {
@@ -86,7 +110,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     }
   }, [formData.activity_type, selectedLocation]);
 
-  // Force structured mode (schéma de séance) when sport supports it — like coaching wizard
+  // Force structured mode when sport supports it
   useEffect(() => {
     if (formData.session_mode !== 'structured') {
       onFormDataChange({ session_mode: 'structured' });
@@ -95,8 +119,10 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
 
   // Auto-compute distance from structured blocks
   const isStructured = true;
-  const resolvedBlocks = React.useMemo(() => normalizeBlocksForStorage(formData.blocks), [formData.blocks]);
-  const resolvedTotals = React.useMemo(() => resolveSessionTotals(resolvedBlocks), [resolvedBlocks]);
+  const resolvedBlocks = React.useMemo(
+    () => normalizeBlocksForStorage(formData.blocks),
+    [formData.blocks]
+  );
   const computedDistanceKm = React.useMemo(
     () => (isStructured ? computeBlocksDistanceKm(resolvedBlocks) : null),
     [isStructured, resolvedBlocks]
@@ -109,21 +135,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     }
   }, [isStructured, computedDistanceKm, formData.distance_km, onFormDataChange]);
 
-
   const showEnduranceFields = isEnduranceActivity(formData.activity_type);
-  const showTerrainField = isRunningActivity(formData.activity_type) || isCyclingActivity(formData.activity_type);
+  const showTerrainField =
+    isRunningActivity(formData.activity_type) || isCyclingActivity(formData.activity_type);
   const showElevationField = showTerrainField;
   const distanceUnit = getDistanceUnit(formData.activity_type);
-  const pacePlaceholder = getPacePlaceholder(formData.activity_type);
-  const selectedActivityMeta = ACTIVITY_TYPES.find((activity) => activity.value === formData.activity_type);
-
-  const handleModeChange = (mode: SessionMode) => {
-    onFormDataChange({ session_mode: mode });
-    // Clear blocks when switching to simple mode
-    if (mode === 'simple') {
-      onFormDataChange({ blocks: [] });
-    }
-  };
 
   const handleBlocksChange = (blocks: SessionBlock[]) => {
     onFormDataChange({ blocks: normalizeBlocksForStorage(blocks) });
@@ -133,32 +149,44 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     onFormDataChange(data);
   };
 
-  const distanceWholeOptions = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const distanceWholeOptions = Array.from({ length: 201 }, (_, i) => ({
+    value: String(i),
+    label: String(i),
+  }));
   const distanceMetersOptions = Array.from({ length: 40 }, (_, i) => {
     const meters = i * 25;
-    return {
-      value: String(meters),
-      label: String(meters).padStart(3, '0'),
-    };
+    return { value: String(meters), label: String(meters).padStart(3, '0') };
   });
   const distanceMetersOnlyOptions = Array.from({ length: 401 }, (_, i) => {
     const meters = i * 25;
-    return {
-      value: String(meters),
-      label: String(meters),
-    };
+    return { value: String(meters), label: String(meters) };
   });
   const distanceMilesDecOptions = Array.from({ length: 100 }, (_, i) => ({
     value: String(i),
     label: String(i).padStart(2, '0'),
   }));
-  const elevationOptions = Array.from({ length: 5001 }, (_, i) => ({ value: String(i), label: String(i) }));
-  const participantsOptions = Array.from({ length: 200 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
-  const paceMinOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
-  const paceSecOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
+  const elevationOptions = Array.from({ length: 5001 }, (_, i) => ({
+    value: String(i),
+    label: String(i),
+  }));
+  const participantsOptions = Array.from({ length: 200 }, (_, i) => ({
+    value: String(i + 1),
+    label: String(i + 1),
+  }));
+  const paceMinOptions = Array.from({ length: 60 }, (_, i) => ({
+    value: String(i),
+    label: String(i).padStart(2, '0'),
+  }));
+  const paceSecOptions = Array.from({ length: 60 }, (_, i) => ({
+    value: String(i),
+    label: String(i).padStart(2, '0'),
+  }));
 
   const openDistancePicker = () => {
-    const parsedKm = Math.max(0, Number.parseFloat((formData.distance_km || "0").replace(",", ".")) || 0);
+    const parsedKm = Math.max(
+      0,
+      Number.parseFloat((formData.distance_km || '0').replace(',', '.')) || 0
+    );
 
     if (distanceUnit === 'mi') {
       const parsedMi = parsedKm / 1.60934;
@@ -170,7 +198,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       const metersRaw = Math.round(parsedKm * 1000);
       const snappedMeters = Math.max(0, Math.round(metersRaw / 25) * 25);
       setDraftDistanceWhole(String(snappedMeters));
-      setDraftDistanceMeters("0");
+      setDraftDistanceMeters('0');
     } else {
       const wholeKm = Math.floor(parsedKm);
       const remainingMetersRaw = Math.round((parsedKm - wholeKm) * 1000);
@@ -178,74 +206,83 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       setDraftDistanceWhole(String(wholeKm));
       setDraftDistanceMeters(String(snappedMeters));
     }
-    setOpenPicker("distance");
-  };
-
-  const openPacePicker = () => {
-    const raw = (formData.pace_general || "").trim();
-    const mmss = raw.match(/(\d{1,2}):(\d{2})/);
-    const min = mmss ? Number.parseInt(mmss[1], 10) : 5;
-    const sec = mmss ? Number.parseInt(mmss[2], 10) : 30;
-    setDraftPaceMin(String(Math.max(0, Math.min(59, min))));
-    setDraftPaceSec(String(Math.max(0, Math.min(59, sec))));
-    setOpenPicker("pace");
+    setOpenPicker('distance');
   };
 
   const openElevationPicker = () => {
-    setDraftElevation(String(Math.max(0, Number.parseInt(formData.elevation_gain || "0", 10) || 0)));
-    setOpenPicker("elevation");
+    setDraftElevation(
+      String(Math.max(0, Number.parseInt(formData.elevation_gain || '0', 10) || 0))
+    );
+    setOpenPicker('elevation');
   };
 
   const openParticipantsPicker = () => {
-    setDraftParticipants(String(Math.max(1, Number.parseInt(formData.max_participants || "20", 10) || 20)));
-    setOpenPicker("participants");
+    setDraftParticipants(
+      String(Math.max(1, Number.parseInt(formData.max_participants || '20', 10) || 20))
+    );
+    setOpenPicker('participants');
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      exit={{ opacity: 0, x: -12 }}
       className={cn('flex min-h-0 w-full flex-col', !hideNavigation && 'flex-1')}
     >
-      <div className={cn('space-y-4', hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4')}>
-        {/* Session identity — aligné sur le style coaching (CreateCoachingSessionDialog) */}
-        <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="min-w-0 space-y-1.5">
-              <Label className="text-xs">Sport</Label>
-              <Select
-                value={formData.activity_type}
-                onValueChange={(v) => onFormDataChange({ activity_type: v })}
-              >
-                <SelectTrigger className="h-11 rounded-xl border-border bg-card">
-                  <SelectValue placeholder="Choisir un sport" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACTIVITY_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      <span className="mr-1.5">{t.icon}</span>
-                      {t.label.replace(/^.+?\s/, '')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-0 space-y-1.5">
-              <Label className="text-xs">Nom de la séance</Label>
-              <Input
-                value={formData.title}
-                onChange={(e) => onFormDataChange({ title: e.target.value })}
-                placeholder="Footing matinal..."
-                className="h-11 rounded-xl border-border bg-card"
-              />
-            </div>
-          </div>
-        </div>
+      <div
+        className={cn(
+          'space-y-5 px-1',
+          hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4'
+        )}
+      >
+        {!hideNavigation && (
+          <AppleStepHeader
+            step={4}
+            title="Compose ta séance"
+            subtitle="Glisse les blocs pour structurer l'effort."
+          />
+        )}
 
-        {/* Schéma de séance — builder type Zwift, identique au coaching */}
+        {/* Identity — sport + nom */}
+        <AppleGroup title="Identité">
+          <div className="px-4 py-3">
+            <Label className="mb-1.5 block text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
+              Sport
+            </Label>
+            <Select
+              value={formData.activity_type}
+              onValueChange={(v) => onFormDataChange({ activity_type: v })}
+            >
+              <SelectTrigger className="h-11 w-full rounded-xl border-border/60 bg-secondary/40">
+                <SelectValue placeholder="Choisir un sport" />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTIVITY_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    <span className="mr-1.5">{t.icon}</span>
+                    {t.label.replace(/^.+?\s/, '')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="border-t border-border/40 px-4 py-3">
+            <Label className="mb-1.5 block text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
+              Nom de la séance
+            </Label>
+            <Input
+              value={formData.title}
+              onChange={(e) => onFormDataChange({ title: e.target.value })}
+              placeholder="Footing matinal..."
+              className="h-11 rounded-xl border-border/60 bg-secondary/40 text-[15px] tracking-tight"
+            />
+          </div>
+        </AppleGroup>
+
+        {/* Schéma de séance — builder */}
         {showEnduranceFields && (
-          <div className="space-y-3 rounded-[28px] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
+          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card p-4">
             <SessionBlockBuilder
               blocks={resolvedBlocks}
               activityType={formData.activity_type}
@@ -254,28 +291,76 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </div>
         )}
 
-        {/* Route Selector - For endurance sports */}
+        {/* Médias / Itinéraire */}
         {showEnduranceFields && (
-          <div className="bg-card rounded-2xl p-4">
-            <RouteSelector
-              selectedRouteId={formData.route_id}
-              onRouteSelect={(route) => onFormDataChange({ route_id: route?.id || null })}
-              onAutoFill={handleRouteAutoFill}
-            />
-          </div>
+          <AppleGroup title="Itinéraire & médias">
+            <div className="px-4 py-3">
+              <RouteSelector
+                selectedRouteId={formData.route_id}
+                onRouteSelect={(route) =>
+                  onFormDataChange({ route_id: route?.id || null })
+                }
+                onAutoFill={handleRouteAutoFill}
+              />
+            </div>
+            <div className="border-t border-border/40 px-4 py-3">
+              <Label className="mb-1.5 block text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
+                Photo (optionnel)
+              </Label>
+              {!imagePreview ? (
+                <label
+                  className={cn(
+                    'flex w-full cursor-pointer items-center gap-3 rounded-xl border border-dashed border-border/70 bg-secondary/40 px-3 py-3 transition-colors',
+                    'active:bg-secondary/60'
+                  )}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onImageSelect}
+                    className="hidden"
+                  />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
+                    <ImagePlus className="h-4 w-4" />
+                  </div>
+                  <span className="text-[15px] tracking-tight text-foreground">
+                    Ajouter une photo
+                  </span>
+                  <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/70" />
+                </label>
+              ) : (
+                <div className="relative overflow-hidden rounded-xl">
+                  <img
+                    src={imagePreview}
+                    alt="Aperçu"
+                    className="h-32 w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={onImageRemove}
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-md active:scale-95"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </AppleGroup>
         )}
 
-        {/* Distance, Elevation, Terrain */}
+        {/* Distance, dénivelé, terrain */}
         {showEnduranceFields && (
-          <div className="bg-card rounded-2xl p-4 space-y-4">
-            {/* Distance & Elevation */}
-            <div className="grid grid-cols-2 gap-3">
+          <AppleGroup title="Mesures">
+            <div className="grid grid-cols-2 gap-3 px-4 py-3">
               <div>
-                <Label htmlFor="distance_km" className="text-sm font-medium flex items-center gap-1.5">
-                  <Ruler className="w-4 h-4 text-primary" />
+                <Label
+                  htmlFor="distance_km"
+                  className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85"
+                >
+                  <Ruler className="h-3.5 w-3.5 text-primary" />
                   Distance ({distanceUnit})
                   {isStructured && (
-                    <span className="ml-auto text-[10px] font-normal text-muted-foreground uppercase tracking-wide">
+                    <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/70">
                       auto
                     </span>
                   )}
@@ -285,23 +370,31 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                   value={formData.distance_km}
                   readOnly
                   onClick={isStructured ? undefined : openDistancePicker}
-                  placeholder={isStructured ? '—' : (isSwimmingActivity(formData.activity_type) ? "1500" : "10")}
+                  placeholder={
+                    isStructured
+                      ? '—'
+                      : isSwimmingActivity(formData.activity_type)
+                      ? '1500'
+                      : '10'
+                  }
                   className={cn(
-                    "h-11 mt-1.5",
-                    isStructured ? "cursor-not-allowed bg-muted/50" : "cursor-pointer"
+                    'h-11 rounded-xl border-border/60 bg-secondary/40 text-[15px] tracking-tight',
+                    isStructured ? 'cursor-not-allowed bg-secondary/20' : 'cursor-pointer'
                   )}
-                  title={isStructured ? "Calculée automatiquement à partir de la structure de la séance" : undefined}
+                  title={
+                    isStructured
+                      ? 'Calculée automatiquement à partir de la structure de la séance'
+                      : undefined
+                  }
                 />
-                {isStructured && (
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Calculée à partir de la structure
-                  </p>
-                )}
               </div>
               {showElevationField && (
                 <div>
-                  <Label htmlFor="elevation_gain" className="text-sm font-medium flex items-center gap-1.5">
-                    <Mountain className="w-4 h-4 text-green-600" />
+                  <Label
+                    htmlFor="elevation_gain"
+                    className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85"
+                  >
+                    <Mountain className="h-3.5 w-3.5 text-emerald-600" />
                     D+ (m)
                   </Label>
                   <Input
@@ -310,168 +403,150 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                     readOnly
                     onClick={openElevationPicker}
                     placeholder="150"
-                    className="h-11 mt-1.5 cursor-pointer"
+                    className="h-11 cursor-pointer rounded-xl border-border/60 bg-secondary/40 text-[15px] tracking-tight"
                   />
                 </div>
               )}
             </div>
-
-            {/* Terrain Type */}
             {showTerrainField && (
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <Mountain className="w-4 h-4 text-amber-600" />
+              <div className="border-t border-border/40 px-4 py-3">
+                <Label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
+                  <Mountain className="h-3.5 w-3.5 text-amber-600" />
                   Type de terrain
                 </Label>
-                <Select value={formData.terrain_type} onValueChange={(v) => onFormDataChange({ terrain_type: v })}>
-                  <SelectTrigger className="h-11">
+                <Select
+                  value={formData.terrain_type}
+                  onValueChange={(v) => onFormDataChange({ terrain_type: v })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl border-border/60 bg-secondary/40">
                     <SelectValue placeholder="Sélectionner le terrain" />
                   </SelectTrigger>
                   <SelectContent>
                     {TERRAIN_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
-          </div>
+          </AppleGroup>
         )}
 
-        {/* Visibility & Participants */}
-        <div className="bg-card rounded-2xl p-4 space-y-4">
-          {/* Max participants */}
-          <div>
-            <Label htmlFor="max_participants" className="text-sm font-medium flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-primary" />
-              Participants max
-            </Label>
-            <Input
-              id="max_participants"
-              value={formData.max_participants}
-              readOnly
+        {/* Participants & club */}
+        <AppleGroup title="Visibilité">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
+              <Users className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <Label
+                htmlFor="max_participants"
+                className="text-[15px] font-normal tracking-tight text-foreground"
+              >
+                Participants max
+              </Label>
+              <p className="text-[12px] text-muted-foreground">
+                Touche pour fixer une limite
+              </p>
+            </div>
+            <button
+              type="button"
               onClick={openParticipantsPicker}
-              placeholder="Illimité"
-              className="h-11 mt-1.5 cursor-pointer"
-            />
+              className="text-[15px] font-medium tracking-tight text-primary"
+            >
+              {formData.max_participants || 'Illimité'}
+            </button>
           </div>
-
-          {/* Club selector - moved before visibility */}
-          <div>
-            <Label className="text-sm font-medium flex items-center gap-1.5 mb-2">
-              <Users className="w-4 h-4 text-blue-500" />
+          <div className="border-t border-border/40 px-4 py-3">
+            <Label className="mb-2 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
+              <Building2 className="h-3.5 w-3.5 text-blue-500" />
               Club (optionnel)
             </Label>
             <ClubSelector
               selectedClubId={formData.club_id}
               onClubSelect={(clubId) => {
                 onFormDataChange({ club_id: clubId });
-                // Auto-switch to club visibility if a club is selected
                 if (clubId && formData.visibility_type !== 'club') {
                   onFormDataChange({ visibility_type: 'club' });
                 }
               }}
             />
           </div>
-
-          {/* Live Tracking Toggle — avertissement avant activation */}
-          <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 shrink-0 rounded-[10px] bg-emerald-500/15 flex items-center justify-center ring-1 ring-emerald-500/25">
-                  <Radio className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div className="min-w-0">
-                  <Label className="text-[15px] font-semibold text-foreground">Live tracking</Label>
-                  <p className="text-[12px] text-muted-foreground leading-snug mt-0.5">
-                    Optionnel : les participants pourront partager leur position sur la carte pendant la séance.
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={formData.live_tracking_enabled}
-                onCheckedChange={(checked) => {
-                  if (checked) setLiveTrackingWarningOpen(true);
-                  else onFormDataChange({ live_tracking_enabled: false });
-                }}
-              />
+          <div className="flex items-start gap-3 border-t border-border/40 px-4 py-3">
+            <div
+              className={cn(
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]',
+                formData.live_tracking_enabled
+                  ? 'bg-emerald-500/15 text-emerald-600'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              <Radio className="h-4 w-4" />
             </div>
+            <div className="min-w-0 flex-1">
+              <Label className="text-[15px] font-normal tracking-tight text-foreground">
+                Live tracking
+              </Label>
+              <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">
+                Diffuse la position des participants pendant la séance.
+              </p>
+            </div>
+            <Switch
+              checked={formData.live_tracking_enabled}
+              onCheckedChange={(checked) => {
+                if (checked) setLiveTrackingWarningOpen(true);
+                else onFormDataChange({ live_tracking_enabled: false });
+              }}
+            />
           </div>
+        </AppleGroup>
 
-          <AlertDialog open={liveTrackingWarningOpen} onOpenChange={setLiveTrackingWarningOpen}>
-            <AlertDialogContent className="rounded-[14px] max-w-[320px] p-0 gap-0 border-border/80 shadow-xl">
-              <AlertDialogHeader className="p-5 pb-3 space-y-2">
-                <AlertDialogTitle className="text-[17px] font-semibold text-center">
-                  Activer le live tracking ?
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-[13px] text-muted-foreground text-center leading-relaxed">
-                  Si vous activez cette option, chaque participant pourra choisir de partager sa position en direct
-                  sur la carte pendant le créneau de la séance. Ce n’est pas obligatoire : le partage se fait depuis{' '}
-                  <span className="font-medium text-foreground">Mes séances</span> pour chacun. Vous pouvez l’arrêter à
-                  tout moment.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <div className="border-t border-border">
-                <AlertDialogCancel className="w-full h-12 border-0 rounded-none text-[17px] font-normal text-primary hover:bg-secondary/60">
-                  Annuler
-                </AlertDialogCancel>
-              </div>
-              <div className="border-t border-border">
-                <AlertDialogAction
-                  className="w-full h-12 border-0 rounded-none bg-transparent hover:bg-secondary/60 text-[17px] font-semibold text-emerald-600"
-                  onClick={() => onFormDataChange({ live_tracking_enabled: true })}
-                >
-                  Activer pour cette séance
-                </AlertDialogAction>
-              </div>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-
-
-        {/* Image & Notes */}
-        <div className="bg-card rounded-2xl p-4 space-y-4">
-          {/* Image */}
-          <div>
-            <Label className="text-sm font-medium">Image (optionnel)</Label>
-            {!imagePreview ? (
-              <label className="mt-2 flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={onImageSelect}
-                  className="hidden"
-                />
-                <ImagePlus className="w-8 h-8 text-muted-foreground mb-2" />
-                <span className="text-sm text-muted-foreground">Ajouter une photo</span>
-              </label>
-            ) : (
-              <div className="relative mt-2">
-                <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
-                <button
-                  type="button"
-                  onClick={onImageRemove}
-                  className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 shadow-lg"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label htmlFor="description" className="text-sm font-medium">Notes (optionnel)</Label>
+        {/* Description */}
+        <AppleGroup title="Notes">
+          <div className="px-4 py-3">
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => onFormDataChange({ description: e.target.value })}
               placeholder="Niveau requis, matériel recommandé..."
               rows={3}
-              className="mt-1.5"
+              className="resize-none rounded-xl border-border/60 bg-secondary/40 text-[15px] tracking-tight"
             />
           </div>
-        </div>
+        </AppleGroup>
+
+        <AlertDialog
+          open={liveTrackingWarningOpen}
+          onOpenChange={setLiveTrackingWarningOpen}
+        >
+          <AlertDialogContent className="max-w-[320px] gap-0 rounded-[14px] border-border/80 p-0 shadow-xl">
+            <AlertDialogHeader className="space-y-2 p-5 pb-3">
+              <AlertDialogTitle className="text-center text-[17px] font-semibold">
+                Activer le live tracking ?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center text-[13px] leading-relaxed text-muted-foreground">
+                Si vous activez cette option, chaque participant pourra choisir de partager sa
+                position en direct sur la carte pendant le créneau de la séance. Vous pouvez
+                l'arrêter à tout moment.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="border-t border-border">
+              <AlertDialogCancel className="h-12 w-full rounded-none border-0 text-[17px] font-normal text-primary hover:bg-secondary/60">
+                Annuler
+              </AlertDialogCancel>
+            </div>
+            <div className="border-t border-border">
+              <AlertDialogAction
+                className="h-12 w-full rounded-none border-0 bg-transparent text-[17px] font-semibold text-emerald-600 hover:bg-secondary/60"
+                onClick={() => onFormDataChange({ live_tracking_enabled: true })}
+              >
+                Activer pour cette séance
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <WheelValuePickerModal
@@ -483,7 +558,9 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           { items: paceSecOptions, value: draftPaceSec, onChange: setDraftPaceSec, suffix: 's' },
         ]}
         onConfirm={() => {
-          onFormDataChange({ pace_general: `${draftPaceMin}:${draftPaceSec.padStart(2, '0')}/km` });
+          onFormDataChange({
+            pace_general: `${draftPaceMin}:${draftPaceSec.padStart(2, '0')}/km`,
+          });
           setOpenPicker(null);
         }}
       />
@@ -491,29 +568,62 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         open={openPicker === 'distance'}
         onClose={() => setOpenPicker(null)}
         title={`Distance (${distanceUnit})`}
-        columns={distanceUnit === 'm'
-          ? [{ items: distanceMetersOnlyOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole, suffix: 'm' }]
-          : distanceUnit === 'mi'
+        columns={
+          distanceUnit === 'm'
             ? [
-                { items: distanceWholeOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole, suffix: 'mi' },
-                { items: distanceMilesDecOptions, value: draftDistanceMeters, onChange: setDraftDistanceMeters },
+                {
+                  items: distanceMetersOnlyOptions,
+                  value: draftDistanceWhole,
+                  onChange: setDraftDistanceWhole,
+                  suffix: 'm',
+                },
+              ]
+            : distanceUnit === 'mi'
+            ? [
+                {
+                  items: distanceWholeOptions,
+                  value: draftDistanceWhole,
+                  onChange: setDraftDistanceWhole,
+                  suffix: 'mi',
+                },
+                {
+                  items: distanceMilesDecOptions,
+                  value: draftDistanceMeters,
+                  onChange: setDraftDistanceMeters,
+                },
               ]
             : [
-                { items: distanceWholeOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole },
-                { items: distanceMetersOptions, value: draftDistanceMeters, onChange: setDraftDistanceMeters, suffix: 'm' },
-              ]}
+                {
+                  items: distanceWholeOptions,
+                  value: draftDistanceWhole,
+                  onChange: setDraftDistanceWhole,
+                },
+                {
+                  items: distanceMetersOptions,
+                  value: draftDistanceMeters,
+                  onChange: setDraftDistanceMeters,
+                  suffix: 'm',
+                },
+              ]
+        }
         onConfirm={() => {
           let totalKm = 0;
           if (distanceUnit === 'mi') {
             const wholeMi = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
-            const decMi = Math.max(0, Math.min(99, Number.parseInt(draftDistanceMeters, 10) || 0));
+            const decMi = Math.max(
+              0,
+              Math.min(99, Number.parseInt(draftDistanceMeters, 10) || 0)
+            );
             totalKm = (wholeMi + decMi / 100) * 1.60934;
           } else if (distanceUnit === 'm') {
             const meters = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
             totalKm = meters / 1000;
           } else {
             const wholeKm = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
-            const meters = Math.min(975, Math.max(0, Number.parseInt(draftDistanceMeters, 10) || 0));
+            const meters = Math.min(
+              975,
+              Math.max(0, Number.parseInt(draftDistanceMeters, 10) || 0)
+            );
             totalKm = wholeKm + meters / 1000;
           }
           const formattedDistance = Number(totalKm.toFixed(3)).toString();
@@ -526,7 +636,12 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         onClose={() => setOpenPicker(null)}
         title="Dénivelé positif"
         columns={[
-          { items: elevationOptions, value: draftElevation, onChange: setDraftElevation, suffix: 'm' },
+          {
+            items: elevationOptions,
+            value: draftElevation,
+            onChange: setDraftElevation,
+            suffix: 'm',
+          },
         ]}
         onConfirm={() => {
           onFormDataChange({ elevation_gain: draftElevation });
@@ -538,7 +653,12 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         onClose={() => setOpenPicker(null)}
         title="Participants max"
         columns={[
-          { items: participantsOptions, value: draftParticipants, onChange: setDraftParticipants, suffix: 'pers.' },
+          {
+            items: participantsOptions,
+            value: draftParticipants,
+            onChange: setDraftParticipants,
+            suffix: 'pers.',
+          },
         ]}
         onConfirm={() => {
           onFormDataChange({ max_participants: draftParticipants });
@@ -547,19 +667,12 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       />
 
       {!hideNavigation && (
-        <div className="flex gap-3 mt-auto pt-4">
-          <Button variant="outline" onClick={onBack} className="h-14 px-5">
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <Button
-            onClick={onNext}
-            disabled={!formData.activity_type || !selectedLocation}
-            className="flex-1 h-14 text-lg font-semibold"
-          >
-            Aperçu
-            <ChevronRight className="w-5 h-5 ml-2" />
-          </Button>
-        </div>
+        <AppleStepFooter
+          onBack={onBack}
+          onNext={onNext}
+          nextDisabled={!formData.activity_type || !selectedLocation}
+          nextLabel="Aperçu"
+        />
       )}
     </motion.div>
   );
