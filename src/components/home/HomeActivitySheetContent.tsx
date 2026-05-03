@@ -1,39 +1,36 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, isToday } from "date-fns";
-import { fr } from "date-fns/locale";
+import { format } from "date-fns";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
+import { ActivityIcon } from "@/lib/activityIcons";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { cn } from "@/lib/utils";
 
-function formatScheduleLabel(value: string) {
-  const date = new Date(value);
-  // "a" est réservé (AM/PM) en date-fns ; on l'échappe avec des guillemets simples pour le littéral "à".
-  const when = isToday(date)
-    ? `Aujourd'hui à ${format(date, "HH:mm", { locale: fr })}`
-    : format(date, "EEE d MMM 'à' HH:mm", { locale: fr });
-  return when;
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatDistanceKm(session: FeedSession) {
-  const raw = session.title.match(/(\d+(?:[.,]\d+)?)\s?km/i)?.[1];
-  if (!raw) return null;
-  return `${raw.replace(",", ".")} km`;
+function formatDistance(km: number | null) {
+  if (km == null || !Number.isFinite(km)) return null;
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
 }
 
 export function HomeActivitySheetContent() {
   const navigate = useNavigate();
   const { feedItems, loading, refresh } = useFeed();
+  const { position } = useGeolocation();
   const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
 
   const items = useMemo(() => feedItems.slice(0, 6), [feedItems]);
 
-  // Refonte Apple Discover bottom sheet (mockup 04) :
-  // - Title display 22/700/-0.4
-  // - Subtitle 12 ink60
-  // - "Voir tout" blue link 15/500 sans flèche (mockup)
   const subtitleCount = items.length;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-transparent px-3 pb-3">
@@ -57,18 +54,16 @@ export function HomeActivitySheetContent() {
 
       <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-2">
         {loading && items.length === 0 ? (
-          // Skeletons : même pattern apple-group-stack qu'à l'état chargé pour éviter le saut visuel.
           <div className="apple-group-stack mx-1 overflow-hidden">
             {[...Array(3)].map((_, i) => (
               <div
                 key={i}
                 className={cn("apple-cell animate-pulse", i === 2 && "apple-cell-last")}
               >
-                <div className="h-11 w-11 shrink-0 rounded-full bg-muted" />
+                <div className="h-11 w-11 shrink-0 rounded-[10px] bg-muted" />
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="h-4 w-2/3 rounded-full bg-muted" />
                   <div className="h-3 w-1/2 rounded-full bg-muted" />
-                  <div className="h-3 w-1/3 rounded-full bg-muted" />
                 </div>
               </div>
             ))}
@@ -85,15 +80,17 @@ export function HomeActivitySheetContent() {
             </button>
           </div>
         ) : (
-          // Mockup ScreenDiscover bottom sheet : un seul Group inset rounded-12 contenant les SessionRow
-          // empilées avec séparateurs hairline 0.5px (apple-cell). Avatar 44×44 ronde, titre 16/600,
-          // sous-titre 13 muted, chevron à droite (legacy : pas de pill REJOINDRE pour ne pas modifier
-          // le flux d'ouverture du dialog).
           <div className="apple-group-stack mx-1 overflow-hidden">
             {items.map((session, idx) => {
-              const distance = formatDistanceKm(session);
               const displayName = session.organizer.display_name || session.organizer.username || "Utilisateur";
               const isLast = idx === items.length - 1;
+              const date = new Date(session.scheduled_at);
+              const dateStr = format(date, "dd/MM/yy");
+              const timeStr = format(date, "HH:mm");
+              const distKm = position
+                ? haversineKm(position.lat, position.lng, session.location_lat, session.location_lng)
+                : null;
+              const distStr = formatDistance(distKm);
               return (
                 <button
                   key={session.id}
@@ -116,23 +113,16 @@ export function HomeActivitySheetContent() {
                     isLast && "apple-cell-last"
                   )}
                 >
-                  <Avatar className="h-11 w-11 shrink-0">
-                    <AvatarImage src={session.organizer.avatar_url || undefined} alt={displayName} />
-                    <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                  <ActivityIcon activityType={session.activity_type} size="md" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[16px] font-semibold leading-tight tracking-[-0.4px] text-foreground">
-                      {displayName} a programmé une séance
+                    <p className="truncate text-[16px] font-semibold leading-tight tracking-[-0.2px] text-foreground">
+                      {session.title}
                     </p>
                     <p className="mt-0.5 truncate text-[13px] leading-snug text-muted-foreground">
-                      {formatScheduleLabel(session.scheduled_at)}
-                      {distance ? ` · ${distance}` : ""}
-                    </p>
-                    <p className="mt-0.5 truncate text-[13px] leading-snug text-muted-foreground">
-                      📍 {session.location_name || "Lieu à définir"}
+                      {displayName} · {dateStr} · {timeStr}
+                      {distStr ? ` · ${distStr}` : ""}
                     </p>
                   </div>
-                  <ChevronGlyph className="apple-cell-chevron" />
                 </button>
               );
             })}
