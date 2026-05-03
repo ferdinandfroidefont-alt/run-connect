@@ -2,14 +2,15 @@ import { lazy, Suspense, useState, useEffect } from "react";
 import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Settings,
   Bell,
   Link2,
   Shield,
   HelpCircle,
-  ChevronRight,
   Loader2,
   ArrowLeft,
   Search,
@@ -26,6 +27,8 @@ import {
   type TutorialReplayId,
 } from "@/lib/tutorials/registry";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { Group, Cell } from "@/components/apple";
+import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -70,7 +73,7 @@ const settingsCategories = [
     title: 'Général',
     description: 'Langue, thème, distances, mot de passe',
     icon: Settings,
-    color: 'bg-[#8E8E93]',
+    iconBg: '#8E8E93',
     searchItems: ['Langue', 'Thème', 'Mode sombre', 'Mode clair', 'Système', 'Apparence', 'Unités de distance', 'Kilomètres', 'Miles', 'Mot de passe', 'Carte', 'Appui long'],
   },
   {
@@ -78,7 +81,7 @@ const settingsCategories = [
     title: 'Notifications',
     description: 'Push, alertes, préférences',
     icon: Bell,
-    color: 'bg-[#FF3B30]',
+    iconBg: '#FF3B30',
     searchItems: ['Push', 'Alertes', 'Messages', 'Sessions', 'Amis', 'Invitation club', 'Présence confirmée', 'Demande de suivi', 'Coaching'],
   },
   {
@@ -86,7 +89,7 @@ const settingsCategories = [
     title: 'Connexions',
     description: 'Strava, Instagram, partage',
     icon: Link2,
-    color: 'bg-[#007AFF]',
+    iconBg: '#007AFF',
     searchItems: ['Strava', 'Instagram', 'Synchronisation', 'Import activités', 'Réseau social', 'Partage'],
   },
   {
@@ -94,7 +97,7 @@ const settingsCategories = [
     title: 'Confidentialité',
     description: 'RGPD, sécurité, données',
     icon: Shield,
-    color: 'bg-[#34C759]',
+    iconBg: '#34C759',
     searchItems: ['RGPD', 'Sécurité', 'Données', 'Profil privé', 'Visibilité', 'Bloquer', 'Signaler', 'Supprimer compte', 'Export données'],
   },
   {
@@ -102,7 +105,7 @@ const settingsCategories = [
     title: 'Aide & Support',
     description: 'Contact, tutoriels, documents, compte',
     icon: HelpCircle,
-    color: 'bg-[#FF9500]',
+    iconBg: '#FF9500',
     searchItems: ['Contact', 'Tutoriel', 'Guide', 'FAQ', 'Bug', 'Signaler problème', 'Feedback', 'Version', 'À propos', 'Mentions légales', 'Conditions', 'Déconnexion', 'Supprimer compte'],
   },
 ];
@@ -119,6 +122,8 @@ const SETTINGS_BOTTOM_NAV_SUPPRESSOR_ID = "settings-dialog";
 export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { userProfile } = useUserProfile();
   const { setBottomNavSuppressed } = useAppContext();
   const [currentPage, setCurrentPage] = useState<SettingsDialogPage>("hub");
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
@@ -322,43 +327,58 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
               >
               <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
                 <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
-                  {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
-                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-                    <div className="ios-card w-full min-w-0 overflow-hidden">
-                    {filteredCategories.map((category, index) => (
-                      <div key={category.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCurrentPage(category.id);
-                          }}
-                          className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary ios-shell:px-2.5"
-                        >
-                          {/* iOS colored icon square */}
-                          <div className={`ios-list-row-icon ${category.color}`}>
-                            <category.icon className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="min-w-0 flex-1 text-left">
-                            <span className="truncate text-[17px]">{category.title}</span>
-                            {searchQuery.trim() && (() => {
-                              const matches = getMatchingItems(category.searchItems, searchQuery);
-                              if (matches.length === 0) return null;
-                              return (
-                                <p className="truncate text-[13px] text-muted-foreground">
-                                  {matches.join(', ')}
-                                </p>
-                              );
-                            })()}
-                          </div>
-                          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-                        </button>
-                        {/* Separator - iOS style (inset) */}
-                        {index < filteredCategories.length - 1 && (
-                          <div className="ios-list-row-inset-sep" />
-                        )}
-                      </div>
-                    ))}
+                  {userProfile ? (
+                    <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleOpenChange(false);
+                          navigate("/profile");
+                        }}
+                        className="flex w-full min-w-0 items-center gap-3.5 rounded-[14px] border border-border/60 bg-card p-4 text-left shadow-[var(--shadow-card)] transition-colors active:bg-muted/40"
+                      >
+                        <Avatar className="h-[60px] w-[60px] shrink-0">
+                          <AvatarImage src={userProfile.avatar_url || undefined} alt="" />
+                          <AvatarFallback className="bg-primary text-lg font-semibold text-primary-foreground">
+                            {(userProfile.display_name?.[0] || userProfile.username?.[0] || user?.email?.[0] || "?").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display truncate text-[19px] font-semibold leading-tight tracking-[-0.4px] text-foreground">
+                            {userProfile.display_name || userProfile.username || "Compte"}
+                          </p>
+                          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                            Compte
+                            {userProfile.is_premium ? " · Premium" : ""}
+                          </p>
+                        </div>
+                        <ChevronGlyph className="apple-cell-chevron shrink-0" />
+                      </button>
                     </div>
+                  ) : null}
+
+                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+                    <Group inset={false} className="mb-0 shadow-[var(--shadow-card)]">
+                      {filteredCategories.map((category, index) => {
+                        const matches = searchQuery.trim()
+                          ? getMatchingItems(category.searchItems, searchQuery)
+                          : [];
+                        const subtitle = matches.length > 0 ? matches.join(", ") : undefined;
+                        return (
+                          <Cell
+                            key={category.id}
+                            icon={
+                              <category.icon className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />
+                            }
+                            iconBg={category.iconBg}
+                            title={category.title}
+                            subtitle={subtitle}
+                            last={index === filteredCategories.length - 1}
+                            onClick={() => setCurrentPage(category.id)}
+                          />
+                        );
+                      })}
+                    </Group>
                   </div>
 
                   {filteredCategories.length === 0 && (

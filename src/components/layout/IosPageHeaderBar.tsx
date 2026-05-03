@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
+import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type IosPageHeaderBarProps = {
   left?: ReactNode;
+  /** Style Réglages iOS : chevron + libellé bleu (prioritaire sur `left` si les deux sont fournis). */
+  leadingBack?: { onClick: () => void; label?: string };
   title: ReactNode;
   right?: ReactNode;
   className?: string;
@@ -17,12 +20,26 @@ type IosPageHeaderBarProps = {
  */
 export function IosPageHeaderBar({
   left,
+  leadingBack,
   title,
   right,
   className,
   titleClassName,
   sideClassName,
 }: IosPageHeaderBarProps) {
+  const leftNode = leadingBack ? (
+    <button
+      type="button"
+      onClick={leadingBack.onClick}
+      className="flex min-w-0 max-w-[min(52%,11rem)] items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-normal text-primary active:opacity-60 [-webkit-tap-highlight-color:transparent]"
+    >
+      <ChevronLeft className="h-6 w-6 shrink-0 stroke-[2.4]" aria-hidden />
+      <span className="min-w-0 truncate">{leadingBack.label ?? "Retour"}</span>
+    </button>
+  ) : (
+    left
+  );
+
   return (
     <div
       className={cn(
@@ -31,7 +48,7 @@ export function IosPageHeaderBar({
       )}
     >
       <div className={cn("flex min-w-0 shrink-0 items-center justify-start", sideClassName)}>
-        {left ?? <span className="inline-flex h-9 w-9 shrink-0" aria-hidden />}
+        {leftNode ?? <span className="inline-flex h-9 w-9 shrink-0" aria-hidden />}
       </div>
       <div className="flex min-h-[44px] min-w-0 flex-1 items-center justify-center px-0.5">
         <h1

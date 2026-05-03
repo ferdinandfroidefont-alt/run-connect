@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
+import { cn } from "@/lib/utils";
 
 interface ProfileQuickStatsProps {
   userId: string;
@@ -13,6 +14,17 @@ interface ProfileQuickStatsProps {
   onReliabilityClick?: () => void;
   /** Profil public / lecture seule : affiche la colonne Fiabilité (connecté), « – » si pas de donnée */
   showReliabilityColumn?: boolean;
+  /**
+   * `tiles` : mockup 19 — 3 cartouches Séances / Abonnés / Suivis (rounded-14, gap-8).
+   * `grid` : grille compacte (activités, distance, abonnés, abonnements [+ fiabilité]).
+   */
+  layout?: "grid" | "tiles";
+}
+
+function formatStatNumber(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  return String(n);
 }
 
 export const ProfileQuickStats = ({
@@ -24,6 +36,7 @@ export const ProfileQuickStats = ({
   reliabilityPercent,
   onReliabilityClick,
   showReliabilityColumn,
+  layout = "grid",
 }: ProfileQuickStatsProps) => {
   const { formatKm } = useDistanceUnits();
   const [totalActivities, setTotalActivities] = useState(0);
@@ -32,25 +45,25 @@ export const ProfileQuickStats = ({
 
   useEffect(() => {
     if (!userId) return;
-    fetchStats();
+    void fetchStats();
   }, [userId]);
 
   const fetchStats = async () => {
     try {
       const [createdRes, joinedRes, distanceRes] = await Promise.all([
         supabase
-          .from('sessions')
-          .select('id', { count: 'exact', head: true })
-          .eq('organizer_id', userId),
+          .from("sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("organizer_id", userId),
         supabase
-          .from('session_participants')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId),
+          .from("session_participants")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId),
         supabase
-          .from('sessions')
-          .select('distance_km')
-          .eq('organizer_id', userId)
-          .not('distance_km', 'is', null),
+          .from("sessions")
+          .select("distance_km")
+          .eq("organizer_id", userId)
+          .not("distance_km", "is", null),
       ]);
 
       const created = createdRes.count || 0;
@@ -60,7 +73,7 @@ export const ProfileQuickStats = ({
       const dist = distanceRes.data?.reduce((sum, s) => sum + (Number(s.distance_km) || 0), 0) || 0;
       setTotalDistance(Math.round(dist));
     } catch (error) {
-      console.error('Error fetching quick stats:', error);
+      console.error("Error fetching quick stats:", error);
     } finally {
       setLoading(false);
     }
@@ -70,6 +83,61 @@ export const ProfileQuickStats = ({
     showReliabilityColumn === true ||
     typeof onReliabilityClick === "function" ||
     (reliabilityPercent != null && !Number.isNaN(Number(reliabilityPercent)));
+
+  if (layout === "tiles") {
+    const tiles: {
+      value: string | number;
+      label: string;
+      onClick?: () => void;
+    }[] = [
+      {
+        value: loading ? "–" : formatStatNumber(totalActivities),
+        label: "Séances",
+      },
+      {
+        value: loading ? "–" : formatStatNumber(followerCount),
+        label: "Abonnés",
+        onClick: onFollowersClick,
+      },
+      {
+        value: loading ? "–" : formatStatNumber(followingCount),
+        label: "Suivis",
+        onClick: onFollowingClick,
+      },
+    ];
+
+    return (
+      <div className="flex w-full min-w-0 gap-2">
+        {tiles.map((stat) => {
+          const inner = (
+            <>
+              <p className="font-display truncate text-[22px] font-bold tabular-nums leading-none tracking-[-0.5px] text-foreground">
+                {stat.value}
+              </p>
+              <p className="mt-1 truncate text-[13px] font-normal text-muted-foreground">{stat.label}</p>
+            </>
+          );
+          const tileClass = cn(
+            "min-h-0 min-w-0 flex-1 rounded-[14px] border border-border/60 bg-card px-3.5 py-3 text-left shadow-[var(--shadow-card)]"
+          );
+          return stat.onClick ? (
+            <button
+              key={stat.label}
+              type="button"
+              onClick={stat.onClick}
+              className={cn(tileClass, "touch-manipulation transition-colors active:bg-muted/50")}
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={stat.label} className={tileClass}>
+              {inner}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   const stats: {
     value: string | number;
@@ -98,11 +166,11 @@ export const ProfileQuickStats = ({
 
   return (
     <div
-      className={`grid w-full min-w-0 overflow-hidden ${
+      className={cn(
+        "grid w-full min-w-0 overflow-hidden",
         colCount === 5 ? "grid-cols-5" : "grid-cols-4"
-      }`}
+      )}
     >
-      {/* Refonte Apple StatTile (mockup 19) — display 22/700/-0.5px + label 13 ink60 */}
       {stats.map((stat, i) => {
         const cell = (
           <>

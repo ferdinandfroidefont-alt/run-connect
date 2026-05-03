@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield, GraduationCap, Scale, BookOpen } from "lucide-react";
+import { Mail, LogOut, Trash2, Settings, ChevronRight, Loader2, FileText, Info, Shield, GraduationCap, Scale, BookOpen } from "lucide-react";
 import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +15,7 @@ import { getSupportEmail, getSupportMailtoHref } from "@/lib/legalMeta";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { SupportInbox } from "@/components/settings/SupportInbox";
 
 
@@ -96,14 +96,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={
-          <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-[17px] font-semibold">Aide & Support</h1>
-              <div className="w-9" />
-            </div>
+          <div className="shrink-0 bg-secondary">
+            <IosPageHeaderBar leadingBack={{ onClick: onBack }} title="Aide & Support" />
           </div>
         }
       >

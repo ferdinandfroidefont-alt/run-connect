@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, FileText, Info, ChevronRight, ArrowLeft, Scale, BarChart3, KeyRound, Smartphone, Download, Eraser } from "lucide-react";
+import { Shield, FileText, Info, ChevronRight, Scale, BarChart3, KeyRound, Smartphone, Download, Eraser } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ import {
   setAnalyticsConsent,
 } from "@/lib/analyticsConsent";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 
 interface Profile {
@@ -299,14 +300,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={
-          <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-[17px] font-semibold">Confidentialité</h1>
-              <div className="w-9" />
-            </div>
+          <div className="shrink-0 bg-secondary">
+            <IosPageHeaderBar leadingBack={{ onClick: onBack }} title="Confidentialité" />
           </div>
         }
       >

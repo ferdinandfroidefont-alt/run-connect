@@ -28,7 +28,7 @@ import {
   DEFAULT_SESSION_CALENDAR_DURATION_MIN,
   estimateSessionDurationMinutes,
 } from '@/lib/estimateSessionDurationMinutes';
-import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
+import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -314,45 +314,35 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
       </div>
 
       {!hideFooter && (
+        // Refonte handoff (mockup `ctaFloat` 12) — pill Action Blue full-width.
+        // Le retour est désormais dans le NavBar parent (chevron-back). Pas de bordure
+        // ni de backdrop-blur ici : le bloc de récap juste au-dessus suffit à séparer
+        // visuellement la zone d'action.
         <div
           className={cn(
-            'relative z-10 -mx-4 shrink-0 border-t border-border/60 bg-secondary/95 px-4 pt-4 backdrop-blur-md supports-[backdrop-filter]:bg-secondary/80',
+            'relative z-10 shrink-0 px-2 pt-3',
             'pb-[max(1rem,env(safe-area-inset-bottom,1rem))]'
           )}
         >
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onBack}
-              disabled={loading}
-              aria-label="Étape précédente"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-foreground transition-transform active:scale-[0.96] disabled:opacity-50"
-            >
-              <span aria-hidden>‹</span>
-            </button>
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={loading}
-              className={cn(
-                'flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-[17px] font-medium tracking-tight text-white transition-transform',
-                'active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40'
-              )}
-            >
-              {loading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-              ) : (
-                <>
-                  <Check className="h-4 w-4" />
-                  {isCoachingMode
-                    ? 'Programmer ma séance'
-                    : formData.recurrence_type === 'weekly'
-                    ? `Créer ${formData.recurrence_count} séances`
-                    : 'Programmer & publier'}
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={loading}
+            className="apple-pill apple-pill-large w-full disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {loading ? (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <span className="inline-flex items-center gap-2 truncate">
+                <Check className="h-4 w-4 shrink-0" />
+                {isCoachingMode
+                  ? 'Programmer ma séance'
+                  : formData.recurrence_type === 'weekly'
+                  ? `Créer ${formData.recurrence_count} séances`
+                  : 'Programmer & publier'}
+              </span>
+            )}
+          </button>
         </div>
       )}
     </motion.div>

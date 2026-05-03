@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffectiveSubscriptionInfo } from '@/hooks/useEffectiveSubscription';
 import { useAppPreview } from '@/contexts/AppPreviewContext';
@@ -21,7 +21,7 @@ import { DEFAULT_SESSION_CALENDAR_DURATION_MIN, estimateSessionDurationMinutes }
 import { normalizeBlocksForStorage, resolveSessionTotals } from '@/lib/sessionBlockCalculations';
 
 import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
-import { ProgressIndicator } from './ProgressIndicator';
+// ProgressIndicator (legacy) remplacé par les dots in-header dans AppleStepHeader.
 import { LocationStep } from './steps/LocationStep';
 import { ActivityStep } from './steps/ActivityStep';
 import { DateTimeStep } from './steps/DateTimeStep';
@@ -596,29 +596,46 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             className="min-h-0 flex-1"
             headerWrapperClassName="z-40 shrink-0 border-b border-border bg-card"
             header={
-              <>
-                <IosPageHeaderBar
-                  className="py-3"
-                  left={
+              // Refonte handoff (mockup `StepHeader` 08–12) :
+              // NavBar slim — chevron-back (étape > 1) ou Fermer (étape 1) à gauche, titre centré,
+              // « Étape n/N » muted à droite. Les dots de progression sont déplacés dans
+              // AppleStepHeader (au-dessus du grand titre de chaque étape).
+              <IosPageHeaderBar
+                className="py-3"
+                left={
+                  wizard.wizardSteps.indexOf(wizard.currentStep) > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => wizard.goToPreviousStep()}
+                      aria-label="Étape précédente"
+                      className="flex min-w-0 items-center gap-0.5 text-primary active:opacity-60"
+                    >
+                      <ChevronLeft className="h-5 w-5 shrink-0" strokeWidth={2.4} />
+                      <span className="truncate text-[17px]">Retour</span>
+                    </button>
+                  ) : (
                     <button
                       type="button"
                       onClick={onClose}
-                      className="flex min-w-0 items-center gap-1 text-primary"
+                      aria-label="Fermer"
+                      className="flex min-w-0 items-center gap-1 text-primary active:opacity-60"
                     >
                       <X className="h-5 w-5 shrink-0" />
                       <span className="truncate text-[17px]">Fermer</span>
                     </button>
-                  }
-                  title={
-                    isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
-                  }
-                />
-                <ProgressIndicator
-                  currentStep={wizard.currentStep}
-                  progress={wizard.progress}
-                  steps={wizard.wizardSteps}
-                />
-              </>
+                  )
+                }
+                title={
+                  isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
+                }
+                right={
+                  wizard.wizardSteps.length > 1 ? (
+                    <span className="truncate text-[15px] text-muted-foreground">
+                      Étape {Math.max(1, wizard.wizardSteps.indexOf(wizard.currentStep) + 1)}/{wizard.wizardSteps.length}
+                    </span>
+                  ) : undefined
+                }
+              />
             }
             scrollClassName="bg-secondary"
           >

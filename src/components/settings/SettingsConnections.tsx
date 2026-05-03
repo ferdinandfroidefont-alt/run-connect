@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Link2, Users, Share2, Gift, ChevronRight, ArrowLeft } from "lucide-react";
+import { Link2, Users, Share2, Gift, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +14,7 @@ import { ReferralDialog } from "@/components/ReferralDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
 interface Profile {
   username: string;
@@ -97,14 +97,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={
-          <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-[17px] font-semibold">Connexions</h1>
-              <div className="w-9" />
-            </div>
+          <div className="shrink-0 bg-secondary">
+            <IosPageHeaderBar leadingBack={{ onClick: onBack }} title="Connexions" />
           </div>
         }
       >

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler, RotateCcw, Sparkles } from "lucide-react";
+import { Languages, Key, Loader2, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler, RotateCcw, Sparkles } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
@@ -121,15 +121,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={
-          <div className="border-b border-border bg-card">
-            <IosPageHeaderBar
-              left={
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              }
-              title={t("settings.general")}
-            />
+          <div className="shrink-0 bg-secondary">
+            <IosPageHeaderBar leadingBack={{ onClick: onBack }} title={t("settings.general")} />
           </div>
         }
       >

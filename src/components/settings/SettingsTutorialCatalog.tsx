@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronRight, GraduationCap } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronRight, GraduationCap } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import {
   TUTORIAL_REPLAY_MENU_ORDER,
   type TutorialReplayId,
@@ -31,18 +31,8 @@ export const SettingsTutorialCatalog = ({ onBack, onReplay }: SettingsTutorialCa
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={
-          <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] min-w-0 items-center gap-x-2 px-4 ios-shell:px-2.5">
-              <div className="shrink-0">
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </div>
-              <h1 className="min-w-0 flex-1 truncate text-center text-[17px] font-semibold">
-                {t("tutorial.catalogPageTitle")}
-              </h1>
-              <div className="h-9 w-9 shrink-0" aria-hidden />
-            </div>
+          <div className="shrink-0 bg-secondary">
+            <IosPageHeaderBar leadingBack={{ onClick: onBack }} title={t("tutorial.catalogPageTitle")} />
           </div>
         }
       >

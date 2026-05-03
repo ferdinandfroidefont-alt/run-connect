@@ -27,9 +27,14 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { ProfileSportsCard } from "@/components/profile/ProfileSportsCard";
-import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
+import { Group, Cell } from "@/components/apple";
+import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
+import { QRShareDialog } from "@/components/QRShareDialog";
+import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
+import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
@@ -89,7 +94,12 @@ const Profile = () => {
   const viewingUserId = urlUserId || searchParams.get('user'); // ID de l'utilisateur à voir via URL ou query param
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
   const {
-    shareProfile
+    shareProfile,
+    showProfileShare,
+    setShowProfileShare,
+    showQRDialog,
+    setShowQRDialog,
+    qrData,
   } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -635,18 +645,36 @@ const Profile = () => {
       data-tutorial="tutorial-profile-page"
     >
       <MainTopHeader
-        title="Mon profil"
+        title="Profil"
         tabs={profileHeaderTabs}
         tabsAriaLabel="Navigation du profil"
         right={
-          <button
-            type="button"
-            onClick={() => setShowSettingsDialog(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
-            aria-label="Ouvrir les paramètres"
-          >
-            <Settings className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-0.5">
+            {profile ? (
+              <button
+                type="button"
+                onClick={() =>
+                  shareProfile({
+                    username: profile.username,
+                    displayName: profile.display_name,
+                    avatarUrl: profile.avatar_url,
+                  })
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full text-primary transition-colors active:bg-secondary"
+                aria-label="Partager le profil"
+              >
+                <Share2 className="h-5 w-5" strokeWidth={2.2} />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setShowSettingsDialog(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
+              aria-label="Ouvrir les paramètres"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          </div>
         }
       />
       <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full">
@@ -659,7 +687,23 @@ const Profile = () => {
         <div className="box-border min-h-0 min-w-0 max-w-full space-y-4 sm:mx-auto sm:max-w-2xl">
         {/* Apple-ID banner (mockup 19) */}
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <div className="flex w-full min-w-0 items-center gap-3.5 rounded-[14px] border border-border/60 bg-card p-4">
+          <div
+            role={!isViewingOtherUser && profile ? "button" : undefined}
+            tabIndex={!isViewingOtherUser && profile ? 0 : undefined}
+            onClick={() => {
+              if (!isViewingOtherUser && profile) setIsEditing(true);
+            }}
+            onKeyDown={(e) => {
+              if (!isViewingOtherUser && profile && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                setIsEditing(true);
+              }
+            }}
+            className={cn(
+              "flex w-full min-w-0 items-center gap-3.5 rounded-[14px] border border-border/60 bg-card p-4 text-left shadow-[var(--shadow-card)] transition-colors",
+              !isViewingOtherUser && profile && "cursor-pointer active:bg-muted/40"
+            )}
+          >
             <div className="relative shrink-0">
               <Avatar className="h-16 w-16">
                 <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
@@ -670,7 +714,8 @@ const Profile = () => {
               {isEditing && !isViewingOtherUser && (
                 <button
                   type="button"
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation();
                     try {
                       const file = await selectFromGallery();
                       if (file) {
@@ -682,7 +727,7 @@ const Profile = () => {
                     }
                   }}
                   disabled={cameraLoading}
-                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md"
+                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md disabled:opacity-50"
                   aria-label="Changer l'avatar"
                 >
                   <Camera className="h-3.5 w-3.5" />
@@ -723,7 +768,10 @@ const Profile = () => {
               {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
                 <button
                   type="button"
-                  onClick={() => navigate('/subscription')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/subscription');
+                  }}
                   className="mt-2 inline-flex h-7 items-center gap-1 rounded-full bg-[hsl(var(--primary))]/10 px-3 text-[12px] font-medium text-[hsl(var(--primary))] active:opacity-70"
                 >
                   <Crown className="h-3 w-3" />
@@ -733,7 +781,10 @@ const Profile = () => {
               {isViewingOtherUser && (
                 <button
                   type="button"
-                  onClick={() => setShowReportDialog(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowReportDialog(true);
+                  }}
                   className="mt-2 inline-flex h-7 items-center gap-1 rounded-full bg-destructive/10 px-3 text-[12px] font-medium text-destructive active:opacity-70"
                 >
                   <Flag className="h-3 w-3" />
@@ -741,28 +792,25 @@ const Profile = () => {
                 </button>
               )}
             </div>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0 text-muted-foreground/60">
-              <path d="M1 6.5h11M7.5 1.5l5 5-5 5" />
-            </svg>
+            <ChevronGlyph className="apple-cell-chevron shrink-0" />
           </div>
         </div>
 
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
-            <ProfileQuickStats
-              userId={viewingUserId || user?.id || ''}
-              followerCount={followerCount}
-              followingCount={followingCount}
-              onFollowersClick={() => {
-                setFollowDialogType('followers');
-                setShowFollowDialog(true);
-              }}
-              onFollowingClick={() => {
-                setFollowDialogType('following');
-                setShowFollowDialog(true);
-              }}
-            />
-          </div>
+          <ProfileQuickStats
+            layout="tiles"
+            userId={viewingUserId || user?.id || ''}
+            followerCount={followerCount}
+            followingCount={followingCount}
+            onFollowersClick={() => {
+              setFollowDialogType('followers');
+              setShowFollowDialog(true);
+            }}
+            onFollowingClick={() => {
+              setFollowDialogType('following');
+              setShowFollowDialog(true);
+            }}
+          />
         </div>
 
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
@@ -786,62 +834,56 @@ const Profile = () => {
         {/* Refonte Apple Profil (mockup 19) — Group avec icônes 29×29 colorées
             (📅 Historique séances, 📸 Stories, 📍 Itinéraires) */}
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <IOSListGroup
-            className="ios-card mb-0 w-full min-w-0 border border-border/60 shadow-[var(--shadow-card)]"
-          >
-            <IOSListItem
-              icon={Calendar}
-              iconBgColor="bg-[hsl(var(--primary))]"
-              iconColor="text-white"
+          <Group inset={false} className="mb-0 shadow-[var(--shadow-card)]">
+            <Cell
+              icon={<Calendar className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
+              iconBg="#0066CC"
               title="Historique des séances"
-              subtitle={!isViewingOtherUser ? 'Tes séances passées et à venir' : undefined}
+              subtitle={!isViewingOtherUser ? "Tes séances passées et à venir" : undefined}
               onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
-              showSeparator
+              last={isViewingOtherUser}
             />
             {!isViewingOtherUser && (
-              <IOSListItem
-                icon={Camera}
-                iconBgColor="bg-[#ff9500]"
-                iconColor="text-white"
+              <Cell
+                icon={<Camera className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
+                iconBg="#ff9500"
                 title="Mes stories"
                 subtitle="Publiées par toi"
                 onClick={() => navigate('/drafts/stories')}
-                showSeparator
+                last={false}
               />
             )}
             {!isViewingOtherUser && (
-              <IOSListItem
-                icon={Route}
-                iconBgColor="bg-[#34c759]"
-                iconColor="text-white"
+              <Cell
+                icon={<Route className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
+                iconBg="#34c759"
                 title="Mes itinéraires"
                 subtitle="Parcours enregistrés"
                 onClick={() => navigate('/itinerary/my-routes')}
-                showSeparator
+                last={false}
               />
             )}
             {!isViewingOtherUser && (
-              <IOSListItem
-                icon={MapPin}
-                iconBgColor="bg-[#af52de]"
-                iconColor="text-white"
+              <Cell
+                icon={<MapPin className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
+                iconBg="#af52de"
                 title="Créer un parcours"
                 onClick={() => navigate('/route-creation')}
-                showSeparator={false}
+                last
               />
             )}
-          </IOSListGroup>
+          </Group>
         </div>
 
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <Collapsible className="ios-card mb-0 w-full min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
-            <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3 ios-shell:px-2.5">
-              <p className="text-[13px] uppercase tracking-[0.3px] text-muted-foreground">
+          <Collapsible className="apple-group-stack mb-0 w-full min-w-0 overflow-hidden shadow-[var(--shadow-card)]">
+            <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-4 py-3 ios-shell:px-3.5">
+              <p className="text-[13px] font-medium uppercase tracking-[0.3px] text-muted-foreground">
                 Records personnels
               </p>
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="border-t border-border/60">
+            <CollapsibleContent className="border-t border-[rgba(60,60,67,0.12)] dark:border-[rgba(84,84,88,0.4)]">
               <PersonalRecords
                 records={{
                   running_records: profile?.running_records,
@@ -960,6 +1002,19 @@ const Profile = () => {
 
         {/* Image Crop Editor */}
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
+
+        <ProfileShareScreen open={showProfileShare} onClose={() => setShowProfileShare(false)} />
+        {qrData ? (
+          <QRShareDialog
+            open={showQRDialog}
+            onOpenChange={setShowQRDialog}
+            profileUrl={qrData.profileUrl}
+            username={qrData.username}
+            displayName={qrData.displayName}
+            avatarUrl={qrData.avatarUrl}
+            referralCode={qrData.referralCode}
+          />
+        ) : null}
 
         </div>
       </div>

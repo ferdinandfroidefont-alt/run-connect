@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type StepHeaderProps = {
@@ -11,8 +11,13 @@ type StepHeaderProps = {
 };
 
 /**
- * En-tête type Apple (App Store / Réglages) : eyebrow « ÉTAPE n / N »,
- * grand titre SF Pro Display tracking serré, sous-titre body 17px.
+ * En-tête type Apple — refonte handoff (mockup `StepHeader` 08–12) :
+ *   <progress-dots step={n}/>           // 5 segments 3px (blue / hairline)
+ *   <h1 display 28/700 -0.5px>{title}</h1>
+ *   <p body-15 muted>{subtitle}</p>
+ *
+ * Le compteur « Étape n/N » est rendu en `trailing` du NavBar parent dans
+ * `CreateSessionWizard` — on évite la redondance avec les dots.
  */
 export const AppleStepHeader: React.FC<StepHeaderProps> = ({
   step,
@@ -22,14 +27,29 @@ export const AppleStepHeader: React.FC<StepHeaderProps> = ({
   className,
 }) => (
   <div className={cn('px-1 pb-5', className)}>
-    <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-primary">
-      Étape {step} / {total}
+    {/*
+     * Progress dots (mockup spec : flex gap-1 (4px) / h-[3px] / rounded-[2px] /
+     * Action Blue actif, hairline inactif rgba(60,60,67,0.18)).
+     */}
+    <div className="mb-3.5 flex gap-1">
+      {Array.from({ length: total }).map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            'h-[3px] flex-1 rounded-[2px] transition-colors',
+            i < step
+              ? 'bg-primary'
+              : 'bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]'
+          )}
+          aria-hidden
+        />
+      ))}
     </div>
-    <h2 className="mt-1.5 text-[28px] font-semibold leading-[1.1] tracking-[-0.5px] text-foreground">
+    <h2 className="text-[28px] font-bold leading-[1.1] tracking-[-0.5px] text-foreground">
       {title}
     </h2>
     {subtitle ? (
-      <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">{subtitle}</p>
+      <p className="mt-1 text-[15px] leading-[1.35] text-muted-foreground">{subtitle}</p>
     ) : null}
   </div>
 );
@@ -61,8 +81,11 @@ export const AppleGroup: React.FC<{
 );
 
 /**
- * Pied wizard : pile bouton Retour (icone) + bouton primaire pleine largeur.
- * L’apparence reproduit la pill bleue Apple avec backdrop-blur + safe area iOS.
+ * Pied wizard — refonte handoff (mockup `ctaFloat` 08–12) :
+ * un seul bouton pill Action Blue full-width, pas de bordure haute, pas de blur.
+ * Le retour est géré dans le NavBar parent (chevron-back). L'option `showBack`
+ * reste exposée pour la rétrocompat des cas hors-wizard mais est désactivée
+ * par défaut.
  */
 export const AppleStepFooter: React.FC<{
   onBack?: () => void;
@@ -78,12 +101,12 @@ export const AppleStepFooter: React.FC<{
   nextLabel,
   nextDisabled,
   loading,
-  showBack = true,
+  showBack = false,
   variant = 'primary',
 }) => (
   <div
     className={cn(
-      'relative z-10 -mx-4 shrink-0 border-t border-border/60 bg-secondary/95 px-4 pt-4 backdrop-blur-md supports-[backdrop-filter]:bg-secondary/80',
+      'relative z-10 shrink-0 px-2 pt-3',
       'pb-[max(1rem,env(safe-area-inset-bottom,1rem))]'
     )}
   >
@@ -95,7 +118,7 @@ export const AppleStepFooter: React.FC<{
           disabled={loading}
           aria-label="Étape précédente"
           className={cn(
-            'flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-foreground transition-transform',
+            'flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-foreground transition-transform',
             'active:scale-[0.96] disabled:opacity-50'
           )}
         >
@@ -107,18 +130,15 @@ export const AppleStepFooter: React.FC<{
         onClick={onNext}
         disabled={nextDisabled || loading}
         className={cn(
-          'flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-[17px] font-medium tracking-tight text-white transition-transform',
-          'active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40',
-          variant === 'success' ? 'bg-emerald-600' : 'bg-primary'
+          'apple-pill apple-pill-large flex-1 disabled:cursor-not-allowed disabled:opacity-40',
+          // variante succès (création coaching → vert iOS) — conserve le shape pill.
+          variant === 'success' && '!bg-[#34C759]'
         )}
       >
         {loading ? (
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
         ) : (
-          <>
-            <span>{nextLabel}</span>
-            <ChevronRight className="h-4 w-4" />
-          </>
+          <span className="truncate">{nextLabel}</span>
         )}
       </button>
     </div>
