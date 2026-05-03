@@ -1,8 +1,25 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe, Repeat, Radio, MapPinned } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType, RecurrenceType } from '../types';
+import {
+  Check,
+  MapPin,
+  Calendar,
+  Users,
+  Ruler,
+  EyeOff,
+  Building2,
+  Globe,
+  Repeat,
+  Radio,
+  MapPinned,
+} from 'lucide-react';
+import {
+  SessionFormData,
+  SelectedLocation,
+  ACTIVITY_TYPES,
+  VisibilityType,
+  RecurrenceType,
+} from '../types';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { VisibilitySelector } from '../VisibilitySelector';
 import { RecurrenceSelector } from '../RecurrenceSelector';
@@ -11,6 +28,7 @@ import {
   DEFAULT_SESSION_CALENDAR_DURATION_MIN,
   estimateSessionDurationMinutes,
 } from '@/lib/estimateSessionDurationMinutes';
+import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -26,19 +44,6 @@ interface ConfirmStepProps {
   embedInFinalize?: boolean;
   hideFooter?: boolean;
 }
-
-const getVisibilityLabel = (type: VisibilityType, hiddenCount: number) => {
-  switch (type) {
-    case 'friends':
-      return hiddenCount > 0 ? `Amis (${hiddenCount} masqué${hiddenCount > 1 ? 's' : ''})` : 'Amis';
-    case 'club':
-      return 'Club';
-    case 'public':
-      return 'Public';
-    default:
-      return 'Amis';
-  }
-};
 
 const getVisibilityIcon = (type: VisibilityType) => {
   switch (type) {
@@ -66,7 +71,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   embedInFinalize = false,
   hideFooter = false,
 }) => {
-  const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
+  const activity = ACTIVITY_TYPES.find((a) => a.value === formData.activity_type);
   const previewTitle = resolveSessionTitle({
     title: formData.title,
     activity_type: formData.activity_type,
@@ -74,21 +79,25 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   });
   const estimatedDurationMin = estimateSessionDurationMinutes({
     session_blocks: formData.blocks,
-    distance_km: formData.distance_km ? Number.parseFloat(formData.distance_km) : null,
-    interval_distance: formData.interval_distance ? Number.parseFloat(formData.interval_distance) : null,
-    interval_count: formData.interval_count ? Number.parseInt(formData.interval_count, 10) : null,
+    distance_km: formData.distance_km
+      ? Number.parseFloat(formData.distance_km)
+      : null,
+    interval_distance: formData.interval_distance
+      ? Number.parseFloat(formData.interval_distance)
+      : null,
+    interval_count: formData.interval_count
+      ? Number.parseInt(formData.interval_count, 10)
+      : null,
     interval_pace: formData.interval_pace || null,
     pace_general: formData.pace_general || null,
   });
   const calendarDurationMin = estimatedDurationMin ?? DEFAULT_SESSION_CALENDAR_DURATION_MIN;
-  const estimatedEndTime =
-    formData.scheduled_at
-      ? new Date(new Date(formData.scheduled_at).getTime() + calendarDurationMin * 60_000)
-      : null;
+  const estimatedEndTime = formData.scheduled_at
+    ? new Date(new Date(formData.scheduled_at).getTime() + calendarDurationMin * 60_000)
+    : null;
 
   const handleVisibilityChange = (type: VisibilityType) => {
     onFormDataChange({ visibility_type: type });
-    // Sync friends_only for backwards compatibility
     onFormDataChange({ friends_only: type === 'friends' });
   };
 
@@ -104,234 +113,246 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
     onFormDataChange({ recurrence_count: count });
   };
 
+  const VisibilityIcon = getVisibilityIcon(formData.visibility_type);
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className={embedInFinalize ? 'flex min-h-0 w-full flex-col' : 'flex min-h-0 w-full flex-1 flex-col'}
+      exit={{ opacity: 0, x: -12 }}
+      className={cn(
+        'flex w-full flex-col',
+        embedInFinalize ? 'min-h-0' : 'min-h-0 flex-1'
+      )}
     >
-      {!embedInFinalize && (
-        <div className="text-center mb-4">
-          <motion.div
-            className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary flex items-center justify-center"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', bounce: 0.5 }}
-          >
-            <span className="text-3xl">{activity?.icon || '🏃'}</span>
-          </motion.div>
-          <h2 className="text-xl font-bold text-foreground">{isCoachingMode ? 'Programmer ma séance' : 'Prêt à créer ?'}</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isCoachingMode ? 'Vérifiez les détails pré-remplis par le coach' : 'Vérifiez les détails et la visibilité'}
-          </p>
-        </div>
-      )}
-
-      {embedInFinalize && (
-        <h3 className="text-[15px] font-semibold text-foreground mb-3">Publication</h3>
-      )}
-
-      {/* Content */}
-      <motion.div
-        className={embedInFinalize ? 'space-y-4' : 'flex-1 overflow-y-auto space-y-4'}
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: embedInFinalize ? 0 : 0.2 }}
+      <div
+        className={cn(
+          'space-y-5 px-1',
+          embedInFinalize ? '' : 'flex-1 overflow-y-auto pb-4'
+        )}
       >
         {!embedInFinalize && (
-        <div className="rounded-[16px] bg-card border border-border/70 overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-          {/* Image */}
-          {imagePreview && (
-            <div className="relative h-32">
-              <img src={imagePreview} alt="Session" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            </div>
-          )}
-
-          {/* Content */}
-          <div className="p-4 space-y-3">
-            {/* Title & Activity */}
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xl">{activity?.icon}</span>
-                <span className="text-xs text-muted-foreground">
-                  {activity?.label?.replace(/^[^\s]+\s/, '') || ''}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-foreground">{previewTitle}</h3>
-            </div>
-
-            {/* Location */}
-            {selectedLocation && (
-              <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">Lieu</p>
-                  <p className="text-sm text-foreground truncate">{selectedLocation.name}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Date/Time */}
-            {formData.scheduled_at && (
-              <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Date & Heure</p>
-                  <p className="text-sm text-foreground">
-                    {new Date(formData.scheduled_at).toLocaleDateString('fr-FR', {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'long'
-                    })} à {new Date(formData.scheduled_at).toLocaleTimeString('fr-FR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </div>
-            )}
-            {estimatedEndTime && (
-              <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Fin estimée</p>
-                  <p className="text-sm text-foreground">
-                    {estimatedEndTime.toLocaleTimeString('fr-FR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Stats row */}
-            <div className="flex flex-wrap gap-4 pt-3 border-t border-border/80">
-              {formData.max_participants && (
-                <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                  <Users className="w-3.5 h-3.5 shrink-0" />
-                  <span>{formData.max_participants} max</span>
-                </div>
-              )}
-              {formData.distance_km && (
-                <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                  <Ruler className="w-3.5 h-3.5 shrink-0" />
-                  <span>{formData.distance_km} km</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          <AppleStepHeader
+            step={5}
+            title={isCoachingMode ? 'Programmer ma séance' : 'Tout est prêt.'}
+            subtitle={
+              isCoachingMode
+                ? 'Vérifie les détails pré-remplis par le coach.'
+                : 'Vérifie le récapitulatif puis publie ta séance.'
+            }
+          />
         )}
 
-        {/* Live tracking — récapitulatif */}
-        <div
-          className={`rounded-[14px] border p-4 shadow-sm ${
-            formData.live_tracking_enabled
-              ? 'border-emerald-500/35 bg-emerald-500/[0.06]'
-              : 'border-border/60 bg-card'
-          }`}
-        >
-          <div className="flex items-start gap-3">
+        {embedInFinalize && (
+          <h3 className="mb-3 text-[15px] font-semibold text-foreground">Publication</h3>
+        )}
+
+        {/* Hero recap card — Apple product tile aesthetic */}
+        {!embedInFinalize && (
+          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card">
+            {imagePreview ? (
+              <div className="relative h-36 w-full">
+                <img
+                  src={imagePreview}
+                  alt="Aperçu"
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute bottom-3 left-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white">
+                  {activity?.label?.replace(/^[^\s]+\s/, '') || 'Séance'}
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-3 p-5">
+              {!imagePreview && (
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  {activity?.label?.replace(/^[^\s]+\s/, '') || 'Séance'}
+                  {formData.distance_km ? ` · ${formData.distance_km} km` : ''}
+                </div>
+              )}
+              <h3 className="text-[24px] font-semibold leading-[1.15] tracking-[-0.5px] text-foreground">
+                {previewTitle}
+              </h3>
+
+              <div className="space-y-2 pt-1">
+                {selectedLocation && (
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span className="min-w-0 truncate text-[15px] tracking-tight text-foreground">
+                      {selectedLocation.name}
+                    </span>
+                  </div>
+                )}
+                {formData.scheduled_at && (
+                  <div className="flex items-start gap-2.5">
+                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div className="min-w-0 text-[15px] tracking-tight text-foreground">
+                      {new Date(formData.scheduled_at).toLocaleDateString('fr-FR', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                      })}{' '}
+                      ·{' '}
+                      {new Date(formData.scheduled_at).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                      {estimatedEndTime ? (
+                        <span className="text-muted-foreground">
+                          {' '}
+                          → {estimatedEndTime.toLocaleTimeString('fr-FR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-2 text-[13px] text-muted-foreground">
+                  {formData.max_participants && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" />
+                      {formData.max_participants} max
+                    </span>
+                  )}
+                  {formData.distance_km && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Ruler className="h-3.5 w-3.5" />
+                      {formData.distance_km} km
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5">
+                    <VisibilityIcon className="h-3.5 w-3.5" />
+                    {formData.visibility_type === 'public'
+                      ? 'Public'
+                      : formData.visibility_type === 'club'
+                      ? 'Club'
+                      : 'Amis'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Live tracking — recap row */}
+        <AppleGroup>
+          <div className="flex items-start gap-3 px-4 py-3">
             <div
-              className={`w-9 h-9 shrink-0 rounded-[10px] flex items-center justify-center ${
-                formData.live_tracking_enabled ? 'bg-emerald-500/20 text-emerald-700' : 'bg-muted text-muted-foreground'
-              }`}
+              className={cn(
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]',
+                formData.live_tracking_enabled
+                  ? 'bg-emerald-500/15 text-emerald-600'
+                  : 'bg-muted text-muted-foreground'
+              )}
             >
               {formData.live_tracking_enabled ? (
-                <Radio className="w-4 h-4" />
+                <Radio className="h-4 w-4" />
               ) : (
-                <MapPinned className="w-4 h-4" />
+                <MapPinned className="h-4 w-4" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-semibold text-foreground">Live tracking</p>
-              <p className="text-[12px] text-muted-foreground leading-relaxed mt-1">
-                {formData.live_tracking_enabled ? (
-                  <>
-                    Activé : les participants pourront activer le partage de position depuis{' '}
-                    <span className="font-medium text-foreground">Mes séances</span> pendant le créneau horaire, et se
-                    voir sur la carte <span className="font-medium text-foreground">Suivre les participants</span>.
-                  </>
-                ) : (
-                  <>Désactivé : aucun partage de position sur la carte pour cette séance.</>
-                )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-medium tracking-tight text-foreground">
+                Live tracking
+              </p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+                {formData.live_tracking_enabled
+                  ? 'Activé : les participants pourront partager leur position pendant la séance.'
+                  : 'Désactivé : aucune position partagée sur la carte.'}
               </p>
             </div>
           </div>
-        </div>
+        </AppleGroup>
 
-        {/* Visibility Selector - iOS Style */}
-        <div className="bg-card rounded-[14px] border border-border/60 p-4 shadow-sm">
-          <VisibilitySelector
-            visibilityType={formData.visibility_type}
-            hiddenFromUsers={formData.hidden_from_users}
-            isPremium={isPremium}
-            onVisibilityChange={handleVisibilityChange}
-            onHiddenUsersChange={handleHiddenUsersChange}
-            clubId={formData.club_id}
-          />
-        </div>
-
-        {/* Hidden users warning */}
-        {formData.visibility_type === 'friends' && formData.hidden_from_users?.length > 0 && (
-          <div className="px-2 flex items-center gap-2 text-xs text-amber-500">
-            <EyeOff className="w-3.5 h-3.5" />
-            <span>{formData.hidden_from_users.length} ami{formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance</span>
+        {/* Visibility */}
+        <AppleGroup title="Visibilité">
+          <div className="px-4 py-3">
+            <VisibilitySelector
+              visibilityType={formData.visibility_type}
+              hiddenFromUsers={formData.hidden_from_users}
+              isPremium={isPremium}
+              onVisibilityChange={handleVisibilityChange}
+              onHiddenUsersChange={handleHiddenUsersChange}
+              clubId={formData.club_id}
+            />
           </div>
-        )}
+        </AppleGroup>
 
-        {/* Recurrence Selector - iOS Style */}
-        <div className="bg-card rounded-[14px] border border-border/60 p-4 shadow-sm">
-          <RecurrenceSelector
-            recurrenceType={formData.recurrence_type}
-            recurrenceCount={formData.recurrence_count}
-            onRecurrenceTypeChange={handleRecurrenceTypeChange}
-            onRecurrenceCountChange={handleRecurrenceCountChange}
-          />
-        </div>
+        {formData.visibility_type === 'friends' &&
+          formData.hidden_from_users?.length > 0 && (
+            <div className="flex items-center gap-2 px-4 text-[12px] text-amber-500">
+              <EyeOff className="h-3.5 w-3.5" />
+              <span>
+                {formData.hidden_from_users.length} ami
+                {formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance
+              </span>
+            </div>
+          )}
 
-        {/* Recurrence info */}
+        {/* Recurrence */}
+        <AppleGroup title="Récurrence">
+          <div className="px-4 py-3">
+            <RecurrenceSelector
+              recurrenceType={formData.recurrence_type}
+              recurrenceCount={formData.recurrence_count}
+              onRecurrenceTypeChange={handleRecurrenceTypeChange}
+              onRecurrenceCountChange={handleRecurrenceCountChange}
+            />
+          </div>
+        </AppleGroup>
+
         {formData.recurrence_type === 'weekly' && (
-          <div className="px-2 flex items-center gap-2 text-xs text-primary">
-            <Repeat className="w-3.5 h-3.5" />
-            <span>{formData.recurrence_count} séances seront créées automatiquement</span>
+          <div className="flex items-center gap-2 px-4 text-[12px] text-primary">
+            <Repeat className="h-3.5 w-3.5" />
+            <span>
+              {formData.recurrence_count} séances seront créées automatiquement
+            </span>
           </div>
         )}
-      </motion.div>
+      </div>
 
       {!hideFooter && (
-        <div className="flex gap-3 mt-auto pt-4">
-          <Button variant="outline" onClick={onBack} className="h-14" disabled={loading}>
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <Button
-            onClick={onSubmit}
-            disabled={loading}
-            className="flex-1 h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
-          >
-            {loading ? (
-              <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Check className="w-5 h-5 mr-2" />
-                {isCoachingMode 
-                  ? 'Programmer ma séance'
-                  : formData.recurrence_type === 'weekly' 
+        <div
+          className={cn(
+            'relative z-10 -mx-4 shrink-0 border-t border-border/60 bg-secondary/95 px-4 pt-4 backdrop-blur-md supports-[backdrop-filter]:bg-secondary/80',
+            'pb-[max(1rem,env(safe-area-inset-bottom,1rem))]'
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              disabled={loading}
+              aria-label="Étape précédente"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-foreground transition-transform active:scale-[0.96] disabled:opacity-50"
+            >
+              <span aria-hidden>‹</span>
+            </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={loading}
+              className={cn(
+                'flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-[17px] font-medium tracking-tight text-white transition-transform',
+                'active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40'
+              )}
+            >
+              {loading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  {isCoachingMode
+                    ? 'Programmer ma séance'
+                    : formData.recurrence_type === 'weekly'
                     ? `Créer ${formData.recurrence_count} séances`
-                    : 'Créer la séance'
-                }
-              </>
-            )}
-          </Button>
+                    : 'Programmer & publier'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
     </motion.div>

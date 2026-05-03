@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
@@ -27,7 +26,6 @@ import {
   type TutorialReplayId,
 } from "@/lib/tutorials/registry";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -286,28 +284,36 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
                 contentScroll
                 scrollClassName="min-h-0 bg-secondary"
                 header={
-                  <div className="min-w-0 max-w-full border-b border-border bg-card/95">
-                    <IosPageHeaderBar
-                      left={
-                        <button
-                          type="button"
-                          onClick={() => handleOpenChange(false)}
-                          className="flex min-w-0 max-w-full items-center gap-1 text-primary"
-                        >
-                          <ArrowLeft className="h-5 w-5 shrink-0" />
-                          <span className="truncate text-[17px]">Retour</span>
-                        </button>
-                      }
-                      title="Paramètres"
-                    />
-                    <div className="min-w-0 px-4 pb-2.5 ios-shell:px-2.5">
-                      <div className="relative min-w-0 max-w-full">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
+                  // Refonte Apple Settings.app (mockup 20) :
+                  // - bar 44h avec "Retour" bleu à gauche
+                  // - large title 34px bold
+                  // - SearchBar iOS pill (apple-search)
+                  <div className="min-w-0 max-w-full bg-secondary">
+                    <div className="flex h-11 items-center justify-between px-4 pt-[var(--safe-area-top)]">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenChange(false)}
+                        className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
+                      >
+                        <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
+                        <span>Retour</span>
+                      </button>
+                      <div className="min-w-[60px]" />
+                    </div>
+                    <div className="px-4 pt-1 pb-3">
+                      <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
+                        Réglages
+                      </h1>
+                    </div>
+                    <div className="px-4 pb-3">
+                      <div className="apple-search">
+                        <Search className="h-3.5 w-3.5 shrink-0" />
+                        <input
+                          type="search"
                           placeholder="Rechercher"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full min-w-0 max-w-full bg-background pl-10"
+                          className="min-w-0 flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground focus:outline-none"
                         />
                       </div>
                     </div>

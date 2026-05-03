@@ -3374,14 +3374,15 @@ const Messages = () => {
                               }
                             }}
                           >
-                            <div className="mb-ios-1 flex items-center justify-between">
-                              <div className="flex items-center gap-ios-2 min-w-0">
+                            {/* Refonte Apple ConvRow (mockup 17) — title 16/600/-0.4 ink, msg 14 ink60 */}
+                            <div className="mb-0.5 flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
                                 {pinnedConversations.has(conversation.id) && (
                                   <span className="text-[13px] flex-shrink-0">📌</span>
                                 )}
-                                <p className="truncate text-[16px] font-semibold text-[#0F172A]">
-                                  {conversation.is_group 
-                                    ? conversation.group_name 
+                                <p className="truncate text-[16px] font-semibold tracking-[-0.4px] text-foreground">
+                                  {conversation.is_group
+                                    ? conversation.group_name
                                     : (conversation.other_participant?.username || "Utilisateur")
                                   }
                                 </p>
@@ -3389,9 +3390,9 @@ const Messages = () => {
                             </div>
                             <div className="flex items-center justify-between">
                               <p className={`truncate text-[14px] ${
-                                conversation.unread_count > 0 
-                                  ? 'text-[#334155] font-medium' 
-                                  : 'text-[#64748B]'
+                                conversation.unread_count > 0
+                                  ? 'text-foreground/85 font-medium'
+                                  : 'text-muted-foreground'
                               }`}>
                                 {conversation.last_message ? (
                                   <>
@@ -3439,9 +3440,9 @@ const Messages = () => {
                             </div>
                           </div>
                           
-                          {/* Right column: time + arrow */}
-                          <div className="ml-ios-2 flex flex-shrink-0 items-start justify-center gap-ios-2">
-                            <span className="text-[13px] text-[#64748B]">
+                          {/* Right column: time (top) — mockup 17 spec : 13 ink60 */}
+                          <div className="ml-2 flex flex-shrink-0 items-start gap-1">
+                            <span className="text-[13px] text-muted-foreground">
                               {(() => {
                                 const date = new Date(conversation.last_message_date || conversation.updated_at);
                                 const now = new Date();
@@ -3457,7 +3458,7 @@ const Messages = () => {
                               })()}
                             </span>
                             {!isSelectionMode && (
-                              <ChevronRight className="h-5 w-5 text-[#007AFF]" />
+                              <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
                             )}
                           </div>
                           

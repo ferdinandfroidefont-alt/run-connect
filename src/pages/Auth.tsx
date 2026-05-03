@@ -11,7 +11,7 @@ import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
-import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, Lock, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { Browser } from '@capacitor/browser';
 import { getIosSupabaseOAuthBridgeRedirectTo } from "@/lib/oauthMobile";
@@ -24,8 +24,6 @@ import {
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
-
-import { Checkbox } from "@/components/ui/checkbox";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
@@ -827,11 +825,12 @@ const Auth = () => {
 
   // ══════════════════════════════════════════════
   // ██  LANDING VIEW — Mockup 01 (Apple Splash) ██
-  // Icon hero, hero title, 4 features list, pill CTA + link
+  // Mockup spec : <Phone bg="#fff"> (canvas pur, pas grouped)
+  // Icon hero 96×96 rounded-22, title 34/bold/-0.6px, 4 features, pill CTA + link
   // ══════════════════════════════════════════════
   const renderLanding = () => (
     <div
-      className="relative flex min-h-[100dvh] flex-col bg-background"
+      className="relative flex min-h-[100dvh] flex-col bg-card"
       style={{
         paddingTop: "max(env(safe-area-inset-top, 0px), 90px)",
         paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
@@ -916,7 +915,7 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   const renderEmailSignin = () => (
     <div
-      className="relative flex min-h-full flex-col bg-background"
+      className="relative flex min-h-full flex-col apple-grouped-bg"
       style={{
         paddingTop: "max(env(safe-area-inset-top, 0px), 0px)",
         paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
@@ -1018,158 +1017,162 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   // ██  EMAIL SIGNIN FORM VIEW  ██
   // ══════════════════════════════════════════════
+  // Mockup 02 SignIn (form variant) — NavBar compact Retour/Connexion +
+  // Group(FieldRow Pseudo + Mot de passe) + Pill Se connecter +
+  // Cell "Mot de passe oublié ?" + "ou" hairline + Group OTP code.
   const renderEmailSigninForm = () => (
     <IosFixedPageHeaderShell
-      className="h-full min-h-0"
-      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      className="h-full min-h-0 apple-grouped-bg"
+      headerWrapperClassName="shrink-0 apple-grouped-bg"
       header={
-        <>
-          <div className="border-b border-border bg-background">
-            <div className="h-2" />
+        <div className="px-4 pt-3">
+          <div className="flex h-11 items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                setView("email-signin");
+                setCaptchaToken(null);
+                captchaRef.current?.resetCaptcha();
+              }}
+              className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
+              aria-label="Retour"
+            >
+              <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+              <span>Retour</span>
+            </button>
+            <div className="apple-navbar-title">Connexion</div>
+            <div className="min-w-[70px]" />
           </div>
-          <div className="px-4 pb-3 pt-6">
-            <div className="mb-2 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setView("email-signin");
-                  setCaptchaToken(null);
-                  captchaRef.current?.resetCaptcha();
-                }}
-                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
-              >
-                <ArrowLeft className="h-5 w-5 text-foreground" />
-              </button>
-              <h2 className="text-[20px] font-bold text-foreground">Connexion par e-mail</h2>
-            </div>
-          </div>
-        </>
+        </div>
       }
     >
-      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
-      {/* Password signin */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
-        <div className="px-4 py-3 border-b border-border">
-          <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Avec mot de passe</p>
-        </div>
-        <form onSubmit={handleUsernameOrEmailSignin} className="p-4 space-y-3">
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
+      <div className="pt-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))]">
+      {/* Group : FieldRow Pseudonyme/Email + Mot de passe */}
+      <div className="apple-group">
+        <div className="apple-group-title">Avec mot de passe</div>
+        <form onSubmit={handleUsernameOrEmailSignin} className="apple-group-stack">
+          <div className="apple-field-row">
+            <div className="apple-field-label">Identifiant</div>
+            <input
               type="text"
               placeholder="Pseudonyme ou email"
               value={usernameOrEmail}
               onChange={(e) => setUsernameOrEmail(e.target.value)}
-              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
+              className="apple-field-value"
               required
+              autoComplete="username"
             />
           </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
+          <div className="apple-field-row apple-field-row-last">
+            <div className="apple-field-label">Mot de passe</div>
+            <input
               type={showPassword ? "text" : "password"}
-              placeholder="Mot de passe"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
+              className="apple-field-value pr-7"
               required
+              autoComplete="current-password"
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-              {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="-mr-1 ml-1 p-1 text-muted-foreground active:opacity-60"
+              aria-label={showPassword ? "Masquer" : "Afficher"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-
-          {!captchaToken && (
-            <CaptchaWidget
-              ref={captchaRef}
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-            />
-          )}
-          {captchaToken && (
-            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
-          )}
-
-          <Button type="submit" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Se connecter
-          </Button>
         </form>
       </div>
 
-      {/* Forgot password */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
+      {/* Captcha */}
+      <div className="px-4 pb-2">
+        {!captchaToken && (
+          <CaptchaWidget
+            ref={captchaRef}
+            onVerify={(token) => setCaptchaToken(token)}
+            onExpire={() => setCaptchaToken(null)}
+            onError={() => setCaptchaToken(null)}
+          />
+        )}
+        {captchaToken && (
+          <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">✅ Vérification réussie</div>
+        )}
+      </div>
+
+      {/* CTA Se connecter — pill Action Blue */}
+      <div className="px-4">
+        <button
+          type="button"
+          onClick={(e) => handleUsernameOrEmailSignin(e as unknown as React.FormEvent)}
+          disabled={isLoading || !captchaToken}
+          className="apple-pill apple-pill-large w-full disabled:opacity-50"
+        >
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Se connecter
+        </button>
         <button
           type="button"
           onClick={handleForgotPassword}
           disabled={!captchaToken}
-          className="w-full flex items-center justify-between px-4 py-3.5 active:bg-secondary/50 transition-colors disabled:opacity-50"
+          className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60 disabled:opacity-50"
         >
-          <span className="text-[15px] text-primary font-medium">Mot de passe oublié ?</span>
-          <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+          Mot de passe oublié ?
         </button>
       </div>
 
-      {/* Divider */}
-      <div className="flex items-center gap-4 px-2">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-[13px] text-muted-foreground">ou</span>
-        <div className="flex-1 h-px bg-border" />
+      {/* "ou" hairline */}
+      <div className="flex items-center gap-3 px-8 pt-6 pb-2">
+        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
+        <div className="text-[13px] text-muted-foreground">ou</div>
+        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
       </div>
 
-      {/* OTP signin */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
-        <div className="px-4 py-3 border-b border-border">
-          <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Connexion par code</p>
-        </div>
-        <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
+      {/* OTP signin — Group(FieldRow Email) + pill secondary "Recevoir un code" */}
+      <div className="apple-group">
+        <div className="apple-group-title">Connexion par code</div>
+        <form onSubmit={handleEmailSubmit} className="apple-group-stack">
+          <div className="apple-field-row apple-field-row-last">
+            <div className="apple-field-label">Email</div>
+            <input
               type="email"
-              placeholder="Email"
+              placeholder="ferdinand@icloud.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
+              className="apple-field-value"
               required
+              autoComplete="email"
             />
           </div>
-          {!captchaToken && (
-            <CaptchaWidget
-              ref={captchaRef}
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-            />
-          )}
-          {captchaToken && (
-            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
-          )}
-          <Button type="submit" variant="outline" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Recevoir un code
-          </Button>
         </form>
       </div>
 
-      {/* Go to signup */}
-      <button
-        type="button"
-        onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
-        className="w-full text-center text-[15px] text-primary font-medium py-3 active:opacity-70 transition-opacity"
-      >
-        Vous n'avez pas de compte ? S'inscrire
-      </button>
-
-      {/* Clean session */}
-      <button
-        type="button"
-        onClick={forceCleanSession}
-        className="w-full text-center text-[12px] text-muted-foreground/60 hover:text-destructive py-2"
-      >
-        Problème de connexion ? Nettoyer la session
-      </button>
+      <div className="px-4">
+        <button
+          type="button"
+          onClick={(e) => handleEmailSubmit(e as unknown as React.FormEvent)}
+          disabled={isLoading || !captchaToken}
+          className="apple-pill apple-pill-large apple-pill-secondary w-full disabled:opacity-50"
+        >
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Recevoir un code
+        </button>
+        <button
+          type="button"
+          onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
+          className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
+        >
+          Vous n&apos;avez pas de compte ? S&apos;inscrire
+        </button>
+        <button
+          type="button"
+          onClick={forceCleanSession}
+          className="mt-1 flex h-9 w-full items-center justify-center text-[12px] text-muted-foreground/60 hover:text-destructive"
+        >
+          Problème de connexion ? Nettoyer la session
+        </button>
+      </div>
 
       <AuthLegalFooter className="pt-4" />
       </div>
@@ -1179,66 +1182,79 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   // ██  EMAIL SIGNUP VIEW  ██
   // ══════════════════════════════════════════════
+  // ══════════════════════════════════════════════
+  // ██  EMAIL SIGNUP — Mockup 03 (Apple Inscription)  ██
+  // NavBar Annuler/Inscription/step + Group(FieldRow Email/Password)
+  // + captcha + Group(Cell CGU check) + Pill Continuer.
+  // Logique : `handleEmailSubmit`, `acceptSignupTerms`, captcha — préservés.
+  // ══════════════════════════════════════════════
   const renderEmailSignup = () => (
     <IosFixedPageHeaderShell
-      className="h-full min-h-0"
-      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      className="h-full min-h-0 apple-grouped-bg"
+      headerWrapperClassName="shrink-0 apple-grouped-bg"
       header={
-        <>
-          <div className="border-b border-border bg-background">
-            <div className="h-2" />
+        <div className="px-4 pt-3">
+          {/* NavBar compact iOS : Annuler bleu / titre / step counter */}
+          <div className="flex h-11 items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                setView("landing");
+                setCaptchaToken(null);
+                setAcceptSignupTerms(false);
+                captchaRef.current?.resetCaptcha();
+              }}
+              className="text-[17px] text-primary active:opacity-60"
+            >
+              Annuler
+            </button>
+            <div className="apple-navbar-title">Inscription</div>
+            <div className="text-[15px] text-muted-foreground">1 / 2</div>
           </div>
-          <div className="space-y-5 px-4 pb-3 pt-6">
-            <AuthFlowProgress current={1} total={2} />
-            <div className="mb-2 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setView("landing");
-                  setCaptchaToken(null);
-                  setAcceptSignupTerms(false);
-                  captchaRef.current?.resetCaptcha();
-                }}
-                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
-              >
-                <ArrowLeft className="h-5 w-5 text-foreground" />
-              </button>
-              <h2 className="text-[20px] font-bold text-foreground">Créer un compte</h2>
-            </div>
-          </div>
-        </>
+        </div>
       }
     >
-      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
-        <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
-              required
-            />
+      <form onSubmit={handleEmailSubmit} className="px-0 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-4">
+        {/* Group : Email + Mot de passe (mockup spec FieldRow style) */}
+        <div className="apple-group">
+          <div className="apple-group-stack">
+            <div className="apple-field-row">
+              <div className="apple-field-label">Email</div>
+              <input
+                type="email"
+                placeholder="ferdinand@icloud.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="apple-field-value"
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="apple-field-row apple-field-row-last">
+              <div className="apple-field-label">Mot de passe</div>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="apple-field-value pr-7"
+                required
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="-mr-1 ml-1 p-1 text-muted-foreground active:opacity-60"
+                aria-label={showPassword ? "Masquer" : "Afficher"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Mot de passe du compte (connexion par e-mail)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
-              required
-              autoComplete="new-password"
-            />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-              {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-            </button>
-          </div>
+        </div>
 
+        {/* Captcha (logique préservée) */}
+        <div className="px-4 pb-2">
           {!captchaToken && (
             <CaptchaWidget
               ref={captchaRef}
@@ -1248,53 +1264,78 @@ const Auth = () => {
             />
           )}
           {captchaToken && (
-            <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">✅ Vérification réussie</div>
+            <div className="text-center text-[13px] font-medium text-[hsl(var(--success,142_76%_36%))] dark:text-green-500">
+              ✅ Vérification réussie
+            </div>
           )}
+        </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-[10px] border border-border/60 bg-secondary/40 px-3 py-3">
-            <Checkbox
-              checked={acceptSignupTerms}
-              onCheckedChange={(c) => setAcceptSignupTerms(c === true)}
-              className="mt-0.5 shrink-0"
-              id="auth-signup-terms"
-            />
-            <span className="text-left text-[13px] leading-snug text-muted-foreground">
-              Je confirme avoir lu les{' '}
-              <Link to="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
-                Conditions d’utilisation
-              </Link>{' '}
-              (dont règles ECTS applicables) et la{' '}
-              <Link to="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
-                Politique de confidentialité
-              </Link>{' '}
-              (traitement des données — RGPD). J’ai au moins 13 ans.
-            </span>
-          </label>
+        {/* Group : Conditions d'utilisation (Cell check style mockup) */}
+        <div className="apple-group">
+          <div className="apple-group-stack">
+            <button
+              type="button"
+              onClick={() => setAcceptSignupTerms(!acceptSignupTerms)}
+              className="apple-cell apple-cell-last w-full text-left"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="apple-cell-title">Conditions d&apos;utilisation</div>
+                <div className="apple-cell-subtitle">
+                  J&apos;accepte les{" "}
+                  <Link to="/terms" className="text-primary underline-offset-2 hover:underline" onClick={(e) => e.stopPropagation()}>
+                    CGU
+                  </Link>{" "}
+                  et la{" "}
+                  <Link to="/privacy" className="text-primary underline-offset-2 hover:underline" onClick={(e) => e.stopPropagation()}>
+                    politique de confidentialité
+                  </Link>
+                  .
+                </div>
+              </div>
+              {acceptSignupTerms ? (
+                <svg width="14" height="11" viewBox="0 0 14 11" aria-hidden style={{ color: "hsl(var(--primary))" }}>
+                  <path d="M1 5.5l4 4 8-8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden className="text-muted-foreground/40">
+                  <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeWidth="1" fill="none" />
+                </svg>
+              )}
+            </button>
+          </div>
+          <div className="apple-group-footer">
+            J&apos;ai au moins 13 ans.
+          </div>
+        </div>
 
-          <Button
+        {/* Code parrainage (logique existante préservée) */}
+        <div className="apple-group">
+          <div className="apple-group-stack p-2">
+            <ReferralCodeInput />
+          </div>
+        </div>
+
+        {/* CTA bottom : Pill Continuer + lien existant */}
+        <div className="mt-2 px-4">
+          <button
             type="submit"
-            className="h-12 w-full rounded-[12px]"
             disabled={isLoading || !captchaToken || !acceptSignupTerms}
+            className="apple-pill apple-pill-large w-full disabled:opacity-50"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Créer mon compte
-          </Button>
-        </form>
-        <div className="px-4 pb-4">
-          <ReferralCodeInput />
+            Continuer
+          </button>
+          <button
+            type="button"
+            onClick={() => { setView('email-signin'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
+            className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
+          >
+            Déjà inscrit ? Se connecter
+          </button>
         </div>
-      </div>
 
-      <button
-        type="button"
-        onClick={() => { setView('email-signin'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
-        className="w-full text-center text-[15px] text-primary font-medium py-3 active:opacity-70 transition-opacity"
-      >
-        Déjà inscrit ? Se connecter
-      </button>
-
-      <AuthLegalFooter className="pt-4" />
-      </div>
+        <AuthLegalFooter className="pt-6" />
+      </form>
     </IosFixedPageHeaderShell>
   );
 

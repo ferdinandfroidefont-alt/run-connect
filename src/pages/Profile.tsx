@@ -783,23 +783,47 @@ const Profile = () => {
           </div>
         )}
 
+        {/* Refonte Apple Profil (mockup 19) — Group avec icônes 29×29 colorées
+            (📅 Historique séances, 📸 Stories, 📍 Itinéraires) */}
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <IOSListGroup
-            header="RACCOURCIS"
             className="ios-card mb-0 w-full min-w-0 border border-border/60 shadow-[var(--shadow-card)]"
           >
             <IOSListItem
-              icon={Route}
-              iconBgColor="bg-teal-500"
+              icon={Calendar}
+              iconBgColor="bg-[hsl(var(--primary))]"
               iconColor="text-white"
-              title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
+              title="Historique des séances"
+              subtitle={!isViewingOtherUser ? 'Tes séances passées et à venir' : undefined}
               onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
-              showSeparator={!isViewingOtherUser}
+              showSeparator
             />
             {!isViewingOtherUser && (
               <IOSListItem
+                icon={Camera}
+                iconBgColor="bg-[#ff9500]"
+                iconColor="text-white"
+                title="Mes stories"
+                subtitle="Publiées par toi"
+                onClick={() => navigate('/drafts/stories')}
+                showSeparator
+              />
+            )}
+            {!isViewingOtherUser && (
+              <IOSListItem
+                icon={Route}
+                iconBgColor="bg-[#34c759]"
+                iconColor="text-white"
+                title="Mes itinéraires"
+                subtitle="Parcours enregistrés"
+                onClick={() => navigate('/itinerary/my-routes')}
+                showSeparator
+              />
+            )}
+            {!isViewingOtherUser && (
+              <IOSListItem
                 icon={MapPin}
-                iconBgColor="bg-purple-500"
+                iconBgColor="bg-[#af52de]"
                 iconColor="text-white"
                 title="Créer un parcours"
                 onClick={() => navigate('/route-creation')}
@@ -812,8 +836,8 @@ const Profile = () => {
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <Collapsible className="ios-card mb-0 w-full min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3 ios-shell:px-2.5">
-              <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
-                Succès & Records
+              <p className="text-[13px] uppercase tracking-[0.3px] text-muted-foreground">
+                Records personnels
               </p>
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>

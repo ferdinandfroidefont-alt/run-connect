@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, ChevronRight, ChevronLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
 
 interface DateTimeStepProps {
   scheduledAt: string;
@@ -17,15 +16,35 @@ interface DateTimeStepProps {
   hideNavigation?: boolean;
 }
 
-// Popular time slots
-const TIME_SUGGESTIONS = [
-  { label: 'Matin tôt', time: '07:00', icon: '🌅' },
-  { label: 'Matin', time: '09:00', icon: '☀️' },
-  { label: 'Midi', time: '12:30', icon: '🌞' },
-  { label: 'Après-midi', time: '15:00', icon: '🏃' },
-  { label: 'Fin de journée', time: '18:00', icon: '🌆' },
-  { label: 'Soir', time: '20:00', icon: '🌙' },
+const QUICK_TIMES = ['07:00', '12:00', '18:30', '20:00'];
+const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const MONTH_NAMES = [
+  'Janvier',
+  'Février',
+  'Mars',
+  'Avril',
+  'Mai',
+  'Juin',
+  'Juillet',
+  'Août',
+  'Septembre',
+  'Octobre',
+  'Novembre',
+  'Décembre',
 ];
+
+const startOfDay = (d: Date) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+const isoDate = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   scheduledAt,
@@ -36,6 +55,20 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   onBack,
   hideNavigation = false,
 }) => {
+  const todayStart = useMemo(() => startOfDay(new Date()), []);
+
+  const initialMonthAnchor = useMemo(() => {
+    if (scheduledAt) {
+      const parsed = new Date(scheduledAt);
+      if (!Number.isNaN(parsed.getTime())) {
+        return new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+      }
+    }
+    return new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
+  }, [scheduledAt, todayStart]);
+
+  const [monthAnchor, setMonthAnchor] = useState<Date>(initialMonthAnchor);
+
   const selectedDate = scheduledAt ? scheduledAt.split('T')[0] : '';
   const selectedTime = scheduledAt ? scheduledAt.split('T')[1] || '' : '';
 
@@ -45,180 +78,176 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   };
 
   const handleTimeChange = (time: string) => {
-    const date = selectedDate || new Date().toISOString().split('T')[0];
+    const date = selectedDate || isoDate(todayStart);
     onScheduledAtChange(`${date}T${time}`);
   };
 
-  const handleTimeSuggestion = (time: string) => {
-    const date = selectedDate || new Date().toISOString().split('T')[0];
-    onScheduledAtChange(`${date}T${time}`);
+  // Calendar grid — 6 weeks anchored on `monthAnchor`
+  const calendarDays = useMemo(() => {
+    const firstOfMonth = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1);
+    const startWeekday = (firstOfMonth.getDay() + 6) % 7; // Monday-first
+    const gridStart = new Date(firstOfMonth);
+    gridStart.setDate(1 - startWeekday);
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(gridStart);
+      d.setDate(gridStart.getDate() + i);
+      return d;
+    });
+  }, [monthAnchor]);
+
+  const goPrevMonth = () => {
+    setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  };
+  const goNextMonth = () => {
+    setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
   };
 
-  // Quick date buttons
-  const getQuickDates = () => {
-    const today = new Date();
-    const dates = [];
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push({
-        date: date.toISOString().split('T')[0],
-        label: i === 0 ? "Aujourd'hui" : i === 1 ? 'Demain' : date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }),
-        isWeekend: date.getDay() === 0 || date.getDay() === 6
-      });
-    }
-    return dates;
-  };
+  const monthAnchorIso = isoDate(monthAnchor);
+  const todayIso = isoDate(todayStart);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className={cn(
-        'flex w-full flex-col',
-        hideNavigation ? '' : 'min-h-0 flex-1'
-      )}
+      exit={{ opacity: 0, x: -12 }}
+      className={cn('flex w-full flex-col', hideNavigation ? '' : 'min-h-0 flex-1')}
     >
-      {!hideNavigation && (
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
-            <Calendar className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold text-foreground">Quand ?</h2>
-          <p className="text-muted-foreground mt-2">Choisissez la date et l'heure de votre séance</p>
-        </div>
-      )}
-
-      {hideNavigation && (
-        <h3 className="text-[15px] font-semibold text-foreground mb-3">Date et heure</h3>
-      )}
-
-      <div className={cn('space-y-6', hideNavigation ? '' : 'flex-1 overflow-y-auto')}>
-        {/* Quick date selection */}
-        <div>
-          <Label className="text-sm font-medium text-muted-foreground mb-3 block">Date</Label>
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-            {getQuickDates().map((d) => (
-              <motion.button
-                key={d.date}
-                onClick={() => handleDateChange(d.date)}
-                className={cn(
-                  "flex-shrink-0 px-4 py-3 rounded-xl text-sm font-medium transition-all min-w-[80px]",
-                  selectedDate === d.date
-                    ? "bg-primary text-primary-foreground"
-                    : d.isWeekend
-                      ? "bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
-                      : "border border-border bg-card text-foreground hover:bg-secondary"
-                )}
-                whileTap={{ scale: 0.95 }}
-              >
-                {d.label}
-              </motion.button>
-            ))}
-          </div>
-          
-          {/* Full date picker */}
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => handleDateChange(e.target.value)}
-            min={new Date().toISOString().split('T')[0]}
-            className="mt-3 h-12"
+      <div className={cn('px-1', hideNavigation ? '' : 'min-h-0 flex-1 overflow-y-auto pb-4')}>
+        {!hideNavigation && (
+          <AppleStepHeader
+            step={3}
+            title="Quand ?"
+            subtitle="Choisis une date et une heure de départ."
           />
-        </div>
+        )}
 
-        {/* Time suggestions */}
-        <div>
-          <Label className="text-sm font-medium text-muted-foreground mb-3 block">Heure suggérée</Label>
-          <div className="grid grid-cols-3 gap-2">
-            {TIME_SUGGESTIONS.map((suggestion) => (
-              <motion.button
-                key={suggestion.time}
-                onClick={() => handleTimeSuggestion(suggestion.time)}
-                className={cn(
-                  "flex flex-col items-center p-3 rounded-xl transition-all",
-                  selectedTime === suggestion.time
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-card text-foreground hover:bg-secondary"
-                )}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="text-xl mb-1">{suggestion.icon}</span>
-                <span className="text-xs font-medium">{suggestion.label}</span>
-                <span className="text-xs opacity-70">{suggestion.time}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
+        {hideNavigation && (
+          <h3 className="mb-3 text-[15px] font-semibold text-foreground">Date et heure</h3>
+        )}
 
-        {/* Custom time */}
-        <div>
-          <Label className="text-sm font-medium text-muted-foreground mb-3 block">Heure personnalisée</Label>
-          <div className="relative">
-            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              type="time"
-              value={selectedTime}
-              onChange={(e) => handleTimeChange(e.target.value)}
-              className="pl-10 h-12"
-            />
-          </div>
-        </div>
-
-        {/* Summary */}
-        {scheduledAt && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-xl bg-primary/10 border border-primary/30"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-primary" />
+        <div className="space-y-5">
+          {/* Calendar card */}
+          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card">
+            <div className="flex items-center justify-between px-4 pb-2 pt-4">
+              <div className="text-[17px] font-semibold tracking-tight text-foreground">
+                {MONTH_NAMES[monthAnchor.getMonth()]} {monthAnchor.getFullYear()}
               </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {new Date(scheduledAt).toLocaleDateString('fr-FR', { 
-                    weekday: 'long', 
-                    day: 'numeric', 
-                    month: 'long' 
-                  })}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  à {new Date(scheduledAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-                {estimatedEndTimeLabel ? (
-                  <>
-                    <p className="text-sm text-muted-foreground">
-                      Fin estimée : {estimatedEndTimeLabel}
-                    </p>
-                    {isEstimatedEndTimeProvisional ? (
-                      <p className="text-[11px] text-muted-foreground/80">Estimation provisoire</p>
-                    ) : null}
-                  </>
-                ) : null}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={goPrevMonth}
+                  aria-label="Mois précédent"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-primary active:scale-[0.95]"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNextMonth}
+                  aria-label="Mois suivant"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-primary active:scale-[0.95]"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
             </div>
-          </motion.div>
-        )}
+            <div className="grid grid-cols-7 gap-y-1 px-3 pb-3">
+              {WEEKDAY_LABELS.map((label, idx) => (
+                <div
+                  key={`${label}-${idx}`}
+                  className="pb-2 text-center text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80"
+                >
+                  {label}
+                </div>
+              ))}
+              {calendarDays.map((day, idx) => {
+                const iso = isoDate(day);
+                const inMonth = day.getMonth() === monthAnchor.getMonth();
+                const isPast = startOfDay(day) < todayStart;
+                const isSelected = iso === selectedDate;
+                const isToday = iso === todayIso;
+                return (
+                  <button
+                    key={`${monthAnchorIso}-${idx}`}
+                    type="button"
+                    disabled={isPast}
+                    onClick={() => !isPast && handleDateChange(iso)}
+                    className={cn(
+                      'flex aspect-square items-center justify-center rounded-full text-[15px] tracking-tight transition-colors',
+                      'active:scale-[0.95] disabled:cursor-not-allowed',
+                      !inMonth && 'text-muted-foreground/35',
+                      inMonth && !isSelected && !isPast && 'text-foreground',
+                      isPast && 'text-muted-foreground/35',
+                      isToday && !isSelected && 'text-primary font-semibold',
+                      isSelected && 'bg-primary font-semibold text-white shadow-sm'
+                    )}
+                  >
+                    {day.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Time picker — Apple grouped cell with native time input */}
+          <AppleGroup
+            title="Heure de départ"
+            footer={
+              estimatedEndTimeLabel ? (
+                <>
+                  Fin estimée à {estimatedEndTimeLabel}
+                  {isEstimatedEndTimeProvisional ? ' (estimation provisoire)' : ''} — basé sur tes
+                  records.
+                </>
+              ) : null
+            }
+          >
+            <label className="flex items-center gap-3 px-4 py-3">
+              <span className="flex-1 text-[17px] tracking-tight text-foreground">Heure</span>
+              <Input
+                type="time"
+                value={selectedTime}
+                onChange={(e) => handleTimeChange(e.target.value)}
+                className={cn(
+                  'h-9 w-auto rounded-md border-border/40 bg-secondary/50 px-3 text-right text-[17px] font-medium tracking-tight text-foreground',
+                  'focus-visible:ring-1'
+                )}
+              />
+            </label>
+          </AppleGroup>
+
+          {/* Quick times — pill chips */}
+          <div className="flex flex-wrap gap-2 px-1">
+            {QUICK_TIMES.map((t) => {
+              const selected = selectedTime === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => handleTimeChange(t)}
+                  className={cn(
+                    'inline-flex h-9 items-center rounded-full px-4 text-[14px] tracking-tight transition-transform',
+                    'active:scale-[0.96]',
+                    selected
+                      ? 'bg-primary text-white'
+                      : 'border border-border/60 bg-card text-foreground'
+                  )}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {!hideNavigation && (
-        <div className="flex gap-3 mt-auto pt-4">
-          <Button variant="outline" onClick={onBack} className="h-14">
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <Button
-            onClick={onNext}
-            disabled={!scheduledAt}
-            className="flex-1 h-14 text-lg font-semibold"
-          >
-            Continuer
-            <ChevronRight className="w-5 h-5 ml-2" />
-          </Button>
-        </div>
+        <AppleStepFooter
+          onBack={onBack}
+          onNext={onNext}
+          nextDisabled={!scheduledAt}
+          nextLabel="Continuer"
+        />
       )}
     </motion.div>
   );
