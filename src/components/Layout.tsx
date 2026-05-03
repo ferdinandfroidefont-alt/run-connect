@@ -57,7 +57,9 @@ export const Layout = ({ children }: LayoutProps) => {
   const latStr = searchParams.get('lat');
   const lngStr = searchParams.get('lng');
   const zoomStr = searchParams.get('zoom');
-  const sessionIdParam = searchParams.get('sessionId') || undefined;
+  /** Liens profonds : `?session=` (stories, open link) ou `?sessionId=` (legacy). */
+  const sessionIdParam =
+    searchParams.get('sessionId') || searchParams.get('session') || undefined;
   const mapInitialLat = latStr ? parseFloat(latStr) : undefined;
   const mapInitialLng = lngStr ? parseFloat(lngStr) : undefined;
   const mapInitialZoom = zoomStr ? parseInt(zoomStr, 10) : undefined;

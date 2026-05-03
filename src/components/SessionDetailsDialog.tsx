@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { RateSessionDialog } from './RateSessionDialog';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 interface SessionBlock {
   id: string;
@@ -105,6 +106,7 @@ interface SessionDetailsDialogProps {
 }
 
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
+  const isMobile = useIsMobile();
   const { formatKm, formatMeters } = useDistanceUnits();
   const { user } = useAuth();
   const { isPreviewMode } = useAppPreview();
@@ -327,6 +329,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   }, [session?.routes?.id]);
 
   if (!session) return null;
+
+  const organizerProfile = session.profiles ?? {
+    username: "",
+    display_name: "",
+    avatar_url: undefined as string | undefined,
+  };
 
   const isOrganizer = user?.id === session.organizer_id;
   const isScheduled = new Date(session.scheduled_at) > new Date();
@@ -639,7 +647,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     location: session.location_name,
     startDate: new Date(session.scheduled_at),
     durationMinutes: calendarDurationMin,
-    organizer: session.profiles.username || session.profiles.display_name,
+    organizer: organizerProfile.username || organizerProfile.display_name,
   };
 
   const levelBadge =
@@ -694,8 +702,17 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   });
 
   return (
-    <Dialog open={!!session} onOpenChange={onClose}>
-      <DialogContent className="relative p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[95vh] sm:rounded-2xl border-0 overflow-hidden flex flex-col apple-grouped-bg [&>button]:hidden">
+    <>
+    <Dialog open={!!session} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        fullScreen={isMobile}
+        hideCloseButton
+        className={cn(
+          "relative flex min-h-0 flex-col gap-0 overflow-hidden border-0 p-0 apple-grouped-bg",
+          !isMobile &&
+            "h-full max-h-full w-full max-w-full sm:h-auto sm:max-h-[95vh] sm:max-w-md sm:rounded-2xl",
+        )}
+      >
         <div className="flex shrink-0 items-center justify-between border-b-[0.5px] border-border apple-grouped-bg px-4 pb-2.5 pt-[max(env(safe-area-inset-top),12px)]">
           <button
             type="button"
@@ -755,9 +772,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     className="flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-80"
                   >
                     <Avatar className="h-9 w-9 shrink-0 rounded-full">
-                      <AvatarImage src={session.profiles.avatar_url} />
+                      <AvatarImage src={organizerProfile.avatar_url} />
                       <AvatarFallback className="bg-primary text-[13px] font-semibold text-primary-foreground">
-                        {(session.profiles.display_name || session.profiles.username || "?")
+                        {(organizerProfile.display_name || organizerProfile.username || "?")
                           .split(/\s+/)
                           .map((w) => w[0])
                           .join("")
@@ -768,7 +785,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] text-muted-foreground">Organisée par</p>
                       <p className="truncate text-[15px] font-semibold text-foreground">
-                        {session.profiles.display_name || session.profiles.username}
+                        {organizerProfile.display_name || organizerProfile.username}
                       </p>
                     </div>
                   </button>
@@ -1099,6 +1116,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           )}
         </div>
       </DialogContent>
+    </Dialog>
 
       <ProfilePreviewDialog
         userId={showOrganizerProfile ? session.organizer_id : null}
@@ -1111,7 +1129,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         onOpenChange={setShowRateDialog}
         sessionId={session.id}
         organizerId={session.organizer_id}
-        organizerName={session.profiles.username || session.profiles.display_name}
+        organizerName={organizerProfile.username || organizerProfile.display_name}
         userId={user?.id || ''}
         onRated={() => setHasRated(true)}
       />
@@ -1353,6 +1371,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           </ScrollArea>
         </DialogContent>
       </Dialog>
-    </Dialog>
+    </>
   );
 };
