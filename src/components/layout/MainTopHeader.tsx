@@ -13,6 +13,8 @@ type MainTopHeaderProps = {
   subtitle?: string;
   tabs?: MainTopHeaderTab[];
   tabsAriaLabel?: string;
+  /** Barre compacte 44px — côté début (ex. « Calendriers ») */
+  left?: ReactNode;
   right?: ReactNode;
   className?: string;
 };
@@ -22,6 +24,7 @@ export function MainTopHeader({
   subtitle,
   tabs,
   tabsAriaLabel,
+  left,
   right,
   className,
 }: MainTopHeaderProps) {
@@ -32,8 +35,14 @@ export function MainTopHeader({
   return (
     <div className={cn("shrink-0 pt-[var(--safe-area-top)]", className)}>
       {/* Compact bar (trailing actions) */}
-      <div className="relative flex h-11 shrink-0 items-center justify-end gap-2 px-4">
-        {right ? <div className="flex items-center gap-2">{right}</div> : null}
+      <div
+        className={cn(
+          "relative flex h-11 shrink-0 items-center gap-2 px-4",
+          left ? "justify-between" : "justify-end"
+        )}
+      >
+        {left ? <div className="flex min-w-0 flex-1 items-center justify-start">{left}</div> : null}
+        {right ? <div className="flex shrink-0 items-center gap-2">{right}</div> : null}
       </div>
 
       {/* Large title — Apple iOS Settings.app/Mail.app spec : marginTop 6 / marginBottom 6 */}

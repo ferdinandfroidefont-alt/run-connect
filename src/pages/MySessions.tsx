@@ -3,7 +3,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -11,30 +11,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
-import { ActivityIcon, getActivityLabel, getActivityConfig } from '@/lib/activityIcons';
+import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 
-/** Pastille blanche avec icône sport bleue (uniquement pour les cards Mes Séances) */
-const SportWhiteIcon = ({ activityType, size = "md" }: { activityType: string; size?: "sm" | "md" | "lg" }) => {
-  const Icon = getActivityConfig(activityType).icon;
-  const wrap = size === "lg" ? "h-12 w-12" : size === "sm" ? "h-8 w-8" : "h-10 w-10";
-  const ic = size === "lg" ? "h-6 w-6" : size === "sm" ? "h-4 w-4" : "h-5 w-5";
-  return (
-    <div className={`${wrap} rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center shrink-0`}>
-      <Icon className={`${ic} text-[#5B7CFF]`} strokeWidth={2.2} />
-    </div>
-  );
-};
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
-import { WeekSelectorPremium, type DaySessionSummary } from '@/components/coaching/planning/WeekSelectorPremium';
-import { addDays, addWeeks, subWeeks, startOfWeek } from 'date-fns';
 import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
@@ -102,66 +88,6 @@ type ConfirmTarget = {
   isCreator: boolean;
 };
 
-const CARD_SWIPE_THRESHOLD = -80;
-const SWIPE_ACTION_WIDTH = 148;
-
-function SwipeConfirmCard({
-  onConfirm,
-  children,
-}: {
-  onConfirm: () => void;
-  children: React.ReactNode;
-}) {
-  const [opened, setOpened] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-
-  return (
-    <div className="relative overflow-hidden">
-      <div
-        className={`absolute inset-y-0 right-0 flex w-[148px] items-center justify-center bg-primary px-3 transition-opacity ${
-          opened || isDragging ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onConfirm();
-            setOpened(false);
-          }}
-          className="h-10 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
-        >
-          Confirmer cette séance
-        </button>
-      </div>
-
-      <motion.div
-        drag="x"
-        dragConstraints={{ left: -SWIPE_ACTION_WIDTH, right: 0 }}
-        dragElastic={0.08}
-        animate={{ x: opened ? -SWIPE_ACTION_WIDTH : 0 }}
-        transition={{ type: "spring", stiffness: 420, damping: 32 }}
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={(_, info) => {
-          setIsDragging(false);
-          if (info.offset.x < CARD_SWIPE_THRESHOLD) {
-            setOpened(true);
-            return;
-          }
-          if (info.offset.x > -24) {
-            setOpened(false);
-          }
-        }}
-        onTap={() => {
-          if (opened) setOpened(false);
-        }}
-      >
-        {children}
-      </motion.div>
-    </div>
-  );
-}
-
 export default function MySessions() {
   const { user } = useAuth();
   const { openCreateSession } = useAppContext();
@@ -170,9 +96,8 @@ export default function MySessions() {
   const location = useLocation();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
   const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
-  const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
-  const [weekAnchor, setWeekAnchor] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
@@ -186,11 +111,9 @@ export default function MySessions() {
   const [showSessionShare, setShowSessionShare] = useState(false);
   const [showShareConversationDialog, setShowShareConversationDialog] = useState(false);
   const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
-  const [sessionPage, setSessionPage] = useState(0);
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
-  const SESSIONS_PER_PAGE = 4;
 
 
   // Live tracking participant states
@@ -536,6 +459,15 @@ export default function MySessions() {
     await loadSessionParticipants(session.id);
   };
 
+  const openSessionFromList = async (session: UserSession) => {
+    if (session.organizer_id && user?.id && session.organizer_id !== user.id) {
+      setSessionSource('joined');
+    } else {
+      setSessionSource('created');
+    }
+    await handleSessionClick(session);
+  };
+
   const handleEditClick = () => {
     setIsEditSessionDialogOpen(true);
   };
@@ -631,21 +563,8 @@ export default function MySessions() {
 
   const now = new Date().toISOString();
   const nowMs = Date.now();
-  const activeSessions =
-    sessionSource === 'created'
-      ? sessions
-      : sessionSource === 'joined'
-        ? joinedSessions
-        : [];
-  const filteredSessions = activeSessions.filter(session => {
-    if (filter === 'all') return true;
-    if (filter === 'upcoming') return session.scheduled_at >= now;
-    if (filter === 'completed') return session.scheduled_at < now;
-    return true;
-  });
 
-  /** Résumé par jour pour le sélecteur hebdo : comme la planification, jour sans séance → lune + « Repos ». */
-  const sessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
+  const mergedSessions = useMemo(() => {
     const merged = [...sessions, ...joinedSessions];
     const seen = new Set<string>();
     const unique: UserSession[] = [];
@@ -654,39 +573,15 @@ export default function MySessions() {
       seen.add(s.id);
       unique.push(s);
     }
+    return unique;
+  }, [sessions, joinedSessions]);
 
-    const sessionsByDay = new Map<string, UserSession[]>();
-    for (const s of unique) {
-      const key = format(new Date(s.scheduled_at), 'yyyy-MM-dd');
-      if (!sessionsByDay.has(key)) sessionsByDay.set(key, []);
-      sessionsByDay.get(key)!.push(s);
-    }
-
-    const activityToSport = (activityType: string): DaySessionSummary['sport'] => {
-      const lower = String(activityType ?? '').toLowerCase();
-      if (lower.includes('bike') || lower.includes('cycl') || lower.includes('vélo') || lower.includes('velo')) return 'cycling';
-      if (lower.includes('swim') || lower.includes('natation')) return 'swimming';
-      if (lower.includes('strength') || lower.includes('renfo') || lower.includes('muscu')) return 'strength';
-      return 'running';
-    };
-
-    const map: Record<string, DaySessionSummary> = {};
-    for (let i = 0; i < 7; i++) {
-      const day = addDays(weekAnchor, i);
-      const key = format(day, 'yyyy-MM-dd');
-      const daySessions = sessionsByDay.get(key) ?? [];
-      if (daySessions.length === 0) {
-        map[key] = { sport: 'rest', value: 'Repos' };
-        continue;
-      }
-      for (const s of daySessions) {
-        const sport = activityToSport((s as { activity_type?: string }).activity_type ?? '');
-        if (!map[key]) map[key] = { sport, value: '1' };
-        else map[key] = { sport: map[key].sport, value: String(parseInt(map[key].value, 10) + 1) };
-      }
-    }
-    return map;
-  }, [sessions, joinedSessions, weekAnchor]);
+  const filteredCalendarSessions = mergedSessions.filter((session) => {
+    if (filter === 'all') return true;
+    if (filter === 'upcoming') return session.scheduled_at >= now;
+    if (filter === 'completed') return session.scheduled_at < now;
+    return true;
+  });
 
   const openConfirmDialog = (session: UserSession) => {
     setConfirmTarget({
@@ -1086,8 +981,31 @@ export default function MySessions() {
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card">
           <MainTopHeader
-            title="Mes séances"
-            tabsAriaLabel="Navigation Mes séances"
+            title="Séances"
+            left={
+              <button
+                type="button"
+                onClick={() => {
+                  const t = new Date();
+                  setCalendarMonth(startOfMonth(t));
+                  setSelectedDate(t);
+                }}
+                className="tap-highlight-none py-1 text-[17px] font-normal leading-none text-primary active:opacity-70"
+              >
+                Calendriers
+              </button>
+            }
+            right={
+              <button
+                type="button"
+                onClick={() => openCreateSession()}
+                className="tap-highlight-none -mr-1 flex h-10 w-10 items-center justify-center rounded-full text-primary active:opacity-70"
+                aria-label="Créer une séance"
+              >
+                <Plus className="h-7 w-7" strokeWidth={2.5} />
+              </button>
+            }
+            tabsAriaLabel="Navigation Séances"
             tabs={[
               { id: "list", label: "Liste", active: true },
               { id: "create", label: "Création", active: false, onClick: () => openCreateSession() },
@@ -1099,24 +1017,8 @@ export default function MySessions() {
 
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
-              <>
-              {/* Calendrier de la semaine — au-dessus des filtres et des cards */}
-              <div className="mb-ios-3">
-                <WeekSelectorPremium
-                  weekStart={weekAnchor}
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  onPreviousWeek={() => setWeekAnchor((d) => subWeeks(d, 1))}
-                  onNextWeek={() => setWeekAnchor((d) => addWeeks(d, 1))}
-                  sessionSummaryByDate={sessionSummaryByDate}
-                  showLegend
-                />
-              </div>
-
-              {/* Filter Pills — refonte Apple Discover (mockup 04) :
-                   actif = ink (#1d1d1f) blanc / inactif = white pill + hairline + ink
-                   hauteur 32, padding 12, font-semibold 13/-0.2px tracking */}
-              <div className="flex gap-1.5 overflow-x-auto pb-1 px-4 mb-3">
+            {/* Filtres */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1 px-4 mb-3">
                 {[
                   { key: 'all', label: 'Toutes' },
                   { key: 'upcoming', label: 'À venir' },
@@ -1124,7 +1026,8 @@ export default function MySessions() {
                 ].map((f) => (
                   <button
                     key={f.key}
-                    onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
+                    type="button"
+                    onClick={() => { setFilter(f.key as 'all' | 'upcoming' | 'completed'); }}
                     className={`h-8 rounded-full px-3 text-[13px] font-semibold tracking-[-0.2px] whitespace-nowrap transition-colors active:scale-[0.98] ${
                       filter === f.key
                         ? 'bg-foreground text-background'
@@ -1134,170 +1037,57 @@ export default function MySessions() {
                     {f.label}
                   </button>
                 ))}
-              </div>
+            </div>
 
-              {/* Sessions Display */}
-              {loading ? (
-                <div className="space-y-px">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-card p-ios-3 animate-pulse">
-                      <div className="flex gap-ios-2">
-                        <div className="h-10 w-10 bg-secondary rounded-ios-md" />
-                        <div className="flex-1 space-y-ios-2">
-                          <div className="h-4 bg-secondary rounded w-3/4" />
-                          <div className="h-3 bg-secondary rounded w-1/2" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            {loading ? (
+                <div className="space-y-3 px-4">
+                  <div className="ios-card h-48 animate-pulse bg-secondary/40" />
+                  <div className="ios-card h-36 animate-pulse bg-secondary/40" />
                 </div>
-              ) : filteredSessions.length === 0 ? (
+            ) : mergedSessions.length === 0 ? (
                 <div className={emptyStateSx.shell}>
                   <div className={emptyStateSx.iconCircle}>
                     <Calendar className="h-12 w-12 text-muted-foreground" />
                   </div>
                   <div className={emptyStateSx.textBlock}>
                     <h3 className="text-ios-title3 font-semibold text-foreground">
-                      {sessionSource === 'created'
-                        ? 'Aucune séance créée'
-                        : 'Aucune séance rejointe'}
+                      Aucune séance
                     </h3>
                     <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
-                      {sessionSource === 'created'
-                        ? 'Créez votre première séance sportive et invitez vos amis à vous rejoindre.'
-                        : 'Rejoignez des séances depuis la page d\'accueil pour les retrouver ici.'}
+                      Créez une séance ou rejoignez-en une depuis Découvrir pour la voir ici.
                     </p>
                   </div>
-                  {sessionSource === 'created' && (
-                    <Button
-                      onClick={() => navigate('/')}
-                      className="w-full max-w-xs"
-                    >
-                      <Plus className="h-5 w-5 mr-ios-2" />
-                      Créer une séance
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => navigate('/')}
+                    className="w-full max-w-xs"
+                  >
+                    <Plus className="h-5 w-5 mr-ios-2" />
+                    Créer une séance
+                  </Button>
                 </div>
               ) : (
-                <div className="bg-white">
-                  {/* Flèche haut */}
-                  {sessionPage > 0 && (
-                    <button
-                      onClick={() => setSessionPage(p => p - 1)}
-                      className="w-full flex items-center justify-center py-2 text-primary active:opacity-70 transition-opacity"
-                    >
-                      <ChevronUp className="h-6 w-6" />
-                    </button>
-                  )}
-
-                  {filteredSessions
-                    .slice(sessionPage * SESSIONS_PER_PAGE, (sessionPage + 1) * SESSIONS_PER_PAGE)
-                    .map((session, index, arr) => {
-                      const isUpcoming = session.scheduled_at >= now;
-                      const orgProfile = sessionSource === 'joined' && session.organizer_id
-                        ? organizerProfiles.get(session.organizer_id)
-                        : null;
-                      return (
-                        <SwipeConfirmCard
-                          key={session.id}
-                          onConfirm={() => openConfirmDialog(session)}
-                        >
-                          <div
-                            onClick={() => handleSessionClick(session)}
-                            className="relative cursor-pointer bg-white px-ios-3 py-4 transition-colors active:bg-secondary/50"
-                          >
-                            <div className="flex items-start gap-ios-2">
-                              <SportWhiteIcon activityType={session.activity_type} size="md" />
-                              <div className="flex-1 min-w-0">
-                                {sessionSource === 'joined' && (
-                                  <div className="flex items-center gap-1.5 mb-0.5">
-                                    <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
-                                  </div>
-                                )}
-                                <h3 className="text-ios-headline font-semibold truncate">{session.title}</h3>
-                                {/* Organizer info for joined sessions */}
-                                {orgProfile && (
-                                  <div className="flex items-center gap-ios-1 mt-ios-1">
-                                    <Avatar className="h-4 w-4">
-                                      <AvatarImage src={orgProfile.avatar_url || undefined} />
-                                      <AvatarFallback className="text-[8px]">
-                                        {orgProfile.username?.[0]?.toUpperCase() || '?'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-ios-footnote text-muted-foreground truncate">
-                                      {orgProfile.display_name || orgProfile.username}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-ios-3 mt-0.5 text-[12px] text-muted-foreground leading-tight">
-                                  <span className="flex items-center gap-0.5">
-                                    <Calendar className="h-3 w-3 shrink-0" />
-                                    {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
-                                  </span>
-                                  <span className="flex items-center gap-0.5">
-                                    <Clock className="h-3 w-3 shrink-0" />
-                                    {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
-                                  </span>
-                                  <span className="flex items-center gap-0.5">
-                                    <Users className="h-3 w-3 shrink-0" />
-                                    {session.current_participants || 0}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 mt-1 shrink-0">
-                                {isUpcoming ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                                    En attente
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                    Confirmée
-                                  </span>
-                                )}
-                                <ChevronRight className="h-4 w-4 text-primary" />
-                              </div>
-                            </div>
-                            {index < arr.length - 1 && (
-                              <div
-                                className="pointer-events-none absolute bottom-0 left-[68px] right-0 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
-                                aria-hidden
-                              />
-                            )}
-                          </div>
-                        </SwipeConfirmCard>
-                      );
-                    })}
-
-                  {/* Flèche bas */}
-                  {(sessionPage + 1) * SESSIONS_PER_PAGE < filteredSessions.length && (
-                    <button
-                      onClick={() => setSessionPage(p => p + 1)}
-                      className="w-full flex items-center justify-center py-2 text-primary active:opacity-70 transition-opacity"
-                    >
-                      <ChevronDown className="h-6 w-6" />
-                    </button>
-                  )}
-
-                  {/* Page indicator */}
-                  {filteredSessions.length > SESSIONS_PER_PAGE && (
-                    <p className="text-center text-[13px] text-muted-foreground">
-                      {sessionPage * SESSIONS_PER_PAGE + 1}-{Math.min((sessionPage + 1) * SESSIONS_PER_PAGE, filteredSessions.length)} sur {filteredSessions.length}
-                    </p>
-                  )}
+                <div className="mb-ios-3 px-4">
+                  <SessionCalendarView
+                    sessions={filteredCalendarSessions}
+                    selectedDate={selectedDate}
+                    onSelectDate={setSelectedDate}
+                    visibleMonth={calendarMonth}
+                    onVisibleMonthChange={setCalendarMonth}
+                    onSessionClick={(s) => void openSessionFromList(s as UserSession)}
+                    onConfirmSession={openConfirmDialog}
+                    organizerProfiles={organizerProfiles}
+                    currentUserId={user?.id}
+                  />
                 </div>
-              )}
+            )}
 
-              {/* Organizer Stats - only for created sessions */}
-              {sessionSource === "created" && (
-                <div className="mt-ios-3 pb-ios-6">
+            {sessions.length > 0 && (
+                <div className="mt-ios-3 px-4 pb-ios-6">
                   <Suspense fallback={null}>
                     <OrganizerStatsCard weeklyOnly />
                   </Suspense>
                 </div>
-              )}
-                </>
+            )}
           </>
         </div>
       </div>
@@ -1379,7 +1169,6 @@ export default function MySessions() {
                 onClick={() => {
                   closeConfirmDialog();
                   setSessionSource('to-confirm');
-                  setSessionPage(0);
                 }}
               >
                 <p className="text-[15px] font-semibold text-foreground">
