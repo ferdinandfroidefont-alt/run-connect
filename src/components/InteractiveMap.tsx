@@ -2255,9 +2255,9 @@ export const InteractiveMap = ({
             type="button"
             title="Me localiser"
             onClick={handleLocateMe}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
-            <MapPin className="h-[17px] w-[17px]" strokeWidth={2} />
+            <MapPin className="h-[15px] w-[15px]" strokeWidth={2} />
           </button>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           {/* Suivi — ouvre la page de suivi des participants (live tracking) */}
@@ -2266,7 +2266,7 @@ export const InteractiveMap = ({
             title="Suivi en direct"
             aria-label="Suivre les participants en direct"
             onClick={() => navigate('/participants')}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             {/* SF Symbols-style "location.viewfinder" pour le suivi live */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -2286,12 +2286,12 @@ export const InteractiveMap = ({
             title={isImmersiveMode ? "Quitter le plein écran" : "Carte plein écran"}
             aria-label={isImmersiveMode ? "Quitter le plein écran" : "Afficher la carte en plein écran"}
             onClick={toggleImmersiveMode}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             {isImmersiveMode ? (
-              <Minimize2 className="h-[17px] w-[17px]" strokeWidth={2} />
+              <Minimize2 className="h-[15px] w-[15px]" strokeWidth={2} />
             ) : (
-              <Expand className="h-[17px] w-[17px]" strokeWidth={2} />
+              <Expand className="h-[15px] w-[15px]" strokeWidth={2} />
             )}
           </button>
         </div>
