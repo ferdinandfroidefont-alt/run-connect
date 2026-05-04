@@ -65,6 +65,8 @@ interface SettingsDialogProps {
   initialSearch?: string;
   /** Ouvre directement une sous-page (ex. confidentialité depuis le profil). */
   initialPage?: SettingsDialogPage;
+  /** Au-dessus d’un autre plein écran (ex. ProfileDialog) : z-index + voile empilés. */
+  stackNested?: boolean;
 }
 
 const settingsCategories = [
@@ -119,7 +121,13 @@ function getMatchingItems(items: string[], query: string): string[] {
 
 const SETTINGS_BOTTOM_NAV_SUPPRESSOR_ID = "settings-dialog";
 
-export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
+export const SettingsDialog = ({
+  open,
+  onOpenChange,
+  initialSearch,
+  initialPage,
+  stackNested = false,
+}: SettingsDialogProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -257,7 +265,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0">
+        <DialogContent stackNested={stackNested} className="max-w-md max-h-[80vh] p-0">
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
@@ -271,6 +279,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         hideCloseButton
+        stackNested={stackNested}
         className="fixed inset-0 left-0 right-0 top-0 z-[125] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[125] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
       >
         <AnimatePresence mode="wait">

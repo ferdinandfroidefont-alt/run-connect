@@ -525,6 +525,93 @@ html, body {
   }
 
   /**
+   * Pastilles rondes sur carte (InteractiveMap, création d’itinéraire) : bordure + ombre type iOS.
+   */
+  .map-overlay-fab-btn {
+    @apply pointer-events-auto flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center text-foreground outline-none transition-all duration-150;
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    box-shadow:
+      0 8px 32px -12px rgba(0, 0, 0, 0.22),
+      0 2px 8px -4px rgba(0, 0, 0, 0.08);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .map-overlay-fab-btn svg {
+    height: 15px;
+    width: 15px;
+  }
+
+  .dark .map-overlay-fab-btn {
+    border-color: #1f1f1f;
+    background: #0a0a0a;
+    box-shadow: 0 12px 40px -16px rgba(0, 0, 0, 0.65);
+  }
+
+  .map-overlay-fab-btn:active:not(:disabled) {
+    @apply scale-[0.92] bg-muted/50;
+  }
+
+  .dark .map-overlay-fab-btn:active:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .map-overlay-fab-btn:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  .map-overlay-fab-btn:disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+
+  /** Coquille seule (ex. MapStyleSelector) : pas de feedback actif sur le conteneur. */
+  .map-overlay-fab-shell {
+    @apply pointer-events-auto flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden;
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    box-shadow:
+      0 8px 32px -12px rgba(0, 0, 0, 0.22),
+      0 2px 8px -4px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark .map-overlay-fab-shell {
+    border-color: #1f1f1f;
+    background: #0a0a0a;
+    box-shadow: 0 12px 40px -16px rgba(0, 0, 0, 0.65);
+  }
+
+  /** Bouton transparent à l’intérieur de `map-overlay-fab-shell` (carte accueil). */
+  .map-overlay-fab-inner {
+    @apply flex h-9 w-9 cursor-pointer items-center justify-center text-foreground outline-none transition-all duration-150;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .map-overlay-fab-inner:active {
+    @apply scale-[0.92] bg-muted/50;
+  }
+
+  .dark .map-overlay-fab-inner:active {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .map-overlay-fab-inner:focus-visible {
+    @apply rounded-full ring-2 ring-ring ring-offset-0;
+  }
+
+  /** Pastilles stats (distance / D+) sur carte — même famille visuelle. */
+  .map-stat-chip {
+    @apply pointer-events-auto rounded-xl border border-black/[0.08] bg-white px-3 py-2;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .map-stat-chip {
+    @apply border-[#1f1f1f] bg-[#0a0a0a];
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  /**
    * Carte accueil — champ recherche façon maquette Accueil : pilule gris système, sans flou.
    */
   .home-map-search-glass {

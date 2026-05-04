@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
 import { useAppPreview } from "@/contexts/AppPreviewContext";
@@ -26,6 +26,7 @@ import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog"
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
 import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
 import { cn } from "@/lib/utils";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 
 function formatMaquetteCompactStat(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
@@ -130,6 +131,8 @@ export const ProfileDialog = ({
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  /** Évite que Radix ferme le profil au même geste qu’à l’ouverture des réglages. */
+  const suppressProfileDismissRef = useRef(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [showOwnStory, setShowOwnStory] = useState(false);
   const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
@@ -652,7 +655,18 @@ export const ProfileDialog = ({
   };
   /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
   const profileDialogShellClassName =
-    "z-[110] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-[#F6F2EC] p-0 !bg-[#F6F2EC] !h-[calc(100dvh-var(--bottom-nav-offset))] !max-h-[calc(100dvh-var(--bottom-nav-offset))]";
+    "z-[110] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 apple-grouped-bg p-0 !h-[calc(100dvh-var(--bottom-nav-offset))] !max-h-[calc(100dvh-var(--bottom-nav-offset))]";
+
+  const handleProfileDialogOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        if (showSettingsDialog) return;
+        if (suppressProfileDismissRef.current) return;
+      }
+      onOpenChange(next);
+    },
+    [onOpenChange, showSettingsDialog]
+  );
 
   const hasActiveOwnStory = ownStories.some((story) => {
     const expiresAtMs = Date.parse(story.expires_at);
@@ -673,7 +687,7 @@ export const ProfileDialog = ({
   const tenKmTime = recordsData.running["10k"]?.trim() ?? "";
 
   return <>
-      <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+      <Dialog open={open} onOpenChange={handleProfileDialogOpenChange} modal={false}>
         {open ? (
         <DialogContent
           data-tutorial="tutorial-profile-page"
@@ -681,87 +695,88 @@ export const ProfileDialog = ({
           fullScreen
           overlayClassName="hidden"
           className={profileDialogShellClassName}
+          onInteractOutside={(e) => {
+            if (showSettingsDialog) e.preventDefault();
+          }}
+          onPointerDownOutside={(e) => {
+            if (showSettingsDialog) e.preventDefault();
+          }}
         >
           {loading ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#F6F2EC]">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col apple-grouped-bg">
             <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
             <div className="flex flex-1 items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           </div>
           ) : (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#F6F2EC]">
-          <DialogTitle className="sr-only">Mon profil</DialogTitle>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col apple-grouped-bg">
+          <DialogTitle className="sr-only">Profil</DialogTitle>
 
-           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-[#F6F2EC]">
-             <div className="box-border min-w-0 max-w-full">
-                {/* Maquette 19 — hero + identité (RunConnect RC) */}
-                <div className="relative h-[290px] w-full shrink-0 overflow-hidden">
-                  {profile?.cover_image_url ? (
-                    <img
-                      src={profile.cover_image_url}
-                      alt=""
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="absolute inset-0 bg-[radial-gradient(120%_80%_at_30%_20%,#d96b3a_0%,#7a3a1d_45%,#3a1d12_100%)]"
-                      aria-hidden
-                    />
-                  )}
-                  <div
-                    className="absolute inset-0 bg-gradient-to-b from-black/10 to-[#F6F2EC]"
-                    aria-hidden
-                  />
-                  <div className="absolute left-0 right-0 top-0 flex items-start justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const u = profile?.username?.trim();
-                        if (!u) {
-                          toast({
-                            title: "Pseudo manquant",
-                            description:
-                              "Définis un nom d'utilisateur dans « Modifier le profil » pour partager ton lien.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        void shareProfile({
-                          username: u,
-                          displayName: profile?.display_name,
-                          bio: profile?.bio,
-                          avatarUrl: profile?.avatar_url,
-                          referralCode: profile?.referral_code,
+          <div className="z-50 shrink-0 apple-grouped-bg">
+            <MainTopHeader
+              title="Profil"
+              className="bg-transparent"
+              right={
+                <div className="flex min-w-0 items-center justify-end gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const u = profile?.username?.trim();
+                      if (!u) {
+                        toast({
+                          title: "Pseudo manquant",
+                          description:
+                            "Définis un nom d'utilisateur dans « Modifier le profil » pour partager ton lien.",
+                          variant: "destructive",
                         });
-                      }}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#E2DBD0] bg-white/85 shadow-sm backdrop-blur-md backdrop-saturate-150 transition-colors active:bg-white"
-                      aria-label="Partager le profil"
-                    >
-                      <Share2 className="h-[14px] w-[14px] text-[#0E0E0F]" strokeWidth={2.2} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowSettingsDialog(true)}
-                      className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-[#E2DBD0] bg-white/85 px-4 shadow-sm backdrop-blur-md backdrop-saturate-150 transition-colors active:bg-white"
-                      aria-label="Ouvrir les paramètres"
-                    >
-                      <Settings className="h-4 w-4 shrink-0 text-[#0E0E0F]" strokeWidth={2.2} />
-                      <span className="font-display text-[13px] font-bold leading-none tracking-tight text-[#0E0E0F]">
-                        Paramètres
-                      </span>
-                    </button>
-                  </div>
+                        return;
+                      }
+                      void shareProfile({
+                        username: u,
+                        displayName: profile?.display_name,
+                        bio: profile?.bio,
+                        avatarUrl: profile?.avatar_url,
+                        referralCode: profile?.referral_code,
+                      });
+                    }}
+                    className="tap-highlight-none -mr-1 flex h-10 w-10 min-w-[44px] shrink-0 items-center justify-center rounded-full text-primary active:opacity-70"
+                    aria-label="Partager le profil"
+                  >
+                    <Share2 className="h-6 w-6" strokeWidth={2.4} />
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={() => {
+                      suppressProfileDismissRef.current = true;
+                    }}
+                    onClick={() => {
+                      setShowSettingsDialog(true);
+                      window.setTimeout(() => {
+                        suppressProfileDismissRef.current = false;
+                      }, 400);
+                    }}
+                    className="tap-highlight-none flex max-w-[min(52%,11rem)] shrink-0 items-center gap-1 py-1 pl-1 text-primary active:opacity-70"
+                    aria-label="Ouvrir les paramètres"
+                  >
+                    <Settings className="h-5 w-5 shrink-0" strokeWidth={2.4} />
+                    <span className="truncate text-[17px] font-normal leading-none">Paramètres</span>
+                  </button>
                 </div>
+              }
+            />
+          </div>
 
-                <div className="relative z-10 -mt-[110px] px-5 pb-2">
+           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] apple-grouped-bg">
+             <div className="box-border min-w-0 max-w-full px-4 ios-shell:px-2">
+                <div className="pb-2 pt-3">
                   <div className="flex min-w-0 items-end gap-3.5">
                     <button type="button" className="relative shrink-0 rounded-full" onClick={handleAvatarPress}>
-                      <div className="rounded-full bg-[#FF4D1A] p-[3px] shadow-sm">
-                        <div className="rounded-full bg-white p-[2px]">
+                      <div className="rounded-full bg-primary p-[3px] shadow-sm ring-1 ring-border/40">
+                        <div className="rounded-full bg-card p-[2px]">
                           <Avatar className="h-[84px] w-[84px]">
                             <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                            <AvatarFallback className="bg-[#EDE6DC] font-display text-[32px] font-bold text-[#0E0E0F]">
+                            <AvatarFallback className="bg-muted font-display text-[32px] font-bold text-foreground">
                               {profile?.display_name?.[0]?.toUpperCase() ||
                                 profile?.username?.[0]?.toUpperCase() ||
                                 "U"}
@@ -787,7 +802,7 @@ export const ProfileDialog = ({
                             }
                           }}
                           disabled={cameraLoading}
-                          className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#FF4D1A] text-white shadow-md disabled:opacity-50"
+                          className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md disabled:opacity-50"
                           aria-label="Changer l'avatar"
                         >
                           <Camera className="h-3.5 w-3.5" />
@@ -796,18 +811,17 @@ export const ProfileDialog = ({
                     </button>
                     <div className="min-w-0 flex-1 pb-2">
                       <div className="flex min-w-0 items-center gap-1.5">
-                        <h2 className="truncate font-display text-[26px] font-bold leading-none tracking-[-0.4px] text-[#0E0E0F]">
+                        <h2 className="truncate font-display text-[26px] font-bold leading-none tracking-[-0.4px] text-foreground">
                           {shortDisplayMaquette(profile?.display_name, profile?.username ?? "")}
                         </h2>
                         {profile?.is_admin ? (
                           <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-amber-500 text-white" />
                         ) : isPremiumUser ? (
-                          <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-[#0066CC] text-white" />
+                          <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-primary text-primary-foreground" />
                         ) : null}
                       </div>
-                      <p className="mt-1 truncate text-[13px] leading-snug text-[#7A7771]">
-                        @
-                        {profile?.username}
+                      <p className="mt-1 truncate text-[13px] leading-snug text-muted-foreground">
+                        @{profile?.username}
                         {profile?.country ? (
                           <>
                             {" "}
@@ -824,7 +838,7 @@ export const ProfileDialog = ({
                     </div>
                   </div>
 
-                  <div className="mt-3.5 flex flex-wrap gap-x-[18px] gap-y-2 text-[13px] text-[#0E0E0F]">
+                  <div className="mt-3.5 flex flex-wrap gap-x-[18px] gap-y-2 text-[13px] text-foreground">
                     <div>
                       <span className="font-display text-[18px] font-bold tracking-tight">
                         {formatMaquetteCompactStat(socialSessionsCount)}
@@ -843,7 +857,7 @@ export const ProfileDialog = ({
                         {formatMaquetteCompactStat(followerCount)}
                       </span>
                       {pendingRequestsCount > 0 ? (
-                        <span className="ml-1 inline-flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#FF4D1A] px-1 text-[10px] font-bold leading-none text-white">
+                        <span className="ml-1 inline-flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
                           {pendingRequestsCount}
                         </span>
                       ) : null}{" "}
@@ -864,7 +878,7 @@ export const ProfileDialog = ({
                     </button>
                   </div>
 
-                  <p className="mt-3.5 text-[14px] leading-snug text-[#3A3936]">
+                  <p className="mt-3.5 text-[14px] leading-snug text-muted-foreground">
                     {(profile?.bio ?? "").trim() ||
                       "Ajoute une bio depuis « Modifier le profil » pour te présenter."}
                   </p>
@@ -876,7 +890,7 @@ export const ProfileDialog = ({
                         onOpenChange(false);
                         navigate("/profile/edit");
                       }}
-                      className="font-display h-11 min-h-[44px] flex-1 rounded-xl bg-[#0E0E0F] text-[13px] font-bold text-white transition-colors active:bg-[#2a2a2c]"
+                      className="font-display h-11 min-h-[44px] flex-1 rounded-xl bg-foreground text-[13px] font-bold text-background transition-opacity active:opacity-90"
                     >
                       Modifier le profil
                     </button>
@@ -901,20 +915,20 @@ export const ProfileDialog = ({
                           referralCode: profile?.referral_code,
                         });
                       }}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#E2DBD0] bg-white transition-colors active:bg-[#EDE6DC]"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors active:bg-muted/60"
                       aria-label="Partager le profil"
                     >
-                      <Share2 className="h-[14px] w-[14px] text-[#0E0E0F]" strokeWidth={2.2} />
+                      <Share2 className="h-[14px] w-[14px]" strokeWidth={2.2} />
                     </button>
                   </div>
 
                   <div
                     role="tablist"
                     aria-label="Sections du profil"
-                    className="mt-[22px] flex border-b border-[#E2DBD0]"
+                    className="mt-[22px] flex border-b border-border"
                   >
-                    <div className="flex flex-1 flex-col items-center border-b-2 border-[#FF4D1A] pb-3 pt-3">
-                      <span className="font-display text-[13px] font-bold text-[#0E0E0F]">Profil</span>
+                    <div className="flex flex-1 flex-col items-center border-b-2 border-primary pb-3 pt-3">
+                      <span className="font-display text-[13px] font-bold text-foreground">Profil</span>
                     </div>
                     <button
                       type="button"
@@ -925,7 +939,7 @@ export const ProfileDialog = ({
                         navigate("/profile/records");
                       }}
                     >
-                      <span className="font-display text-[13px] font-bold text-[#7A7771]">Records</span>
+                      <span className="font-display text-[13px] font-bold text-muted-foreground">Record</span>
                     </button>
                     <button
                       type="button"
@@ -936,50 +950,48 @@ export const ProfileDialog = ({
                         navigate("/stories/create");
                       }}
                     >
-                      <span className="font-display text-[13px] font-bold text-[#7A7771]">Stories</span>
+                      <span className="font-display text-[13px] font-bold text-muted-foreground">Stories</span>
                     </button>
                   </div>
 
                   <div className="mt-3.5 grid grid-cols-2 gap-2.5">
-                    {/* Carte record feu — 5 km */}
-                    <div className="relative overflow-hidden rounded-[18px] border-[1.5px] border-[#E2DBD0] bg-white p-3.5 text-[#0E0E0F]">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">
+                    <div className="relative overflow-hidden rounded-[18px] border border-border/60 bg-card p-3.5 text-foreground shadow-[var(--shadow-card)]">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-muted-foreground">
                         Record · 5 km
                       </div>
                       <div className="mt-2 font-display text-[28px] font-bold leading-none tracking-[-1px]">
                         {fiveKmTime || "—"}
                       </div>
                       {fiveKmTime ? (
-                        <div className="mt-0.5 text-[11px] font-semibold text-[#7A7771]">
+                        <div className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
                           {paceForKmMaquette(fiveKmTime, 5) ?? ""}
                         </div>
                       ) : (
-                        <div className="mt-0.5 text-[11px] font-semibold text-[#7A7771] opacity-70">
+                        <div className="mt-0.5 text-[11px] font-semibold text-muted-foreground/80">
                           Renseigne ton temps
                         </div>
                       )}
-                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#FF4D1A] text-white">
+                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
                         <Zap className="h-3 w-3" strokeWidth={2.4} />
                       </div>
                     </div>
-                    {/* Carte record foncée — 10 km */}
-                    <div className="relative overflow-hidden rounded-[18px] bg-[#0E0E0F] p-3.5 text-white">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/60">
+                    <div className="relative overflow-hidden rounded-[18px] bg-foreground p-3.5 text-background shadow-[var(--shadow-card)]">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-background/60">
                         Record · 10 km
                       </div>
                       <div className="mt-2 font-display text-[28px] font-bold leading-none tracking-[-1px]">
                         {tenKmTime || "—"}
                       </div>
                       {tenKmTime ? (
-                        <div className="mt-0.5 text-[11px] font-semibold text-white/70">
+                        <div className="mt-0.5 text-[11px] font-semibold text-background/70">
                           {paceForKmMaquette(tenKmTime, 10) ?? ""}
                         </div>
                       ) : (
-                        <div className="mt-0.5 text-[11px] font-semibold text-white/70">
+                        <div className="mt-0.5 text-[11px] font-semibold text-background/70">
                           Renseigne ton temps
                         </div>
                       )}
-                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white">
+                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-background/15 text-background">
                         <Zap className="h-3 w-3" strokeWidth={2.4} />
                       </div>
                     </div>
@@ -987,7 +999,7 @@ export const ProfileDialog = ({
                 </div>
 
               {/* Stories à la une - cercles style Instagram */}
-              <div className="mt-3 border-t border-[#E2DBD0]/80 bg-[#F6F2EC] px-5 py-3">
+              <div className="mt-3 border-t border-border/60 px-1 py-3">
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {storyHighlights.map((item) => {
                     const titleSafe = String(item.title ?? "").trim() || "Sans titre";
@@ -1160,7 +1172,11 @@ export const ProfileDialog = ({
 
       {/* Settings Dialog */}
       <Suspense fallback={null}>
-        <SettingsDialog open={showSettingsDialog} onOpenChange={open => setShowSettingsDialog(open)} />
+        <SettingsDialog
+          open={showSettingsDialog}
+          onOpenChange={setShowSettingsDialog}
+          stackNested
+        />
       </Suspense>
 
       {/* Reliability Details Dialog */}

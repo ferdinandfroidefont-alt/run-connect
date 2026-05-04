@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, CloudMoon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -80,6 +80,7 @@ import {
   getSessionVisualState,
   type SessionVisibilityVisualState,
 } from '@/lib/sessionVisibility';
+import { getActivityEmoji, getDiscoverSportTileClass } from '@/lib/discoverSessionVisual';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -211,16 +212,15 @@ const TIME_SLOTS = [
   { id: "morning" as const, icon: Sunrise, label: "6h-12h", startHour: 6, endHour: 12 },
   { id: "afternoon" as const, icon: Sun, label: "12h-18h", startHour: 12, endHour: 18 },
   { id: "evening" as const, icon: Moon, label: "18h-23h", startHour: 18, endHour: 23 },
-  { id: "night" as const, icon: Moon, label: "23h-6h", startHour: 23, endHour: 6 },
+  { id: "night" as const, icon: CloudMoon, label: "23h-6h", startHour: 23, endHour: 6 },
 ];
 
-/** Couleur d’icône sur fond blanc (état non sélectionné) — sélection = tout en bleu iOS */
-/** Icônes créneaux sur fond blanc : teintes proches des pastilles Réglages (moins saturées que avant) */
-const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening' | 'night', string> = {
-  morning: 'text-[#FF9500]',
-  afternoon: 'text-[#C9A018]',
-  evening: 'text-[#5856D6]',
-  night: 'text-[#3730A3]',
+/** Pastilles type « À la une » : fond saturé + glyphe blanc */
+const TIME_SLOT_TILE_BG: Record<'morning' | 'afternoon' | 'evening' | 'night', string> = {
+  morning: 'bg-[#FF9500]',
+  afternoon: 'bg-[#D4940A]',
+  evening: 'bg-[#5856D6]',
+  night: 'bg-[#312E81]',
 };
 
 const ACTIVITY_OPTIONS: { id: string; label: string; values: string[] }[] = [
@@ -2053,11 +2053,25 @@ export const InteractiveMap = ({
                   {ACTIVITY_OPTIONS.map((opt) => {
                     const active =
                       JSON.stringify(filters.activity_types) === JSON.stringify(opt.values);
+                    const activityKey = opt.values[0];
                     return (
                       <HomeMapFilterRow
                         key={opt.id}
                         label={opt.label}
                         selected={active}
+                        leading={
+                          <div
+                            className={cn(
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[22px] leading-none text-white shadow-sm",
+                              opt.id === "all"
+                                ? "bg-[#8E8E93]"
+                                : getDiscoverSportTileClass(activityKey ?? ""),
+                            )}
+                            aria-hidden
+                          >
+                            {opt.id === "all" ? "✨" : getActivityEmoji(activityKey ?? "")}
+                          </div>
+                        }
                         onClick={() => {
                           setFilters((prev) => ({ ...prev, activity_types: opt.values }));
                           setExpandedFilter(null);
@@ -2131,13 +2145,21 @@ export const InteractiveMap = ({
                         }
                         selected={active}
                         leading={
-                          <Icon
+                          <div
                             className={cn(
-                              'h-6 w-6',
-                              active ? 'text-primary' : TIME_SLOT_ICON_CLASS[slot.id]
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] shadow-sm",
+                              active ? "bg-primary" : TIME_SLOT_TILE_BG[slot.id],
                             )}
-                            strokeWidth={2}
-                          />
+                            aria-hidden
+                          >
+                            <Icon
+                              className={cn(
+                                "h-[22px] w-[22px]",
+                                active ? "text-primary-foreground" : "text-white",
+                              )}
+                              strokeWidth={2}
+                            />
+                          </div>
                         }
                         onClick={() => {
                           setFilters((prev) => ({
@@ -2283,14 +2305,7 @@ export const InteractiveMap = ({
             ),
           },
         ] as Array<any>).map((btn) => (
-          <div
-            key={btn.key}
-            className={cn(
-              "pointer-events-auto flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border",
-              "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
-              "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
-            )}
-          >
+          <div key={btn.key} className="map-overlay-fab-shell">
             {btn.isStyle ? (
               <div className="flex h-9 w-9 items-center justify-center [&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-full [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground [&_svg]:h-[15px] [&_svg]:w-[15px]">
                 <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
@@ -2301,7 +2316,7 @@ export const InteractiveMap = ({
                 title={btn.title}
                 aria-label={btn.title}
                 onClick={btn.onClick}
-                className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+                className="map-overlay-fab-inner"
               >
                 {btn.icon}
               </button>

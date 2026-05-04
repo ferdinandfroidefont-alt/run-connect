@@ -188,7 +188,9 @@ export function HomeMapFilterRow({
         "active:bg-black/[0.045] dark:active:bg-[#111111]"
       )}
     >
-      {leading ? <span className="flex h-9 w-9 shrink-0 items-center justify-center">{leading}</span> : null}
+      {leading ? (
+        <span className="flex shrink-0 items-center justify-center self-center">{leading}</span>
+      ) : null}
       <span className="min-w-0 flex-1">
         <span className="block text-[17px] leading-snug text-foreground">{label}</span>
         {hint ? <span className="mt-0.5 block text-[13px] leading-snug text-muted-foreground">{hint}</span> : null}

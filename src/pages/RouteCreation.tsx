@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MapPin, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronRight, Navigation, Plus, Undo, Redo, Trash2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -1183,13 +1183,13 @@ export const RouteCreation = () => {
               ) : null}
 
               <div className="pointer-events-none absolute left-3 top-3 z-10 flex gap-2">
-                <div className="pointer-events-auto rounded-xl bg-white/90 px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:bg-zinc-900/90">
+                <div className="map-stat-chip min-w-0">
                   <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Distance</div>
                   <div className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
                     {formatKm(Math.max(0, totalDistance))}
                   </div>
                 </div>
-                <div className="pointer-events-auto rounded-xl bg-white/90 px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:bg-zinc-900/90">
+                <div className="map-stat-chip min-w-0">
                   <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Dénivelé</div>
                   <div className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
                     {Math.round(totalElevationGain)} m
@@ -1201,67 +1201,61 @@ export const RouteCreation = () => {
                 <button
                   type="button"
                   onClick={() => void handleRecenter()}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  className="map-overlay-fab-btn"
                   aria-label="Recentrer sur ma position"
                 >
-                  <span aria-hidden>📍</span>
+                  <Navigation strokeWidth={2} aria-hidden />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleZoomIn}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
-                  aria-label="Zoom avant"
-                >
-                  <span aria-hidden>➕</span>
+                <button type="button" onClick={handleZoomIn} className="map-overlay-fab-btn" aria-label="Zoom avant">
+                  <Plus strokeWidth={2} aria-hidden />
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleUndo()}
                   disabled={waypointCount === 0}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 disabled:pointer-events-none disabled:opacity-35 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  className="map-overlay-fab-btn"
                   aria-label="Annuler le dernier point"
                 >
-                  <span aria-hidden>↩️</span>
+                  <Undo strokeWidth={2} aria-hidden />
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleRedo()}
                   disabled={!canRedo}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 disabled:pointer-events-none disabled:opacity-35 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  className="map-overlay-fab-btn"
                   aria-label="Rétablir"
                 >
-                  <span aria-hidden>↪️</span>
+                  <Redo strokeWidth={2} aria-hidden />
                 </button>
                 <button
                   type="button"
                   onClick={handleClear}
                   disabled={waypointCount === 0}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 disabled:pointer-events-none disabled:opacity-35 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  className="map-overlay-fab-btn"
                   aria-label="Effacer tout"
                 >
-                  <span aria-hidden>🗑️</span>
+                  <Trash2 strokeWidth={2} aria-hidden />
                 </button>
                 {!isEditMode ? (
                   <button
                     type="button"
                     onClick={() => navigate('/drafts/routes')}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                    className="map-overlay-fab-btn"
                     aria-label="Brouillons d’itinéraire"
                   >
-                    <span aria-hidden>📄</span>
+                    <FileText strokeWidth={2} aria-hidden />
                   </button>
                 ) : null}
                 <div
                   className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90',
-                    '[&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:min-h-0 [&_.map-ios-colored-fab]:min-w-0 [&_.map-ios-colored-fab]:rounded-full [&_.map-ios-colored-fab]:p-0 [&_.map-ios-colored-fab]:shadow-none',
+                    'map-overlay-fab-shell',
+                    '[&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-full [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground [&_svg]:h-[15px] [&_svg]:w-[15px]',
                   )}
                 >
                   <MapStyleSelector
                     currentStyle={mapStyleId}
                     onStyleChange={handleMapStyleChange}
                     panelAnchor="viewport-left"
-                    triggerEmoji
                   />
                 </div>
               </div>

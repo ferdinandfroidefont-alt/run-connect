@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { TabPaneErrorBoundary } from "@/components/TabPaneErrorBoundary";
 
 const Index = lazy(() => import("@/pages/Index"));
 const MySessions = lazy(() => import("@/pages/MySessions"));
@@ -187,15 +188,17 @@ export function MainTabsSwipeHost() {
                   </div>
                 }
               >
-                <div
-                  className={
-                    tab.path === "/"
-                      ? "pointer-events-none flex h-full min-h-0 flex-col"
-                      : "pointer-events-auto flex h-full min-h-0 flex-col"
-                  }
-                >
-                  {tab.render()}
-                </div>
+                <TabPaneErrorBoundary key={tab.path}>
+                  <div
+                    className={
+                      tab.path === "/"
+                        ? "pointer-events-none flex h-full min-h-0 flex-col"
+                        : "pointer-events-auto flex h-full min-h-0 flex-col"
+                    }
+                  >
+                    {tab.render()}
+                  </div>
+                </TabPaneErrorBoundary>
               </Suspense>
             ) : null}
           </div>

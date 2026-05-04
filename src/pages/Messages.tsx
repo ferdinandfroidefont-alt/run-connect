@@ -244,8 +244,20 @@ const Messages = () => {
   const [showConversationInfo, setShowConversationInfo] = useState(false);
   const [userNotifSettings, setUserNotifSettings] = useState<{ notifications_enabled: boolean; notif_message: boolean }>({ notifications_enabled: false, notif_message: true });
   const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('pinnedConversations');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
+    try {
+      const saved = localStorage.getItem("pinnedConversations");
+      if (!saved) return new Set();
+      const parsed: unknown = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return new Set();
+      return new Set(parsed.filter((id): id is string => typeof id === "string" && id.length > 0));
+    } catch {
+      try {
+        localStorage.removeItem("pinnedConversations");
+      } catch {
+        /* ignore — quota ou mode privé */
+      }
+      return new Set();
+    }
   });
   /** Recherche locale dans le fil de messages ouvert */
   const [threadSearchOpen, setThreadSearchOpen] = useState(false);
