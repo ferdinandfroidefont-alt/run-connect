@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -2234,69 +2234,82 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — au-dessus du FAB et du bandeau Feed replié (--home-map-controls-stack-bottom) */}
+      {/* Contrôles carte — boutons séparés (chacun dans sa propre pastille) */}
       <div
         className={cn(
-          "pointer-events-none fixed z-[104] flex flex-col items-end",
+          "pointer-events-none fixed z-[104] flex flex-col items-end gap-2",
           "bottom-[calc(var(--layout-bottom-inset)+var(--home-feed-sheet-peek)+0.25rem+var(--home-bottom-stack-gap))]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
-        <div
-          className={cn(
-            "home-map-control-rail pointer-events-auto flex flex-col items-center overflow-hidden rounded-[16px] border",
-            "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
-            "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
-          )}
-        >
-          {/* Refonte Apple Discover (mockup 04) — rail vertical avec :
-              Localiser / Suivi (NEW) / Palette (existant, ouvre BottomStyleSheet iOS) / Plein écran */}
-          <button
-            type="button"
-            title="Me localiser"
-            onClick={handleLocateMe}
-            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            <MapPin className="h-[15px] w-[15px]" strokeWidth={2} />
-          </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          {/* Suivi — ouvre la page de suivi des participants (live tracking) */}
-          <button
-            type="button"
-            title="Suivi en direct"
-            aria-label="Suivre les participants en direct"
-            onClick={() => navigate('/participants')}
-            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            {/* SF Symbols-style "location.viewfinder" pour le suivi live */}
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-              <path d="M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" />
-            </svg>
-          </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          {/* Palette — MapStyleSelector existant, ouvre déjà BottomStyleSheet iOS-style */}
-          <div className="flex h-9 w-9 items-center justify-center [&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground [&_svg]:h-[15px] [&_svg]:w-[15px]">
-            <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
-          </div>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          <button
-            type="button"
-            title={isImmersiveMode ? "Quitter le plein écran" : "Carte plein écran"}
-            aria-label={isImmersiveMode ? "Quitter le plein écran" : "Afficher la carte en plein écran"}
-            onClick={toggleImmersiveMode}
-            className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            {isImmersiveMode ? (
+        {([
+          {
+            key: 'locate',
+            title: 'Me localiser',
+            onClick: handleLocateMe,
+            icon: <MapPin className="h-[15px] w-[15px]" strokeWidth={2} />,
+          },
+          {
+            key: 'tracking',
+            title: 'Suivi en direct',
+            onClick: () => navigate('/participants'),
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                <path d="M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" />
+              </svg>
+            ),
+          },
+          {
+            key: 'route-create',
+            title: "Créer un itinéraire",
+            onClick: () => navigate('/route-create'),
+            icon: <Brush className="h-[15px] w-[15px]" strokeWidth={2} />,
+          },
+          {
+            key: 'style',
+            title: 'Style de carte',
+            isStyle: true,
+          },
+          {
+            key: 'fullscreen',
+            title: isImmersiveMode ? 'Quitter le plein écran' : 'Carte plein écran',
+            onClick: toggleImmersiveMode,
+            icon: isImmersiveMode ? (
               <Minimize2 className="h-[15px] w-[15px]" strokeWidth={2} />
             ) : (
               <Expand className="h-[15px] w-[15px]" strokeWidth={2} />
+            ),
+          },
+        ] as Array<any>).map((btn) => (
+          <div
+            key={btn.key}
+            className={cn(
+              "pointer-events-auto flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border",
+              "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
+              "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
             )}
-          </button>
-        </div>
+          >
+            {btn.isStyle ? (
+              <div className="flex h-9 w-9 items-center justify-center [&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-full [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
+              </div>
+            ) : (
+              <button
+                type="button"
+                title={btn.title}
+                aria-label={btn.title}
+                onClick={btn.onClick}
+                className="flex h-9 w-9 items-center justify-center text-foreground transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+              >
+                {btn.icon}
+              </button>
+            )}
+          </div>
+        ))}
       </div>
-      
+
 
       {/* Create Session Wizard */}
       <CreateSessionWizard
