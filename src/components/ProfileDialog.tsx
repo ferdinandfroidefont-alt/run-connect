@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
 import { useAppPreview } from "@/contexts/AppPreviewContext";
@@ -371,13 +371,6 @@ export const ProfileDialog = ({
     setNewHighlightTitle("");
     await fetchStoriesAndHighlights();
   };
-  const highlightPreviewByStoryId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const story of ownStories) {
-      if (story.media_url) map.set(story.id, story.media_url);
-    }
-    return map;
-  }, [ownStories]);
   const removeHighlight = async (highlightId: string) => {
     const { error } = await (supabase as any).from("profile_story_highlights").delete().eq("id", highlightId);
     if (error) return;
@@ -610,7 +603,7 @@ export const ProfileDialog = ({
       // Normaliser le numéro de téléphone avant sauvegarde
       let normalizedPhone = formData.phone;
       if (normalizedPhone) {
-        normalizedPhone = normalizedPhone.replace(/[\s\-\(\)]/g, '');
+        normalizedPhone = normalizedPhone.replace(/[\s\-()]/g, '');
         if (normalizedPhone.startsWith('+33')) {
           normalizedPhone = '0' + normalizedPhone.substring(3);
         } else if (normalizedPhone.startsWith('33') && normalizedPhone.length === 11) {
@@ -653,9 +646,9 @@ export const ProfileDialog = ({
       setLoading(false);
     }
   };
-  /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
+  /** Plein écran — fond crème maquette 19 (screens-msg-profile), dark inchangé. */
   const profileDialogShellClassName =
-    "z-[110] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 apple-grouped-bg p-0 !h-[calc(100dvh-var(--bottom-nav-offset))] !max-h-[calc(100dvh-var(--bottom-nav-offset))]";
+    "z-[110] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-[#F6F2EC] p-0 text-[#0E0E0F] dark:bg-background dark:text-foreground !h-[calc(100dvh-var(--bottom-nav-offset))] !max-h-[calc(100dvh-var(--bottom-nav-offset))]";
 
   const handleProfileDialogOpenChange = useCallback(
     (next: boolean) => {
@@ -703,78 +696,151 @@ export const ProfileDialog = ({
           }}
         >
           {loading ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col apple-grouped-bg">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#F6F2EC] dark:bg-background">
             <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
             <div className="flex flex-1 items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#FF4D1A] dark:text-primary" />
             </div>
           </div>
           ) : (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col apple-grouped-bg">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-transparent">
           <DialogTitle className="sr-only">Profil</DialogTitle>
 
-          <div className="z-50 shrink-0 apple-grouped-bg">
-            <MainTopHeader
-              title="Profil"
-              className="bg-transparent"
-              right={
-                <div className="flex min-w-0 items-center justify-end gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const u = profile?.username?.trim();
-                      if (!u) {
-                        toast({
-                          title: "Pseudo manquant",
-                          description:
-                            "Définis un nom d'utilisateur dans « Modifier le profil » pour partager ton lien.",
-                          variant: "destructive",
+          {isEditing ? (
+            <div className="z-50 shrink-0 bg-transparent pt-[env(safe-area-inset-top,0px)]">
+              <MainTopHeader
+                title="Profil"
+                className="bg-transparent"
+                right={
+                  <div className="flex min-w-0 items-center justify-end gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const u = profile?.username?.trim();
+                        if (!u) {
+                          toast({
+                            title: "Pseudo manquant",
+                            description:
+                              "Définis un nom d'utilisateur dans « Modifier le profil » pour partager ton lien.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        void shareProfile({
+                          username: u,
+                          displayName: profile?.display_name,
+                          bio: profile?.bio,
+                          avatarUrl: profile?.avatar_url,
+                          referralCode: profile?.referral_code,
                         });
-                        return;
-                      }
-                      void shareProfile({
-                        username: u,
-                        displayName: profile?.display_name,
-                        bio: profile?.bio,
-                        avatarUrl: profile?.avatar_url,
-                        referralCode: profile?.referral_code,
-                      });
-                    }}
-                    className="tap-highlight-none -mr-1 flex h-10 w-10 min-w-[44px] shrink-0 items-center justify-center rounded-full text-primary active:opacity-70"
-                    aria-label="Partager le profil"
-                  >
-                    <Share2 className="h-6 w-6" strokeWidth={2.4} />
-                  </button>
-                  <button
-                    type="button"
-                    onPointerDown={() => {
-                      suppressProfileDismissRef.current = true;
-                    }}
-                    onClick={() => {
-                      setShowSettingsDialog(true);
-                      window.setTimeout(() => {
-                        suppressProfileDismissRef.current = false;
-                      }, 400);
-                    }}
-                    className="tap-highlight-none flex max-w-[min(52%,11rem)] shrink-0 items-center gap-1 py-1 pl-1 text-primary active:opacity-70"
-                    aria-label="Ouvrir les paramètres"
-                  >
-                    <Settings className="h-5 w-5 shrink-0" strokeWidth={2.4} />
-                    <span className="truncate text-[17px] font-normal leading-none">Paramètres</span>
-                  </button>
-                </div>
-              }
-            />
-          </div>
+                      }}
+                      className="tap-highlight-none -mr-1 flex h-10 w-10 min-w-[44px] shrink-0 items-center justify-center rounded-full text-primary active:opacity-70"
+                      aria-label="Partager le profil"
+                    >
+                      <Share2 className="h-6 w-6" strokeWidth={2.4} />
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={() => {
+                        suppressProfileDismissRef.current = true;
+                      }}
+                      onClick={() => {
+                        setShowSettingsDialog(true);
+                        window.setTimeout(() => {
+                          suppressProfileDismissRef.current = false;
+                        }, 400);
+                      }}
+                      className="tap-highlight-none flex max-w-[min(52%,11rem)] shrink-0 items-center gap-1 py-1 pl-1 text-primary active:opacity-70"
+                      aria-label="Ouvrir les paramètres"
+                    >
+                      <Settings className="h-5 w-5 shrink-0" strokeWidth={2.4} />
+                      <span className="truncate text-[17px] font-normal leading-none">Paramètres</span>
+                    </button>
+                  </div>
+                }
+              />
+            </div>
+          ) : null}
 
-           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] apple-grouped-bg">
-             <div className="box-border min-w-0 max-w-full px-4 ios-shell:px-2">
-                <div className="pb-2 pt-3">
+           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-transparent">
+             {!isEditing ? (
+               <div className="relative h-[290px] w-full shrink-0 overflow-hidden">
+                 {profile?.cover_image_url ? (
+                   <img
+                     src={profile.cover_image_url}
+                     alt=""
+                     className="absolute inset-0 h-full w-full object-cover"
+                   />
+                 ) : (
+                   <div
+                     className="absolute inset-0 bg-[radial-gradient(120%_80%_at_30%_20%,#d96b3a_0%,#7a3a1d_45%,#3a1d12_100%)]"
+                     aria-hidden
+                   />
+                 )}
+                 <div
+                   className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-[#F6F2EC] dark:to-background"
+                   aria-hidden
+                 />
+                 <div className="absolute left-4 right-4 z-20 flex justify-between pt-[calc(env(safe-area-inset-top,0px)+6px)]">
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const u = profile?.username?.trim();
+                       if (!u) {
+                         toast({
+                           title: "Pseudo manquant",
+                           description:
+                             "Définis un nom d'utilisateur dans « Modifier le profil » pour partager ton lien.",
+                           variant: "destructive",
+                         });
+                         return;
+                       }
+                       void shareProfile({
+                         username: u,
+                         displayName: profile?.display_name,
+                         bio: profile?.bio,
+                         avatarUrl: profile?.avatar_url,
+                         referralCode: profile?.referral_code,
+                       });
+                     }}
+                     className="tap-highlight-none flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[0.06] bg-white/85 text-[#0E0E0F] shadow-sm backdrop-blur-xl active:opacity-80 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                     aria-label="Partager le profil"
+                   >
+                     <Share2 className="h-[14px] w-[14px]" strokeWidth={2.2} />
+                   </button>
+                   <button
+                     type="button"
+                     onPointerDown={() => {
+                       suppressProfileDismissRef.current = true;
+                     }}
+                     onClick={() => {
+                       setShowSettingsDialog(true);
+                       window.setTimeout(() => {
+                         suppressProfileDismissRef.current = false;
+                       }, 400);
+                     }}
+                     className="tap-highlight-none flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[0.06] bg-white/85 text-[#0E0E0F] shadow-sm backdrop-blur-xl active:opacity-80 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                     aria-label="Ouvrir les paramètres"
+                   >
+                     <Settings className="h-4 w-4" strokeWidth={2.2} />
+                   </button>
+                 </div>
+               </div>
+             ) : null}
+             <div
+               className={cn(
+                 "box-border min-w-0 max-w-full",
+                 isEditing ? "px-4 pt-3 ios-shell:px-2" : "relative z-10 -mt-[110px] px-5 ios-shell:px-4"
+               )}
+             >
+                <div className="pb-2 pt-0">
                   <div className="flex min-w-0 items-end gap-3.5">
                     <button type="button" className="relative shrink-0 rounded-full" onClick={handleAvatarPress}>
-                      <div className="rounded-full bg-primary p-[3px] shadow-sm ring-1 ring-border/40">
-                        <div className="rounded-full bg-card p-[2px]">
-                          <Avatar className="h-[84px] w-[84px]">
+                      <div
+                        className="rounded-full p-[2.5px] shadow-[0_0_0_2.5px_#fff,0_0_0_4.5px_#FF4D1A] dark:shadow-[0_0_0_2.5px_hsl(var(--card)),0_0_0_4.5px_hsl(var(--primary))]"
+                      >
+                        <div className="rounded-full bg-white p-0.5 dark:bg-card">
+                          <Avatar className="h-[92px] w-[92px]">
                             <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
                             <AvatarFallback className="bg-muted font-display text-[32px] font-bold text-foreground">
                               {profile?.display_name?.[0]?.toUpperCase() ||
@@ -811,7 +877,7 @@ export const ProfileDialog = ({
                     </button>
                     <div className="min-w-0 flex-1 pb-2">
                       <div className="flex min-w-0 items-center gap-1.5">
-                        <h2 className="truncate font-display text-[26px] font-bold leading-none tracking-[-0.4px] text-foreground">
+                        <h2 className="truncate font-display text-[26px] font-bold leading-none tracking-[-0.4px] text-[#0E0E0F] dark:text-foreground">
                           {shortDisplayMaquette(profile?.display_name, profile?.username ?? "")}
                         </h2>
                         {profile?.is_admin ? (
@@ -820,7 +886,7 @@ export const ProfileDialog = ({
                           <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-primary text-primary-foreground" />
                         ) : null}
                       </div>
-                      <p className="mt-1 truncate text-[13px] leading-snug text-muted-foreground">
+                      <p className="mt-1 truncate text-[13px] leading-snug text-[#7A7771] dark:text-muted-foreground">
                         @{profile?.username}
                         {profile?.country ? (
                           <>
@@ -838,7 +904,7 @@ export const ProfileDialog = ({
                     </div>
                   </div>
 
-                  <div className="mt-3.5 flex flex-wrap gap-x-[18px] gap-y-2 text-[13px] text-foreground">
+                  <div className="mt-3.5 flex flex-wrap gap-x-[18px] gap-y-2 text-[13px] text-[#0E0E0F] dark:text-foreground">
                     <div>
                       <span className="font-display text-[18px] font-bold tracking-tight">
                         {formatMaquetteCompactStat(socialSessionsCount)}
@@ -878,7 +944,7 @@ export const ProfileDialog = ({
                     </button>
                   </div>
 
-                  <p className="mt-3.5 text-[14px] leading-snug text-muted-foreground">
+                  <p className="mt-3.5 text-[14px] leading-[1.4] text-[#3A3936] dark:text-muted-foreground">
                     {(profile?.bio ?? "").trim() ||
                       "Ajoute une bio depuis « Modifier le profil » pour te présenter."}
                   </p>
@@ -890,7 +956,7 @@ export const ProfileDialog = ({
                         onOpenChange(false);
                         navigate("/profile/edit");
                       }}
-                      className="font-display h-11 min-h-[44px] flex-1 rounded-xl bg-foreground text-[13px] font-bold text-background transition-opacity active:opacity-90"
+                      className="font-display h-11 min-h-[44px] flex-1 rounded-[12px] bg-[#0E0E0F] text-[13px] font-bold text-white transition-opacity active:opacity-90 dark:bg-foreground dark:text-background"
                     >
                       Modifier le profil
                     </button>
@@ -915,7 +981,7 @@ export const ProfileDialog = ({
                           referralCode: profile?.referral_code,
                         });
                       }}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors active:bg-muted/60"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#E2DBD0] bg-white text-[#0E0E0F] transition-colors active:bg-[#EDE6DC] dark:border-border dark:bg-card dark:text-foreground dark:active:bg-muted/60"
                       aria-label="Partager le profil"
                     >
                       <Share2 className="h-[14px] w-[14px]" strokeWidth={2.2} />
@@ -925,10 +991,10 @@ export const ProfileDialog = ({
                   <div
                     role="tablist"
                     aria-label="Sections du profil"
-                    className="mt-[22px] flex border-b border-border"
+                    className="mt-[22px] flex border-b border-[#E2DBD0] dark:border-border"
                   >
-                    <div className="flex flex-1 flex-col items-center border-b-2 border-primary pb-3 pt-3">
-                      <span className="font-display text-[13px] font-bold text-foreground">Profil</span>
+                    <div className="flex flex-1 flex-col items-center border-b-2 border-[#FF4D1A] pb-3 pt-3 dark:border-primary">
+                      <span className="font-display text-[13px] font-bold text-[#0E0E0F] dark:text-foreground">Profil</span>
                     </div>
                     <button
                       type="button"
@@ -939,7 +1005,7 @@ export const ProfileDialog = ({
                         navigate("/profile/records");
                       }}
                     >
-                      <span className="font-display text-[13px] font-bold text-muted-foreground">Record</span>
+                      <span className="font-display text-[13px] font-bold text-[#7A7771] dark:text-muted-foreground">Records</span>
                     </button>
                     <button
                       type="button"
@@ -950,86 +1016,53 @@ export const ProfileDialog = ({
                         navigate("/stories/create");
                       }}
                     >
-                      <span className="font-display text-[13px] font-bold text-muted-foreground">Stories</span>
+                      <span className="font-display text-[13px] font-bold text-[#7A7771] dark:text-muted-foreground">Stories</span>
                     </button>
                   </div>
 
                   <div className="mt-3.5 grid grid-cols-2 gap-2.5">
-                    <div className="relative overflow-hidden rounded-[18px] border border-border/60 bg-card p-3.5 text-foreground shadow-[var(--shadow-card)]">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-muted-foreground">
+                    <div className="relative overflow-hidden rounded-[18px] border-[1.5px] border-[#E2DBD0] bg-white p-3.5 text-[#0E0E0F] dark:border-border/60 dark:bg-card dark:text-foreground">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7A7771] dark:text-muted-foreground">
                         Record · 5 km
                       </div>
                       <div className="mt-2 font-display text-[28px] font-bold leading-none tracking-[-1px]">
                         {fiveKmTime || "—"}
                       </div>
                       {fiveKmTime ? (
-                        <div className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
+                        <div className="mt-0.5 text-[11px] font-semibold text-[#7A7771] dark:text-muted-foreground">
                           {paceForKmMaquette(fiveKmTime, 5) ?? ""}
                         </div>
                       ) : (
-                        <div className="mt-0.5 text-[11px] font-semibold text-muted-foreground/80">
+                        <div className="mt-0.5 text-[11px] font-semibold text-[#7A7771]/80 dark:text-muted-foreground/80">
                           Renseigne ton temps
                         </div>
                       )}
-                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#FF4D1A] text-white">
                         <Zap className="h-3 w-3" strokeWidth={2.4} />
                       </div>
                     </div>
-                    <div className="relative overflow-hidden rounded-[18px] bg-foreground p-3.5 text-background shadow-[var(--shadow-card)]">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-background/60">
+                    <div className="relative overflow-hidden rounded-[18px] bg-[#0E0E0F] p-3.5 text-white dark:bg-foreground dark:text-background">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/60 dark:text-background/60">
                         Record · 10 km
                       </div>
                       <div className="mt-2 font-display text-[28px] font-bold leading-none tracking-[-1px]">
                         {tenKmTime || "—"}
                       </div>
                       {tenKmTime ? (
-                        <div className="mt-0.5 text-[11px] font-semibold text-background/70">
+                        <div className="mt-0.5 text-[11px] font-semibold text-white/70 dark:text-background/70">
                           {paceForKmMaquette(tenKmTime, 10) ?? ""}
                         </div>
                       ) : (
-                        <div className="mt-0.5 text-[11px] font-semibold text-background/70">
+                        <div className="mt-0.5 text-[11px] font-semibold text-white/70 dark:text-background/70">
                           Renseigne ton temps
                         </div>
                       )}
-                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-background/15 text-background">
+                      <div className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white dark:bg-background/15 dark:text-background">
                         <Zap className="h-3 w-3" strokeWidth={2.4} />
                       </div>
                     </div>
                   </div>
                 </div>
-
-              {/* Stories à la une - cercles style Instagram */}
-              <div className="mt-3 border-t border-border/60 px-1 py-3">
-                <div className="flex gap-3 overflow-x-auto pb-1">
-                  {storyHighlights.map((item) => {
-                    const titleSafe = String(item.title ?? "").trim() || "Sans titre";
-                    const previewUrl = highlightPreviewByStoryId.get(item.story_id) ?? null;
-                    return (
-                    <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
-                      <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-primary/30 bg-muted">
-                        {previewUrl ? (
-                          <img src={previewUrl} alt={titleSafe} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
-                        )}
-                      </div>
-                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{titleSafe}</p>
-                    </button>
-                    );
-                  })}
-                  {/* Bouton ajouter */}
-                  <button
-                    type="button"
-                    className="flex w-16 shrink-0 flex-col items-center gap-1.5"
-                    onClick={() => setShowHighlightsManager(true)}
-                  >
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40 bg-secondary/50 text-muted-foreground">
-                      <span className="text-xl leading-none">+</span>
-                    </div>
-                    <p className="w-full truncate text-center text-[11px] text-muted-foreground">Ajouter</p>
-                  </button>
-                </div>
-              </div>
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (

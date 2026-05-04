@@ -29,6 +29,7 @@ import {
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { Group, Cell } from "@/components/apple";
 import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
+import { cn } from "@/lib/utils";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -280,7 +281,11 @@ export const SettingsDialog = ({
       <DialogContent
         hideCloseButton
         stackNested={stackNested}
-        className="fixed inset-0 left-0 right-0 top-0 z-[125] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[125] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
+        className={cn(
+          "fixed inset-0 left-0 right-0 top-0 mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border",
+          /* Avec stackNested, l’overlay est z-[130] : le contenu doit rester au même plan ou au-dessus (sinon le voile capte tous les touches). */
+          stackNested ? "z-[130] sm:z-[130]" : "z-[125] sm:z-[125]"
+        )}
       >
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (

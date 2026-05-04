@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { addDays, format, getISOWeek } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Bike, ChevronLeft, ChevronRight, Dumbbell, Footprints, Moon, Waves } from "lucide-react";
+import { Bike, Check, ChevronLeft, ChevronRight, Dumbbell, Footprints, Moon, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WeekSelectorPremiumProps {
@@ -12,6 +12,8 @@ interface WeekSelectorPremiumProps {
   onNextWeek: () => void;
   indicatorsByDate?: Record<string, Array<{ color: string }>>;
   sessionSummaryByDate?: Record<string, DaySessionSummary>;
+  /** Jours où l’athlète ciblé a marqué la séance comme réalisée (vue coach semaine). */
+  dayAthleteCompletedByDate?: Record<string, boolean>;
   showLegend?: boolean;
   /**
    * - embed : bande mini-semaine avec flèches (< maquette précédente).
@@ -108,6 +110,7 @@ export function WeekSelectorPremium({
   onNextWeek,
   indicatorsByDate = {},
   sessionSummaryByDate = {},
+  dayAthleteCompletedByDate = {},
   showLegend = false,
   variant = "default",
 }: WeekSelectorPremiumProps) {
@@ -129,9 +132,10 @@ export function WeekSelectorPremium({
           isSelected: key === format(selectedDate, "yyyy-MM-dd"),
           indicators: indicatorsByDate[key] ?? [],
           summary: sessionSummaryByDate[key],
+          athleteCompleted: Boolean(dayAthleteCompletedByDate[key]),
         };
       }),
-    [indicatorsByDate, selectedDate, sessionSummaryByDate, weekStart]
+    [dayAthleteCompletedByDate, indicatorsByDate, selectedDate, sessionSummaryByDate, weekStart]
   );
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} - ${format(addDays(weekStart, 6), "d MMM", { locale: fr })}`;
@@ -263,7 +267,7 @@ export function WeekSelectorPremium({
                 >
                   {day.dayNumber}
                 </div>
-                <div className="mt-0.5 flex h-[26px] flex-col items-center justify-center gap-0.5">
+                <div className="relative mt-0.5 flex h-[26px] flex-col items-center justify-center gap-0.5">
                   {day.summary?.sport === "rest" ? (
                     <>
                       <span className="inline-flex" style={{ color: COACH_WEEK_SPORT.rest }}>
@@ -292,6 +296,15 @@ export function WeekSelectorPremium({
                     <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-dashed border-muted-foreground/45 text-[12px] font-light leading-none text-muted-foreground">
                       +
                     </div>
+                  ) : null}
+                  {day.athleteCompleted ? (
+                    <span
+                      className="absolute -bottom-0.5 right-0 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-[#34C759] text-white shadow-sm"
+                      title="Séance réalisée"
+                    >
+                      <Check className="h-2.5 w-2.5 stroke-[3]" stroke="currentColor" aria-hidden />
+                      <span className="sr-only">Séance réalisée</span>
+                    </span>
                   ) : null}
                 </div>
               </button>

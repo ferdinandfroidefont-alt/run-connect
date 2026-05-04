@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Group } from "@/components/apple/Group";
 import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { addDays, format } from "date-fns";
@@ -10,6 +11,8 @@ export type LandingAthleteCard = {
   name: string;
   initials: string;
   subtitle: string;
+  /** Photo profil (URL publique Supabase ou absolue). */
+  avatarUrl?: string | null;
   avatarClass: string;
   statusDotClass: string;
 };
@@ -198,14 +201,18 @@ export function CoachPlanificationLanding({
               className="w-24 shrink-0 rounded-[14px] bg-card p-3 text-center shadow-none active:opacity-90"
             >
               <div className="relative mx-auto">
-                <div
-                  className={cn(
-                    "mx-auto flex h-14 w-14 items-center justify-center rounded-full text-[18px] font-semibold text-white",
-                    a.avatarClass
-                  )}
-                >
-                  {a.initials}
-                </div>
+                <Avatar className="mx-auto h-14 w-14 border-0 shadow-none">
+                  {a.avatarUrl ? <AvatarImage src={a.avatarUrl} alt="" className="object-cover" /> : null}
+                  <AvatarFallback
+                    delayMs={a.avatarUrl ? 120 : 0}
+                    className={cn(
+                      "rounded-full text-[18px] font-semibold text-white",
+                      a.avatarClass
+                    )}
+                  >
+                    {a.initials}
+                  </AvatarFallback>
+                </Avatar>
                 <span
                   className={cn(
                     "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card",
@@ -238,7 +245,7 @@ export function CoachPlanificationLanding({
         </Group>
       </div>
 
-      <div className="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 px-4">
+      <div className="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px)-10px)] left-0 right-0 z-40 px-4">
         <button type="button" onClick={onCreateSession} className="pointer-events-auto handoff-coaching-fab">
           <Plus className="h-3.5 w-3.5 stroke-[2.4px]" stroke="currentColor" aria-hidden />
           Créer une séance

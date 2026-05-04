@@ -4,7 +4,7 @@ import { SessionActionMenu } from "@/components/coaching/planning/SessionActionM
 import { SessionStatusAction } from "@/components/coaching/planning/SessionStatusAction";
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { cn } from "@/lib/utils";
-import { Bike, ChevronRight, Dumbbell, Footprints, Moon, Waves } from "lucide-react";
+import { Bike, Check, ChevronRight, Dumbbell, Footprints, Moon, Waves } from "lucide-react";
 
 interface DayPlanningRowProps {
   dayLabel: string;
@@ -27,6 +27,8 @@ interface DayPlanningRowProps {
   layoutVariant?: "default" | "coachWeek";
   /** Dernière ligne du groupe : pas de filet inférieur (coachWeek). */
   isLast?: boolean;
+  /** Athlète ciblé : participation « completed » (maquette 16). */
+  athleteSessionCompleted?: boolean;
 }
 
 function sportAbbrev(s?: SessionSummaryView["sportHint"]) {
@@ -79,6 +81,7 @@ export function DayPlanningRow({
   hideActionSlot = false,
   layoutVariant = "default",
   isLast = false,
+  athleteSessionCompleted = false,
 }: DayPlanningRowProps) {
   const coachWeek = layoutVariant === "coachWeek";
   const dayAbbrev = dayLabel.slice(0, 3).toUpperCase();
@@ -125,6 +128,12 @@ export function DayPlanningRow({
                     </span>
                   ) : null}
                   <span className="truncate text-[16px] font-semibold tracking-[-0.03em] text-foreground">{session.title}</span>
+                  {athleteSessionCompleted ? (
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-[#34C759]/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#248a3d] dark:text-[#34C759]">
+                      <Check className="h-2.5 w-2.5 stroke-[2.8]" aria-hidden />
+                      Fait
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
                   {sportAbbrev(session.sportHint)}

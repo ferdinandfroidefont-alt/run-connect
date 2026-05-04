@@ -123,6 +123,23 @@ interface Conversation {
   last_message_date?: string;
 }
 
+/** Heure / date en ligne de liste (maquette 17 : HH:mm, Hier, Lun…). */
+function formatConversationListTime(iso: string): string {
+  const date = new Date(iso);
+  if (!isValid(date)) return "";
+  if (isToday(date)) return format(date, "HH:mm");
+  if (isYesterday(date)) return "Hier";
+  const todayStart = startOfDay(new Date());
+  const msgStart = startOfDay(date);
+  const diffDays = Math.round((todayStart.getTime() - msgStart.getTime()) / 86400000);
+  if (diffDays > 1 && diffDays < 7) {
+    const raw = format(date, "EEE", { locale: fr });
+    const strip = raw.replace(/\.$/, "");
+    return strip.charAt(0).toUpperCase() + strip.slice(1);
+  }
+  return format(date, "dd/MM", { locale: fr });
+}
+
 interface Message {
   id: string;
   conversation_id: string;
@@ -821,11 +838,11 @@ const Messages = () => {
         if (!conversationSearch.trim()) return true;
         const query = conversationSearch.toLowerCase();
         if (conv.is_group) {
-          return !!conv.group_name?.toLowerCase().includes(query);
+          return (conv.group_name ?? "").toLowerCase().includes(query);
         }
         return (
-          !!conv.other_participant?.username?.toLowerCase().includes(query) ||
-          !!conv.other_participant?.display_name?.toLowerCase().includes(query)
+          (conv.other_participant?.username ?? "").toLowerCase().includes(query) ||
+          (conv.other_participant?.display_name ?? "").toLowerCase().includes(query)
         );
       })
       .sort((a, b) => {
@@ -3370,15 +3387,13 @@ const Messages = () => {
       <div
         className={cn(
           "flex h-full min-h-0 flex-col overflow-hidden",
-          activeRootTab === "conversations"
-            ? "bg-[#F6F2EC] dark:bg-background"
-            : "bg-background"
+          activeRootTab === "conversations" ? "apple-grouped-bg" : "bg-background"
         )}
         data-tutorial="tutorial-messages"
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="z-50 bg-[#F6F2EC] dark:bg-background"
+          headerWrapperClassName="z-50 apple-grouped-bg"
           header={
             activeRootTab === "create-club" ? (
               <MainTopHeader
@@ -3402,16 +3417,16 @@ const Messages = () => {
                 }
               />
             ) : (
-              <div className="bg-[#F6F2EC] pt-[var(--safe-area-top)] dark:bg-background">
+              <div className="apple-grouped-bg pt-[var(--safe-area-top)]">
                 <div className="flex items-center justify-between px-5">
-                  <h1 className="font-display text-[36px] font-bold leading-[1.02] tracking-[-1.44px] text-[#0E0E0F] dark:text-foreground">
+                  <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
                     Messages
                   </h1>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-[#0E0E0F] text-white transition-[transform] duration-200 active:scale-95 dark:bg-foreground dark:text-background"
+                        className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-primary text-primary-foreground shadow-none transition-[transform] duration-200 active:scale-95"
                         aria-label="Nouveau message ou club"
                       >
                         <Plus className="h-5 w-5" strokeWidth={2.2} />
@@ -3448,13 +3463,13 @@ const Messages = () => {
                 </div>
 
                 <div className="mt-3.5 px-5">
-                  <div className="flex h-11 items-center gap-2 rounded-[22px] border border-[#E2DBD0] bg-white px-3.5 dark:border-border dark:bg-card">
-                    <Search className="h-3.5 w-3.5 shrink-0 text-[#7A7771] dark:text-muted-foreground" />
+                  <div className="flex h-11 items-center gap-2 rounded-[22px] border border-border bg-card px-3.5 shadow-none">
+                    <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <Input
                       value={conversationSearch}
                       onChange={(e) => setConversationSearch(e.target.value)}
                       placeholder="Rechercher amis · clubs · groupes"
-                      className="h-9 min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-[#0E0E0F] shadow-none placeholder:text-[#7A7771] focus-visible:ring-0 focus-visible:ring-offset-0 dark:text-foreground dark:placeholder:text-muted-foreground"
+                      className="h-9 min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                       aria-label="Rechercher une conversation"
                     />
                   </div>
@@ -3493,8 +3508,8 @@ const Messages = () => {
                         className={cn(
                           "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3.5 text-[13px] font-semibold tracking-[-0.1px] transition-[transform,opacity] active:scale-[0.98]",
                           active
-                            ? "border-transparent bg-[#0E0E0F] text-white shadow-none dark:bg-foreground dark:text-background"
-                            : "border border-[#E2DBD0] bg-white/95 text-[#0E0E0F] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:border-border dark:bg-card dark:text-foreground"
+                            ? "border-transparent bg-foreground text-background shadow-none"
+                            : "border border-border bg-card text-foreground shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]"
                         )}
                       >
                         {chip.label}
@@ -3511,7 +3526,7 @@ const Messages = () => {
             "pb-ios-2",
             activeRootTab === "create-club"
               ? "min-h-0 flex-1 bg-secondary pt-2.5"
-              : "min-h-0 flex-1 bg-[#F6F2EC] dark:bg-background"
+              : "min-h-0 flex-1 apple-grouped-bg"
           )}
         >
           {activeRootTab === "conversations" ? (
@@ -3519,9 +3534,8 @@ const Messages = () => {
               {/* Liste — carte blanche arrondie (maquette 17) */}
               <div
                 className={cn(
-                  "mt-3.5 min-h-[280px] flex-1 rounded-t-[24px] bg-white pb-ios-4 dark:bg-card",
-                  filteredAndSortedConversations.length > 0 &&
-                    "divide-y divide-[#E2DBD0] dark:divide-border"
+                  "mt-3.5 min-h-[280px] flex-1 rounded-t-[24px] bg-card pb-ios-4",
+                  filteredAndSortedConversations.length > 0 && "divide-y divide-border"
                 )}
               >
                 {conversations.length === 0 ? (
@@ -3559,7 +3573,7 @@ const Messages = () => {
                 ) : (
                   <div className="sm:mx-auto sm:max-w-2xl">
                     {filteredAndSortedConversations.map((conversation) => {
-                      const when = formatConversationRowTime(
+                      const when = formatConversationListTime(
                         conversation.last_message_date || conversation.updated_at
                       );
                       const unread = conversation.unread_count > 0;
@@ -3578,7 +3592,7 @@ const Messages = () => {
                       >
                         <div
                           className={cn(
-                            "relative flex items-center gap-3 bg-white px-5 py-3 dark:bg-card",
+                            "relative flex items-center gap-3 bg-card px-5 py-3",
                             selectedConversations.has(conversation.id) && "bg-primary/5"
                           )}
                           onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
@@ -3635,7 +3649,7 @@ const Messages = () => {
                             )}
                             {(isClub || isGrp) && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
                               <div
-                                className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white text-[10px] dark:border-card dark:bg-card"
+                                className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card text-[10px]"
                                 aria-hidden
                               >
                                 {isClub ? "🏛" : "👥"}
@@ -3662,7 +3676,7 @@ const Messages = () => {
                                     📌
                                   </span>
                                 ) : null}
-                                <p className="truncate font-display text-[15px] font-bold text-[#0E0E0F] dark:text-foreground">
+                                <p className="truncate font-display text-[15px] font-bold text-foreground">
                                   {conversation.is_group
                                     ? conversation.group_name
                                     : conversation.other_participant?.username || "Utilisateur"}
@@ -3672,8 +3686,8 @@ const Messages = () => {
                                 className={cn(
                                   "shrink-0 text-[11px] tabular-nums",
                                   unread
-                                    ? "font-bold text-[#FF4D1A] dark:text-orange-500"
-                                    : "font-medium text-[#7A7771] dark:text-muted-foreground"
+                                    ? "font-bold text-primary"
+                                    : "font-medium text-muted-foreground"
                                 )}
                               >
                                 {when}
@@ -3682,8 +3696,8 @@ const Messages = () => {
                             <div className="mt-0.5 flex items-center justify-between gap-2">
                               <p
                                 className={cn(
-                                  "min-w-0 truncate text-[13px] text-[#7A7771] dark:text-muted-foreground",
-                                  unread && "font-medium text-[#3A3936] dark:text-foreground/90"
+                                  "min-w-0 truncate text-[13px] text-muted-foreground",
+                                  unread && "font-medium text-foreground/90"
                                 )}
                               >
                                 {conversation.last_message ? (
@@ -3722,12 +3736,12 @@ const Messages = () => {
                               {unread ? (
                                 conversation.unread_count === 1 ? (
                                   <span
-                                    className="mx-1 h-2 w-2 shrink-0 rounded-full bg-[#FF4D1A] dark:bg-orange-500"
+                                    className="mx-1 h-2 w-2 shrink-0 rounded-full bg-primary"
                                     aria-label="Non lu"
                                   />
                                 ) : (
-                                  <div className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#FF4D1A] px-1.5 dark:bg-orange-500">
-                                    <span className="text-[11px] font-bold text-white">
+                                  <div className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5">
+                                    <span className="text-[11px] font-bold text-primary-foreground">
                                       {conversation.unread_count > 99 ? "99+" : conversation.unread_count}
                                     </span>
                                   </div>

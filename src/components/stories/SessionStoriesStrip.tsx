@@ -116,7 +116,10 @@ export function SessionStoriesStrip({
   );
   const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
-  // Maquette 17 : anneau dégradé feu RunConnect (#FF4D1A · #FFB199), « Toi » + pastille +
+  // Maquette 17 : anneau conique (non vu) = tokens --primary ; vu = bordure sémantique ; fond intérieur = grouped
+  const ringUnviewed =
+    "conic-gradient(from 200deg, hsl(var(--primary) / 1) 0%, hsl(var(--primary-on-dark) / 1) 50%, hsl(var(--primary) / 1) 100%)";
+
   return (
     <div
       className={cn(
@@ -132,23 +135,23 @@ export function SessionStoriesStrip({
         >
           <div
             className="relative h-16 w-16 rounded-full p-[2.5px]"
-            style={{ background: "#E2DBD0" }}
+            style={{ background: "hsl(var(--border))" }}
           >
-            <div className="h-full w-full rounded-full bg-[#F6F2EC] p-[2px] dark:bg-background">
+            <div className="h-full w-full rounded-full bg-muted p-[2px]">
               <Avatar className="h-full w-full">
                 <AvatarImage src={myStoryAvatarUrl ?? ""} />
-                <AvatarFallback className="bg-[hsl(var(--muted))] text-[18px] font-semibold text-foreground/70">
+                <AvatarFallback className="bg-muted text-[18px] font-semibold text-foreground/70">
                   {hasMyStory ? "MOI" : "+"}
                 </AvatarFallback>
               </Avatar>
             </div>
             {!hasMyStory && (
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[2.5px] border-[#F6F2EC] bg-[#FF4D1A] text-white dark:border-background dark:bg-orange-500">
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[2.5px] border-muted bg-primary text-primary-foreground">
                 <Plus className="h-3 w-3" strokeWidth={2.4} />
               </span>
             )}
           </div>
-          <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-[#7A7771] dark:text-muted-foreground">
+          <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-muted-foreground">
             Toi
           </span>
         </button>
@@ -165,21 +168,19 @@ export function SessionStoriesStrip({
               <div
                 className="h-16 w-16 rounded-full p-[2.5px]"
                 style={{
-                  background: author.viewed
-                    ? "#E2DBD0"
-                    : "conic-gradient(from 200deg, #FF4D1A 0%, #FFB199 50%, #FF4D1A 100%)",
+                  background: author.viewed ? "hsl(var(--border))" : ringUnviewed,
                 }}
               >
-                <div className="h-full w-full rounded-full bg-[#F6F2EC] p-[2px] dark:bg-background">
+                <div className="h-full w-full rounded-full bg-muted p-[2px]">
                   <Avatar className="h-full w-full">
                     <AvatarImage src={author.avatar_url ?? ""} />
-                    <AvatarFallback className="bg-[hsl(var(--muted))] text-[18px] font-semibold text-foreground">
+                    <AvatarFallback className="bg-muted text-[18px] font-semibold text-foreground">
                       {(author.username ?? "U").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
               </div>
-              <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-[#0E0E0F] dark:text-foreground">
+              <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-foreground">
                 {author.display_name || author.username || "Membre"}
               </span>
             </button>

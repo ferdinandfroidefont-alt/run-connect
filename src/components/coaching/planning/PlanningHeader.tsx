@@ -27,9 +27,19 @@ interface PlanningHeaderProps {
    * `ScreenCoachPlan` dans apple-screens.jsx à la place notifications + réglages.
    */
   coachLandingBrand?: boolean;
+  /** Maquette Mon plan : pas de cloche ni de bouton paramètres dans la barre (menu via drawer ailleurs). */
+  hideDrawerActions?: boolean;
 }
 
-export function PlanningHeader({ onOpenMenu, title, subtitle, tabs, coachLandingBrand }: PlanningHeaderProps) {
+export function PlanningHeader({
+  onOpenMenu,
+  title,
+  subtitle,
+  tabs,
+  coachLandingBrand,
+  hideDrawerActions,
+}: PlanningHeaderProps) {
+  const showBellAndSettings = !coachLandingBrand && !hideDrawerActions;
   return (
     <MainTopHeader
       title={title}
@@ -39,7 +49,7 @@ export function PlanningHeader({ onOpenMenu, title, subtitle, tabs, coachLanding
       right={
         <>
           <RunConnectHeaderMark />
-          {coachLandingBrand ? null : (
+          {showBellAndSettings ? (
             <>
               <div className="flex shrink-0 items-center justify-center">
                 <NotificationCenter scope="coaching" />
@@ -53,7 +63,7 @@ export function PlanningHeader({ onOpenMenu, title, subtitle, tabs, coachLanding
                 <Settings className="h-[20px] w-[20px]" />
               </button>
             </>
-          )}
+          ) : null}
         </>
       }
     />
