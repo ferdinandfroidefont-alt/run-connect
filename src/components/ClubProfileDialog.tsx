@@ -1,29 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
-  Copy,
   Share2,
   GraduationCap,
-  UserPlus,
   Search,
-  MoreHorizontal,
   AlertTriangle,
   UserMinus,
-  Bell,
-  BellOff,
-  LogOut,
-  Trash2,
   Building2,
+  Loader2,
+  EllipsisVertical,
+  ChevronRight,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import {
@@ -44,6 +38,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+import { ClubSettingsMaquetteView, type ClubMaquetteMember } from "@/components/club/ClubSettingsMaquetteView";
 
 interface Profile {
   user_id: string;
@@ -73,6 +69,9 @@ interface ClubProfileDialogProps {
   isClub?: boolean;
   isMuted?: boolean;
   onToggleMute?: () => void;
+  /** Stats maquette · nombre de programmes / groupes */
+  groupsCount?: number;
+  onEditClub?: () => void;
   /** Après suppression du club (admin) ou départ (membre), pour rafraîchir la liste sans recharger la page. */
   onClubLeftOrDeleted?: () => void;
   /** Ouvre l’onglet Coaching « Gérer le club » pour ce conversation id (coachs / admins). */
@@ -95,6 +94,8 @@ export const ClubProfileDialog = ({
   onToggleMute,
   onClubLeftOrDeleted,
   onOpenManageClubInCoaching,
+  groupsCount = 0,
+  onEditClub,
 }: ClubProfileDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -108,7 +109,6 @@ export const ClubProfileDialog = ({
   const [inviteLoading, setInviteLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<GroupMember | null>(null);
-  const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [showLeaveClubDialog, setShowLeaveClubDialog] = useState(false);
 
   const loadGroupMembers = async () => {
@@ -163,8 +163,6 @@ export const ClubProfileDialog = ({
   const currentUserIsCoach = members.some(
     (m) => m.user_id === user?.id && (m.is_coach || m.is_admin)
   ) || createdBy === user?.id;
-
-  const currentUserMember = members.find((m) => m.user_id === user?.id);
 
   const searchUsers = async () => {
     if (!searchQuery.trim()) { setSearchResults([]); return; }
@@ -294,330 +292,203 @@ export const ClubProfileDialog = ({
   }, [searchQuery, members]);
 
   useEffect(() => {
-    if (isOpen) {
-      setMemberSearchQuery("");
-      loadGroupMembers();
-    }
+    if (isOpen) void loadGroupMembers();
   }, [isOpen, conversationId]);
 
   const memberCount = members.length;
-  const filteredMembers = members.filter((m) => {
-    const q = memberSearchQuery.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      (m.display_name || "").toLowerCase().includes(q) ||
-      (m.username || "").toLowerCase().includes(q)
-    );
-  });
-
-  const getRoleBadge = (member: GroupMember) => {
-    if (member.user_id === createdBy || member.is_admin) {
-      return <Badge className="bg-primary/12 text-primary border-0 text-[11px] px-1.5 py-0">Admin</Badge>;
-    }
-    if (member.is_coach) {
-      return <Badge className="bg-secondary text-foreground border-0 text-[11px] px-1.5 py-0">Coach</Badge>;
-    }
-    return <Badge className="bg-muted text-muted-foreground border-0 text-[11px] px-1.5 py-0">Athlète</Badge>;
-  };
-
+  const coachesCount = useMemo(() => members.filter((m) => m.is_coach || m.is_admin).length, [members]);
+  const maquetteVariant = currentUserIsCoach ? "admin" : "athlete";
   const createdDate = createdAt ? format(new Date(createdAt), "d MMMM yyyy", { locale: fr }) : null;
-
   const entityLabel = isClub ? "club" : "groupe";
   const showManageClubCoaching =
     isClub && currentUserIsCoach && Boolean(onOpenManageClubInCoaching);
 
+  const sortedMembers = useMemo(() => {
+    const copy = [...members];
+    copy.sort((a, b) => {
+      if (a.is_admin && !b.is_admin) return -1;
+      if (!a.is_admin && b.is_admin) return 1;
+      if (a.is_coach && !b.is_coach) return -1;
+      if (!a.is_coach && b.is_coach) return 1;
+      return (a.display_name || a.username || "").localeCompare(b.display_name || b.username || "");
+    });
+    return copy;
+  }, [members]);
+
+  const roleLabelForMember = (m: GroupMember) => {
+    if (m.is_admin) return m.user_id === createdBy ? "Coach principal" : "Administrateur";
+    if (m.is_coach) return "Coach";
+    return "Athlète";
+  };
+
+  const maquetteMembers: ClubMaquetteMember[] = sortedMembers.map((m) => ({
+    userId: m.user_id,
+    displayName: m.display_name || m.username || "Membre",
+    roleLabel: roleLabelForMember(m),
+    avatarUrl: m.avatar_url,
+    isYou: m.user_id === user?.id,
+    isAdminStar: m.user_id === createdBy,
+  }));
+
+  const clubTag =
+    groupName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 3) || "RC";
+
+  const subtitleLine =
+    [groupDescription?.trim(), createdDate ? `Créé le ${createdDate}` : null].filter(Boolean).join(" · ") ||
+    (isClub ? "Club RunConnect" : "Groupe");
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0 bg-background">
-          {/* iOS Navigation Bar */}
-          <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 pt-[max(0.75rem,var(--safe-area-top))] flex items-center shrink-0">
-            <button
-              onClick={onClose}
-              className="flex items-center gap-0.5 text-primary text-[16px] min-w-[70px] font-medium"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="text-[15px] font-normal">Retour</span>
-            </button>
-            <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
-              {isClub ? "Profil du club" : "Profil du groupe"}
-            </span>
-            <div className="min-w-[70px]" />
+        <DialogContent fullScreen hideCloseButton className="flex flex-col gap-0 bg-background p-0">
+          <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-[hsl(var(--muted))] pt-[max(0.75rem,var(--safe-area-top))]">
+            <IosPageHeaderBar
+              leadingBack={{ onClick: onClose, label: "Messages" }}
+              title=""
+              titleClassName="sr-only"
+              right={
+                <button
+                  type="button"
+                  className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-primary active:opacity-60"
+                  onClick={() => {
+                    if (currentUserIsCoach) onEditClub?.();
+                    else void handleShare();
+                  }}
+                >
+                  {currentUserIsCoach ? <span className="font-semibold">Modifier</span> : "Partager"}
+                </button>
+              }
+            />
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-5 pb-8">
-
-              {/* 1️⃣ Header premium */}
-              <div className="bg-card border-b border-border px-4 pt-6 pb-5">
-                <div className="flex flex-col items-center text-center">
-                  <Avatar className="h-24 w-24 mb-3 ring-4 ring-primary/10">
-                    <AvatarImage src={groupAvatarUrl || ""} />
-                    <AvatarFallback className="text-3xl bg-primary/10 text-primary font-bold">
-                      {(groupName || "C").charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <h2 className="text-[22px] font-bold text-foreground">{groupName}</h2>
-                  
-                  {/* Role badge - only for clubs */}
-                  {isClub && (
-                    <div className="mt-1.5">
-                      {currentUserIsCoach ? (
-                        <Badge className="bg-primary/12 text-primary border-0 text-[12px] px-2 py-0.5">
-                          Coach principal
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-secondary text-foreground border-0 text-[12px] px-2 py-0.5">
-                          Membre
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {groupDescription && (
-                    <p className="text-[13px] text-muted-foreground mt-2 max-w-[280px]">{groupDescription}</p>
-                  )}
-
-                  <p className="text-[12px] text-muted-foreground mt-2">
-                    {memberCount} membre{memberCount > 1 ? 's' : ''}
-                    {createdDate && ` · Créé le ${createdDate}`}
-                  </p>
-                </div>
+          <div className="min-h-0 flex-1 overflow-y-auto apple-grouped-bg">
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-label="Chargement" />
               </div>
-
-              {/* Membres */}
-              <div className="mx-4">
-                <div className="bg-card rounded-[10px] overflow-hidden border border-border shadow-sm">
-                  <div className="flex flex-col gap-2 border-b border-border/50 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-2">
-                    <div className="relative min-w-0 flex-1">
-                      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Rechercher un membre…"
-                        value={memberSearchQuery}
-                        onChange={(e) => setMemberSearchQuery(e.target.value)}
-                        className="h-9 border-border/80 pl-8 text-[14px]"
-                      />
-                    </div>
-                    {isAdmin && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-9 shrink-0 gap-1.5 px-3"
-                        onClick={() => {
+            ) : (
+              <>
+                <ClubSettingsMaquetteView
+                  variant={maquetteVariant}
+                  clubName={groupName}
+                  clubTag={clubTag}
+                  clubAvatarUrl={groupAvatarUrl}
+                  subtitleLine={subtitleLine}
+                  statsMembers={memberCount}
+                  statsCoaches={coachesCount}
+                  statsPrograms={groupsCount}
+                  members={maquetteMembers}
+                  totalMemberCount={memberCount}
+                  conversationMute={
+                    maquetteVariant === "admin" && onToggleMute
+                      ? { muted: isMuted, onToggle: () => onToggleMute() }
+                      : undefined
+                  }
+                  onQuickInvite={
+                    currentUserIsCoach && isClub
+                      ? () => {
                           setSearchQuery("");
                           setSearchResults([]);
                           setShowInviteDialog(true);
-                        }}
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        <span className="text-[13px]">Inviter</span>
-                      </Button>
-                    )}
-                  </div>
-
-                  {loading ? (
-                    <div className="space-y-3 p-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <div className="h-11 w-11 animate-pulse rounded-full bg-muted" />
-                          <div className="flex-1">
-                            <div className="mb-1 h-4 w-2/3 animate-pulse rounded bg-muted" />
-                            <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : filteredMembers.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-[13px] text-muted-foreground">
-                      {memberSearchQuery.trim()
-                        ? "Aucun membre ne correspond à votre recherche"
-                        : "Aucun membre pour le moment"}
-                    </p>
-                  ) : (
-                    <div>
-                      {filteredMembers.map((member, index) => (
-                        <div key={member.user_id}>
-                          <div className="flex items-center gap-3 px-4 py-3">
-                            <Avatar
-                              className="h-11 w-11 cursor-pointer transition-opacity hover:opacity-80"
-                              onClick={() => navigateToProfile(member.user_id)}
-                            >
-                              <AvatarImage src={member.avatar_url || ""} />
-                              <AvatarFallback className="text-sm">
-                                {(member.username || member.display_name || "").charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                <p className="truncate text-[15px] font-semibold text-foreground">
-                                  {member.display_name || member.username}
-                                  {member.user_id === user?.id && (
-                                    <span className="font-normal text-muted-foreground"> (vous)</span>
-                                  )}
-                                </p>
-                              </div>
-                              <div className="mt-0.5 flex items-center gap-1.5">
-                                <p className="text-[12px] text-muted-foreground">@{member.username}</p>
-                                {getRoleBadge(member)}
-                              </div>
-                            </div>
-
-                            {isAdmin && member.user_id !== user?.id && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/50"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => toggleCoach(member.user_id, member.is_coach)}>
-                                    <GraduationCap className="mr-2 h-4 w-4" />
-                                    {member.is_coach ? "Retirer coach" : "Promouvoir coach"}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => {
+                        }
+                      : undefined
+                  }
+                  onQuickAddCoach={
+                    currentUserIsCoach && isClub
+                      ? () => {
+                          setSearchQuery("");
+                          setSearchResults([]);
+                          setShowInviteDialog(true);
+                        }
+                      : undefined
+                  }
+                  onQuickShareLink={isClub ? () => void handleShare() : undefined}
+                  onMemberRowClick={(userId) => navigateToProfile(userId)}
+                  renderMemberTrailing={
+                    currentUserIsCoach
+                      ? (row) =>
+                          row.userId !== user?.id ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" aria-label="Actions">
+                                  <EllipsisVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const member = members.find((mm) => mm.user_id === row.userId);
+                                    if (member) void toggleCoach(member.user_id, member.is_coach);
+                                  }}
+                                >
+                                  <GraduationCap className="mr-2 h-4 w-4" />
+                                  {members.find((mm) => mm.user_id === row.userId)?.is_coach
+                                    ? "Retirer coach"
+                                    : "Promouvoir coach"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => {
+                                    const member = members.find((mm) => mm.user_id === row.userId);
+                                    if (member) {
                                       setMemberToDelete(member);
                                       setShowDeleteDialog(true);
-                                    }}
-                                  >
-                                    <UserMinus className="mr-2 h-4 w-4" />
-                                    Retirer du {entityLabel}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                          {index < filteredMembers.length - 1 && (
-                            <div className="ml-[68px] h-px bg-border/50" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+                                    }
+                                  }}
+                                >
+                                  <UserMinus className="mr-2 h-4 w-4" />
+                                  Retirer du {entityLabel}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span className="pb-1 text-[18px] tracking-[2px] text-muted-foreground/40">···</span>
+                          )
+                      : undefined
+                  }
+                  onAdminSettingInfos={() => onEditClub?.()}
+                  onAdminSettingPrivacy={() => onEditClub?.()}
+                  onAdminSettingNotifications={() => onEditClub?.()}
+                  onAdminSettingCalendar={() => onEditClub?.()}
+                  onAdminSettingPrograms={() => onEditClub?.()}
+                  onAdminCoAdmins={() => onEditClub?.()}
+                  onAdminExport={() => toast({ title: "Export à venir" })}
+                  onAdminArchive={isAdmin ? () => toast({ title: "Archivage à venir" }) : undefined}
+                  onAdminDelete={isAdmin ? () => setShowDeleteGroupDialog(true) : undefined}
+                  athleteNotificationsOn={!isMuted}
+                  onAthleteToggleNotifications={() => onToggleMute?.()}
+                  onAthleteCalendar={() => onEditClub?.()}
+                  onAthletePrograms={() => onEditClub?.()}
+                  onAthleteLeaveClub={() => setShowLeaveClubDialog(true)}
+                />
 
-              {/* Code d'invitation — clubs uniquement */}
-              {isClub && clubCode && (
-                <div className="mx-4">
-                  <div className="overflow-hidden rounded-[10px] border border-border bg-card shadow-sm">
-                    <div className="flex items-center justify-between px-4 py-3">
+                {showManageClubCoaching ? (
+                  <div className="px-4 pb-10">
+                    <button
+                      type="button"
+                      onClick={() => onOpenManageClubInCoaching?.()}
+                      className="flex w-full items-center gap-3 overflow-hidden rounded-[10px] bg-card px-4 py-3 text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] active:bg-muted/60"
+                    >
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-[rgba(10,132,255,0.12)] text-primary">
+                        <Building2 className="h-4 w-4" />
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-mono text-[24px] font-bold tracking-[0.15em] text-foreground">
-                          {clubCode}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          Partagez ce code pour inviter des membres
-                        </p>
+                        <div className="text-[16px] font-medium tracking-[-0.02em] text-foreground">Coaching</div>
+                        <div className="text-[12px] text-muted-foreground">Ouvrir la gestion avancée du club</div>
                       </div>
-                      <div className="flex shrink-0 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(clubCode);
-                            toast({ title: "Code copié !" });
-                          }}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary active:opacity-70"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleShare}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary active:opacity-70"
-                        >
-                          <Share2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
+                      <ChevronRight className="h-[18px] w-4 shrink-0 text-muted-foreground/45" />
+                    </button>
                   </div>
-                </div>
-              )}
-
-              {/* Notifications & actions */}
-              <div className="mx-4">
-                <div className="overflow-hidden rounded-[10px] border border-border bg-card shadow-sm">
-                  {onToggleMute && (
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <div
-                        className={`flex h-[30px] w-[30px] items-center justify-center rounded-[7px] ${isMuted ? "bg-muted" : "bg-primary"}`}
-                      >
-                        {isMuted ? (
-                          <BellOff className="h-[18px] w-[18px] text-muted-foreground" />
-                        ) : (
-                          <Bell className="h-[18px] w-[18px] text-primary-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[15px] text-foreground">Mettre en sourdine</p>
-                        <p className="text-[12px] text-muted-foreground">
-                          {isMuted ? "Notifications désactivées" : "Notifications actives"}
-                        </p>
-                      </div>
-                      <Switch checked={isMuted} onCheckedChange={onToggleMute} />
-                    </div>
-                  )}
-
-                  {onToggleMute && <div className="h-px bg-border/50" />}
-
-                  {showManageClubCoaching && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onOpenManageClubInCoaching?.()}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
-                      >
-                        <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-primary/12">
-                          <Building2 className="h-[18px] w-[18px] text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-[15px] text-foreground">Gérer le club</p>
-                          <p className="text-[12px] text-muted-foreground">
-                            Membres, groupes et coaching dans l&apos;espace Coaching
-                          </p>
-                        </div>
-                      </button>
-                      <div className="h-px bg-border/50" />
-                    </>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      isAdmin ? setShowDeleteGroupDialog(true) : setShowLeaveClubDialog(true)
-                    }
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
-                  >
-                    <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-destructive/15">
-                      {isAdmin ? (
-                        <Trash2 className="h-[18px] w-[18px] text-destructive" />
-                      ) : (
-                        <LogOut className="h-[18px] w-[18px] text-destructive" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[15px] text-foreground">
-                        {isAdmin ? `Supprimer le ${entityLabel}` : `Quitter le ${entityLabel}`}
-                      </p>
-                      <p className="text-[12px] text-muted-foreground">
-                        {isAdmin
-                          ? isClub
-                            ? "Supprime définitivement le club et tout son contenu"
-                            : "Supprime définitivement le groupe et tout son contenu"
-                          : isClub
-                            ? "Vous ne recevrez plus les messages de ce club"
-                            : "Vous ne recevrez plus les messages de ce groupe"}
-                      </p>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-            </div>
+                ) : null}
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

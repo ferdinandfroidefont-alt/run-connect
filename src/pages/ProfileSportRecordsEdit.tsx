@@ -1,38 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Bike, Check, Footprints, Loader2, Plus, Trash2, Waves, Zap, type LucideIcon } from "lucide-react";
+import { Activity, Bike, Check, Footprints, Loader2, Plus, Trash2, Waves, Zap, X, type LucideIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
-import {
-  PROFILE_SPORT_RECORD_KEYS,
-  PROFILE_SPORT_RECORD_LABELS,
-  isProfileSportRecordKey,
-  type ProfileSportRecordKey,
-} from "@/lib/profileSportRecords";
+import { PROFILE_SPORT_RECORD_LABELS, isProfileSportRecordKey, type ProfileSportRecordKey } from "@/lib/profileSportRecords";
 import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsDisplay";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import { kmToMiles, milesToKm } from "@/lib/distanceUnits";
+import { cn } from "@/lib/utils";
 
-type WizardStep = 1 | 2 | 3 | 4;
-type RunningMode = "time" | "pace";
-type CyclingMode = "speed" | "watts";
+/** Maquette 21 · RunConnect accent & surfaces */
+const RC = {
+  fire: "#FF4D1A",
+  surface: "#FAFAF7",
+  prBadgeBg: "#FFF6F2",
+} as const;
 
-const STEP_LABELS = ["Sport", "Distance", "Performance", "Récap"];
-
-const DISTANCE_PRESETS: Array<{ id: string; label: string; km: number | null }> = [
+const DISTANCE_CHIPS: Array<{ id: string; label: string; km: number | null }> = [
+  { id: "1k", label: "1 km", km: 1 },
   { id: "5k", label: "5 km", km: 5 },
   { id: "10k", label: "10 km", km: 10 },
-  { id: "semi", label: "Semi-marathon", km: 21.097 },
+  { id: "semi", label: "Semi", km: 21.097 },
   { id: "marathon", label: "Marathon", km: 42.195 },
   { id: "custom", label: "Autre", km: null },
 ];
+
+const SPORT_EMOJI: Partial<Record<ProfileSportRecordKey, string>> & Record<string, string> = {
+  running: "🏃",
+  cycling: "🚴",
+  swimming: "🏊",
+  walking: "🥾",
+  triathlon: "🔱",
+  other: "➕",
+};
+
+const PRIMARY_SPORT_ORDER: ProfileSportRecordKey[] = ["running", "cycling", "swimming", "walking"];
+const EXTRA_SPORTS: ProfileSportRecordKey[] = ["triathlon", "other"];
 
 const SPORT_ICONS: Record<ProfileSportRecordKey, LucideIcon> = {
   running: Activity,
@@ -43,36 +51,26 @@ const SPORT_ICONS: Record<ProfileSportRecordKey, LucideIcon> = {
   other: Plus,
 };
 
-function formatDuration(totalSec: number): string {
+function formatDurationParts(totalSec: number): { h: string; m: string; s: string } {
   const safe = Math.max(0, Math.round(totalSec));
   const h = Math.floor(safe / 3600);
   const m = Math.floor((safe % 3600) / 60);
   const s = safe % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+  return {
+    h: String(h).padStart(2, "0"),
+    m: String(m).padStart(2, "0"),
+    s: String(s).padStart(2, "0"),
+  };
 }
 
-function parseDurationToSec(raw: string): number | null {
-  const t = raw.trim();
-  if (!t) return null;
-  const parts = t.split(":").map((p) => Number.parseInt(p, 10));
-  if (parts.some((p) => !Number.isFinite(p) || p < 0)) return null;
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  return null;
-}
-
-function formatDistanceByUnit(km: number, unit: "km" | "mi"): string {
-  const v = unit === "mi" ? kmToMiles(km) : km;
-  const suffix = unit === "mi" ? "mi" : "km";
-  return `${v.toFixed(v >= 10 ? 1 : 2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1")} ${suffix}`;
+function formatDuration(totalSec: number): string {
+  const { h, m, s } = formatDurationParts(totalSec);
+  const hi = Number(h);
+  return hi > 0 ? `${hi}:${m}:${s}` : `${Number(m)}:${s}`;
 }
 
 function paceSecPerKmFromDuration(distanceKm: number, durationSec: number): number {
   return durationSec / Math.max(0.001, distanceKm);
-}
-
-function durationSecFromPace(distanceKm: number, paceSecPerKm: number): number {
-  return Math.round(distanceKm * paceSecPerKm);
 }
 
 function speedKmhFromDuration(distanceKm: number, durationSec: number): number {
@@ -83,8 +81,10 @@ function durationSecFromSpeed(distanceKm: number, kmh: number): number {
   return Math.round((distanceKm / Math.max(0.1, kmh)) * 3600);
 }
 
-function speedFromWatts(watts: number): number {
-  return 10 + watts * 0.065;
+function formatDistanceByUnit(km: number, unit: "km" | "mi"): string {
+  const v = unit === "mi" ? kmToMiles(km) : km;
+  const suffix = unit === "mi" ? "mi" : "km";
+  return `${v.toFixed(v >= 10 ? 1 : 2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1")} ${suffix}`;
 }
 
 export default function ProfileSportRecordsEdit() {
@@ -97,69 +97,25 @@ export default function ProfileSportRecordsEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [step, setStep] = useState<WizardStep>(1);
   const [sportKey, setSportKey] = useState<ProfileSportRecordKey>("running");
-  const [presetId, setPresetId] = useState<string>("5k");
-  const [distanceKm, setDistanceKm] = useState(5);
-  const [eventLabel, setEventLabel] = useState("5 km");
+  const [presetId, setPresetId] = useState<string>("10k");
+  const [distanceKm, setDistanceKm] = useState(10);
+  const [eventLabel, setEventLabel] = useState("10 km");
 
-  const [runningMode, setRunningMode] = useState<RunningMode>("time");
-  const [cyclingMode, setCyclingMode] = useState<CyclingMode>("speed");
-  const [durationSec, setDurationSec] = useState(25 * 60);
+  const [durationSec, setDurationSec] = useState(41 * 60 + 18);
   const [paceSecPerKm, setPaceSecPerKm] = useState(5 * 60);
-  const [speedKmh, setSpeedKmh] = useState(25);
-  const [watts, setWatts] = useState(220);
 
   const [customDistanceOpen, setCustomDistanceOpen] = useState(false);
   const [durationPickerOpen, setDurationPickerOpen] = useState(false);
-  const [pacePickerOpen, setPacePickerOpen] = useState(false);
   const [speedPickerOpen, setSpeedPickerOpen] = useState(false);
-  const [wattsPickerOpen, setWattsPickerOpen] = useState(false);
 
   const [customDistanceWhole, setCustomDistanceWhole] = useState("5");
   const [customDistanceDec, setCustomDistanceDec] = useState("0");
   const [durH, setDurH] = useState("0");
-  const [durM, setDurM] = useState("25");
-  const [durS, setDurS] = useState("0");
-  const [paceM, setPaceM] = useState("5");
-  const [paceS, setPaceS] = useState("0");
+  const [durM, setDurM] = useState("41");
+  const [durS, setDurS] = useState("18");
   const [speedWhole, setSpeedWhole] = useState("25");
   const [speedDec, setSpeedDec] = useState("0");
-  const [wattsDraft, setWattsDraft] = useState("220");
-  const profileHeaderTabs = [
-    { id: "profile", label: "Profil", active: false, onClick: () => navigate("/profile") },
-    { id: "records", label: "Record", active: true },
-    { id: "story", label: "Créer une story", active: false, onClick: () => navigate("/stories/create") },
-  ];
-
-  const openDurationPicker = () => {
-    const h = Math.floor(durationSec / 3600);
-    const m = Math.floor((durationSec % 3600) / 60);
-    const s = durationSec % 60;
-    setDurH(String(h));
-    setDurM(String(m));
-    setDurS(String(s));
-    setDurationPickerOpen(true);
-  };
-
-  const openPacePicker = () => {
-    setPaceM(String(Math.floor(paceSecPerKm / 60)));
-    setPaceS(String(paceSecPerKm % 60));
-    setPacePickerOpen(true);
-  };
-
-  const openSpeedPicker = () => {
-    const whole = Math.floor(speedKmh);
-    const dec = Math.round((speedKmh - whole) * 10);
-    setSpeedWhole(String(whole));
-    setSpeedDec(String(dec));
-    setSpeedPickerOpen(true);
-  };
-
-  const openWattsPicker = () => {
-    setWattsDraft(String(Math.round(watts)));
-    setWattsPickerOpen(true);
-  };
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -188,24 +144,18 @@ export default function ProfileSportRecordsEdit() {
     void load();
   }, [user, navigate, load]);
 
+  const runningLike = sportKey === "running" || sportKey === "walking" || sportKey === "swimming";
+
   useEffect(() => {
-    const runningLike = sportKey === "running" || sportKey === "walking" || sportKey === "swimming";
-    if (runningLike && runningMode === "time") {
+    if (runningLike) {
       setPaceSecPerKm(paceSecPerKmFromDuration(distanceKm, durationSec));
     }
-    if (runningLike && runningMode === "pace") {
-      setDurationSec(durationSecFromPace(distanceKm, paceSecPerKm));
-    }
-    if (!runningLike && cyclingMode === "speed") {
-      setDurationSec(durationSecFromSpeed(distanceKm, speedKmh));
-      setWatts(Math.round((speedKmh - 10) / 0.065));
-    }
-    if (!runningLike && cyclingMode === "watts") {
-      const computedSpeed = speedFromWatts(watts);
-      setSpeedKmh(computedSpeed);
-      setDurationSec(durationSecFromSpeed(distanceKm, computedSpeed));
-    }
-  }, [distanceKm, sportKey, runningMode, cyclingMode, paceSecPerKm, speedKmh, watts]);
+  }, [distanceKm, durationSec, runningLike]);
+
+  const speedKmh = useMemo(
+    () => (runningLike ? 0 : speedKmhFromDuration(distanceKm, durationSec)),
+    [runningLike, distanceKm, durationSec],
+  );
 
   const recordValue = useMemo(() => {
     const distText = formatDistanceByUnit(distanceKm, unit);
@@ -215,42 +165,61 @@ export default function ProfileSportRecordsEdit() {
     if (sportKey === "swimming") {
       return `${formatDuration(durationSec)} - ${distText} - ${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")}/100m`;
     }
-    const perf = cyclingMode === "watts" ? `${Math.round(watts)} W` : `${speedKmh.toFixed(1)} km/h`;
-    return `${formatDuration(durationSec)} - ${distText} - ${perf}`;
-  }, [distanceKm, durationSec, paceSecPerKm, speedKmh, watts, sportKey, unit, cyclingMode]);
+    return `${formatDuration(durationSec)} - ${distText} - ${speedKmh.toFixed(1)} km/h`;
+  }, [distanceKm, durationSec, paceSecPerKm, speedKmh, sportKey, unit]);
 
-  const canContinueStep2 = eventLabel.trim().length > 0 && distanceKm > 0;
-  const canContinueStep3 = durationSec > 0;
+  const performanceLineLabel =
+    sportKey === "swimming" ? "Allure /100m" : sportKey === "running" || sportKey === "walking" ? "Allure calculée" : "Vitesse moyenne";
 
-  const resetWizard = () => {
-    setStep(1);
-    setSportKey("running");
-    setPresetId("5k");
-    setDistanceKm(5);
-    setEventLabel("5 km");
-    setRunningMode("time");
-    setCyclingMode("speed");
-    setDurationSec(25 * 60);
-    setPaceSecPerKm(5 * 60);
-    setSpeedKmh(25);
-    setWatts(220);
+  const performanceLineValue =
+    sportKey === "swimming"
+      ? `${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")} /100m`
+      : sportKey === "running" || sportKey === "walking"
+        ? `${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")} /km`
+        : `${speedKmh.toFixed(1)} km/h`;
+
+  const showNewPrBadge = useMemo(() => {
+    const label = eventLabel.trim().toLowerCase();
+    return !rows.some((r) => r.sport_key === sportKey && r.event_label.trim().toLowerCase() === label);
+  }, [rows, sportKey, eventLabel]);
+
+  const canSave = eventLabel.trim().length > 0 && distanceKm > 0 && durationSec > 0;
+
+  const openDurationPicker = () => {
+    const h = Math.floor(durationSec / 3600);
+    const m = Math.floor((durationSec % 3600) / 60);
+    const s = durationSec % 60;
+    setDurH(String(h));
+    setDurM(String(m));
+    setDurS(String(s));
+    setDurationPickerOpen(true);
   };
 
-  const handleSelectPreset = (id: string, label: string, km: number | null) => {
+  const openSpeedPicker = () => {
+    const sp = speedKmhFromDuration(distanceKm, durationSec);
+    const whole = Math.floor(sp);
+    const dec = Math.round((sp - whole) * 10);
+    setSpeedWhole(String(whole));
+    setSpeedDec(String(dec));
+    setSpeedPickerOpen(true);
+  };
+
+  const handleSelectChip = (id: string, label: string, km: number | null) => {
     setPresetId(id);
     if (km == null) {
-      setCustomDistanceWhole(String(Math.floor(distanceKm)));
+      setCustomDistanceWhole(String(Math.floor(Math.max(distanceKm, 1))));
       setCustomDistanceDec(String(Math.round((distanceKm % 1) * 10)));
       setCustomDistanceOpen(true);
       return;
     }
-    const converted = unit === "mi" ? kmToMiles(km) : km;
-    setDistanceKm(unit === "mi" ? milesToKm(converted) : converted);
+    const displayKm = unit === "mi" ? kmToMiles(km) : km;
+    const nextKm = unit === "mi" ? milesToKm(displayKm) : displayKm;
+    setDistanceKm(nextKm);
     setEventLabel(label);
   };
 
   const handleAdd = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !canSave) return;
     setSaving(true);
     try {
       const nextOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.sort_order)) + 1 : 0;
@@ -269,7 +238,6 @@ export default function ProfileSportRecordsEdit() {
       setRows((prev) => [...prev, data as ProfileSportRecordRow]);
       window.dispatchEvent(new Event("profile-records-updated"));
       toast({ title: "Record ajouté" });
-      resetWizard();
     } catch {
       toast({ title: "Erreur", description: "Impossible d'ajouter le record.", variant: "destructive" });
     } finally {
@@ -298,192 +266,198 @@ export default function ProfileSportRecordsEdit() {
   const hourOpts = Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") }));
   const minSecOpts = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") }));
   const speedWholeOpts = Array.from({ length: 101 }, (_, i) => ({ value: String(i), label: String(i) }));
-  const wattsOpts = Array.from({ length: 571 }, (_, i) => ({ value: String(i + 80), label: String(i + 80) }));
+  const timeParts = formatDurationParts(durationSec);
+
+  const iconBtnClass =
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#E2DBD0] bg-white text-[#0E0E0F] shadow-none transition-transform active:scale-95";
 
   return (
     <IosFixedPageHeaderShell
-      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-background"
-      headerWrapperClassName="shrink-0"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-white"
+      headerWrapperClassName="shrink-0 border-b border-[rgba(226,219,208,0.6)] bg-white"
       contentScroll
-      scrollClassName="min-h-0 bg-background"
+      scrollClassName="min-h-0 bg-white"
       header={
-        <MainTopHeader
-          title="Mon profil"
-          tabs={profileHeaderTabs}
-          tabsAriaLabel="Navigation du profil"
-        />
+        <div className="px-5 pt-[calc(var(--safe-area-top)+8px)] pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <button type="button" className={iconBtnClass} aria-label="Fermer" onClick={() => navigate(-1)}>
+              <X className="h-[18px] w-[18px] stroke-[1.75]" />
+            </button>
+            <h1 className="min-w-0 flex-1 text-center font-display text-[18px] font-bold leading-tight tracking-[-0.72px] text-[#0E0E0F]">
+              Ajouter un record
+            </h1>
+            <button
+              type="button"
+              className={cn(iconBtnClass, "border-0 text-white")}
+              style={{ backgroundColor: RC.fire }}
+              aria-label="Enregistrer le record"
+              disabled={!canSave || saving}
+              onClick={() => void handleAdd()}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Check className="h-4 w-4 stroke-[2.4] text-white" />}
+            </button>
+          </div>
+        </div>
       }
     >
       <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">
-        <div className="space-y-4 px-4 py-5 ios-shell:px-2.5">
-          <div className="rounded-2xl bg-card p-3">
-            <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>Progression</span>
-              <span>{step}/4</span>
+        <div className="space-y-[22px] px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
+          {/* Sport — maquette 21 */}
+          <section>
+            <div
+              className="text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]"
+              style={{ letterSpacing: "0.6px" }}
+            >
+              Sport
             </div>
-            <div className="grid grid-cols-4 gap-1.5">
-              {STEP_LABELS.map((label, i) => {
-                const idx = (i + 1) as WizardStep;
-                const active = idx === step;
-                const done = idx < step;
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {PRIMARY_SPORT_ORDER.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setSportKey(k)}
+                  className={cn(
+                    "flex h-14 w-14 items-center justify-center rounded-[14px] text-2xl leading-none transition-transform active:scale-95",
+                    sportKey === k ? "bg-[#0E0E0F] text-white" : "border-[1.5px] border-[#E2DBD0] bg-[#FAFAF7] text-[#0E0E0F]",
+                  )}
+                  aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
+                  aria-pressed={sportKey === k}
+                >
+                  {SPORT_EMOJI[k]}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {EXTRA_SPORTS.map((k) => {
+                const Icon = SPORT_ICONS[k];
                 return (
-                  <div key={label} className={`rounded-lg px-2 py-2 text-center text-[11px] ${active ? "bg-primary text-primary-foreground" : done ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
-                    {label}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {step === 1 && (
-            <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Choisis ton sport</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Une seule sélection, puis suivant.</p>
-              <div className="mt-4 grid grid-cols-2 gap-2.5">
-                {PROFILE_SPORT_RECORD_KEYS.map((k) => {
-                  const SportIcon = SPORT_ICONS[k];
-                  return (
                   <button
                     key={k}
                     type="button"
                     onClick={() => setSportKey(k)}
-                    className={`rounded-2xl border px-3 py-4 text-left ${sportKey === k ? "border-primary bg-primary/10" : "border-border bg-secondary/40"}`}
+                    className={cn(
+                      "flex h-14 w-14 items-center justify-center rounded-[14px] text-xl transition-transform active:scale-95",
+                      sportKey === k ? "bg-[#0E0E0F] text-white" : "border-[1.5px] border-[#E2DBD0] bg-[#FAFAF7] text-[#0E0E0F]",
+                    )}
+                    aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
+                    aria-pressed={sportKey === k}
                   >
-                    <SportIcon className="h-6 w-6 text-primary" />
-                    <p className="mt-1 text-[14px] font-semibold text-foreground">{PROFILE_SPORT_RECORD_LABELS[k]}</p>
+                    <Icon className="h-6 w-6" />
                   </button>
-                  );
-                })}
-              </div>
+                );
+              })}
             </div>
-          )}
+          </section>
 
-          {step === 2 && (
-            <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Distance / épreuve</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Format guidé, rapide à une main.</p>
-              <div className="mt-4 space-y-2">
-                {DISTANCE_PRESETS.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => handleSelectPreset(d.id, d.label, d.km)}
-                    className={`w-full rounded-xl border px-4 py-3 text-left text-[16px] font-semibold ${presetId === d.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-foreground"}`}
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-4 rounded-xl border border-border/60 bg-secondary/40 p-3">
-                <p className="text-xs text-muted-foreground">Distance sélectionnée</p>
-                <p className="text-[17px] font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</p>
-                <Input
-                  value={eventLabel}
-                  onChange={(e) => setEventLabel(e.target.value)}
-                  placeholder="Nom de lépreuve"
-                  className="mt-2 h-10"
-                />
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Performance</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Sélection précise via roulettes verticales.</p>
-
-              {(sportKey === "running" || sportKey === "walking" || sportKey === "swimming") && (
-                <div className="mt-4 space-y-3">
-                  <div className="inline-flex rounded-xl border border-border bg-secondary/30 p-1">
-                    <button type="button" onClick={() => setRunningMode("time")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${runningMode === "time" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Temps</button>
-                    <button type="button" onClick={() => setRunningMode("pace")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${runningMode === "pace" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Allure</button>
-                  </div>
-
-                  <button type="button" onClick={openDurationPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
-                    <p className="text-xs text-muted-foreground">Temps</p>
-                    <p className="text-[20px] font-semibold text-foreground">{formatDuration(durationSec)}</p>
-                  </button>
-                  <button type="button" onClick={openPacePicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
-                    <p className="text-xs text-muted-foreground">{sportKey === "swimming" ? "Allure /100m" : "Allure /km"}</p>
-                    <p className="text-[20px] font-semibold text-foreground">{Math.floor(paceSecPerKm / 60)}:{String(paceSecPerKm % 60).padStart(2, "0")}</p>
-                  </button>
-                </div>
-              )}
-
-              {(sportKey === "cycling" || sportKey === "triathlon" || sportKey === "other") && (
-                <div className="mt-4 space-y-3">
-                  <div className="inline-flex rounded-xl border border-border bg-secondary/30 p-1">
-                    <button type="button" onClick={() => setCyclingMode("speed")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${cyclingMode === "speed" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Vitesse</button>
-                    <button type="button" onClick={() => setCyclingMode("watts")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${cyclingMode === "watts" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Puissance</button>
-                  </div>
-
-                  <button type="button" onClick={openDurationPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
-                    <p className="text-xs text-muted-foreground">Temps</p>
-                    <p className="text-[20px] font-semibold text-foreground">{formatDuration(durationSec)}</p>
-                  </button>
-
-                  {cyclingMode === "speed" ? (
-                    <button type="button" onClick={openSpeedPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
-                      <p className="text-xs text-muted-foreground">Vitesse moyenne</p>
-                      <p className="text-[20px] font-semibold text-foreground">{speedKmh.toFixed(1)} km/h</p>
-                    </button>
-                  ) : (
-                    <button type="button" onClick={openWattsPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
-                      <p className="text-xs text-muted-foreground">Puissance moyenne</p>
-                      <p className="text-[20px] font-semibold text-foreground">{Math.round(watts)} W</p>
-                    </button>
+          {/* Distance chips */}
+          <section>
+            <div className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">Distance</div>
+            <div className="flex flex-wrap gap-1.5">
+              {DISTANCE_CHIPS.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => handleSelectChip(d.id, d.label, d.km)}
+                  className={cn(
+                    "rounded-full px-4 py-2.5 text-[13px] font-bold transition-transform active:scale-[0.98]",
+                    presetId === d.id ? "text-white" : "border border-[#E2DBD0] bg-[#FAFAF7] text-[#0E0E0F]",
                   )}
+                  style={presetId === d.id ? { backgroundColor: RC.fire, border: "none" } : undefined}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Temps + performance — card */}
+          <section
+            className="rounded-[18px] border-[1.5px] border-[#E2DBD0] p-[18px]"
+            style={{ backgroundColor: RC.surface }}
+          >
+            <div className="text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">Temps</div>
+            <button
+              type="button"
+              onClick={openDurationPicker}
+              className="mt-2.5 flex w-full items-baseline justify-start gap-1.5 text-left font-display font-bold leading-none tracking-[-2.5px] active:opacity-80"
+            >
+              <span className="text-[56px] text-[#0E0E0F]">{timeParts.h}</span>
+              <span className="pb-1 text-[20px] font-medium text-[#7A7771]">h</span>
+              <span className="text-[56px]" style={{ color: RC.fire }}>
+                {timeParts.m}
+              </span>
+              <span className="pb-1 text-[20px] font-medium text-[#7A7771]">m</span>
+              <span className="text-[56px] text-[#0E0E0F]">{timeParts.s}</span>
+              <span className="pb-1 text-[20px] font-medium text-[#7A7771]">s</span>
+            </button>
+
+            {runningLike ? (
+              <div className="mt-3.5 flex w-full items-center justify-between rounded-xl bg-white p-3 text-left">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">{performanceLineLabel}</div>
+                  <div className="mt-0.5 font-display text-[18px] font-bold text-[#0E0E0F]">{performanceLineValue}</div>
                 </div>
-              )}
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Récapitulatif</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Vérifie puis confirme ton record.</p>
-              <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-secondary/30 p-3">
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Sport</span><span className="font-semibold text-foreground">{PROFILE_SPORT_RECORD_LABELS[sportKey]}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Épreuve</span><span className="font-semibold text-foreground">{eventLabel}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Distance</span><span className="font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Performance</span><span className="font-semibold text-primary">{recordValue}</span></div>
+                {showNewPrBadge ? (
+                  <span
+                    className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
+                    style={{ color: RC.fire, backgroundColor: RC.prBadgeBg }}
+                  >
+                    NOUVEAU PR
+                  </span>
+                ) : null}
               </div>
-              <Button className="mt-4 h-12 w-full rounded-xl text-[17px] font-semibold" onClick={() => void handleAdd()} disabled={saving}>
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Plus className="mr-2 h-5 w-5" />Confirmer le record</>}
-              </Button>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="outline" className="h-11 flex-1" disabled={step === 1} onClick={() => setStep((s) => Math.max(1, s - 1) as WizardStep)}>Retour</Button>
-            <Button className="h-11 flex-1" disabled={(step === 2 && !canContinueStep2) || (step === 3 && !canContinueStep3) || step === 4} onClick={() => setStep((s) => Math.min(4, s + 1) as WizardStep)}>
-              Suivant
-            </Button>
-          </div>
-
-          <div className="rounded-2xl bg-card p-4">
-            <h3 className="mb-3 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">Mes records</h3>
-            {loading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
-            ) : rows.length === 0 ? (
-              <p className="py-6 text-center text-ios-subheadline text-muted-foreground">Aucun record pour l'instant.</p>
             ) : (
-              <ul className="divide-y divide-border/50">
+              <button
+                type="button"
+                onClick={openSpeedPicker}
+                className="mt-3.5 flex w-full items-center justify-between rounded-xl bg-white p-3 text-left active:opacity-90"
+              >
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">{performanceLineLabel}</div>
+                  <div className="mt-0.5 font-display text-[18px] font-bold text-[#0E0E0F]">{performanceLineValue}</div>
+                </div>
+                {showNewPrBadge ? (
+                  <span
+                    className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
+                    style={{ color: RC.fire, backgroundColor: RC.prBadgeBg }}
+                  >
+                    NOUVEAU PR
+                  </span>
+                ) : null}
+              </button>
+            )}
+          </section>
+
+          {/* Liste existante — backend conservé */}
+          <section className="pb-4">
+            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">Mes records</h2>
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-7 w-7 animate-spin text-[#FF4D1A]" />
+              </div>
+            ) : rows.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-[#E2DBD0] bg-[#FAFAF7] py-8 text-center text-[15px] text-[#7A7771]">
+                Aucun record pour l'instant.
+              </p>
+            ) : (
+              <ul className="divide-y divide-[rgba(226,219,208,0.55)] rounded-2xl border border-[#E2DBD0] bg-white px-1">
                 {rows.map((r) => (
-                  <li key={r.id} className="flex items-center gap-3 py-3">
+                  <li key={r.id} className="flex items-center gap-3 py-3 pl-3 pr-1">
                     <div className="min-w-0 flex-1">
-                      <p className="text-ios-caption1 text-muted-foreground">{isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}</p>
-                      <p className="truncate text-ios-body font-medium text-foreground">{r.event_label}</p>
-                      <p className="font-mono text-ios-subheadline text-primary tabular-nums">{r.record_value}</p>
+                      <p className="text-[13px] text-[#7A7771]">{isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}</p>
+                      <p className="truncate font-display text-[16px] font-bold text-[#0E0E0F]">{r.event_label}</p>
+                      <p className="font-mono text-[14px] tabular-nums" style={{ color: RC.fire }}>
+                        {r.record_value}
+                      </p>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => void handleDelete(r.id)} disabled={saving}>
+                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive" onClick={() => void handleDelete(r.id)} disabled={saving}>
                       <Trash2 className="h-5 w-5" />
                     </Button>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         </div>
       </ScrollArea>
 
@@ -514,23 +488,8 @@ export default function ProfileSportRecordsEdit() {
         ]}
         onConfirm={() => {
           const sec = Number(durH) * 3600 + Number(durM) * 60 + Number(durS);
-          setRunningMode("time");
           setDurationSec(Math.max(1, sec));
           setDurationPickerOpen(false);
-        }}
-      />
-      <WheelValuePickerModal
-        open={pacePickerOpen}
-        onClose={() => setPacePickerOpen(false)}
-        title={sportKey === "swimming" ? "Allure /100m" : "Allure /km"}
-        columns={[
-          { items: minSecOpts, value: paceM, onChange: setPaceM, suffix: "min" },
-          { items: minSecOpts, value: paceS, onChange: setPaceS, suffix: "s" },
-        ]}
-        onConfirm={() => {
-          setRunningMode("pace");
-          setPaceSecPerKm(Number(paceM) * 60 + Number(paceS));
-          setPacePickerOpen(false);
         }}
       />
       <WheelValuePickerModal
@@ -542,18 +501,9 @@ export default function ProfileSportRecordsEdit() {
           { items: digitOpts, value: speedDec, onChange: setSpeedDec },
         ]}
         onConfirm={() => {
-          setSpeedKmh(Number(`${speedWhole}.${speedDec}`));
+          const sp = Number(`${speedWhole}.${speedDec}`);
+          setDurationSec(durationSecFromSpeed(distanceKm, sp));
           setSpeedPickerOpen(false);
-        }}
-      />
-      <WheelValuePickerModal
-        open={wattsPickerOpen}
-        onClose={() => setWattsPickerOpen(false)}
-        title="Puissance moyenne"
-        columns={[{ items: wattsOpts, value: wattsDraft, onChange: setWattsDraft, suffix: "W" }]}
-        onConfirm={() => {
-          setWatts(Number(wattsDraft));
-          setWattsPickerOpen(false);
         }}
       />
     </IosFixedPageHeaderShell>

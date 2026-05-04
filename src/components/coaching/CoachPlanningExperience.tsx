@@ -54,7 +54,15 @@ import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDr
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
 import { parseRCC } from "@/lib/rccParser";
-import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
+import {
+  ClubManagementPage,
+  type ClubMemberItem,
+  type ClubGroupItem,
+  type ClubInvitationItem,
+  type ClubRole,
+  type ClubMaquetteNextEvent,
+  type ClubSettingsMaquetteVariant,
+} from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { CoachingDraftsPage, type CoachingDraftListItem } from "@/components/coaching/CoachingDraftsPage";
@@ -922,9 +930,11 @@ export function CoachPlanningExperience() {
   const [clubGroupsAdmin, setClubGroupsAdmin] = useState<ClubGroupItem[]>([]);
   const [clubInvitations, setClubInvitations] = useState<ClubInvitationItem[]>([]);
   const [clubLocation, setClubLocation] = useState<string | null>(null);
+  const [clubDescription, setClubDescription] = useState<string | null>(null);
+  const [clubCode, setClubCode] = useState<string | null>(null);
+  const [clubCreatedBy, setClubCreatedBy] = useState<string | null>(null);
   const [clubAvatarUrl, setClubAvatarUrl] = useState<string | null>(null);
-  const [plannedSessionsCount, setPlannedSessionsCount] = useState(0);
-  const [validatedSessionsCount, setValidatedSessionsCount] = useState(0);
+  const [nextClubEvent, setNextClubEvent] = useState<ClubMaquetteNextEvent | null>(null);
   const [trackingSelectedAthleteId, setTrackingSelectedAthleteId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -946,6 +956,11 @@ export function CoachPlanningExperience() {
   }, [draft.blocks, selectedBlockId]);
 
   const effectiveAthleteMode = !isCoachMode || viewAsAthlete;
+
+  const clubPageVariant = useMemo<ClubSettingsMaquetteVariant>(() => {
+    const me = clubMembers.find((m) => m.userId === user?.id);
+    return me?.role === "athlete" ? "athlete" : "admin";
+  }, [clubMembers, user?.id]);
 
   const rotateActiveClub = () => {
     if (!clubs.length) return;
@@ -1110,10 +1125,10 @@ export function CoachPlanningExperience() {
     if (!activeClubId) return;
     let ignore = false;
     const loadClubAdmin = async () => {
-      const [{ data: clubRow }, { data: groupRows }, { data: gmRows }, { data: invitationRows }] = await Promise.all([
+      const [{ data: clubRow }, { data: groupRows }, { data: gmRows }, { data: invitationRows }, nextRes] = await Promise.all([
         supabase
           .from("conversations")
-          .select("group_name, group_avatar_url, location")
+          .select("group_name, group_avatar_url, location, group_description, club_code, created_by")
           .eq("id", activeClubId)
           .maybeSingle(),
         supabase.from("club_groups").select("id, name").eq("club_id", activeClubId).order("name", { ascending: true }),
@@ -1124,6 +1139,14 @@ export function CoachPlanningExperience() {
           .eq("club_id", activeClubId)
           .order("created_at", { ascending: false })
           .limit(20),
+        supabase
+          .from("coaching_sessions")
+          .select("title, scheduled_at, default_location_name")
+          .eq("club_id", activeClubId)
+          .gte("scheduled_at", new Date().toISOString())
+          .order("scheduled_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       const memberIds = (gmRows || []).map((m) => m.user_id);
@@ -1188,44 +1211,31 @@ export function CoachPlanningExperience() {
         };
       });
 
-      const weekEnd = addDays(weekAnchor, 7);
-      const [{ count: plannedCount }, { data: weekSessions }] = await Promise.all([
-        supabase
-          .from("coaching_sessions")
-          .select("id", { count: "exact", head: true })
-          .eq("club_id", activeClubId)
-          .gte("scheduled_at", weekAnchor.toISOString())
-          .lt("scheduled_at", weekEnd.toISOString()),
-        supabase
-          .from("coaching_sessions")
-          .select("id")
-          .eq("club_id", activeClubId)
-          .gte("scheduled_at", weekAnchor.toISOString())
-          .lt("scheduled_at", weekEnd.toISOString()),
-      ]);
-      const weekSessionIds = (weekSessions || []).map((s) => s.id);
-      const { count: validatedCount } = weekSessionIds.length
-        ? await supabase
-            .from("coaching_participations")
-            .select("id", { count: "exact", head: true })
-            .in("coaching_session_id", weekSessionIds)
-            .eq("status", "completed")
-        : { count: 0 };
-
       if (ignore) return;
       setClubMembers(memberItems);
       setClubGroupsAdmin(groupItems);
       setClubInvitations(invitationItems);
       setClubLocation(clubRow?.location || null);
+      setClubDescription(clubRow?.group_description || null);
+      setClubCode(clubRow?.club_code || null);
+      setClubCreatedBy(clubRow?.created_by || null);
       setClubAvatarUrl(clubRow?.group_avatar_url || null);
-      setPlannedSessionsCount(plannedCount || 0);
-      setValidatedSessionsCount(validatedCount || 0);
+      const nextSess = nextRes.data;
+      if (nextSess?.scheduled_at) {
+        setNextClubEvent({
+          title: nextSess.title || "Séance club",
+          detail: format(new Date(nextSess.scheduled_at), "EEE d MMM · HH:mm", { locale: fr }),
+          place: nextSess.default_location_name || undefined,
+        });
+      } else {
+        setNextClubEvent(null);
+      }
     };
     void loadClubAdmin();
     return () => {
       ignore = true;
     };
-  }, [activeClubId, weekAnchor]);
+  }, [activeClubId]);
 
   useEffect(() => {
     if (effectiveAthleteMode || !activeClubId || !user) return;
@@ -2573,6 +2583,53 @@ export function CoachPlanningExperience() {
     toast.success("Informations du club mises à jour");
   };
 
+  const shareClubFromCoaching = async () => {
+    if (!clubCode) {
+      toast.error("Code du club indisponible");
+      return;
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: activeClubName || "Club",
+          text: `Rejoins ${activeClubName || "le club"} avec le code : ${clubCode}`,
+        });
+      } else {
+        await navigator.clipboard.writeText(clubCode);
+        toast.success("Code copié");
+      }
+    } catch {
+      /* annulation partage */
+    }
+  };
+
+  const deleteClubAsAdmin = async () => {
+    if (!activeClubId || !user) return;
+    if (!window.confirm(`Supprimer définitivement le club « ${activeClubName || ""} » ?`)) return;
+    try {
+      await supabase.from("group_members").delete().eq("conversation_id", activeClubId);
+      await supabase.from("messages").delete().eq("conversation_id", activeClubId);
+      const { error } = await supabase.from("conversations").delete().eq("id", activeClubId);
+      if (error) throw error;
+      toast.success("Club supprimé");
+      setClubs((prev) => prev.filter((c) => c.id !== activeClubId));
+      setActiveClubId(null);
+      setActiveMenuKey(effectiveAthleteMode ? "my-plan" : "planning");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error("Suppression impossible", msg);
+    }
+  };
+
+  const leaveClubFromCoaching = async () => {
+    if (!user || !activeClubId) return;
+    if (!window.confirm("Quitter ce club ?")) return;
+    await removeMemberFromClub(user.id);
+    setClubs((prev) => prev.filter((c) => c.id !== activeClubId));
+    setActiveClubId(null);
+    setActiveMenuKey("my-plan");
+  };
+
   const createGroup = async () => {
     if (!activeClubId) return;
     const name = window.prompt("Nom du groupe", "Nouveau groupe");
@@ -2706,29 +2763,62 @@ export function CoachPlanningExperience() {
       <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden" data-tutorial="tutorial-coaching">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="shrink-0 border-b border-border bg-card"
+          headerWrapperClassName={
+            weekPlannerMode
+              ? "shrink-0 border-0 apple-grouped-bg"
+              : activeMenuKey === "club"
+                ? "shrink-0 border-b border-border apple-grouped-bg"
+                : "shrink-0 border-b border-border bg-card"
+          }
           header={
             weekPlannerMode ? (
               <div className="pt-[var(--safe-area-top)]">
                 <IosPageHeaderBar
                   left={
-                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
+                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#0066cc]" onClick={clearWeekPlannerTarget}>
                       Annuler
                     </button>
                   }
                   title=""
                   right={
-                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-semibold leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
+                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-semibold leading-none text-[#0066cc]" onClick={clearWeekPlannerTarget}>
                       OK
                     </button>
                   }
                 />
               </div>
+            ) : activeMenuKey === "club" ? (
+              <div className="pt-[var(--safe-area-top)]">
+                <IosPageHeaderBar
+                  leadingBack={{
+                    onClick: () => setActiveMenuKey(effectiveAthleteMode ? "my-plan" : "planning"),
+                    label: "Coaching",
+                  }}
+                  title=""
+                  titleClassName="sr-only"
+                  right={
+                    <button
+                      type="button"
+                      className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#0066cc] active:opacity-60"
+                      onClick={() => {
+                        if (clubPageVariant === "admin") void editClubInfo();
+                        else void shareClubFromCoaching();
+                      }}
+                    >
+                      {clubPageVariant === "admin" ? <span className="font-semibold">Modifier</span> : "Partager"}
+                    </button>
+                  }
+                />
+              </div>
             ) : (
-              <PlanningHeader onOpenMenu={() => setDrawerOpen(true)} title={coachingHeaderTitle} />
+              <PlanningHeader
+                onOpenMenu={() => setDrawerOpen(true)}
+                title={coachingHeaderTitle}
+                coachLandingBrand={showCoachLanding}
+              />
             )
           }
-          scrollClassName={showCoachLanding ? "apple-grouped-bg" : "bg-white"}
+          scrollClassName={showCoachLanding || weekPlannerMode || activeMenuKey === "club" ? "apple-grouped-bg" : "bg-white"}
           footer={null}
         >
           <div className={cn("space-y-0", activeMenuKey === "planning" ? "pb-0" : "pb-6")}>
@@ -2772,15 +2862,22 @@ export function CoachPlanningExperience() {
             )}
 
             {weekPlannerMode ? (
-              <div className="border-b border-border bg-card px-4 pb-3.5 pt-1">
-                <h2 className="font-[system-ui] text-[28px] font-bold tracking-[-0.04em] text-foreground">Programmer la semaine</h2>
+              <div className="px-4 pb-3.5 pt-1">
+                <h2 className="font-display text-[28px] font-bold tracking-[-0.04em] text-foreground">Programmer la semaine</h2>
               </div>
             ) : null}
 
-            {weekPlannerMode ? <PlanningSearchBar value={search} onChange={setSearch} /> : null}
+            {weekPlannerMode ? (
+              <PlanningSearchBar
+                bare
+                value={search}
+                onChange={setSearch}
+                placeholder="Rechercher un athlète ou un groupe"
+              />
+            ) : null}
 
             {weekPlannerMode && (activeAthlete || activeGroup) ? (
-              <div className="border-b border-border bg-card px-4 py-3">
+              <div className="px-4 pb-[18px] pt-3">
                 {activeAthlete ? (
                   <div className="flex items-center gap-3 rounded-[14px] border border-[rgba(10,132,255,0.25)] bg-card py-2.5 pl-2.5 pr-2 shadow-[0_0_0_3px_rgba(10,132,255,0.08)]">
                     <div
@@ -2795,7 +2892,8 @@ export function CoachPlanningExperience() {
                     </div>
                     <button
                       type="button"
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[15px] leading-none text-muted-foreground"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[15px] leading-none text-muted-foreground"
+                      style={{ background: "rgba(118, 118, 128, 0.12)" }}
                       onClick={() => setActiveAthleteId(undefined)}
                       aria-label="Désélectionner l'athlète"
                     >
@@ -2813,7 +2911,8 @@ export function CoachPlanningExperience() {
                     </div>
                     <button
                       type="button"
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[15px] leading-none text-muted-foreground"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[15px] leading-none text-muted-foreground"
+                      style={{ background: "rgba(118, 118, 128, 0.12)" }}
                       onClick={() => setActiveGroupId(undefined)}
                       aria-label="Désélectionner le groupe"
                     >
@@ -2906,6 +3005,7 @@ export function CoachPlanningExperience() {
                 upcomingSessions={upcomingCoachRows}
                 onOpenSession={(id) => openEditSession(id)}
                 onCreateSession={() => openCreateForDate(selectedDate)}
+                onOpenMonthView={() => toast.info("Vue mois", "Le calendrier mois complet arrive bientôt.")}
               />
             ) : activeMenuKey === "planning" ? (
               <>
@@ -2918,10 +3018,11 @@ export function CoachPlanningExperience() {
                   indicatorsByDate={dayIndicatorsByDate}
                   sessionSummaryByDate={daySessionSummaryByDate}
                   showLegend
+                  variant={weekPlannerMode ? "coachWeek" : "default"}
                 />
 
                 <Group title="Plan de la semaine" className="mb-0">
-                  {weekDays.map((day) => {
+                  {weekDays.map((day, dayIdx) => {
                     const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                     const session = daySessions[0];
                     const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
@@ -2964,11 +3065,14 @@ export function CoachPlanningExperience() {
                       <DayPlanningRow
                         key={day.toISOString()}
                         dayLabel={format(day, "EEEE", { locale: fr })}
-                        dateLabel={format(day, "d MMM", { locale: fr })}
+                        dateLabel={weekPlannerMode ? format(day, "d") : format(day, "d MMM", { locale: fr })}
                         isSelected={isSelectedDay}
                         session={summary}
                         isSent={session?.sent}
                         accentColor={accentColor}
+                        emptyLabel={weekPlannerMode ? "Ajouter une séance" : undefined}
+                        layoutVariant={weekPlannerMode ? "coachWeek" : "default"}
+                        isLast={weekPlannerMode && dayIdx === weekDays.length - 1}
                         onAdd={() => openCreateForDate(day)}
                         onOpen={session ? () => openEditSession(session.id) : undefined}
                         onEdit={session ? () => openEditSession(session.id) : undefined}
@@ -2987,7 +3091,7 @@ export function CoachPlanningExperience() {
                 {weekPlannerMode ? (
                   <div className="flex gap-2.5 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
                     <button type="button" className="handoff-week-btn handoff-week-btn--primary" onClick={() => copyAthleteWeek()}>
-                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 text-[#0a84ff]">
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 text-[#0066cc]">
                         <rect x="4" y="4" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
                         <path d="M4 11H3a1 1 0 01-1-1V3a1 1 0 011-1h7a1 1 0 011 1v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                       </svg>
@@ -3078,32 +3182,33 @@ export function CoachPlanningExperience() {
               )
             ) : activeMenuKey === "club" ? (
               <ClubManagementPage
+                variant={clubPageVariant}
                 clubName={activeClubName || "RunConnect Club"}
+                clubCreatedBy={clubCreatedBy}
+                clubDescription={clubDescription}
                 clubLocation={clubLocation}
                 clubAvatarUrl={clubAvatarUrl}
-                athletesCount={clubMembers.filter((m) => m.role === "athlete").length}
                 coachesCount={clubMembers.filter((m) => m.role === "coach" || m.role === "admin").length}
                 groupsCount={clubGroupsAdmin.length}
-                plannedSessionsCount={plannedSessionsCount}
-                validatedSessionsCount={validatedSessionsCount}
                 members={clubMembers}
-                groups={clubGroupsAdmin}
                 invitations={clubInvitations}
+                nextEvent={nextClubEvent}
+                currentUserId={user?.id}
                 onInviteAthlete={() => setInviteDialogOpen(true)}
                 onInviteCoach={() => setInviteDialogOpen(true)}
-                onCreateGroup={() => void createGroup()}
                 onEditClub={() => void editClubInfo()}
                 onViewGroups={() => setActiveMenuKey("groups")}
                 onOpenMemberProfile={(userId) => navigate(`/profile/${userId}`)}
                 onSendMessage={(userId) => void openDirectMessage(userId)}
                 onChangeRole={(userId, role) => void updateMemberRole(userId, role)}
                 onRemoveMember={(userId) => void removeMemberFromClub(userId)}
-                onOpenGroup={() => setActiveMenuKey("groups")}
-                onEditGroup={() => setActiveMenuKey("groups")}
-                onDeleteGroup={(groupId) => void deleteGroup(groupId)}
-                onAssignMembers={() => setActiveMenuKey("groups")}
                 onResendInvitation={(invitationId) => void resendInvitation(invitationId)}
                 onCancelInvitation={(invitationId) => void cancelInvitation(invitationId)}
+                onShareClubCode={() => void shareClubFromCoaching()}
+                onAdminArchive={() => toast.success("Archivage : fonction à venir")}
+                onAdminDeleteClub={() => void deleteClubAsAdmin()}
+                onAdminExport={() => toast.success("Export : fonction à venir")}
+                onLeaveClub={() => void leaveClubFromCoaching()}
               />
             ) : (
               <div className="border-b border-border bg-secondary/30 px-4 py-6">

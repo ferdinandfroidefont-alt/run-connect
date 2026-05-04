@@ -6,12 +6,14 @@ export type MyRouteRow = {
   id: string;
   name: string;
   description: string | null;
+  activity_type: string | null;
   total_distance: number | null;
   total_elevation_gain: number | null;
   total_elevation_loss: number | null;
   min_elevation: number | null;
   max_elevation: number | null;
   created_at: string;
+  updated_at: string;
   coordinates: unknown;
   is_public?: boolean;
 };

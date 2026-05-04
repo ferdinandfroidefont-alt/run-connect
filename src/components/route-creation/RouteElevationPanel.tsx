@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cumulativeDistanceAlongPath, sampleAlongPathAtDistance } from '@/lib/routePersistence';
@@ -25,6 +25,8 @@ type Props = {
   onScrub: (meta: RouteElevationScrubMeta | null) => void;
   defaultExpanded?: boolean;
   autoExpandToken?: number;
+  /** Maquette 07 ï¿½ variante ï¿½ Itinï¿½raire ï¿½ : en-tï¿½te fixe, sans replis. */
+  layout?: 'default' | 'itinerary';
 };
 
 const VB_W = 332;
@@ -94,8 +96,10 @@ export function RouteElevationPanel({
   onScrub,
   defaultExpanded = false,
   autoExpandToken,
+  layout = 'default',
 }: Props) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const gradId = useId().replace(/:/g, '');
+  const [expanded, setExpanded] = useState(layout === 'itinerary' ? true : defaultExpanded);
   const [scrubDistM, setScrubDistM] = useState<number | null>(null);
   const [drawLength, setDrawLength] = useState(0);
   const [drawReady, setDrawReady] = useState(false);
@@ -125,6 +129,10 @@ export function RouteElevationPanel({
     if (autoExpandToken == null) return;
     setExpanded(true);
   }, [autoExpandToken]);
+
+  useEffect(() => {
+    if (layout === 'itinerary') setExpanded(true);
+  }, [layout]);
 
   const smoothElevations = useMemo(() => {
     if (!seriesOk) return [] as number[];
@@ -166,12 +174,27 @@ export function RouteElevationPanel({
   }, [precisePath, curvePoints, innerH]);
 
   const xTicksTop = useMemo(() => {
-    if (!seriesOk) return [] as Array<{ x: number; label: string; anchor: 'start' | 'end' }>;
+    if (!seriesOk) return [] as Array<{ x: number; label: string; anchor: 'start' | 'end' | 'middle' }>;
+    if (layout === 'itinerary') {
+      const n = 5;
+      return Array.from({ length: n }, (_, i) => {
+        const t = i / (n - 1);
+        const distM = t * chartTotalM;
+        const x = PAD.l + t * innerW;
+        return {
+          x,
+          label: formatDistanceAlongPath(distM),
+          anchor: (i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle') as 'start' | 'end' | 'middle',
+        };
+      });
+    }
     return [
       { x: PAD.l, label: formatDistanceAlongPath(0), anchor: 'start' as const },
       { x: PAD.l + innerW, label: formatDistanceAlongPath(chartTotalM), anchor: 'end' as const },
     ];
-  }, [seriesOk, chartTotalM, innerW, formatDistanceAlongPath]);
+  }, [seriesOk, chartTotalM, innerW, formatDistanceAlongPath, layout]);
+
+  const chartMaxHeight = layout === 'itinerary' ? 110 : VB_H;
 
   const applyScrub = useCallback(
     (distM: number | null) => {
@@ -227,42 +250,75 @@ export function RouteElevationPanel({
     return () => cancelAnimationFrame(raf);
   }, [expanded, precisePath, elevations.length, totalDistanceM]);
 
+  const itineraryHeader = layout === 'itinerary' && (
+    <div className="mb-2.5 flex min-w-0 items-baseline justify-between gap-2">
+      <div className="text-[13px] font-medium tracking-tight text-muted-foreground">Profil d&apos;ï¿½lï¿½vation</div>
+      <div className="flex shrink-0 gap-3 text-[12px] text-muted-foreground">
+        {isLoadingElevation ? (
+          <span className="inline-flex items-center gap-1">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+          </span>
+        ) : (
+          <>
+            <span>
+              ? <span className="font-semibold text-foreground">{Math.round(elevationGain)} m</span>
+            </span>
+            <span>
+              ? <span className="font-semibold text-foreground">{Math.round(elevationLoss)} m</span>
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className={cn('overflow-hidden rounded-ios-lg border border-slate-200 bg-white shadow-sm', className)}>
-      <button
-        type="button"
-        className="flex w-full min-w-0 items-center gap-1.5 px-2.5 py-2 text-left transition-colors active:bg-slate-50"
-        onClick={() => setExpanded((e) => !e)}
-      >
-        <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] leading-tight tabular-nums text-slate-900">
-            <span className="font-semibold">{formatDistanceKm(totalDistanceM / 1000)}</span>
-            <span className="text-slate-400">?</span>
-            {isLoadingElevation ? (
-              <span className="inline-flex items-center gap-1 text-slate-500">
-                <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />
-                <span className="text-[11px]">Dénivelé</span>
-              </span>
-            ) : (
-              <>
-                <span className="text-emerald-600">D+ {Math.round(elevationGain)} m</span>
-                <span className="text-slate-400">?</span>
-                <span className="text-rose-600">D- {Math.round(elevationLoss)} m</span>
-              </>
-            )}
-          </p>
-        </div>
-        {expanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-500" />}
-      </button>
+    <div
+      className={cn(
+        layout === 'itinerary'
+          ? 'rounded-[14px] bg-card p-4'
+          : 'overflow-hidden rounded-ios-lg border border-slate-200 bg-white shadow-sm',
+        className,
+      )}
+    >
+      {layout !== 'itinerary' ? (
+        <button
+          type="button"
+          className="flex w-full min-w-0 items-center gap-1.5 px-2.5 py-2 text-left transition-colors active:bg-slate-50"
+          onClick={() => setExpanded((e) => !e)}
+        >
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] leading-tight tabular-nums text-slate-900">
+              <span className="font-semibold">{formatDistanceKm(totalDistanceM / 1000)}</span>
+              <span className="text-slate-400">ï¿½</span>
+              {isLoadingElevation ? (
+                <span className="inline-flex items-center gap-1 text-slate-500">
+                  <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />
+                  <span className="text-[11px]">Dï¿½nivelï¿½</span>
+                </span>
+              ) : (
+                <>
+                  <span className="text-emerald-600">D+ {Math.round(elevationGain)} m</span>
+                  <span className="text-slate-400">ï¿½</span>
+                  <span className="text-rose-600">D- {Math.round(elevationLoss)} m</span>
+                </>
+              )}
+            </p>
+          </div>
+          {expanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-500" />}
+        </button>
+      ) : null}
+
+      {layout === 'itinerary' ? itineraryHeader : null}
 
       {expanded && (
-        <div className="border-t border-slate-200 px-2 pb-2 pt-1">
+        <div className={cn(layout === 'itinerary' ? '' : 'border-t border-slate-200 px-2 pb-2 pt-1')}>
           {!seriesOk ? (
             <div className="flex items-center justify-center gap-2 px-0.5 py-5 text-[11px] text-slate-500">
               {isLoadingElevation ? (
                 <>
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
-                  <span>Calcul du profil?</span>
+                  <span>Calcul du profilï¿½</span>
                 </>
               ) : (
                 <span>Profil indisponible.</span>
@@ -270,23 +326,25 @@ export function RouteElevationPanel({
             </div>
           ) : (
             <>
-              <div className="flex min-h-[1.375rem] flex-wrap items-center gap-x-3 gap-y-0 px-0.5 py-0.5 text-[11px] tabular-nums text-slate-500">
-                {scrubSample != null ? (
-                  <>
-                    <span className="font-medium text-slate-900">{formatDistanceAlongPath(scrubSample.distFromStartM)}</span>
-                    <span className="text-slate-800">{Math.round(scrubSample.elevM)} m</span>
-                  </>
-                ) : (
-                  <span className="text-[10px] leading-tight text-slate-500">Glissez sur le profil pour voir distance et altitude</span>
-                )}
-              </div>
+              {layout !== 'itinerary' ? (
+                <div className="flex min-h-[1.375rem] flex-wrap items-center gap-x-3 gap-y-0 px-0.5 py-0.5 text-[11px] tabular-nums text-slate-500">
+                  {scrubSample != null ? (
+                    <>
+                      <span className="font-medium text-slate-900">{formatDistanceAlongPath(scrubSample.distFromStartM)}</span>
+                      <span className="text-slate-800">{Math.round(scrubSample.elevM)} m</span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] leading-tight text-slate-500">Glissez sur le profil pour voir distance et altitude</span>
+                  )}
+                </div>
+              ) : null}
 
               <svg
                 viewBox={`0 0 ${VB_W} ${VB_H}`}
                 className="w-full touch-none select-none"
-                style={{ maxHeight: VB_H }}
+                style={{ maxHeight: chartMaxHeight }}
                 role="img"
-                aria-label="Profil d'élévation"
+                aria-label="Profil d'ï¿½lï¿½vation"
                 onPointerDown={(e) => {
                   e.currentTarget.setPointerCapture(e.pointerId);
                   activePointer.current = e.pointerId;
@@ -313,30 +371,54 @@ export function RouteElevationPanel({
                 }}
               >
                 <defs>
-                  <linearGradient id="elevLine" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#2563eb" />
-                    <stop offset="100%" stopColor="#2563eb" />
+                  <linearGradient id={`elevLine-${gradId}`} x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={layout === 'itinerary' ? '#0066cc' : '#2563eb'} />
+                    <stop offset="100%" stopColor={layout === 'itinerary' ? '#0066cc' : '#2563eb'} />
                   </linearGradient>
-                  <linearGradient id="elevFillPremium" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
+                  <linearGradient id={`elevFillPremium-${gradId}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={layout === 'itinerary' ? '#0066cc' : '#2563eb'} stopOpacity={layout === 'itinerary' ? 0.35 : 0.18} />
+                    <stop offset="100%" stopColor={layout === 'itinerary' ? '#0066cc' : '#2563eb'} stopOpacity={layout === 'itinerary' ? 0 : 0.02} />
                   </linearGradient>
                 </defs>
 
-                {xTicksTop.map((t, i) => (
-                  <text key={`x-top-${i}`} x={t.x} y={9} textAnchor={t.anchor} fontSize="8" fill="currentColor" className="text-slate-500">
-                    {t.label}
-                  </text>
-                ))}
+                {layout === 'itinerary' &&
+                  [PAD.t + innerH * 0.25, PAD.t + innerH * 0.55, PAD.t + innerH * 0.8].map((y, gi) => (
+                    <line
+                      key={`g-${gi}`}
+                      x1={PAD.l}
+                      x2={PAD.l + innerW}
+                      y1={y}
+                      y2={y}
+                      stroke="currentColor"
+                      strokeWidth={0.5}
+                      strokeDasharray="2 3"
+                      className="text-border"
+                    />
+                  ))}
 
-                <path d={fillPath} fill="url(#elevFillPremium)" stroke="none" />
+                {layout !== 'itinerary' &&
+                  xTicksTop.map((t, i) => (
+                    <text
+                      key={`x-top-${i}`}
+                      x={t.x}
+                      y={9}
+                      textAnchor={t.anchor === 'middle' ? 'middle' : t.anchor}
+                      fontSize="8"
+                      fill="currentColor"
+                      className="text-muted-foreground"
+                    >
+                      {t.label}
+                    </text>
+                  ))}
+
+                <path d={fillPath} fill={`url(#elevFillPremium-${gradId})`} stroke="none" />
 
                 <path
                   ref={mainPathRef}
                   d={precisePath}
                   fill="none"
-                  stroke="url(#elevLine)"
-                  strokeWidth={2.8}
+                  stroke={`url(#elevLine-${gradId})`}
+                  strokeWidth={layout === 'itinerary' ? 2 : 2.8}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   style={
@@ -355,8 +437,8 @@ export function RouteElevationPanel({
                 <path
                   d={curvePath}
                   fill="none"
-                  stroke="#2563eb"
-                  strokeOpacity={0.22}
+                  stroke={layout === 'itinerary' ? '#0066cc' : '#2563eb'}
+                  strokeOpacity={layout === 'itinerary' ? 0.12 : 0.22}
                   strokeWidth={1.2}
                   strokeLinejoin="round"
                   strokeLinecap="round"
@@ -365,10 +447,26 @@ export function RouteElevationPanel({
                 {cursorX != null && cursorY != null && (
                   <g>
                     <line x1={cursorX} y1={PAD.t} x2={cursorX} y2={PAD.t + innerH} stroke="#93c5fd" strokeWidth="0.9" />
-                    <circle cx={cursorX} cy={cursorY} r="3.6" fill="#2563eb" stroke="white" strokeWidth="1.25" />
+                    <circle
+                      cx={cursorX}
+                      cy={cursorY}
+                      r="3.6"
+                      fill={layout === 'itinerary' ? '#0066cc' : '#2563eb'}
+                      stroke="white"
+                      strokeWidth="1.25"
+                    />
                   </g>
                 )}
               </svg>
+              {layout === 'itinerary' && seriesOk ? (
+                <div className="mt-1 flex justify-between gap-1 text-[10px] tabular-nums text-muted-foreground/80">
+                  {xTicksTop.map((t, i) => (
+                    <span key={`x-bot-${i}`} className="min-w-0 truncate">
+                      {t.label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </>
           )}
         </div>

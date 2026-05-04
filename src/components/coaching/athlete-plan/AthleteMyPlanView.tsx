@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, getISOWeek, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ExternalLink, Share2 } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Group } from "@/components/apple/Group";
 import { CoachingAthleteWeekGrid } from "@/components/coaching/handoff/CoachingAthleteWeekGrid";
 import type { AthleteWeekGridDay } from "@/components/coaching/handoff/CoachingAthleteWeekGrid";
-import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
+import { AthleteMaquettePlanDayRow } from "@/components/coaching/athlete-plan/AthleteMaquettePlanDayRow";
+import type { AthleteMaquetteDayStatus } from "@/components/coaching/athlete-plan/AthleteMaquettePlanDayRow";
+import { buildWorkoutHeadline, resolveWorkoutMetrics } from "@/lib/workoutPresentation";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, formatCalendarDistance, isExplicitRestDay, kmForSession, toCalendarSummarySport } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
-import { sportDotClass } from "./sportTokens";
+import { parseSport } from "./sportTokens";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { useAuth } from "@/hooks/useAuth";
@@ -199,8 +201,9 @@ export function AthleteMyPlanView(props: Props) {
   }, [dayRows, sessionSummaryByDate]);
 
   const weekStripTitle = `SEMAINE ${getISOWeek(props.weekStart)} — ${format(props.weekStart, "d MMM", { locale: fr })}`.toUpperCase();
-  const coachLabel = (coaches[0]?.name ?? sessions[0]?.coachName ?? "Coach").toUpperCase();
-  const completedSessions = sessions.filter((s) => s.participationStatus === "completed").length;
+  const coachDisplay = (coaches[0]?.name ?? sessions[0]?.coachName ?? "Coach").trim();
+  const coachFirst = (coachDisplay.split(/\s+/)[0] || coachDisplay).toUpperCase();
+  const coachLabel = coachFirst;  const completedSessions = sessions.filter((s) => s.participationStatus === "completed").length;
   const totalSessions = sessions.length;
   const progressPct = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
 
@@ -223,18 +226,21 @@ export function AthleteMyPlanView(props: Props) {
   }, []);
 
   return (
-    <div className="apple-grouped-bg pb-28 pt-2">
-      <section className="px-4 pb-3">
-        <div className="rounded-[18px] border border-border/80 bg-card p-[18px] text-card-foreground shadow-none">
-          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+    <div className="apple-grouped-bg pb-28 pt-0">
+      <section className="px-4 pb-3 pt-2">
+        <div className="rounded-[18px] border-[0.5px] border-[rgba(60,60,67,0.12)] bg-card p-[18px] text-card-foreground shadow-none dark:border-[rgba(84,84,88,0.45)]">
+          <p className="text-[12px] font-medium uppercase tracking-[0.4px] text-muted-foreground">
             {`SEMAINE ${getISOWeek(props.weekStart)} · COACH ${coachLabel}`}
           </p>
-          <p className="mt-1.5 font-[system-ui] text-[28px] font-semibold leading-tight tracking-[-0.04em] text-foreground">
+          <p className="mt-1.5 font-display text-[28px] font-semibold leading-tight tracking-[-0.04em] text-foreground">
             {totalSessions > 0 ? `${completedSessions} sur ${totalSessions} séances` : "Aucune séance prévue"}
           </p>
           {totalSessions > 0 ? (
-            <div className="mt-3 h-1.5 overflow-hidden rounded-[3px] bg-muted">
-              <div className="h-full rounded-[3px] bg-[#0066CC]" style={{ width: `${progressPct}%` }} />
+            <div className="mt-3 h-1.5 overflow-hidden rounded-[3px] bg-[rgba(60,60,67,0.12)] dark:bg-muted">
+              <div
+                className="h-full rounded-[3px] bg-[#2997ff] dark:bg-[#5e5ce6]"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
           ) : null}
         </div>
@@ -249,33 +255,32 @@ export function AthleteMyPlanView(props: Props) {
         weekTitle={weekStripTitle}
       />
 
-      <section className="px-4 pb-3">
-        <div className="ios-card flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold text-foreground">Exporte tes entraînements</p>
-            <p className="truncate text-[13px] text-muted-foreground">Vers Garmin et les autres apps compatibles.</p>
-          </div>
+      <Group
+        title="Plan de la semaine"
+        className="mb-0"
+        footer={
           <button
             type="button"
-            className="apple-pill apple-pill-secondary inline-flex shrink-0 items-center gap-1.5"
+            className="handoff-ios-link text-[13px] font-normal leading-snug text-left hover:underline"
             onClick={() => {
               props.onOpenExportApps?.();
               setExportDialogOpen(true);
             }}
           >
-            <Share2 className="h-[15px] w-[15px]" aria-hidden />
-            Exporter
+            Exporter mes séances vers Garmin ou une autre app…
           </button>
-        </div>
-      </section>
-
-      <Group title="Plan de la semaine" className="mb-0">
+        }
+      >
         {loading ? (
           <div className="m-4 h-24 animate-pulse rounded-xl bg-muted" />
         ) : (
-          dayRows.map((row) => {
-            const selected = isSameDay(row.day, selectedDate);
-            const dayLabel = format(row.day, "EEEE", { locale: fr });
+          dayRows.map((row, index) => {
+            const gridDay = handoffDays[index];
+            const status: AthleteMaquetteDayStatus = gridDay?.status ?? "planned";
+            const dayAbbrev = format(row.day, "EEEE", { locale: fr })
+              .slice(0, 3)
+              .toUpperCase();
+            const dateNum = Number(format(row.day, "d"));
             const hasSession = row.sessions.length > 0;
             const segments = row.primarySession
               ? buildWorkoutSegments(row.primarySession.blocks, {
@@ -289,54 +294,39 @@ export function AthleteMyPlanView(props: Props) {
                   explicitDistanceKm: row.primarySession.distanceKm,
                 })
               : null;
+            const miniProfile =
+              row.primarySession && segments.length
+                ? renderWorkoutMiniProfile(segments, { sessionSchema: true })
+                : undefined;
+            const openRow = () => {
+              onSelectDate(row.day);
+              if (row.primarySession) setDetail(row.primarySession);
+              else onOpenCalendar?.();
+            };
             return (
-              <div key={row.day.toISOString()} className={row.primarySession ? sportDotClass(row.primarySession.sport) : "bg-muted-foreground/50"}>
-                <DayPlanningRow
-                  dayLabel={dayLabel}
-                  dateLabel={format(row.day, "d MMM", { locale: fr })}
-                  isSelected={selected}
-                  session={
-                    hasSession
-                      ? {
-                          title: buildWorkoutHeadline({
-                            title: row.primarySession?.title,
-                            segments,
-                            sport: row.primarySession?.sport,
-                            isRestDay: row.isRest,
-                          }),
-                          subtitle: row.primarySession?.title,
-                          duration: row.isRest ? undefined : metrics?.durationLabel,
-                          distance: row.isRest ? undefined : metrics?.distanceLabel,
-                          intensityLabel: row.sessions.length > 1 ? `${row.sessions.length} séances` : metrics?.intensityLabel,
-                          miniProfile: renderWorkoutMiniProfile(segments, { sessionSchema: true }),
-                          sportHint: row.primarySession?.sport,
-                          isRestDay: row.isRest,
-                        }
-                      : undefined
-                  }
-                  accentColor={workoutAccentColor(segments, row.primarySession?.sport, row.isRest)}
-                  emptyLabel="Aucune séance"
-                  onAdd={() => {
-                    onSelectDate(row.day);
-                    onOpenCalendar?.();
-                  }}
-                  onOpen={
-                    row.primarySession
-                      ? () => {
-                          onSelectDate(row.day);
-                          setDetail(row.primarySession);
-                        }
-                      : undefined
-                  }
-                  onEdit={row.primarySession ? () => setDetail(row.primarySession) : undefined}
-                  onSend={undefined}
-                  onDuplicate={undefined}
-                  onDelete={undefined}
-                  onUnsend={undefined}
-                  allowSessionActions={false}
-                  hideActionSlot={!hasSession}
-                />
-              </div>
+              <AthleteMaquettePlanDayRow
+                key={row.day.toISOString()}
+                dayAbbrev={dayAbbrev}
+                dateNum={dateNum}
+                status={status}
+                sportKey={row.primarySession ? parseSport(row.primarySession.sport) : null}
+                title={
+                  hasSession
+                    ? buildWorkoutHeadline({
+                        title: row.primarySession?.title,
+                        segments,
+                        sport: row.primarySession?.sport,
+                        isRestDay: row.isRest,
+                      })
+                    : "Repos"
+                }
+                distanceLabel={row.isRest ? null : metrics?.distanceLabel}
+                durationLabel={row.isRest ? null : metrics?.durationLabel}
+                multiSessionHint={row.sessions.length > 1 ? `${row.sessions.length} séances` : null}
+                miniProfile={miniProfile}
+                onOpen={openRow}
+                onStart={hasSession ? openRow : undefined}
+              />
             );
           })
         )}

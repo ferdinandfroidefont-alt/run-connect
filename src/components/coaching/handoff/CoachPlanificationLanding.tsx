@@ -2,9 +2,8 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Group } from "@/components/apple/Group";
 import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { addDays } from "date-fns";
 
 export type LandingAthleteCard = {
   id: string;
@@ -48,14 +47,14 @@ function CoachSessionRow({
       onClick={onClick}
       className={cn(
         "flex w-full items-center gap-3 px-4 py-[11px] text-left active:bg-muted/50",
-        !last && "border-b border-border/80"
+        !last && "border-b-[0.5px] border-border/80"
       )}
     >
       <div className="w-11 shrink-0 text-center">
         <p className="text-[11px] text-muted-foreground">{row.dayShort}</p>
-        <p className="font-[system-ui] text-[22px] font-semibold leading-none text-foreground">{row.dateNum}</p>
+        <p className="font-display text-[22px] font-semibold leading-none text-foreground">{row.dateNum}</p>
       </div>
-      <div className="h-9 w-px shrink-0 bg-border" aria-hidden />
+      <div className="h-[36px] w-[0.5px] shrink-0 bg-border" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="text-[16px] font-semibold tracking-[-0.04em] text-foreground">{row.title}</p>
         <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
@@ -103,6 +102,7 @@ export function CoachPlanificationLanding({
   upcomingSessions,
   onOpenSession,
   onCreateSession,
+  onOpenMonthView,
 }: {
   weekStart: Date;
   selectedDate: Date;
@@ -121,6 +121,8 @@ export function CoachPlanificationLanding({
   upcomingSessions: CoachUpcomingSessionRow[];
   onOpenSession: (id: string) => void;
   onCreateSession: () => void;
+  /** Maquette 15 — lien « Mois » */
+  onOpenMonthView?: () => void;
 }) {
   const weekEndLabel = format(addDays(weekStart, 6), "d MMM yyyy", { locale: fr });
   const sessionSummaryByDate = {} as Record<string, DaySessionSummary>;
@@ -128,11 +130,11 @@ export function CoachPlanificationLanding({
   return (
     <div className="apple-grouped-bg pb-36">
       <div className="px-4">
-        <div className="rounded-[18px] border border-border/80 bg-card p-[18px] text-card-foreground shadow-none">
-          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{monthLine}</p>
+        <div className="rounded-[18px] border-[0.5px] border-border/80 bg-card p-[18px] text-card-foreground shadow-none">
+          <p className="text-[12px] font-medium uppercase tracking-[0.04em] text-muted-foreground">{monthLine}</p>
           <div className="mt-1.5 flex items-baseline gap-3.5">
-            <p className="font-[system-ui] text-[32px] font-bold leading-none tracking-[-0.06em] text-foreground">{sessionsScheduled}</p>
-            <p className="text-[14px] text-muted-foreground">séances programmées</p>
+            <p className="font-display text-[32px] font-bold leading-none tracking-[-0.06em] text-foreground">{sessionsScheduled}</p>
+            <p className="text-[14px] leading-snug text-foreground/85">séances programmées</p>
           </div>
           <div className="mt-3.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[13px]">
             <p>
@@ -154,13 +156,17 @@ export function CoachPlanificationLanding({
       <div className="mt-5 px-4">
         <div className="mb-2.5 flex items-baseline justify-between">
           <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-muted-foreground">Calendrier</p>
-          <button type="button" className="handoff-ios-link">
+          <button
+            type="button"
+            className="handoff-ios-link"
+            onClick={() => onOpenMonthView?.()}
+          >
             Mois
           </button>
         </div>
         <div className="overflow-hidden rounded-[14px] bg-card">
           <WeekSelectorPremium
-            variant="embed"
+            variant="landing"
             weekStart={weekStart}
             selectedDate={selectedDate}
             onSelectDate={onSelectDate}
@@ -189,7 +195,7 @@ export function CoachPlanificationLanding({
               key={a.id}
               type="button"
               onClick={() => onSelectAthlete(a.id)}
-              className="w-24 shrink-0 rounded-[14px] border border-border/60 bg-card p-3 text-center shadow-none active:opacity-90"
+              className="w-24 shrink-0 rounded-[14px] bg-card p-3 text-center shadow-none active:opacity-90"
             >
               <div className="relative mx-auto">
                 <div
@@ -215,7 +221,7 @@ export function CoachPlanificationLanding({
         </div>
       </div>
 
-      <div className="mt-2 px-1">
+      <div className="mt-2">
         <Group title="Séances à venir" className="mb-0">
           {upcomingSessions.length === 0 ? (
             <div className="px-4 py-6 text-center text-[14px] text-muted-foreground">Aucune séance cette semaine.</div>

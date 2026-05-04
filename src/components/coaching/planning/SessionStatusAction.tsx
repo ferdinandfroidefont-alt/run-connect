@@ -28,9 +28,9 @@ export function SessionStatusAction({ mode, onAdd, onSentClick }: SessionStatusA
       type="button"
       onClick={onAdd}
       className={cn(
-        "inline-flex h-[30px] w-[30px] items-center justify-center rounded-full text-[18px] font-light leading-none text-white transition-transform active:scale-95"
+        "inline-flex h-[30px] w-[30px] items-center justify-center rounded-full text-[18px] font-light leading-none text-white transition-transform active:scale-95",
       )}
-      style={{ backgroundColor: "#0a84ff" }}
+      style={{ backgroundColor: "#0066cc" }}
       aria-label="Ajouter une séance"
     >
       <Plus className="h-[18px] w-[18px] stroke-[2.2px]" stroke="currentColor" />

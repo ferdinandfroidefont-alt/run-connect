@@ -93,7 +93,6 @@ export default function MySessions() {
   const location = useLocation();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
   const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -558,7 +557,6 @@ export default function MySessions() {
     }
   };
 
-  const now = new Date().toISOString();
   const nowMs = Date.now();
 
   const mergedSessions = useMemo(() => {
@@ -572,13 +570,6 @@ export default function MySessions() {
     }
     return unique;
   }, [sessions, joinedSessions]);
-
-  const filteredCalendarSessions = mergedSessions.filter((session) => {
-    if (filter === 'all') return true;
-    if (filter === 'upcoming') return session.scheduled_at >= now;
-    if (filter === 'completed') return session.scheduled_at < now;
-    return true;
-  });
 
   const openConfirmDialog = (session: UserSession) => {
     setConfirmTarget({
@@ -974,11 +965,15 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background" data-tutorial="tutorial-my-sessions">
-        {/* iOS Header */}
-        <div className="z-50 shrink-0 border-b border-border bg-card">
+      <div
+        className="flex h-full min-h-0 flex-col overflow-hidden apple-grouped-bg"
+        data-tutorial="tutorial-my-sessions"
+      >
+        {/* Maquette 13 — en-tête large title, fond grouped (pas de carte séparée) */}
+        <div className="z-50 shrink-0 apple-grouped-bg">
           <MainTopHeader
             title="Séances"
+            className="bg-transparent"
             left={
               <button
                 type="button"
@@ -996,40 +991,17 @@ export default function MySessions() {
               <button
                 type="button"
                 onClick={() => openCreateSession()}
-                className="tap-highlight-none -mr-1 flex h-10 w-10 items-center justify-center rounded-full text-primary active:opacity-70"
+                className="tap-highlight-none -mr-1 flex h-10 w-10 min-w-[44px] items-center justify-center rounded-full text-primary active:opacity-70"
                 aria-label="Créer une séance"
               >
                 <Plus className="h-7 w-7" strokeWidth={2.5} />
               </button>
             }
           />
-          <div className="h-px bg-border" />
         </div>
 
-        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
+        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg">
           <>
-            {/* Filtres */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1 px-4 mb-3">
-                {[
-                  { key: 'all', label: 'Toutes' },
-                  { key: 'upcoming', label: 'À venir' },
-                  { key: 'completed', label: 'Réalisées' }
-                ].map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => { setFilter(f.key as 'all' | 'upcoming' | 'completed'); }}
-                    className={`h-8 rounded-full px-3 text-[13px] font-semibold tracking-[-0.2px] whitespace-nowrap transition-colors active:scale-[0.98] ${
-                      filter === f.key
-                        ? 'bg-foreground text-background'
-                        : 'bg-card text-foreground border-[0.5px] border-[rgba(60,60,67,0.18)] dark:border-[rgba(84,84,88,0.65)]'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-            </div>
-
             {loading ? (
                 <div className="space-y-3 px-4">
                   <div className="ios-card h-48 animate-pulse bg-secondary/40" />
@@ -1057,9 +1029,9 @@ export default function MySessions() {
                   </Button>
                 </div>
               ) : (
-                <div className="mb-ios-3 px-4">
+                <div className="mb-ios-3 min-w-0">
                   <SessionCalendarView
-                    sessions={filteredCalendarSessions}
+                    sessions={mergedSessions}
                     selectedDate={selectedDate}
                     onSelectDate={setSelectedDate}
                     visibleMonth={calendarMonth}
@@ -1068,6 +1040,7 @@ export default function MySessions() {
                     onConfirmSession={openConfirmDialog}
                     organizerProfiles={organizerProfiles}
                     currentUserId={user?.id}
+                    onAddSession={() => openCreateSession()}
                   />
                 </div>
             )}

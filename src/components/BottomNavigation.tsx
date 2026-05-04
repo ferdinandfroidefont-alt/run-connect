@@ -59,7 +59,12 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
    *  Icônes SF-style (refonte handoff) : DiscoverIcon, SessionsIcon, etc. */
   const navItems = useMemo<NavItem[]>(
     () => [
-      { path: "/", icon: DiscoverIcon, label: t("navigation.home"), isActive: (p) => p === "/" },
+      {
+        path: "/",
+        icon: DiscoverIcon,
+        label: t("navigation.home"),
+        isActive: (p) => p === "/" || p === "/feed",
+      },
       {
         path: "/my-sessions",
         icon: SessionsIcon,

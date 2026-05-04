@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Undo, Redo, Trash2, Navigation, Route, MapPin, Check, Layers, FileText, Settings } from 'lucide-react';
+import { Undo, Redo, Trash2, Navigation, MapPin, FileText, Plus, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -60,8 +60,10 @@ import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
-import { NotificationCenter } from '@/components/NotificationCenter';
-import { MainTopHeader } from '@/components/layout/MainTopHeader';
+import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useMyRoutesList } from '@/hooks/useMyRoutesList';
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -96,6 +98,8 @@ export const RouteCreation = () => {
   const { pathname: routeCreationPathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { routes: myRoutesCatalog } = useMyRoutesList();
+  const myRoutesCount = myRoutesCatalog.length;
   const { setBottomNavSuppressed } = useAppContext();
   const { formatKm, unit } = useDistanceUnits();
 
@@ -948,6 +952,13 @@ export const RouteCreation = () => {
     }
   }, [ensureUserLocationMarker, getCurrentPosition]);
 
+  const handleZoomIn = useCallback(() => {
+    const m = map.current;
+    if (!m) return;
+    const z = m.getZoom();
+    m.easeTo({ zoom: Math.min(z + 1, 18), duration: 220 });
+  }, []);
+
   const handleFinish = async () => {
     if (waypoints.current.length < 2) {
       toast.error('Veuillez tracer un parcours avec au moins 2 points');
@@ -1078,203 +1089,232 @@ export const RouteCreation = () => {
   addWaypointRef.current = addWaypoint;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-background">
-      <div className="relative z-20 shrink-0 bg-white/95 backdrop-blur-md">
-        <MainTopHeader
-          title="Découvrir"
-          tabsAriaLabel="Navigation découvrir"
-          tabs={[
-            { id: "planning", label: "Planification", active: false, onClick: () => navigate("/") },
-            { id: "tracking", label: "Suivi", active: false, onClick: () => navigate("/participants") },
-            { id: "routes", label: "Création itinéraire", active: true },
-          ]}
-          right={
-            <>
-              <div className="flex shrink-0 items-center justify-center">
-                <NotificationCenter />
-              </div>
-              <button
-                type="button"
-                className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
-                aria-label="Paramètres"
-                onClick={() => navigate('/profile/edit')}
-              >
-                <Settings className="h-[20px] w-[20px]" />
-              </button>
-            </>
-          }
-        />
-      </div>
-
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div
-          ref={mapContainer}
-          className="relative z-[1] h-full min-h-0 w-full min-w-0"
-          data-tutorial="tutorial-route-creation-map"
-        />
-
-      {!isMapLoaded && !mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-secondary/90 z-[5]">
-          <div className="flex flex-col items-center gap-ios-3">
-            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-ios-subheadline text-muted-foreground">Chargement de la carte...</p>
-          </div>
-        </div>
-      )}
-      {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-secondary/95 z-[5]">
-          <div className="flex flex-col items-center gap-ios-4 px-ios-6 text-center">
-            <MapPin className="h-12 w-12 text-muted-foreground" />
-            <p className="text-ios-subheadline text-muted-foreground">Impossible de charger la carte. Vérifiez VITE_MAPBOX_ACCESS_TOKEN.</p>
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              Retour
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="absolute left-ios-4 top-ios-4 z-10 max-w-[calc(100vw-2rem)] min-w-0">
-        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex flex-nowrap items-center gap-ios-1">
-          <Button
-            size="sm"
-            variant={!isManualMode ? 'default' : 'ghost'}
-            onClick={() => (!isManualMode ? null : handleModeToggle())}
-            className={`gap-2 ${!isManualMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'text-muted-foreground'}`}
-          >
-            <Route className="w-4 h-4" />
-            Guidé
-          </Button>
-          <Button
-            size="sm"
-            variant={isManualMode ? 'default' : 'ghost'}
-            onClick={() => (isManualMode ? null : handleModeToggle())}
-            className={`gap-2 ${isManualMode ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-muted-foreground'}`}
-          >
-            <MapPin className="w-4 h-4" />
-            Manuel
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => requestExitWithRouteDraft('/itinerary/my-routes')}
-            className="ml-auto shrink-0 gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
-          >
-            <Layers className="h-4 w-4" />
-            Mes itinéraires
-          </Button>
-        </div>
-        <p className="text-ios-footnote text-muted-foreground mt-ios-1 text-center">
-          {isManualMode ? '🛤️ Tracé libre hors-piste' : '🚶 Suit les chemins'}
-        </p>
-      </div>
-
-      <div
-        className={cn(
-          'absolute right-ios-4 top-[calc(env(safe-area-inset-top)+9.75rem)] z-10 flex flex-col gap-ios-2'
-        )}
-      >
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={handleFinish}
-          className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg"
-          title="Valider"
-        >
-          <Check className="w-4 h-4" />
-        </Button>
-
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={handleRecenter}
-          className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg"
-          title="Recentrer"
-        >
-          <Navigation className="w-4 h-4" />
-        </Button>
-
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={handleUndo}
-          disabled={waypoints.current.length === 0}
-          className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg disabled:opacity-50"
-          title="Annuler dernier point"
-        >
-          <Undo className="w-4 h-4" />
-        </Button>
-
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={handleRedo}
-          disabled={!canRedo}
-          className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg disabled:opacity-50"
-          title="Rétablir"
-        >
-          <Redo className="w-4 h-4" />
-        </Button>
-
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={handleClear}
-          disabled={waypoints.current.length === 0}
-          className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg disabled:opacity-50"
-          title="Effacer tout"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-
-        {!isEditMode && (
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={() => navigate('/drafts/routes')}
-            className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg"
-            title="Brouillons itinéraire"
-          >
-            <FileText className="w-4 h-4" />
-          </Button>
-        )}
-
-        {/* Même bottom sheet « Style de carte » que l’accueil ; gabarit h-11 comme les boutons outline */}
-        <div
-          className={cn(
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-ios-lg border border-border/50 bg-background/80 shadow-lg backdrop-blur-md hover:bg-background/90',
-            '[&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:border-0 [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/85 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/85'
-          )}
-        >
-          <MapStyleSelector currentStyle={mapStyleId} onStyleChange={handleMapStyleChange} />
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pb-4">
-        <div className="pointer-events-auto w-full px-ios-4">
-          {waypointCount >= 2 && (
-            <RouteElevationPanel
-              elevations={routeElevations}
-              coords={elevationChartCoords}
-              totalDistanceM={Math.max(0, totalDistance * 1000)}
-              elevationGain={totalElevationGain}
-              elevationLoss={totalElevationLoss}
-              formatDistanceKm={formatKm}
-              formatDistanceAlongPath={(m) => formatDistanceAlongPathMeters(m, unit)}
-              isLoadingElevation={elevationLoading}
-              defaultExpanded={false}
-              autoExpandToken={elevationAutoExpandToken}
-              onScrub={handleElevationScrub}
+    <>
+      <IosFixedPageHeaderShell
+        className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
+        headerWrapperClassName="shrink-0"
+        contentScroll
+        scrollClassName="min-h-0 bg-secondary"
+        header={
+          <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
+            <IosPageHeaderBar
+              leadingBack={{
+                onClick: () => requestExitWithRouteDraft('/'),
+                label: 'Retour',
+              }}
+              title="Itinéraire"
+              right={
+                <button
+                  type="button"
+                  onClick={() => void handleFinish()}
+                  className="min-w-[44px] py-1 text-right text-[17px] font-semibold text-primary [-webkit-tap-highlight-color:transparent] active:opacity-60"
+                >
+                  OK
+                </button>
+              }
             />
-          )}
-        </div>
-      </div>
+          </div>
+        }
+      >
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+          <div className="min-w-0 max-w-full space-y-3 px-4 pb-32 pt-3 ios-shell:px-2.5">
+            <div
+              className="rounded-[14px] p-1 shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)]"
+              style={{ background: 'hsl(var(--card))' }}
+            >
+              <div className="flex">
+                <button
+                  type="button"
+                  onClick={() => (isManualMode ? handleModeToggle() : undefined)}
+                  className={cn(
+                    'min-w-0 flex-1 rounded-lg py-[7px] text-center text-[13px] font-semibold transition-colors',
+                    !isManualMode
+                      ? 'bg-background text-foreground shadow-[0_0_0_0.5px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]'
+                      : 'bg-transparent text-muted-foreground',
+                  )}
+                >
+                  Guidé
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (!isManualMode ? handleModeToggle() : undefined)}
+                  className={cn(
+                    'min-w-0 flex-1 rounded-lg py-[7px] text-center text-[13px] font-semibold transition-colors',
+                    isManualMode
+                      ? 'bg-background text-foreground shadow-[0_0_0_0.5px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]'
+                      : 'bg-transparent text-muted-foreground',
+                  )}
+                >
+                  Manuel
+                </button>
+              </div>
+            </div>
 
-      {waypointCount === 0 && (
-        <div className="absolute bottom-ios-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border/50 bg-background/90 px-ios-4 py-ios-2 shadow-lg backdrop-blur-md">
-          <p className="text-center text-ios-subheadline text-foreground">👆 Cliquez sur la carte pour tracer votre parcours</p>
-        </div>
-      )}
-      </div>
+            <p className="text-center text-[13px] text-muted-foreground">
+              {isManualMode ? 'Tracé libre hors-piste' : 'Suit les chemins et sentiers'}
+            </p>
+
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleUndo}
+                disabled={waypoints.current.length === 0}
+                className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
+              >
+                <Undo className="h-4 w-4" />
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
+              >
+                <Redo className="h-4 w-4" />
+                Rétablir
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleClear}
+                disabled={waypoints.current.length === 0}
+                className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
+              >
+                <Trash2 className="h-4 w-4" />
+                Effacer
+              </Button>
+              <div
+                className={cn(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/90',
+                  '[&_.map-ios-colored-fab]:h-8 [&_.map-ios-colored-fab]:w-8 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:border-0 [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/85 [&_span_svg]:!stroke-current',
+                )}
+              >
+                <MapStyleSelector currentStyle={mapStyleId} onStyleChange={handleMapStyleChange} />
+              </div>
+              {!isEditMode ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => navigate('/drafts/routes')}
+                  className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
+                >
+                  <FileText className="h-4 w-4" />
+                  Brouillons
+                </Button>
+              ) : null}
+            </div>
+
+            <div
+              className="relative h-[420px] w-full min-w-0 overflow-hidden rounded-[18px] bg-card shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.25)]"
+              data-tutorial="tutorial-route-creation-map"
+            >
+              <div ref={mapContainer} className="absolute inset-0 z-[1] min-h-0 w-full" />
+
+              {!isMapLoaded && !mapError ? (
+                <div className="absolute inset-0 z-[5] flex items-center justify-center bg-secondary/90">
+                  <div className="flex flex-col items-center gap-ios-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <p className="text-ios-subheadline text-muted-foreground">Chargement de la carte...</p>
+                  </div>
+                </div>
+              ) : null}
+              {mapError ? (
+                <div className="absolute inset-0 z-[5] flex items-center justify-center bg-secondary/95 px-4">
+                  <div className="flex max-w-sm flex-col items-center gap-ios-4 text-center">
+                    <MapPin className="h-12 w-12 text-muted-foreground" />
+                    <p className="text-ios-subheadline text-muted-foreground">
+                      Impossible de charger la carte. Vérifiez VITE_MAPBOX_ACCESS_TOKEN.
+                    </p>
+                    <Button variant="outline" onClick={() => navigate(-1)}>
+                      Retour
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="pointer-events-none absolute left-3 top-3 z-10 flex gap-2">
+                <div className="pointer-events-auto rounded-xl bg-white/90 px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:bg-zinc-900/90">
+                  <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Distance</div>
+                  <div className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
+                    {formatKm(Math.max(0, totalDistance))}
+                  </div>
+                </div>
+                <div className="pointer-events-auto rounded-xl bg-white/90 px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:bg-zinc-900/90">
+                  <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Dénivelé</div>
+                  <div className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
+                    {Math.round(totalElevationGain)} m
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleRecenter()}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[#0066cc] shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 dark:text-[#0A84FF] [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  aria-label="Recentrer sur ma position"
+                >
+                  <Navigation className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[#0066cc] shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 dark:text-[#0A84FF] [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  aria-label="Zoom avant"
+                >
+                  <Plus className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                </button>
+              </div>
+
+              {waypointCount === 0 && !mapError ? (
+                <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 max-w-[90%] -translate-x-1/2 rounded-full border border-border/50 bg-background/92 px-4 py-2 shadow-lg backdrop-blur-md">
+                  <p className="text-center text-[15px] text-foreground">Touchez la carte pour tracer le parcours</p>
+                </div>
+              ) : null}
+            </div>
+
+            {waypointCount >= 2 ? (
+              <RouteElevationPanel
+                layout="itinerary"
+                elevations={routeElevations}
+                coords={elevationChartCoords}
+                totalDistanceM={Math.max(0, totalDistance * 1000)}
+                elevationGain={totalElevationGain}
+                elevationLoss={totalElevationLoss}
+                formatDistanceKm={formatKm}
+                formatDistanceAlongPath={(m) => formatDistanceAlongPathMeters(m, unit)}
+                isLoadingElevation={elevationLoading}
+                defaultExpanded
+                autoExpandToken={elevationAutoExpandToken}
+                onScrub={handleElevationScrub}
+              />
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => requestExitWithRouteDraft('/itinerary/my-routes')}
+              className="flex min-w-0 w-full items-center gap-3 rounded-[14px] bg-card px-4 py-3.5 text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] active:opacity-90 dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)] [-webkit-tap-highlight-color:transparent]"
+            >
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-lg leading-none text-primary-foreground">
+                📍
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[17px] font-normal leading-snug tracking-tight text-foreground">Mes itinéraires</div>
+                <div className="mt-0.5 text-[13px] text-muted-foreground">
+                  {myRoutesCount} enregistré{myRoutesCount !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/45" aria-hidden />
+            </button>
+          </div>
+        </ScrollArea>
+      </IosFixedPageHeaderShell>
 
       <RouteDialog
         isOpen={saveDialogOpen}
@@ -1316,7 +1356,7 @@ export const RouteCreation = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 };
 

@@ -42,7 +42,7 @@ export function MainTopHeader({
         )}
       >
         {left ? <div className="flex min-w-0 flex-1 items-center justify-start">{left}</div> : null}
-        {right ? <div className="flex shrink-0 items-center gap-2">{right}</div> : null}
+        {right ? <div className="flex shrink-0 items-center gap-4">{right}</div> : null}
       </div>
 
       {/* Large title — Apple iOS Settings.app/Mail.app spec : marginTop 6 / marginBottom 6 */}

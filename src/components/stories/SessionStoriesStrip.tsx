@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus } from "lucide-react";
@@ -18,6 +19,8 @@ interface SessionStoriesStripProps {
   onCreateStory: () => void;
   /** Incremente pour forcer un rechargement (ex: apres creation story). */
   refreshToken?: number;
+  /** Classes sur le conteneur horizontal (maquette 17 : fond crème, padding 20px). */
+  className?: string;
 }
 
 export function SessionStoriesStrip({
@@ -25,6 +28,7 @@ export function SessionStoriesStrip({
   onOpenStory,
   onCreateStory,
   refreshToken = 0,
+  className,
 }: SessionStoriesStripProps) {
   const [authors, setAuthors] = useState<StoryAuthor[]>([]);
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
@@ -112,14 +116,15 @@ export function SessionStoriesStrip({
   );
   const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
-  // Refonte Apple stories rail (mockup 17 ScreenMessages) :
-  // - 64×64 anneau conic-gradient blue (non vu) / gris (vu)
-  // - Avatar 54×54 dedans, padding 2.5
-  // - Toi : avatar gris + bouton + bleu en bas-droit
-  // - Label 11px sous l'avatar
+  // Maquette 17 : anneau dégradé feu RunConnect (#FF4D1A · #FFB199), « Toi » + pastille +
   return (
-    <div className="overflow-x-auto bg-card px-4 pt-1.5 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="flex min-w-max items-start gap-3">
+    <div
+      className={cn(
+        "overflow-x-auto px-5 pb-1 pt-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className
+      )}
+    >
+      <div className="flex min-w-max items-start gap-3.5">
         <button
           type="button"
           onClick={hasMyStory ? () => onOpenStory(currentUserId!) : onCreateStory}
@@ -127,27 +132,24 @@ export function SessionStoriesStrip({
         >
           <div
             className="relative h-16 w-16 rounded-full p-[2.5px]"
-            style={{ background: "rgba(120,120,128,0.18)" }}
+            style={{ background: "#E2DBD0" }}
           >
-            <div className="h-full w-full rounded-full bg-secondary p-[2px]">
+            <div className="h-full w-full rounded-full bg-[#F6F2EC] p-[2px] dark:bg-background">
               <Avatar className="h-full w-full">
                 <AvatarImage src={myStoryAvatarUrl ?? ""} />
-                <AvatarFallback className="bg-[hsl(var(--muted))] text-foreground/70 font-semibold text-[18px]">
+                <AvatarFallback className="bg-[hsl(var(--muted))] text-[18px] font-semibold text-foreground/70">
                   {hasMyStory ? "MOI" : "+"}
                 </AvatarFallback>
               </Avatar>
             </div>
             {!hasMyStory && (
-              <span
-                className="absolute -bottom-0.5 -right-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-primary text-white"
-                style={{ border: "2.5px solid hsl(var(--background))" }}
-              >
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[2.5px] border-[#F6F2EC] bg-[#FF4D1A] text-white dark:border-background dark:bg-orange-500">
                 <Plus className="h-3 w-3" strokeWidth={2.4} />
               </span>
             )}
           </div>
-          <span className="max-w-[70px] truncate text-[11px] font-medium text-muted-foreground">
-            Votre story
+          <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-[#7A7771] dark:text-muted-foreground">
+            Toi
           </span>
         </button>
 
@@ -164,20 +166,20 @@ export function SessionStoriesStrip({
                 className="h-16 w-16 rounded-full p-[2.5px]"
                 style={{
                   background: author.viewed
-                    ? "rgba(120,120,128,0.24)"
-                    : "conic-gradient(from 200deg, hsl(var(--primary)) 0%, hsl(var(--primary-on-dark, 211 100% 52%)) 50%, hsl(var(--primary)) 100%)",
+                    ? "#E2DBD0"
+                    : "conic-gradient(from 200deg, #FF4D1A 0%, #FFB199 50%, #FF4D1A 100%)",
                 }}
               >
-                <div className="h-full w-full rounded-full bg-secondary p-[2px]">
+                <div className="h-full w-full rounded-full bg-[#F6F2EC] p-[2px] dark:bg-background">
                   <Avatar className="h-full w-full">
                     <AvatarImage src={author.avatar_url ?? ""} />
-                    <AvatarFallback className="bg-[hsl(var(--muted))] text-foreground font-semibold text-[18px]">
+                    <AvatarFallback className="bg-[hsl(var(--muted))] text-[18px] font-semibold text-foreground">
                       {(author.username ?? "U").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
               </div>
-              <span className="max-w-[70px] truncate text-[11px] font-medium text-foreground">
+              <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-[#0E0E0F] dark:text-foreground">
                 {author.display_name || author.username || "Membre"}
               </span>
             </button>

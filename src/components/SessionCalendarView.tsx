@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  addMonths,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -10,11 +9,10 @@ import {
   isSameMonth,
   startOfMonth,
   startOfWeek,
-  subMonths,
   getISODay,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, ChevronRightIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 import { getActivitySolidBgClass } from "@/lib/activityIcons";
@@ -50,6 +48,8 @@ interface SessionCalendarViewProps {
     { username: string; display_name: string; avatar_url: string | null }
   >;
   currentUserId?: string;
+  /** Maquette 13 : + sur la rangée du mois (en plus du trailing NavBar) */
+  onAddSession?: () => void;
 }
 
 function SwipeConfirmCard({
@@ -121,8 +121,22 @@ export const SessionCalendarView = ({
   onConfirmSession,
   organizerProfiles,
   currentUserId,
+  onAddSession,
 }: SessionCalendarViewProps) => {
   const today = new Date();
+  const monthInputRef = useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const sessionsFiltered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return sessions;
+    return sessions.filter(
+      (s) =>
+        s.title.toLowerCase().includes(q) ||
+        (s.location_name && s.location_name.toLowerCase().includes(q))
+    );
+  }, [sessions, searchQuery]);
 
   const monthStart = startOfMonth(visibleMonth);
   const monthEnd = endOfMonth(visibleMonth);
@@ -132,14 +146,14 @@ export const SessionCalendarView = ({
 
   const sessionsByDate = useMemo(() => {
     const map = new Map<string, SessionCalendarSession[]>();
-    for (const session of sessions) {
+    for (const session of sessionsFiltered) {
       const dateKey = format(new Date(session.scheduled_at), "yyyy-MM-dd");
       const existing = map.get(dateKey) ?? [];
       existing.push(session);
       map.set(dateKey, existing);
     }
     return map;
-  }, [sessions]);
+  }, [sessionsFiltered]);
 
   const selectedKey = format(selectedDate, "yyyy-MM-dd");
   const selectedDaySessions = useMemo(() => {
@@ -149,113 +163,161 @@ export const SessionCalendarView = ({
 
   const isToday = isSameDay(selectedDate, today);
   const sessionCount = selectedDaySessions.length;
-  const countLabel = sessionCount === 0 ? "Aucune séance" : sessionCount === 1 ? "1 séance" : `${sessionCount} séances`;
+  const countLabel =
+    sessionCount === 0
+      ? "aucune séance"
+      : sessionCount === 1
+        ? "1 séance"
+        : `${sessionCount} séances`;
+
+  const monthPickerValue = format(visibleMonth, "yyyy-MM");
 
   return (
     <div className="space-y-0">
-      <div className="ios-card overflow-hidden">
-        <div className="flex items-center justify-between px-3 pt-2 pb-1">
-          <button
-            type="button"
-            onClick={() => onVisibleMonthChange(subMonths(visibleMonth, 1))}
-            className="flex h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
-            aria-label="Mois précédent"
-          >
-            <ChevronLeft className="h-6 w-6 text-primary" strokeWidth={2.2} />
-          </button>
-          <span className="font-display text-[17px] font-semibold capitalize tracking-[-0.3px] text-foreground">
+      <input
+        ref={monthInputRef}
+        type="month"
+        className="sr-only"
+        value={monthPickerValue}
+        aria-hidden
+        tabIndex={-1}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (!raw) return;
+          const [y, m] = raw.split("-").map(Number);
+          if (y && m) onVisibleMonthChange(startOfMonth(new Date(y, m - 1, 1)));
+        }}
+      />
+
+      {/* Maquette 13 — rangée mois + ⌕ + (Apple Calendar) */}
+      <div className="flex items-baseline justify-between px-4">
+        <button
+          type="button"
+          className="flex min-w-0 items-baseline gap-0.5 text-left text-primary active:opacity-70"
+          onClick={() => monthInputRef.current?.showPicker?.() ?? monthInputRef.current?.click()}
+          aria-label="Choisir le mois"
+        >
+          <span className="font-display text-[22px] font-bold capitalize tracking-[-0.5px]">
             {format(visibleMonth, "MMMM yyyy", { locale: fr })}
           </span>
+          <ChevronDown className="relative top-px h-[13px] w-[13px] shrink-0" strokeWidth={2.4} aria-hidden />
+        </button>
+        <div className="flex items-center gap-3.5 text-primary">
           <button
             type="button"
-            onClick={() => onVisibleMonthChange(addMonths(visibleMonth, 1))}
-            className="flex h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
-            aria-label="Mois suivant"
+            className="tap-highlight-none flex h-10 w-9 items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+            aria-label={searchOpen ? "Fermer la recherche" : "Rechercher une séance"}
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen((v) => !v)}
           >
-            <ChevronRight className="h-6 w-6 text-primary" strokeWidth={2.2} />
+            <Search className="h-[17px] w-[17px]" strokeWidth={2.5} />
           </button>
-        </div>
-
-        <div className="grid grid-cols-7 border-b-[0.5px] border-border px-1">
-          {WEEK_LABELS.map((label, i) => (
-            <div
-              key={`${label}-${i}`}
-              className={cn(
-                "py-2 text-center",
-                (i === 5 || i === 6) && "opacity-70"
-              )}
+          {onAddSession ? (
+            <button
+              type="button"
+              className="tap-highlight-none flex h-10 w-9 items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+              aria-label="Créer une séance"
+              onClick={onAddSession}
             >
-              <span className="text-[11px] font-semibold uppercase tracking-[0.02em] text-muted-foreground">
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 px-0 pb-1">
-          {days.map((day, idx) => {
-            const dateKey = format(day, "yyyy-MM-dd");
-            const daySessions = sessionsByDate.get(dateKey) ?? [];
-            const dayIsToday = isSameDay(day, today);
-            const inMonth = isSameMonth(day, visibleMonth);
-            const isSelected = isSameDay(day, selectedDate);
-            const dotClasses = [
-              ...new Set(daySessions.map((s) => getActivitySolidBgClass(s.activity_type))),
-            ].slice(0, 3);
-
-            return (
-              <button
-                key={dateKey}
-                type="button"
-                onClick={() => {
-                  onSelectDate(day);
-                  if (!isSameMonth(day, visibleMonth)) {
-                    onVisibleMonthChange(startOfMonth(day));
-                  }
-                }}
-                className={cn(
-                  "relative flex min-h-[52px] flex-col items-center justify-start border-border/60 pt-1.5 transition-colors",
-                  idx >= 7 && "border-t-[0.5px]",
-                  !inMonth && "opacity-[0.38]",
-                  isSelected && !dayIsToday && "bg-primary/[0.08]",
-                  isSelected && dayIsToday && "bg-transparent"
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex h-[26px] w-[26px] items-center justify-center rounded-full text-[15px] font-medium leading-none",
-                    isWeekendDate(day) && !dayIsToday && inMonth && "text-muted-foreground",
-                    !isWeekendDate(day) && inMonth && !dayIsToday && !isSelected && "text-foreground",
-                    dayIsToday &&
-                      "bg-[#FF3B30] font-semibold text-white shadow-sm dark:bg-[#FF453A]",
-                    !dayIsToday && isSelected && "font-semibold text-foreground"
-                  )}
-                >
-                  {format(day, "d")}
-                </span>
-                <div className="mt-1 flex h-2.5 items-end justify-center gap-0.5 px-0.5">
-                  {dotClasses.map((cls) => (
-                    <span
-                      key={cls}
-                      className={cn("h-1 w-1 shrink-0 rounded-full", cls)}
-                      aria-hidden
-                    />
-                  ))}
-                </div>
-              </button>
-            );
-          })}
+              <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
+            </button>
+          ) : null}
         </div>
       </div>
 
-      <div className="ios-card mt-3 overflow-hidden border-t-[0.5px] border-border">
-        <div className="border-b-[0.5px] border-border px-4 py-3">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="font-display text-[20px] font-bold capitalize tracking-[-0.4px] text-foreground">
+      {searchOpen ? (
+        <div className="px-4 pb-2 pt-1">
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher une séance…"
+            className="h-9 w-full rounded-[10px] border-[0.5px] border-border bg-card px-3 text-[15px] font-normal text-foreground outline-none ring-0 placeholder:text-muted-foreground focus:border-primary/40"
+          />
+        </div>
+      ) : null}
+
+      {/* En-tête L M M J V S D — maquette: 11px / 500, WE atténués */}
+      <div className="mx-4 mt-2.5 grid grid-cols-7">
+        {WEEK_LABELS.map((label, i) => (
+          <div
+            key={`${label}-${i}`}
+            className={cn(
+              "py-1 text-center text-[11px] font-medium leading-none",
+              i >= 5 ? "text-foreground/30" : "text-muted-foreground"
+            )}
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+      <div className="mx-4 h-px bg-border" aria-hidden />
+
+      {/* Grille mois — bordures horizontales entre semaines uniquement */}
+      <div className="mx-4 grid grid-cols-7">
+        {days.map((day, idx) => {
+          const dateKey = format(day, "yyyy-MM-dd");
+          const daySessions = sessionsByDate.get(dateKey) ?? [];
+          const dayIsToday = isSameDay(day, today);
+          const inMonth = isSameMonth(day, visibleMonth);
+          const isSelected = isSameDay(day, selectedDate);
+          const dotClasses = [
+            ...new Set(daySessions.map((s) => getActivitySolidBgClass(s.activity_type))),
+          ].slice(0, 3);
+
+          return (
+            <button
+              key={dateKey}
+              type="button"
+              onClick={() => {
+                onSelectDate(day);
+                if (!isSameMonth(day, visibleMonth)) {
+                  onVisibleMonthChange(startOfMonth(day));
+                }
+              }}
+              className={cn(
+                "flex aspect-[1/1.05] flex-col items-center pt-1.5 gap-[3px] transition-colors",
+                idx >= 7 && "border-t-[0.5px] border-border",
+                !inMonth && "opacity-[0.38]",
+                isSelected && !dayIsToday && "bg-muted/35 dark:bg-muted/25"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full font-display text-[16px] leading-none tracking-[-0.3px]",
+                  isWeekendDate(day) && !dayIsToday && inMonth && "text-foreground/30",
+                  !isWeekendDate(day) && inMonth && !dayIsToday && !isSelected && "text-foreground",
+                  dayIsToday && "bg-[#FF3B30] font-semibold text-white dark:bg-[#FF453A]",
+                  !dayIsToday && isSelected && "font-semibold text-foreground"
+                )}
+              >
+                {format(day, "d")}
+              </span>
+              <div className="flex h-2.5 items-end justify-center gap-[2px]">
+                {dotClasses.map((cls) => (
+                  <span
+                    key={cls}
+                    className={cn("h-1 w-1 shrink-0 rounded-full", cls)}
+                    aria-hidden
+                  />
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 8px — maquette */}
+      <div className="h-2 shrink-0" aria-hidden />
+
+      {/* Panneau jour — fond cellule iOS, pas de carte arrondie englobante */}
+      <div className="border-t-[0.5px] border-border bg-card">
+        <div className="px-4 pb-1.5 pt-3.5">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="font-display text-[17px] font-bold capitalize tracking-[-0.4px] text-foreground">
               {format(selectedDate, "EEEE d", { locale: fr })}
             </span>
             <span className="text-[13px] text-muted-foreground">
-              {isToday ? `aujourd'hui · ${countLabel}` : `${countLabel}`}
+              {isToday ? `aujourd'hui · ${countLabel}` : countLabel}
             </span>
           </div>
         </div>
@@ -265,18 +327,18 @@ export const SessionCalendarView = ({
             <p className="text-[15px] text-muted-foreground">Aucune séance ce jour</p>
           </div>
         ) : (
-          <div className="divide-y-[0.5px] divide-border">
-            {selectedDaySessions.map((session) => {
+          <div>
+            {selectedDaySessions.map((session, rowIdx) => {
               const org =
                 session.organizer_id &&
                 currentUserId &&
                 session.organizer_id !== currentUserId
                   ? organizerProfiles?.get(session.organizer_id)
                   : null;
-              const friends =
-                Math.max(0, (session.current_participants ?? 0) - 1);
+              const friends = Math.max(0, (session.current_participants ?? 0) - 1);
               const friendsLabel =
                 friends <= 0 ? "" : friends === 1 ? "· 1 ami" : `· ${friends} amis`;
+              const isLastRow = rowIdx === selectedDaySessions.length - 1;
 
               const rowInner = (
                 <div
@@ -289,24 +351,28 @@ export const SessionCalendarView = ({
                       onSessionClick(session);
                     }
                   }}
-                  className="flex cursor-pointer items-center gap-3 bg-card px-4 py-3 text-left transition-colors active:bg-secondary/60"
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 bg-card px-4 py-[11px] text-left transition-colors active:bg-secondary/60",
+                    !isLastRow && "border-b-[0.5px] border-border"
+                  )}
                 >
-                  <ActivityIcon activityType={session.activity_type} size="sm" />
+                  <ActivityIcon
+                    activityType={session.activity_type}
+                    size="md"
+                    className="!h-11 !w-11 shrink-0 !rounded-[10px] [&>svg]:!h-[22px] [&>svg]:!w-[22px]"
+                  />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-display text-[17px] font-semibold leading-tight tracking-[-0.3px]">
+                    <p className="truncate text-[16px] font-semibold leading-[1.15] tracking-[-0.4px] text-foreground">
                       {session.title}
                     </p>
-                    <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                    <p className="mt-px truncate text-[13px] text-muted-foreground">
                       {format(new Date(session.scheduled_at), "HH:mm", { locale: fr })} ·{" "}
                       {getActivityLabel(session.activity_type)}
-                      {session.location_name ? ` · ${session.location_name}` : ""}{" "}
-                      {friendsLabel}
-                      {org
-                        ? ` · ${org.display_name || org.username}`
-                        : ""}
+                      {session.location_name ? ` · ${session.location_name}` : ""} {friendsLabel}
+                      {org ? ` · ${org.display_name || org.username}` : ""}
                     </p>
                   </div>
-                  <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/60" aria-hidden />
+                  <ChevronRight className="h-[15px] w-[15px] shrink-0 text-muted-foreground/55" aria-hidden />
                 </div>
               );
 

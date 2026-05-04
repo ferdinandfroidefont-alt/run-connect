@@ -31,18 +31,16 @@ import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import {
   MessageCircle, 
   Users, 
-  Send, 
-  ArrowLeft, 
+  Send,
+  ArrowLeft,
+  ChevronLeft,
   Search,
   Plus,
   Paperclip,
   Check,
   CheckCheck,
   Image,
-  Calendar,
   UserPlus,
-  MapPin,
-  Clock,
   Settings,
   MoreVertical,
   Crown,
@@ -57,8 +55,9 @@ import {
   Camera,
   ChevronRight
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
+import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 import { MessageSectionHeader, shouldShowSectionHeader } from "../components/MessageTimestamp";
 
 import { TypingIndicator } from "@/components/TypingIndicator";
@@ -437,10 +436,11 @@ const Messages = () => {
       return t ? `hsl(${t})` : '';
     };
     if (inThread) {
-      const sec = hslVar('--secondary');
-      if (sec) {
-        root.style.backgroundColor = sec;
-        document.body.style.backgroundColor = sec;
+      const dark = root.classList.contains("dark");
+      const threadBg = dark ? hslVar("--secondary") || "" : "#F6F2EC";
+      if (threadBg) {
+        root.style.backgroundColor = threadBg;
+        document.body.style.backgroundColor = threadBg;
       }
     } else {
       const bg = hslVar('--background');
@@ -2245,198 +2245,310 @@ const Messages = () => {
     
     return (
       <>
-        <div className="h-full min-h-0 flex flex-col bg-secondary">
-        <div className="max-w-md mx-auto flex min-h-0 w-full flex-1 flex-col">
-          <IosFixedPageHeaderShell
-            className="min-h-0 flex-1"
-            scrollRef={threadScrollRef}
-            headerWrapperClassName="z-50 bg-card border-b border-border/50"
-            header={
-            <div className="flex items-center px-ios-2 py-ios-2">
-              {/* Back button - Left */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedConversation(null)}
-                className="gap-ios-1 text-primary p-0 h-auto font-normal shrink-0"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                Retour
-              </Button>
-              
-              {/* Center - Avatar and Name (stacked) */}
-              <div className="flex-1 flex flex-col items-center justify-center -ml-ios-4">
-                {selectedConversation.is_group ? (
-                  <div 
-                    className="flex flex-col items-center cursor-pointer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const clubData = selectedConversation;
-                      setSelectedConversation(null);
-                      setTimeout(() => {
-                        setGroupInfoData(clubData);
-                        setShowClubProfile(true);
-                      }, 100);
-                    }}
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                      <AvatarFallback className="bg-border text-muted-foreground">
-                        <Users className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex items-center gap-ios-1 mt-ios-1">
-                      <p className="text-ios-footnote font-semibold text-foreground">{selectedConversation.group_name}</p>
-                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  </div>
-                ) : (
-                  <div 
-                    className="flex flex-col items-center cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowConversationInfo(true);
-                    }}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-9 w-9">
+        <div className="flex h-full min-h-0 flex-col bg-[#F6F2EC] dark:bg-secondary">
+          <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col">
+            <IosFixedPageHeaderShell
+              className="min-h-0 flex-1"
+              scrollRef={threadScrollRef}
+              headerWrapperClassName="z-50 shrink-0 border-b border-[#E2DBD0] bg-white dark:border-border dark:bg-card"
+              header={
+                isDirectMessage ? (
+                  <div className="flex items-center gap-2.5 px-4 py-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedConversation(null)}
+                      className="h-9 w-9 shrink-0 rounded-full p-0 hover:bg-transparent dark:hover:bg-secondary"
+                      aria-label="Retour"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-[#0E0E0F] dark:text-foreground" strokeWidth={2.5} />
+                    </Button>
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowConversationInfo(true);
+                      }}
+                    >
+                      <Avatar className="h-9 w-9 shrink-0">
                         <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                        <AvatarFallback className="bg-border text-muted-foreground text-[13px]">
-                          {(selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name || "").charAt(0).toUpperCase()}
+                        <AvatarFallback className="bg-[#EDE6DC] text-[13px] font-semibold text-[#0E0E0F] dark:bg-secondary dark:text-foreground">
+                          {(selectedConversation.other_participant?.username ||
+                            selectedConversation.other_participant?.display_name ||
+                            "").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} className="w-2 h-2" />
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate font-bold leading-tight text-[15px] tracking-tight text-[#0E0E0F] dark:text-foreground"
+                          style={{ fontFamily: "Inter Tight, ui-sans-serif, system-ui, sans-serif" }}
+                        >
+                          {selectedConversation.other_participant?.username ||
+                            selectedConversation.other_participant?.display_name}
+                        </p>
+                        {selectedConversation.other_participant?.user_id && (
+                          <OnlineStatus
+                            userId={selectedConversation.other_participant.user_id}
+                            display="subtitle"
+                            className="mt-0.5"
+                          />
+                        )}
+                      </div>
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#0E0E0F] dark:text-foreground"
+                          aria-label="Plus d’options"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-56 rounded-ios-lg border border-border bg-card shadow-lg"
+                      >
+                        <DropdownMenuItem
+                          onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
+                          className="py-ios-3"
+                        >
+                          <User className="mr-ios-3 h-4 w-4 text-primary" />
+                          Voir le profil
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedConversation(null);
+                            setActiveRootTab("create-club");
+                          }}
+                          className="py-ios-3"
+                        >
+                          <Users className="mr-ios-3 h-4 w-4 text-primary" />
+                          Créer un groupe
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (!userNotifSettings.notifications_enabled) {
+                              navigate("/profile");
+                              setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent("open-notification-settings"));
+                              }, 500);
+                              return;
+                            }
+                            const newMuted = !isMuted;
+                            setIsMuted(newMuted);
+                            if (user) {
+                              supabase
+                                .from("profiles")
+                                .update({ notif_message: !newMuted })
+                                .eq("user_id", user.id);
+                            }
+                          }}
+                          className="justify-between py-ios-3"
+                        >
+                          <div className="flex items-center">
+                            <span className="mr-ios-3 text-lg">
+                              {!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}
+                            </span>
+                            <span>Notifications</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {!userNotifSettings.notifications_enabled
+                              ? "Désactivées"
+                              : isMuted
+                                ? "Off"
+                                : "On"}
+                          </span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
+                          className="justify-between py-ios-3"
+                        >
+                          <div className="flex items-center">
+                            <span className="mr-ios-3 text-lg">📌</span>
+                            <span>Épingler</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
+                          </span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => setThreadSearchOpen(true)}
+                          className="py-ios-3"
+                        >
+                          <Search className="mr-ios-3 h-4 w-4 text-primary" />
+                          Rechercher dans la conversation
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => confirmDeleteConversation()}
+                          className="py-ios-3 text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-ios-3 h-4 w-4" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 px-4 py-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedConversation(null)}
+                      className="h-9 shrink-0 gap-1 px-0 font-normal text-primary hover:bg-transparent dark:hover:bg-secondary"
+                    >
+                      <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+                      Retour
+                    </Button>
+
+                    <div className="min-w-0 flex flex-1 items-center justify-center">
+                      <div
+                        className="flex min-w-0 cursor-pointer flex-col items-center gap-1"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const clubData = selectedConversation;
+                          setSelectedConversation(null);
+                          setTimeout(() => {
+                            setGroupInfoData(clubData);
+                            setShowClubProfile(true);
+                          }, 100);
+                        }}
+                      >
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={selectedConversation.group_avatar_url || ""} />
+                          <AvatarFallback className="border bg-border text-muted-foreground">
+                            <Users className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex max-w-full items-center gap-1 px-1">
+                          <p className="truncate font-semibold text-ios-footnote text-foreground">
+                            {selectedConversation.group_name}
+                          </p>
+                          <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-ios-1 mt-ios-1">
-                      <p className="text-ios-footnote font-semibold text-foreground">
-                        {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
-                      </p>
-                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <button
+                        type="button"
+                        className={cn(
+                          "p-ios-2 text-primary",
+                          threadSearchOpen && "rounded-ios-md bg-secondary"
+                        )}
+                        aria-label="Rechercher dans la conversation"
+                        onClick={() => {
+                          setThreadSearchOpen((o) => {
+                            if (o) setThreadSearch("");
+                            return !o;
+                          });
+                        }}
+                      >
+                        <Search className="h-5 w-5" />
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="shrink-0 p-ios-2 text-primary">
+                            <MoreVertical className="h-5 w-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 rounded-ios-lg border border-border bg-card shadow-lg">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedConversation(null);
+                              setActiveRootTab("create-club");
+                            }}
+                            className="py-ios-3"
+                          >
+                            <Users className="mr-ios-3 h-4 w-4 text-primary" />
+                            Créer un groupe
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (!userNotifSettings.notifications_enabled) {
+                                navigate("/profile");
+                                setTimeout(() => {
+                                  window.dispatchEvent(new CustomEvent("open-notification-settings"));
+                                }, 500);
+                                return;
+                              }
+                              const newMuted = !isMuted;
+                              setIsMuted(newMuted);
+                              if (user) {
+                                supabase
+                                  .from("profiles")
+                                  .update({ notif_message: !newMuted })
+                                  .eq("user_id", user.id);
+                              }
+                            }}
+                            className="justify-between py-ios-3"
+                          >
+                            <div className="flex items-center">
+                              <span className="mr-ios-3 text-lg">
+                                {!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}
+                              </span>
+                              <span>Notifications</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {!userNotifSettings.notifications_enabled
+                                ? "Désactivées"
+                                : isMuted
+                                  ? "Off"
+                                  : "On"}
+                            </span>
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
+                            className="justify-between py-ios-3"
+                          >
+                            <div className="flex items-center">
+                              <span className="mr-ios-3 text-lg">📌</span>
+                              <span>Épingler</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
+                            </span>
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem onClick={() => setThreadSearchOpen(true)} className="py-ios-3">
+                            <Search className="mr-ios-3 h-4 w-4 text-primary" />
+                            Rechercher dans la conversation
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => confirmDeleteConversation()}
+                            className="py-ios-3 text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-ios-3 h-4 w-4" />
+                            {selectedConversation.created_by !== user?.id ? "Quitter le club" : "Supprimer"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Right - search + menu */}
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  className={cn("p-ios-2 text-primary", threadSearchOpen && "bg-secondary rounded-ios-md")}
-                  aria-label="Rechercher dans la conversation"
-                  onClick={() => {
-                    setThreadSearchOpen((o) => {
-                      if (o) setThreadSearch("");
-                      return !o;
-                    });
-                  }}
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="p-ios-2 text-primary shrink-0">
-                    <MoreVertical className="h-5 w-5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-card border border-border rounded-ios-lg shadow-lg">
-                  {!selectedConversation.is_group && (
-                    <DropdownMenuItem 
-                      onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
-                      className="py-ios-3"
-                    >
-                      <User className="h-4 w-4 mr-ios-3 text-primary" />
-                      Voir le profil
-                    </DropdownMenuItem>
-                  )}
-                  
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setSelectedConversation(null);
-                      setActiveRootTab("create-club");
-                    }}
-                    className="py-ios-3"
-                  >
-                    <Users className="h-4 w-4 mr-ios-3 text-primary" />
-                    Créer un groupe
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      if (!userNotifSettings.notifications_enabled) {
-                        navigate('/profile');
-                        setTimeout(() => {
-                          // The settings dialog will need to be opened on Profile page
-                          window.dispatchEvent(new CustomEvent('open-notification-settings'));
-                        }, 500);
-                        return;
-                      }
-                      const newMuted = !isMuted;
-                      setIsMuted(newMuted);
-                      // Persist to profile
-                      if (user) {
-                        supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
-                      }
-                    }}
-                    className="py-ios-3 justify-between"
-                  >
-                    <div className="flex items-center">
-                      <span className="mr-ios-3 text-lg">{!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}</span>
-                      <span>Notifications</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {!userNotifSettings.notifications_enabled ? "Désactivées" : isMuted ? "Off" : "On"}
-                    </span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-                    className="py-ios-3 justify-between"
-                  >
-                    <div className="flex items-center">
-                      <span className="mr-ios-3 text-lg">📌</span>
-                      <span>Épingler</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
-                    </span>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    onClick={() => setThreadSearchOpen(true)}
-                    className="py-ios-3"
-                  >
-                    <Search className="h-4 w-4 mr-ios-3 text-primary" />
-                    Rechercher dans la conversation
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    onClick={() => confirmDeleteConversation()}
-                    className="py-ios-3 text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-ios-3" />
-                    {selectedConversation.is_group && selectedConversation.created_by !== user?.id 
-                      ? "Quitter le club" 
-                      : "Supprimer"
-                    }
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              </div>
-            </div>
-            }
+                )
+              }
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
             footer={
               <div
                 ref={composerRef}
                 className={cn(
-                  "keyboard-input-container fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-t border-border bg-background px-ios-2 py-ios-1",
-                  "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none"
+                  "keyboard-input-container fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-0 bg-transparent px-3 pt-1",
+                  "dark:backdrop-blur-none"
                 )}
                 style={{
                   transform: `translateY(-${keyboardInsetBottom}px)`,
                   transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
-                  paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+                  paddingBottom: "max(26px, env(safe-area-inset-bottom, 0px))",
                 }}
               >
                 {replyTo && (
@@ -2466,16 +2578,18 @@ const Messages = () => {
                     <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-ios-2">
+                <div className="flex items-center gap-2 rounded-[26px] border border-transparent bg-white py-1 pl-3 pr-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.08)] dark:border-[#1f1f1f] dark:bg-[#1c1c1e]">
                   {!isRecording && (
                     <>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EDE6DC] text-[#0E0E0F] disabled:opacity-50 dark:bg-secondary dark:text-foreground"
                             disabled={isLoading}
+                            type="button"
+                            aria-label="Pièces jointes"
                           >
-                            <Plus className="h-6 w-6" strokeWidth={2} />
+                            <Plus className="h-4 w-4" strokeWidth={2.25} />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-56">
@@ -2561,44 +2675,46 @@ const Messages = () => {
                         className="hidden"
                         disabled={isLoading}
                       />
-                      <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-ios-4 py-ios-2">
-                        <input
-                          type="text"
-                          enterKeyHint="send"
-                          autoComplete="off"
-                          placeholder="iMessage"
-                          value={newMessage}
-                          onChange={(e) => {
-                            setNewMessage(e.target.value);
-                            handleTyping();
-                          }}
-                          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                          className="flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground outline-none"
-                          disabled={isLoading}
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        enterKeyHint="send"
+                        autoComplete="off"
+                        placeholder="Message…"
+                        value={newMessage}
+                        onChange={(e) => {
+                          setNewMessage(e.target.value);
+                          handleTyping();
+                        }}
+                        onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                        className="min-w-0 flex-1 bg-transparent py-2 text-[14px] text-[#0E0E0F] outline-none placeholder:text-[#7A7771] dark:text-foreground dark:placeholder:text-muted-foreground"
+                        disabled={isLoading}
+                      />
                       {newMessage.trim() ? (
                         <button
+                          type="button"
                           onClick={sendMessage}
                           disabled={loading || !newMessage.trim()}
-                          className="w-8 h-8 flex items-center justify-center bg-primary rounded-full shrink-0 disabled:opacity-50"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FF4D1A] text-white disabled:opacity-50 dark:bg-primary"
+                          aria-label="Envoyer"
                         >
-                          <Send className="h-4 w-4 text-white" />
+                          <Send className="h-[18px] w-[18px]" strokeWidth={2} />
                         </button>
                       ) : (
                         <button
+                          type="button"
                           onClick={handleVoiceRecording}
                           disabled={loading}
-                          className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FF4D1A] text-white dark:bg-primary"
+                          aria-label="Message vocal"
                         >
-                          <Mic className="h-6 w-6" />
+                          <Mic className="h-[18px] w-[18px]" strokeWidth={2.25} />
                         </button>
                       )}
                     </>
                   )}
                   {isRecording && (
-                    <div className="flex-1 flex items-center gap-ios-3">
-                      <div className="flex-1 flex items-center gap-ios-2 bg-destructive/10 border border-destructive/30 rounded-full px-ios-4 py-ios-2">
+                    <div className="flex w-full min-w-0 flex-1 items-center gap-ios-3 px-1">
+                      <div className="flex min-w-0 flex-1 items-center gap-ios-2 rounded-full border border-destructive/30 bg-destructive/10 px-ios-4 py-ios-2">
                         <div className="w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
                         <span className="text-[15px] font-medium text-destructive">
                           {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
@@ -2626,7 +2742,7 @@ const Messages = () => {
             }
           >
             {threadSearchOpen && (
-              <div className="shrink-0 border-b border-border/50 bg-card px-ios-3 py-ios-2">
+              <div className="shrink-0 border-b border-[#E2DBD0] bg-white px-4 py-2 dark:border-border dark:bg-card">
                 <div className="flex items-center gap-ios-2">
                   <Input
                     value={threadSearch}
@@ -2657,7 +2773,7 @@ const Messages = () => {
               </div>
             )}
             <div
-              className="flex-1 px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary"
+              className="flex flex-1 flex-col gap-2 bg-[#F6F2EC] px-4 pb-2 pt-2 dark:bg-secondary"
               style={{ paddingBottom: composerHeight + keyboardInsetBottom + 8 }}
             >
               {visibleMessages.map((message, index) => {
@@ -2700,6 +2816,13 @@ const Messages = () => {
                   );
                 }
                 
+                const sessionShareOnly =
+                  message.message_type === "session" &&
+                  !!message.session &&
+                  !message.deleted_at &&
+                  !message.reply_to &&
+                  !(message.content && message.content.trim().length > 0);
+
                 return (
                   <div key={message.id}>
                     {showHeader && (
@@ -2707,10 +2830,10 @@ const Messages = () => {
                     )}
                     
                     <div
-                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} py-ios-1`}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} py-1`}
                       onClick={toggleTimestamp}
                     >
-                      <div className={`max-w-[75%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
+                      <div className={`relative max-w-[78%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
                         {/* Show sender info only for groups, not for DMs (iMessage style) */}
                         {shouldShowSenderInfo && (
                           <div className="flex items-center gap-ios-2 mb-ios-1 ml-ios-1">
@@ -2778,7 +2901,7 @@ const Messages = () => {
                           {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
                             <SignedImage 
                               fileUrl={message.file_url} 
-                              className="max-w-full h-auto rounded-ios-lg"
+                              className="h-auto max-w-full rounded-[18px]"
                               style={{ maxHeight: '240px' }}
                             />
                           )}
@@ -2790,18 +2913,23 @@ const Messages = () => {
                             </div>
                           )}
 
-                          {/* iMessage bubble */}
+                          {/* Bulles — maquette RC #18 */}
                           {(message.message_type === 'session' || message.message_type === 'coaching_session' || 
                             (message.file_url && !message.file_type?.startsWith('image/')) ||
                             (message.content && !message.content.match(/^(Image partagée)$/i) && !isOnlyEmojis(message.content)) ||
                             message.deleted_at ||
                             message.reply_to) && (
                             <div
-                              className={`rounded-ios-lg px-ios-3 py-ios-2 ${
-                                isOwnMessage
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-[#E5E5EA] text-black'
-                              }`}
+                              className={cn(
+                                !sessionShareOnly &&
+                                  "rounded-[18px] px-[14px] py-[10px] text-[14px] leading-[1.4] tracking-normal",
+                                !sessionShareOnly &&
+                                  (isOwnMessage
+                                    ? "rounded-br-[6px] bg-[#0E0E0F] text-white dark:bg-primary dark:text-primary-foreground"
+                                    : "rounded-bl-[6px] border border-[#E2DBD0] bg-white text-[#0E0E0F] dark:border-[#1f1f1f] dark:bg-[#2c2c2e] dark:text-foreground"),
+                                sessionShareOnly &&
+                                  "max-w-[min(240px,78vw)] rounded-[18px] border-0 bg-transparent p-0 text-[#0E0E0F] dark:bg-transparent dark:text-foreground"
+                              )}
                             >
                               {/* Reply context */}
                               {message.reply_to && !message.deleted_at && (
@@ -2813,7 +2941,7 @@ const Messages = () => {
                               )}
                               {/* Show deleted message */}
                               {message.deleted_at ? (
-                                <p className="text-sm italic text-muted-foreground">Message supprimé</p>
+                                <p className="text-[14px] italic leading-[1.4] text-muted-foreground">Message supprimé</p>
                               ) : (
                                 <>
                                   {/* Poll Card */}
@@ -2833,51 +2961,70 @@ const Messages = () => {
                                     </div>
                                   )}
 
-                                  {/* Session sharing - iOS Card Style */}
-                                  {message.message_type === 'session' && message.session && (
-                                    <div 
-                                      className="mb-ios-2 bg-background rounded-ios-lg overflow-hidden shadow-sm border border-border/50 cursor-pointer active:scale-[0.98] transition-transform"
+                                  {/* Partage séance — carte maquette 18 */}
+                                  {message.message_type === 'session' && message.session && (() => {
+                                    const act = (message.session!.activity_type ?? "").toLowerCase();
+                                    const emoji = getActivityEmoji(message.session!.activity_type ?? "");
+                                    const sportWord =
+                                      act.includes("velo") || act.includes("vtt") || act.includes("bike") || act.includes("cycl") || act.includes("gravel")
+                                        ? "Vélo"
+                                        : act.includes("nat") || act.includes("swim") || act.includes("kayak") || act.includes("surf")
+                                          ? "Natation"
+                                          : act.includes("trail") || act.includes("rando") || act.includes("marche") || act.includes("walk") || act.includes("hike")
+                                            ? "Marche · trail"
+                                            : "Course";
+                                    const rawWhen = format(
+                                      new Date(message.session.scheduled_at),
+                                      "EEEE · HH:mm",
+                                      { locale: fr }
+                                    );
+                                    const whenLabel = rawWhen.charAt(0).toUpperCase() + rawWhen.slice(1);
+                                    return (
+                                    <div
+                                      className="mb-ios-2 w-full max-w-[240px] cursor-pointer overflow-hidden rounded-[18px] border border-[#E2DBD0] bg-white active:scale-[0.98] dark:border-[#1f1f1f] dark:bg-[#2c2c2e]"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleSessionClick(message.session);
                                       }}
                                     >
-                                      {/* Header */}
-                                      <div className="px-ios-3 py-ios-2 bg-primary/10 border-b border-border/30">
-                                        <div className="flex items-center gap-ios-2">
-                                          <div className="w-6 h-6 rounded-ios-sm bg-primary flex items-center justify-center">
-                                            <Calendar className="h-3.5 w-3.5 text-primary-foreground" />
-                                          </div>
-                                          <span className="font-semibold text-sm text-foreground flex-1 truncate">{message.session.title}</span>
+                                      <div className="relative h-20 shrink-0 overflow-hidden bg-[#EFE8DA] dark:bg-muted">
+                                        {/* mini « carte » + tracé type maquette */}
+                                        <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 240 80">
+                                          <path
+                                            d="M20 50 Q60 30 110 42 T216 34"
+                                            fill="none"
+                                            stroke="#FF4D1A"
+                                            strokeLinecap="round"
+                                            strokeWidth="2"
+                                          />
+                                        </svg>
+                                        <div className="absolute left-2 top-2 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-[#0E0E0F] shadow-sm dark:bg-card dark:text-foreground">
+                                          {emoji} {sportWord}
                                         </div>
                                       </div>
-                                      {/* Content */}
-                                      <div className="p-ios-3 space-y-ios-2">
-                                        <div className="flex items-center gap-ios-2">
-                                          <div className="w-5 h-5 rounded-ios-sm bg-[#FF3B30]/10 flex items-center justify-center">
-                                            <Clock className="h-3 w-3 text-[#FF3B30]" />
-                                          </div>
-                                          <span className="text-xs text-foreground">{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
+                                      <div className="px-3 py-3">
+                                        <div
+                                          className="truncate font-bold leading-tight text-[14px] text-[#0E0E0F] dark:text-foreground"
+                                          style={{ fontFamily: "Inter Tight, ui-sans-serif, system-ui, sans-serif" }}
+                                        >
+                                          {message.session.title}
                                         </div>
-                                        <div className="flex items-center gap-ios-2">
-                                          <div className="w-5 h-5 rounded-ios-sm bg-[#34C759]/10 flex items-center justify-center">
-                                            <MapPin className="h-3 w-3 text-[#34C759]" />
-                                          </div>
-                                          <span className="text-xs text-muted-foreground truncate">{message.session.location_name}</span>
+                                        <div className="mt-0.5 text-[11px] font-normal leading-snug text-[#7A7771] dark:text-muted-foreground">
+                                          {whenLabel}
+                                          {message.session.location_name
+                                            ? ` · ${message.session.location_name}`
+                                            : ""}
                                         </div>
-                                        <div className="flex items-center gap-ios-2">
-                                          <div className="w-5 h-5 rounded-ios-sm bg-primary/10 flex items-center justify-center">
-                                            <Users className="h-3 w-3 text-primary" />
-                                          </div>
-                                          <span className="text-xs text-muted-foreground">{message.session.current_participants}/{message.session.max_participants} participants</span>
+                                        <div
+                                          className="mt-2 flex h-8 w-full cursor-pointer select-none items-center justify-center rounded-lg bg-[#FF4D1A] text-[12px] font-bold text-white dark:bg-primary"
+                                          role="presentation"
+                                        >
+                                          Rejoindre
                                         </div>
-                                      </div>
-                                      {/* Footer CTA */}
-                                      <div className="px-ios-3 py-ios-2 bg-secondary/50 border-t border-border/30">
-                                        <span className="text-xs text-primary font-medium">Voir sur la carte →</span>
                                       </div>
                                     </div>
-                                  )}
+                                    );
+                                  })()}
 
                                   {/* Non-image file attachments (audio, files) */}
                                   {message.file_url && !message.file_type?.startsWith('image/') && (
@@ -2895,25 +3042,31 @@ const Messages = () => {
                                   
                                   {/* Show text content only if it's not a media-only message and not emoji-only */}
                                   {message.content && !message.content.match(/^(Image partagée|Message vocal.*)/i) && !isOnlyEmojis(message.content) && (
-                                    <p className="text-sm">{message.content}</p>
+                                    <p className="text-[14px] leading-[1.4]">{message.content}</p>
                                   )}
                                 </>
                               )}
                           
                               {/* Read status for own messages inside bubble */}
-                              {isOwnMessage && (message.content || message.message_type === 'session' || (message.file_url && !message.file_type?.startsWith('image/'))) && (
-                                <div className={`flex justify-end mt-1 ${
-                                  isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                                }`}>
-                                  <div className="flex items-center">
-                                    {message.read_at ? (
-                                      <CheckCheck className="h-3 w-3 text-blue-500" />
-                                    ) : (
-                                      <Check className="h-3 w-3" />
-                                    )}
+                              {isOwnMessage &&
+                                !sessionShareOnly &&
+                                (message.content || message.message_type === 'session' || (message.file_url && !message.file_type?.startsWith('image/'))) && (
+                                  <div
+                                    className={`mt-1 flex justify-end ${
+                                      isOwnMessage
+                                        ? "text-white/60 dark:text-primary-foreground/70"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    <div className="flex items-center">
+                                      {message.read_at ? (
+                                        <CheckCheck className="h-3 w-3 text-[#5AC8FA]" />
+                                      ) : (
+                                        <Check className="h-3 w-3" />
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                             </div>
                           )}
                           
@@ -2951,12 +3104,8 @@ const Messages = () => {
               })}
               
               {/* Typing indicators */}
-              {Object.entries(typingUsers).map(([userId, data]) => (
-                <TypingIndicator 
-                  key={userId}
-                  isTyping={true}
-                  username={data.username}
-                />
+              {Object.entries(typingUsers).map(([userId]) => (
+                <TypingIndicator key={userId} isTyping variant="caption" />
               ))}
               
               <div ref={messagesEndRef} />
@@ -3180,95 +3329,163 @@ const Messages = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background" data-tutorial="tutorial-messages">
+      <div
+        className={cn(
+          "flex h-full min-h-0 flex-col overflow-hidden",
+          activeRootTab === "conversations"
+            ? "bg-[#F6F2EC] dark:bg-background"
+            : "bg-background"
+        )}
+        data-tutorial="tutorial-messages"
+      >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="z-50 bg-card"
+          headerWrapperClassName="z-50 bg-[#F6F2EC] dark:bg-background"
           header={
-          <div className="pt-[var(--safe-area-top)]">
-            <MainTopHeader
-              title="Messages"
-              tabsAriaLabel="Navigation messages"
-              tabs={[
-                {
-                  id: "conversations",
-                  label: "Conversations",
-                  active: activeRootTab === "conversations",
-                  onClick: () => {
-                    setActiveRootTab("conversations");
-                    setSearchParams((prev) => {
-                      const next = new URLSearchParams(prev);
-                      if (next.get("tab") === "create-club") next.delete("tab");
-                      return next;
-                    }, { replace: true });
-                  },
-                },
-                {
-                  id: "search",
-                  label: "Recherche",
-                  active: false,
-                  onClick: () => navigate("/search"),
-                },
-                {
-                  id: "create-club",
-                  label: "Créer un club",
-                  active: activeRootTab === "create-club",
-                  onClick: () => {
-                    setActiveRootTab("create-club");
-                    setSearchParams((prev) => {
-                      const next = new URLSearchParams(prev);
-                      next.set("tab", "create-club");
-                      return next;
-                    }, { replace: true });
-                  },
-                },
-              ]}
-              right={
-                <>
+            activeRootTab === "create-club" ? (
+              <MainTopHeader
+                title="Créer un club"
+                left={
                   <button
                     type="button"
-                    onClick={() => setActiveRootTab("create-club")}
-                    className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
-                    aria-label="Créer un club"
+                    onClick={() => {
+                      setActiveRootTab("conversations");
+                      setSearchParams((prev) => {
+                        const next = new URLSearchParams(prev);
+                        next.delete("tab");
+                        return next;
+                      }, { replace: true });
+                    }}
+                    className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full active:scale-95"
+                    aria-label="Retour aux messages"
                   >
-                    <Users className="h-5 w-5" />
+                    <ArrowLeft className="h-5 w-5" />
                   </button>
-                  <Button
-                    onClick={() => setShowNewConversation(true)}
-                    size="sm"
-                    variant="ghost"
-                    className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
-                    aria-label="Nouvelle conversation"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </>
-              }
-            />
-          </div>
+                }
+              />
+            ) : (
+              <div className="bg-[#F6F2EC] pt-[var(--safe-area-top)] dark:bg-background">
+                <div className="flex items-center justify-between px-5">
+                  <h1 className="font-display text-[36px] font-bold leading-[1.02] tracking-[-1.44px] text-[#0E0E0F] dark:text-foreground">
+                    Messages
+                  </h1>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-[#0E0E0F] text-white transition-[transform] duration-200 active:scale-95 dark:bg-foreground dark:text-background"
+                        aria-label="Nouveau message ou club"
+                      >
+                        <Plus className="h-5 w-5" strokeWidth={2.2} />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem
+                        onClick={() => setShowNewConversation(true)}
+                        className="gap-2"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Nouvelle conversation
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setActiveRootTab("create-club");
+                          setSearchParams((prev) => {
+                            const next = new URLSearchParams(prev);
+                            next.set("tab", "create-club");
+                            return next;
+                          }, { replace: true });
+                        }}
+                        className="gap-2"
+                      >
+                        <Users className="h-4 w-4" />
+                        Créer un club
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/search")} className="gap-2">
+                        <Search className="h-4 w-4" />
+                        Recherche
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div className="mt-3.5 px-5">
+                  <div className="flex h-11 items-center gap-2 rounded-[22px] border border-[#E2DBD0] bg-white px-3.5 dark:border-border dark:bg-card">
+                    <Search className="h-3.5 w-3.5 shrink-0 text-[#7A7771] dark:text-muted-foreground" />
+                    <Input
+                      value={conversationSearch}
+                      onChange={(e) => setConversationSearch(e.target.value)}
+                      placeholder="Rechercher amis · clubs · groupes"
+                      className="h-9 min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-[#0E0E0F] shadow-none placeholder:text-[#7A7771] focus-visible:ring-0 focus-visible:ring-offset-0 dark:text-foreground dark:placeholder:text-muted-foreground"
+                      aria-label="Rechercher une conversation"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <SessionStoriesStrip
+                    currentUserId={user?.id ?? null}
+                    refreshToken={storiesRefreshToken}
+                    onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+                    onCreateStory={() => navigate("/stories/create")}
+                    className="border-0 bg-transparent"
+                  />
+                </div>
+
+                <div
+                  role="tablist"
+                  aria-label="Filtrer les conversations"
+                  className="mt-3.5 flex min-h-0 flex-nowrap items-center gap-1.5 overflow-x-auto overscroll-x-contain px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {(
+                    [
+                      { id: "all" as const, label: "Conversations" },
+                      { id: "clubs" as const, label: `Clubs · ${inboxClubCount}` },
+                      { id: "groups" as const, label: `Groupes · ${inboxGroupCount}` },
+                    ] as const
+                  ).map((chip) => {
+                    const active = messagesInboxSegment === chip.id;
+                    return (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setMessagesInboxSegment(chip.id)}
+                        className={cn(
+                          "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3.5 text-[13px] font-semibold tracking-[-0.1px] transition-[transform,opacity] active:scale-[0.98]",
+                          active
+                            ? "border-transparent bg-[#0E0E0F] text-white shadow-none dark:bg-foreground dark:text-background"
+                            : "border border-[#E2DBD0] bg-white/95 text-[#0E0E0F] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:border-border dark:bg-card dark:text-foreground"
+                        )}
+                      >
+                        {chip.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )
           }
         >
         <div
           className={cn(
-            "pb-ios-2 pt-2.5",
+            "pb-ios-2",
             activeRootTab === "create-club"
-              ? "min-h-0 flex-1 bg-secondary"
-              : "space-y-2.5 bg-white"
+              ? "min-h-0 flex-1 bg-secondary pt-2.5"
+              : "min-h-0 flex-1 bg-[#F6F2EC] dark:bg-background"
           )}
         >
           {activeRootTab === "conversations" ? (
             <>
-              <div className="w-full overflow-hidden border-x-0 rounded-none sm:mx-auto sm:max-w-2xl">
-                <SessionStoriesStrip
-                  currentUserId={user?.id ?? null}
-                  refreshToken={storiesRefreshToken}
-                  onOpenStory={(authorId) => setStoryAuthorId(authorId)}
-                  onCreateStory={() => navigate("/stories/create")}
-                />
-              </div>
-
-              {/* Conversations List */}
-              <div className={conversations.length === 0 ? "ios-card overflow-hidden" : "ios-list-stack"}>
+              {/* Liste — carte blanche arrondie (maquette 17) */}
+              <div
+                className={cn(
+                  "mt-3.5 min-h-[280px] flex-1 rounded-t-[24px] bg-white pb-ios-4 dark:bg-card",
+                  filteredAndSortedConversations.length > 0 &&
+                    "divide-y divide-[#E2DBD0] dark:divide-border"
+                )}
+              >
                 {conversations.length === 0 ? (
                   <div className={emptyStateSx.shell}>
                     <div className={emptyStateSx.iconCircle}>
@@ -3290,9 +3507,27 @@ const Messages = () => {
                       Nouvelle conversation
                     </Button>
                   </div>
+                ) : filteredAndSortedConversations.length === 0 ? (
+                  <div className={cn(emptyStateSx.shell, "py-ios-8")}>
+                    <div className={emptyStateSx.textBlock}>
+                      <h3 className="text-ios-title3 font-semibold text-foreground">
+                        Aucun fil à afficher
+                      </h3>
+                      <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
+                        Aucune conversation ne correspond à ce filtre ou à ta recherche.
+                      </p>
+                    </div>
+                  </div>
                 ) : (
-                  <div>
-                    {filteredAndSortedConversations.map((conversation, index) => (
+                  <div className="sm:mx-auto sm:max-w-2xl">
+                    {filteredAndSortedConversations.map((conversation) => {
+                      const when = formatConversationRowTime(
+                        conversation.last_message_date || conversation.updated_at
+                      );
+                      const unread = conversation.unread_count > 0;
+                      const isClub = !!(conversation.is_group && conversation.club_code);
+                      const isGrp = !!(conversation.is_group && !conversation.club_code);
+                      return (
                       <SwipeableConversationItem
                         key={conversation.id}
                         isPinned={pinnedConversations.has(conversation.id)}
@@ -3305,7 +3540,7 @@ const Messages = () => {
                       >
                         <div
                           className={cn(
-                            "ios-list-row relative flex items-center gap-ios-3 bg-white px-3.5 py-2.5",
+                            "relative flex items-center gap-3 bg-white px-5 py-3 dark:bg-card",
                             selectedConversations.has(conversation.id) && "bg-primary/5"
                           )}
                           onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
@@ -3335,11 +3570,11 @@ const Messages = () => {
                             }
                           >
                             {isSelectionMode && selectedConversations.has(conversation.id) ? (
-                              <div className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] rounded-full border-2 border-primary bg-primary flex items-center justify-center">
+                              <div className="flex h-[50px] w-[50px] min-h-[50px] min-w-[50px] items-center justify-center rounded-full border-2 border-primary bg-primary">
                                 <Check className="h-5 w-5 text-primary-foreground" />
                               </div>
                             ) : (
-                              <Avatar className="h-[50px] w-[50px] min-w-[50px] min-h-[50px] aspect-square avatar-fixed">
+                              <Avatar className="avatar-fixed aspect-square h-[50px] w-[50px] min-h-[50px] min-w-[50px]">
                                 {conversation.is_group ? (
                                   <>
                                     <AvatarImage src={conversation.group_avatar_url || ""} />
@@ -3360,10 +3595,18 @@ const Messages = () => {
                             {!conversation.is_group && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
                               <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
                             )}
+                            {(isClub || isGrp) && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
+                              <div
+                                className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white text-[10px] dark:border-card dark:bg-card"
+                                aria-hidden
+                              >
+                                {isClub ? "🏛" : "👥"}
+                              </div>
+                            )}
                           </button>
-                          
-                          <div 
-                            className="flex-1 min-w-0"
+
+                          <div
+                            className="min-w-0 flex-1"
                             onClick={() => {
                               if (isSelectionMode) {
                                 toggleConversationSelection(conversation.id);
@@ -3374,103 +3617,90 @@ const Messages = () => {
                               }
                             }}
                           >
-                            {/* Refonte Apple ConvRow (mockup 17) — title 16/600/-0.4 ink, msg 14 ink60 */}
-                            <div className="mb-0.5 flex items-center justify-between">
-                              <div className="flex items-center gap-2 min-w-0">
-                                {pinnedConversations.has(conversation.id) && (
-                                  <span className="text-[13px] flex-shrink-0">📌</span>
-                                )}
-                                <p className="truncate text-[16px] font-semibold tracking-[-0.4px] text-foreground">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex min-w-0 items-center gap-1.5">
+                                {pinnedConversations.has(conversation.id) ? (
+                                  <span className="flex-shrink-0 text-[12px]" aria-hidden>
+                                    📌
+                                  </span>
+                                ) : null}
+                                <p className="truncate font-display text-[15px] font-bold text-[#0E0E0F] dark:text-foreground">
                                   {conversation.is_group
                                     ? conversation.group_name
-                                    : (conversation.other_participant?.username || "Utilisateur")
-                                  }
+                                    : conversation.other_participant?.username || "Utilisateur"}
                                 </p>
                               </div>
+                              <span
+                                className={cn(
+                                  "shrink-0 text-[11px] tabular-nums",
+                                  unread
+                                    ? "font-bold text-[#FF4D1A] dark:text-orange-500"
+                                    : "font-medium text-[#7A7771] dark:text-muted-foreground"
+                                )}
+                              >
+                                {when}
+                              </span>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <p className={`truncate text-[14px] ${
-                                conversation.unread_count > 0
-                                  ? 'text-foreground/85 font-medium'
-                                  : 'text-muted-foreground'
-                              }`}>
+                            <div className="mt-0.5 flex items-center justify-between gap-2">
+                              <p
+                                className={cn(
+                                  "min-w-0 truncate text-[13px] text-[#7A7771] dark:text-muted-foreground",
+                                  unread && "font-medium text-[#3A3936] dark:text-foreground/90"
+                                )}
+                              >
                                 {conversation.last_message ? (
                                   <>
-                                    {conversation.last_message.message_type === 'image' && (
+                                    {conversation.last_message.message_type === "image" && (
                                       <span className="inline-flex items-center gap-ios-2">
                                         {conversation.last_message.file_url ? (
                                           <SignedImage
                                             fileUrl={conversation.last_message.file_url}
-                                            className="h-4 w-4 rounded-ios-sm object-cover inline-block"
+                                            className="inline-block h-4 w-4 rounded-ios-sm object-cover"
                                           />
                                         ) : null}
                                         Photo
                                       </span>
                                     )}
-                                    {conversation.last_message.message_type === 'file' && 'Fichier'}
-                                    {conversation.last_message.message_type === 'voice' && 'Message vocal'}
-                                    {conversation.last_message.message_type === 'session' && 'Session partagée'}
-                                    {conversation.last_message.message_type === 'poll' && '📊 Sondage'}
-                                    {conversation.last_message.message_type === 'coaching_session' && '🎓 Séance coach'}
-                                    {conversation.last_message.message_type === 'system' && (
-                                      <span className="italic text-muted-foreground">
-                                        {conversation.last_message.content}
-                                      </span>
+                                    {conversation.last_message.message_type === "file" && "Fichier"}
+                                    {conversation.last_message.message_type === "voice" && "Message vocal"}
+                                    {conversation.last_message.message_type === "session" && "Session partagée"}
+                                    {conversation.last_message.message_type === "poll" && "📊 Sondage"}
+                                    {conversation.last_message.message_type === "coaching_session" && "🎓 Séance coach"}
+                                    {conversation.last_message.message_type === "system" && (
+                                      <span className="italic">{conversation.last_message.content}</span>
                                     )}
-                                    {(!conversation.last_message.message_type || conversation.last_message.message_type === 'text') && 
-                                      (conversation.last_message.content?.length > 40 
-                                        ? conversation.last_message.content.substring(0, 40) + '…' 
-                                        : conversation.last_message.content || 'Message supprimé'
-                                      )
-                                    }
+                                    {(!conversation.last_message.message_type ||
+                                      conversation.last_message.message_type === "text") &&
+                                      (conversation.last_message.content?.length > 40
+                                        ? `${conversation.last_message.content.substring(0, 40)}…`
+                                        : conversation.last_message.content || "Message supprimé")}
                                   </>
+                                ) : conversation.is_group ? (
+                                  `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? "s" : ""}`
                                 ) : (
-                                  conversation.is_group 
-                                    ? `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? 's' : ''}`
-                                    : 'Aucun message'
+                                  "Aucun message"
                                 )}
                               </p>
-                              {conversation.unread_count > 0 && (
-                                <div className="h-5 min-w-5 px-ios-1 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-ios-2 animate-[pulse_2s_ease-in-out_infinite]">
-                                  <span className="text-[11px] font-semibold text-primary-foreground">
-                                    {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                                  </span>
-                                </div>
-                              )}
+                              {unread ? (
+                                conversation.unread_count === 1 ? (
+                                  <span
+                                    className="mx-1 h-2 w-2 shrink-0 rounded-full bg-[#FF4D1A] dark:bg-orange-500"
+                                    aria-label="Non lu"
+                                  />
+                                ) : (
+                                  <div className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#FF4D1A] px-1.5 dark:bg-orange-500">
+                                    <span className="text-[11px] font-bold text-white">
+                                      {conversation.unread_count > 99 ? "99+" : conversation.unread_count}
+                                    </span>
+                                  </div>
+                                )
+                              ) : null}
                             </div>
                           </div>
-                          
-                          {/* Right column: time (top) — mockup 17 spec : 13 ink60 */}
-                          <div className="ml-2 flex flex-shrink-0 items-start gap-1">
-                            <span className="text-[13px] text-muted-foreground">
-                              {(() => {
-                                const date = new Date(conversation.last_message_date || conversation.updated_at);
-                                const now = new Date();
-                                const diffMs = now.getTime() - date.getTime();
-                                const diffMin = Math.floor(diffMs / 60000);
-                                const diffH = Math.floor(diffMs / 3600000);
-                                const diffD = Math.floor(diffMs / 86400000);
-                                if (diffMin < 1) return "à l'instant";
-                                if (diffMin < 60) return `${diffMin} min`;
-                                if (diffH < 24) return `${diffH}h`;
-                                if (diffD < 7) return format(date, 'EEEE', { locale: fr });
-                                return format(date, 'dd/MM', { locale: fr });
-                              })()}
-                            </span>
-                            {!isSelectionMode && (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
-                            )}
-                          </div>
-                          
-                          {index < filteredAndSortedConversations.length - 1 && (
-                            <div
-                              className="pointer-events-none absolute bottom-0 left-[76px] right-3.5 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
-                              aria-hidden
-                            />
-                          )}
                         </div>
                       </SwipeableConversationItem>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -3557,6 +3787,11 @@ const Messages = () => {
               setShowClubProfile(false);
               navigate("/coaching", { state: { coachingClubManage: { clubId: id } } });
             }}
+            onEditClub={() => {
+              setShowClubProfile(false);
+              setTimeout(() => setShowEditGroup(true), 0);
+            }}
+            groupsCount={0}
           />
         </Suspense>
         
