@@ -709,10 +709,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         hideCloseButton
         className={cn(
           "relative flex min-h-0 flex-col gap-0 overflow-hidden border-0 p-0 apple-grouped-bg",
+          isMobile && "h-[100dvh] max-h-[100dvh] w-screen max-w-none",
           !isMobile &&
             "h-full max-h-full w-full max-w-full sm:h-auto sm:max-h-[95vh] sm:max-w-md sm:rounded-2xl",
         )}
       >
+        <DialogTitle className="sr-only">{session.title}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Détails de la séance, horaires, lieu, organisateur et actions disponibles.
+        </DialogDescription>
         <div className="flex shrink-0 items-center justify-between border-b-[0.5px] border-border apple-grouped-bg px-4 pb-2.5 pt-[max(env(safe-area-inset-top),12px)]">
           <button
             type="button"
