@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, isSameDay, parseISO } from "date-fns";
+import { format, getISOWeek, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ExternalLink, Share2 } from "lucide-react";
-import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
+import { Group } from "@/components/apple/Group";
+import { CoachingAthleteWeekGrid } from "@/components/coaching/handoff/CoachingAthleteWeekGrid";
+import type { AthleteWeekGridDay } from "@/components/coaching/handoff/CoachingAthleteWeekGrid";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, formatCalendarDistance, isExplicitRestDay, kmForSession, toCalendarSummarySport } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
-import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { sportDotClass } from "./sportTokens";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import type { DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -94,6 +96,7 @@ export function AthleteMyPlanView(props: Props) {
     onCompleteSession,
     onMessageCoach,
     onPersistSessionFeedback,
+    coaches,
     onOpenCalendar,
   } = props;
   const [detail, setDetail] = useState<AthletePlanSessionModel | null>(null);
@@ -179,6 +182,29 @@ export function AthleteMyPlanView(props: Props) {
     return summaries;
   }, [dayRows]);
 
+  const handoffDays = useMemo((): AthleteWeekGridDay[] => {
+    const today = new Date();
+    return dayRows.map((row) => {
+      let status: AthleteWeekGridDay["status"];
+      if (row.isRest) status = "rest";
+      else if (row.primarySession?.participationStatus === "completed") status = "done";
+      else if (isSameDay(row.day, today)) status = "today";
+      else status = "planned";
+      const key = format(row.day, "yyyy-MM-dd");
+      return {
+        date: row.day,
+        status,
+        summary: sessionSummaryByDate[key],
+      };
+    });
+  }, [dayRows, sessionSummaryByDate]);
+
+  const weekStripTitle = `SEMAINE ${getISOWeek(props.weekStart)} — ${format(props.weekStart, "d MMM", { locale: fr })}`.toUpperCase();
+  const coachLabel = (coaches[0]?.name ?? sessions[0]?.coachName ?? "Coach").toUpperCase();
+  const completedSessions = sessions.filter((s) => s.participationStatus === "completed").length;
+  const totalSessions = sessions.length;
+  const progressPct = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
+
   useEffect(() => {
     const onGarminAuthSuccess = () => {
       toast.success("Garmin connecté. Tu peux exporter tes entraînements.");
@@ -198,7 +224,32 @@ export function AthleteMyPlanView(props: Props) {
   }, []);
 
   return (
-    <div className="bg-secondary pb-28 pt-2">
+    <div className="apple-grouped-bg pb-28 pt-2">
+      <section className="px-4 pb-3">
+        <div className="rounded-[18px] border border-border/80 bg-card p-[18px] text-card-foreground shadow-none">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            {`SEMAINE ${getISOWeek(props.weekStart)} · COACH ${coachLabel}`}
+          </p>
+          <p className="mt-1.5 font-[system-ui] text-[28px] font-semibold leading-tight tracking-[-0.04em] text-foreground">
+            {totalSessions > 0 ? `${completedSessions} sur ${totalSessions} séances` : "Aucune séance prévue"}
+          </p>
+          {totalSessions > 0 ? (
+            <div className="mt-3 h-1.5 overflow-hidden rounded-[3px] bg-muted">
+              <div className="h-full rounded-[3px] bg-[#0066CC]" style={{ width: `${progressPct}%` }} />
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <CoachingAthleteWeekGrid
+        days={handoffDays}
+        selectedDate={selectedDate}
+        onSelectDate={onSelectDate}
+        onPreviousWeek={props.onPreviousWeek}
+        onNextWeek={props.onNextWeek}
+        weekTitle={weekStripTitle}
+      />
+
       <section className="px-4 pb-3">
         <div className="ios-card flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
           <div className="min-w-0">
@@ -220,17 +271,7 @@ export function AthleteMyPlanView(props: Props) {
         </div>
       </section>
 
-      <WeekSelectorPremium
-        weekStart={props.weekStart}
-        selectedDate={selectedDate}
-        onSelectDate={onSelectDate}
-        onPreviousWeek={props.onPreviousWeek}
-        onNextWeek={props.onNextWeek}
-        sessionSummaryByDate={sessionSummaryByDate}
-        showLegend
-      />
-
-      <div className="flex flex-col border-t border-border bg-card">
+      <Group title="Plan de la semaine" className="mb-0">
         {loading ? (
           <div className="m-4 h-24 animate-pulse rounded-xl bg-muted" />
         ) : (
@@ -301,7 +342,7 @@ export function AthleteMyPlanView(props: Props) {
             );
           })
         )}
-      </div>
+      </Group>
 
       <AthletePlanSessionDetailSheet
         session={detail}

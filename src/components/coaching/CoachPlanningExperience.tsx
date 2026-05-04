@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
+import { addDays, addWeeks, format, getISOWeek, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Activity,
@@ -7,7 +7,6 @@ import {
   Clock3,
   Crosshair,
   ChevronRight,
-  ChevronLeft,
   Dumbbell,
   Flame,
   Gauge,
@@ -61,6 +60,9 @@ import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { CoachingDraftsPage, type CoachingDraftListItem } from "@/components/coaching/CoachingDraftsPage";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
+import { CoachingRolePill } from "@/components/coaching/handoff/CoachingRolePill";
+import { CoachPlanificationLanding, type CoachUpcomingSessionRow, type LandingAthleteCard } from "@/components/coaching/handoff/CoachPlanificationLanding";
+import { Group } from "@/components/apple/Group";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
 import { formatCalendarDistance, isExplicitRestDay, toCalendarSummarySport } from "@/components/coaching/athlete-plan/planUtils";
@@ -275,6 +277,23 @@ type AthleteEntry = {
   coachRunningRecords?: Record<string, unknown> | null;
 };
 type GroupEntry = { id: string; name: string };
+
+function initialsFromName(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const a = parts[0]?.[0] ?? "";
+    const b = parts[parts.length - 1]?.[0] ?? "";
+    return `${a}${b}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function avatarHueFromId(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  const hues = [350, 207, 199, 280, 32, 24];
+  return hues[h % hues.length];
+}
 
 const athleteIntensityFromRunningRecords = (
   runningRecords?: Record<string, unknown> | null,
@@ -2356,6 +2375,101 @@ export function CoachPlanningExperience() {
     return Array.from(m.values());
   }, [athletePlanSessions]);
 
+  const landingWeekSessions = useMemo(() => {
+    if (effectiveAthleteMode || activeAthleteId || activeGroupId) return [];
+    return sessions;
+  }, [sessions, effectiveAthleteMode, activeAthleteId, activeGroupId]);
+
+  const landingIndicatorsByDate = useMemo(() => {
+    const map: Record<string, Array<{ color: string }>> = {};
+    const sportColor = (sport: SportType) => {
+      if (sport === "running") return "#0a84ff";
+      if (sport === "cycling") return "#ff9500";
+      if (sport === "swimming") return "#5ac8fa";
+      if (sport === "strength") return "#af52de";
+      return "#64748b";
+    };
+    landingWeekSessions.forEach((session) => {
+      const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
+      if (!map[key]) map[key] = [];
+      map[key].push({ color: sportColor(session.sport) });
+    });
+    return map;
+  }, [landingWeekSessions]);
+
+  const landingMonthLine = useMemo(() => {
+    const w = getISOWeek(weekAnchor);
+    const month = format(weekAnchor, "MMMM yyyy", { locale: fr });
+    return `SEMAINE ${w} · ${month}`.toUpperCase();
+  }, [weekAnchor]);
+
+  const landingStats = useMemo(() => {
+    const sessionsScheduled = landingWeekSessions.length;
+    const validatedCount = landingWeekSessions.filter((s) => s.sent).length;
+    const pendingCount = landingWeekSessions.filter((s) => !s.sent).length;
+    const athletesActive = athletes.length;
+    return { sessionsScheduled, validatedCount, pendingCount, athletesActive };
+  }, [landingWeekSessions, athletes.length]);
+
+  const landingAthleteCards = useMemo((): LandingAthleteCard[] => {
+    return athletes.slice(0, 16).map((a) => {
+      const mine = landingWeekSessions.filter((s) => {
+        const ids = new Set<string>();
+        if (s.athleteId) ids.add(s.athleteId);
+        (s.athleteIds || []).forEach((id) => ids.add(id));
+        return ids.has(a.id);
+      });
+      const hasDraft = mine.some((s) => !s.sent);
+      const hasAny = mine.length > 0;
+      const hue = avatarHueFromId(a.id);
+      return {
+        id: a.id,
+        name: a.name,
+        initials: initialsFromName(a.name),
+        subtitle: "Athlète",
+        avatarClass: `bg-[hsl(${hue},85%,52%)]`,
+        statusDotClass: hasDraft ? "bg-[#FF9F0A]" : hasAny ? "bg-[#34C759]" : "bg-muted-foreground/35",
+      };
+    });
+  }, [athletes, landingWeekSessions]);
+
+  const upcomingCoachRows = useMemo((): CoachUpcomingSessionRow[] => {
+    const sorted = [...landingWeekSessions].sort(
+      (a, b) => new Date(a.assignedDate).getTime() - new Date(b.assignedDate).getTime()
+    );
+    return sorted.slice(0, 10).map((s) => {
+      const athleteId = s.athleteId || s.athleteIds?.[0];
+      const athlete = athleteId ? athletes.find((x) => x.id === athleteId) : undefined;
+      const name = athlete?.name || "Athlète";
+      const d = new Date(s.assignedDate);
+      const hue = avatarHueFromId(athleteId || s.id);
+      return {
+        id: s.id,
+        dayShort: format(d, "EEE", { locale: fr })
+          .replace(/\.$/, "")
+          .slice(0, 3)
+          .toUpperCase(),
+        dateNum: format(d, "d"),
+        time: format(d, "HH:mm"),
+        title: s.title,
+        athleteName: name,
+        athleteInitials: initialsFromName(name),
+        athleteAvatarClass: `bg-[hsl(${hue},85%,52%)]`,
+        status: s.sent ? "sent" : "draft",
+      };
+    });
+  }, [landingWeekSessions, athletes]);
+
+  const showCoachLanding = activeMenuKey === "planning" && !effectiveAthleteMode && !activeAthleteId && !activeGroupId;
+  const weekPlannerMode = activeMenuKey === "planning" && !effectiveAthleteMode && !!(activeAthleteId || activeGroupId);
+  const coachingHeaderTitle = !isCoachMode || effectiveAthleteMode ? "Mon plan" : "Planification";
+
+  const clearWeekPlannerTarget = useCallback(() => {
+    setActiveAthleteId(undefined);
+    setActiveGroupId(undefined);
+    setSearch("");
+  }, []);
+
   const confirmAthleteSession = async (s: AthletePlanSessionModel) => {
     if (!s.participationId) {
       toast.error("Synchronisation en cours. Réessayez dans un instant.");
@@ -2594,66 +2708,48 @@ export function CoachPlanningExperience() {
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0 border-b border-border bg-card"
           header={
-            <PlanningHeader
-              onOpenMenu={() => setDrawerOpen(true)}
-              title="Coaching"
-              tabs={[
-                {
-                  id: "planning",
-                  label: "Planification",
-                  active: activeMenuKey === "planning",
-                  onClick: () => {
-                    setActiveMenuKey("planning");
-                    setViewAsAthlete(false);
-                    setCoachingTab("planning");
-                  },
-                },
-                {
-                  id: "tracking",
-                  label: "Suivi athlète",
-                  active: activeMenuKey === "tracking",
-                  onClick: () => {
-                    setActiveMenuKey("tracking");
-                    setTrackingSelectedAthleteId(null);
-                    setCoachingTab("planning");
-                  },
-                },
-                {
-                  id: "my-plan",
-                  label: "Mon plan",
-                  active: activeMenuKey === "my-plan",
-                  onClick: () => {
-                    setActiveMenuKey("my-plan");
-                    setViewAsAthlete(true);
-                    setCoachingTab("planning");
-                  },
-                },
-              ]}
-            />
-          }
-          scrollClassName="bg-white"
-          footer={
-            activeMenuKey === "planning" && !effectiveAthleteMode ? (
-              <div className="border-t border-border bg-card px-4 py-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="secondary" className="h-10 rounded-xl" onClick={() => copyAthleteWeek()}>
-                    Copier la semaine
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-10 rounded-xl"
-                    onClick={() => void pasteAthleteWeek()}
-                    disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
-                  >
-                    Coller la semaine
-                  </Button>
-                </div>
+            weekPlannerMode ? (
+              <div className="pt-[var(--safe-area-top)]">
+                <IosPageHeaderBar
+                  left={
+                    <button type="button" className="px-1 text-[17px] leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
+                      Annuler
+                    </button>
+                  }
+                  title=""
+                  right={
+                    <button type="button" className="px-1 text-[17px] font-semibold leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
+                      OK
+                    </button>
+                  }
+                />
               </div>
-            ) : null
+            ) : (
+              <PlanningHeader onOpenMenu={() => setDrawerOpen(true)} title={coachingHeaderTitle} />
+            )
           }
+          scrollClassName={showCoachLanding ? "apple-grouped-bg" : "bg-white"}
+          footer={null}
         >
           <div className={cn("space-y-0", activeMenuKey === "planning" ? "pb-0" : "pb-6")}>
+            {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") ? (
+              <CoachingRolePill
+                active={effectiveAthleteMode ? "athlete" : "coach"}
+                onSelect={(role) => {
+                  if (role === "athlete") {
+                    setViewAsAthlete(true);
+                    setActiveMenuKey("my-plan");
+                  } else {
+                    setViewAsAthlete(false);
+                    setActiveAthleteId(undefined);
+                    setActiveGroupId(undefined);
+                    setActiveMenuKey("planning");
+                    setSearch("");
+                  }
+                }}
+              />
+            ) : null}
+
             {activeMenuKey === "planning" && clubs.length > 1 && (
               <div className="border-b border-border bg-card">
                 <p className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
@@ -2675,16 +2771,31 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            {activeMenuKey === "planning" && !effectiveAthleteMode && <PlanningSearchBar value={search} onChange={setSearch} />}
+            {weekPlannerMode ? (
+              <div className="border-b border-border bg-card px-4 pb-3.5 pt-1">
+                <h2 className="font-[system-ui] text-[28px] font-bold tracking-[-0.04em] text-foreground">Programmer la semaine</h2>
+              </div>
+            ) : null}
 
-            {activeMenuKey === "planning" && !effectiveAthleteMode && (activeAthlete || activeGroup) && (
-              <div className="border-b border-border bg-card px-4 py-2">
+            {weekPlannerMode ? <PlanningSearchBar value={search} onChange={setSearch} /> : null}
+
+            {weekPlannerMode && (activeAthlete || activeGroup) ? (
+              <div className="border-b border-border bg-card px-4 py-3">
                 {activeAthlete ? (
-                  <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
-                    <span className="text-[14px] font-medium text-foreground">Athlète sélectionné : {activeAthlete.name}</span>
+                  <div className="flex items-center gap-3 rounded-[14px] border border-[rgba(10,132,255,0.25)] bg-card py-2.5 pl-2.5 pr-2 shadow-[0_0_0_3px_rgba(10,132,255,0.08)]">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
+                      style={{ backgroundColor: `hsl(${avatarHueFromId(activeAthlete.id)},85%,52%)` }}
+                    >
+                      {initialsFromName(activeAthlete.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[16px] font-semibold tracking-[-0.03em] text-foreground">{activeAthlete.name}</p>
+                      <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Athlète</p>
+                    </div>
                     <button
                       type="button"
-                      className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[15px] leading-none text-muted-foreground"
                       onClick={() => setActiveAthleteId(undefined)}
                       aria-label="Désélectionner l'athlète"
                     >
@@ -2692,11 +2803,17 @@ export function CoachPlanningExperience() {
                     </button>
                   </div>
                 ) : activeGroup ? (
-                  <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
-                    <span className="text-[14px] font-medium text-foreground">Groupe sélectionné : {activeGroup.name}</span>
+                  <div className="flex items-center gap-3 rounded-[14px] border border-[rgba(10,132,255,0.25)] bg-card py-2.5 pl-2.5 pr-2 shadow-[0_0_0_3px_rgba(10,132,255,0.08)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground">
+                      {initialsFromName(activeGroup.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[16px] font-semibold tracking-[-0.03em] text-foreground">{activeGroup.name}</p>
+                      <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Groupe</p>
+                    </div>
                     <button
                       type="button"
-                      className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[15px] leading-none text-muted-foreground"
                       onClick={() => setActiveGroupId(undefined)}
                       aria-label="Désélectionner le groupe"
                     >
@@ -2705,9 +2822,9 @@ export function CoachPlanningExperience() {
                   </div>
                 ) : null}
               </div>
-            )}
+            ) : null}
 
-            {activeMenuKey === "planning" && !effectiveAthleteMode && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
+            {weekPlannerMode && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) ? (
               <div className="divide-y divide-border border-b border-border bg-card">
                 {searchResults.groups.map((group) => (
                   <button
@@ -2738,7 +2855,7 @@ export function CoachPlanningExperience() {
                   </button>
                 ))}
               </div>
-            )}
+            ) : null}
 
             {activeMenuKey === "my-plan" ? (
               <AthleteMyPlanView
@@ -2763,6 +2880,33 @@ export function CoachPlanningExperience() {
                 onOpenExportApps={() => toast.info("Export entraînements", "Choisis ton app pour lancer la synchronisation.")}
                 navigateProfile={(userId) => navigate(`/profile/${userId}`)}
               />
+            ) : activeMenuKey === "planning" && showCoachLanding ? (
+              <CoachPlanificationLanding
+                weekStart={weekAnchor}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
+                onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
+                indicatorsByDate={landingIndicatorsByDate}
+                sessionsScheduled={landingStats.sessionsScheduled}
+                athletesActive={landingStats.athletesActive}
+                validatedCount={landingStats.validatedCount}
+                pendingCount={landingStats.pendingCount}
+                monthLine={landingMonthLine}
+                athletes={landingAthleteCards}
+                onSelectAthlete={(id) => {
+                  setActiveAthleteId(id);
+                  setActiveGroupId(undefined);
+                }}
+                onSeeAllAthletes={
+                  athletes.length > 6
+                    ? () => toast.info("Athlètes", "Choisis un athlète à programmer : recherche ou carte ci-dessus après sélection.")
+                    : undefined
+                }
+                upcomingSessions={upcomingCoachRows}
+                onOpenSession={(id) => openEditSession(id)}
+                onCreateSession={() => openCreateForDate(selectedDate)}
+              />
             ) : activeMenuKey === "planning" ? (
               <>
                 <WeekSelectorPremium
@@ -2776,71 +2920,91 @@ export function CoachPlanningExperience() {
                   showLegend
                 />
 
-                <div className="flex flex-col border-t border-border">
+                <Group title="Plan de la semaine" className="mb-0">
                   {weekDays.map((day) => {
-                const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
-                const session = daySessions[0];
-                const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-                const normalizedSegments = session
-                  ? buildWorkoutSegments(session.blocks, {
-                      sport: session.sport,
-                      athleteIntensity: session.athleteIntensity ?? undefined,
-                    })
-                  : [];
-                const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
-                  ? session.sport === "cycling"
-                    ? "cycling"
-                    : session.sport === "swimming"
-                      ? "swimming"
-                      : session.sport === "strength"
-                        ? "strength"
-                        : session.sport === "running"
-                          ? "running"
-                          : "other"
-                  : undefined;
-                const workoutMetrics = session
-                  ? resolveWorkoutMetrics({
-                      segments: normalizedSegments,
-                    })
-                  : null;
-                const summary = session
-                  ? {
-                      title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
-                      subtitle: session.title,
-                      duration: workoutMetrics?.durationLabel,
-                      distance: workoutMetrics?.distanceLabel,
-                      intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
-                      miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
-                      isRestDay: isExplicitRestDay([session]),
-                      sportHint,
-                    }
-                  : undefined;
-                const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
-                return (
-                  <DayPlanningRow
-                    key={day.toISOString()}
-                    dayLabel={format(day, "EEEE", { locale: fr })}
-                    dateLabel={format(day, "d MMM", { locale: fr })}
-                    isSelected={isSelectedDay}
-                    session={summary}
-                    isSent={session?.sent}
-                    accentColor={accentColor}
-                    onAdd={() => openCreateForDate(day)}
-                    onOpen={session ? () => openEditSession(session.id) : undefined}
-                    onEdit={session ? () => openEditSession(session.id) : undefined}
-                    onSend={
-                      session
-                        ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id))
-                        : undefined
-                    }
-                    onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
-                    onDelete={session ? () => void removeSession(session.id) : undefined}
-                    onUnsend={session ? () => void unsendSession(session.id) : undefined}
-                    allowSessionActions={!effectiveAthleteMode}
-                  />
-                );
+                    const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                    const session = daySessions[0];
+                    const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                    const normalizedSegments = session
+                      ? buildWorkoutSegments(session.blocks, {
+                          sport: session.sport,
+                          athleteIntensity: session.athleteIntensity ?? undefined,
+                        })
+                      : [];
+                    const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
+                      ? session.sport === "cycling"
+                        ? "cycling"
+                        : session.sport === "swimming"
+                          ? "swimming"
+                          : session.sport === "strength"
+                            ? "strength"
+                            : session.sport === "running"
+                              ? "running"
+                              : "other"
+                      : undefined;
+                    const workoutMetrics = session
+                      ? resolveWorkoutMetrics({
+                          segments: normalizedSegments,
+                        })
+                      : null;
+                    const summary = session
+                      ? {
+                          title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                          subtitle: session.title,
+                          duration: workoutMetrics?.durationLabel,
+                          distance: workoutMetrics?.distanceLabel,
+                          intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
+                          miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
+                          isRestDay: isExplicitRestDay([session]),
+                          sportHint,
+                        }
+                      : undefined;
+                    const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
+                    return (
+                      <DayPlanningRow
+                        key={day.toISOString()}
+                        dayLabel={format(day, "EEEE", { locale: fr })}
+                        dateLabel={format(day, "d MMM", { locale: fr })}
+                        isSelected={isSelectedDay}
+                        session={summary}
+                        isSent={session?.sent}
+                        accentColor={accentColor}
+                        onAdd={() => openCreateForDate(day)}
+                        onOpen={session ? () => openEditSession(session.id) : undefined}
+                        onEdit={session ? () => openEditSession(session.id) : undefined}
+                        onSend={
+                          session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
+                        }
+                        onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
+                        onDelete={session ? () => void removeSession(session.id) : undefined}
+                        onUnsend={session ? () => void unsendSession(session.id) : undefined}
+                        allowSessionActions={!effectiveAthleteMode}
+                      />
+                    );
                   })}
-                </div>
+                </Group>
+
+                {weekPlannerMode ? (
+                  <div className="flex gap-2.5 bg-card px-4 py-2 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-11 flex-1 rounded-xl text-[15px] font-semibold text-primary shadow-none"
+                      onClick={() => copyAthleteWeek()}
+                    >
+                      Copier la semaine
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-11 flex-1 rounded-xl text-[15px] font-semibold text-muted-foreground shadow-none"
+                      onClick={() => void pasteAthleteWeek()}
+                      disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
+                    >
+                      Coller la semaine
+                    </Button>
+                  </div>
+                ) : null}
               </>
             ) : activeMenuKey === "dashboard" ? (
               activeClubId ? (
@@ -3048,7 +3212,7 @@ export function CoachPlanningExperience() {
                   left={
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 text-[16px] font-medium text-primary"
+                      className="text-[17px] font-normal leading-none text-[#0a84ff]"
                       onClick={() => {
                         if (hasCreateDraftWork) {
                           setPendingDrawerKey("planning");
@@ -3058,11 +3222,10 @@ export function CoachPlanningExperience() {
                         setCoachingTab("planning");
                       }}
                     >
-                      <ChevronLeft className="h-4 w-4" />
-                      Retour
+                      Annuler
                     </button>
                   }
-                  title="Créer une séance"
+                  title=""
                   right={
                     editorTab === "build" ? (
                       <button
@@ -3070,11 +3233,11 @@ export function CoachPlanningExperience() {
                         onClick={() => void saveSession()}
                         disabled={draft.blocks.length === 0}
                         className={cn(
-                          "text-[16px] font-semibold",
-                          draft.blocks.length ? "text-primary" : "text-muted-foreground"
+                          "text-[17px] font-semibold leading-none",
+                          draft.blocks.length ? "text-[#0a84ff]" : "text-muted-foreground"
                         )}
                       >
-                        Enregistrer
+                        OK
                       </button>
                     ) : (
                       <span className="inline-block w-14" aria-hidden />
@@ -3140,8 +3303,20 @@ export function CoachPlanningExperience() {
                       value={draft.title}
                       onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
                       placeholder="Nom de la séance"
-                      className="h-11 rounded-2xl border-border bg-white text-[15px] dark:bg-card"
+                      className="min-h-[44px] rounded-[12px] border-0 bg-card px-3.5 font-[system-ui] text-[22px] font-semibold tracking-[-0.04em] shadow-none dark:bg-card"
                     />
+                    <p className="px-1 text-[13px] text-muted-foreground">
+                      {[previewMetrics.distanceLabel, previewMetrics.durationLabel && `~${previewMetrics.durationLabel}`]
+                        .filter(Boolean)
+                        .join(" · ") || "Charge estimée après blocs"}
+                      {previewMetrics.feedbackLabel ? (
+                        <>
+                          {" "}
+                          ·{" "}
+                          <span className="font-semibold text-[#0a84ff]">{previewMetrics.feedbackLabel}</span>
+                        </>
+                      ) : null}
+                    </p>
 
                     <div className="grid grid-cols-4 gap-2">
                       {SPORTS.map((sport) => (
@@ -3173,9 +3348,9 @@ export function CoachPlanningExperience() {
                   <div className="space-y-3 px-4 py-3">
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
                     <div className="min-w-0">
-                      <div className="rounded-[16px] border border-border/65 bg-background px-2 py-2">
+                      <div className="rounded-[18px] border border-border/65 bg-card px-2 py-2">
                         <div className="flex min-w-0 gap-2">
-                          <div className="flex h-[72px] shrink-0 flex-col justify-between py-0.5 text-[10px] font-semibold">
+                          <div className="flex min-h-[200px] shrink-0 flex-col justify-between py-1 text-[9px] font-semibold text-muted-foreground/80">
                             <span className="text-[#BF5AF2]">Z6</span>
                             <span className="text-[#FF453A]">Z5</span>
                             <span className="text-[#FF9F0A]">Z4</span>
@@ -3219,7 +3394,7 @@ export function CoachPlanningExperience() {
                                 const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
                                 if (block) setSelectedBlockId(block.id);
                               }}
-                              className="relative z-[2] h-[72px] w-full border-l border-b border-border/70 bg-white/70"
+                              className="relative z-[2] h-[200px] w-full border-l border-b border-border/70 bg-white/70"
                             />
                             {schemaDropRatio != null ? (
                               <div

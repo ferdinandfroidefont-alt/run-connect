@@ -708,7 +708,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         fullScreen={isMobile}
         hideCloseButton
         className={cn(
-          "relative flex min-h-0 flex-col gap-0 overflow-hidden border-0 p-0 apple-grouped-bg",
+          "flex min-h-0 flex-col gap-0 overflow-hidden border-0 p-0 apple-grouped-bg",
           isMobile && "h-[100dvh] max-h-[100dvh] w-screen max-w-none",
           !isMobile &&
             "h-full max-h-full w-full max-w-full sm:h-auto sm:max-h-[95vh] sm:max-w-md sm:rounded-2xl",

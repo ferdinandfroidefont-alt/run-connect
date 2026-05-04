@@ -13,6 +13,8 @@ interface WeekSelectorPremiumProps {
   indicatorsByDate?: Record<string, Array<{ color: string }>>;
   sessionSummaryByDate?: Record<string, DaySessionSummary>;
   showLegend?: boolean;
+  /** Calendrier intégré dans une carte (maquette coach · Planification). */
+  variant?: "default" | "embed";
 }
 
 const DAY_INITIALS = ["L", "M", "M", "J", "V", "S", "D"];
@@ -86,6 +88,7 @@ export function WeekSelectorPremium({
   indicatorsByDate = {},
   sessionSummaryByDate = {},
   showLegend = false,
+  variant = "default",
 }: WeekSelectorPremiumProps) {
   const touchStartX = useRef<number | null>(null);
 
@@ -111,7 +114,12 @@ export function WeekSelectorPremium({
 
   return (
     <div
-      className="border-b border-border bg-card px-4 py-3"
+      className={cn(
+        "py-3",
+        variant === "embed"
+          ? "border-0 bg-transparent px-1"
+          : "border-b border-border bg-card px-4"
+      )}
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
       }}
