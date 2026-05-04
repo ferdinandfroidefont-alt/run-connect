@@ -2923,9 +2923,25 @@ export function CoachPlanningExperience() {
                   }
                   title="Programmer la semaine"
                   right={
-                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-semibold leading-none text-[#0066cc]" onClick={clearWeekPlannerTarget}>
-                      OK
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {activeClubId ? (
+                        <button
+                          type="button"
+                          onClick={openClubProfileSheet}
+                          className="inline-flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[13px] font-semibold text-primary active:opacity-80"
+                          aria-label="Fiche du club"
+                        >
+                          {clubAvatarUrl ? (
+                            <img src={clubAvatarUrl} alt={activeClubName || "Club"} className="h-full w-full object-cover" />
+                          ) : (
+                            (activeClubName || "Club").trim().slice(0, 1).toUpperCase() || "C"
+                          )}
+                        </button>
+                      ) : null}
+                      <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-semibold leading-none text-[#0066cc]" onClick={clearWeekPlannerTarget}>
+                        OK
+                      </button>
+                    </div>
                   }
                 />
               </div>

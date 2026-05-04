@@ -47,7 +47,8 @@ export function PlanningHeader({
   onPressClubAvatar,
 }: PlanningHeaderProps) {
   const showBellAndSettings = !coachLandingBrand && !hideDrawerActions;
-  const showClubMark = Boolean(onPressClubAvatar && (clubAvatarUrl || (clubName && clubName.trim())));
+  /** Dès qu’une action fiche club est fournie, afficher le bouton (initiale de secours si pas encore nom/photo). */
+  const showClubMark = Boolean(onPressClubAvatar);
   const clubInitial = (clubName || "Club").trim().slice(0, 1).toUpperCase() || "C";
   return (
     <MainTopHeader

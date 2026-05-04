@@ -2291,7 +2291,7 @@ const Messages = () => {
             onStartConversation={startConversation}
             onCreateClub={() => {
               setShowNewConversation(false);
-              setActiveRootTab("create-club");
+              openCreateClubTab();
             }}
             onAvatarClick={handleAvatarClick}
           />
@@ -2382,7 +2382,7 @@ const Messages = () => {
                         <DropdownMenuItem
                           onClick={() => {
                             setSelectedConversation(null);
-                            setActiveRootTab("create-club");
+                            openCreateClubTab();
                           }}
                           className="py-ios-3"
                         >
@@ -2524,7 +2524,7 @@ const Messages = () => {
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedConversation(null);
-                              setActiveRootTab("create-club");
+                              openCreateClubTab();
                             }}
                             className="py-ios-3"
                           >
@@ -3441,39 +3441,45 @@ const Messages = () => {
                   <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
                     Messages
                   </h1>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md text-foreground active:bg-black/[0.04] dark:active:bg-white/[0.06]"
-                        aria-label="Nouvelle conversation, club ou groupe"
+                  <div className="flex items-center text-primary">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                          aria-label="Nouvelle conversation, club ou groupe"
+                        >
+                          <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="z-[130] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
                       >
-                        <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="z-[130] w-56"
-                    >
-                      <DropdownMenuItem
-                        className="gap-2"
-                        onSelect={() => {
-                          setShowNewConversation(true);
-                        }}
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        Nouvelle conversation
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2" onSelect={openCreateClubTab}>
-                        <Users className="h-4 w-4" />
-                        Créer un club
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2" onSelect={openCreateClubTab}>
-                        <UserPlus className="h-4 w-4" />
-                        Créer un groupe
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        <DropdownMenuItem
+                          className="cursor-pointer gap-2 py-ios-3"
+                          onClick={() => setShowNewConversation(true)}
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          Nouvelle conversation
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer gap-2 py-ios-3"
+                          onClick={() => openCreateClubTab()}
+                        >
+                          <Users className="h-4 w-4" />
+                          Créer un club
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer gap-2 py-ios-3"
+                          onClick={() => openCreateClubTab()}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          Créer un groupe
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
                 <div className="mt-3.5 px-5 py-2">
