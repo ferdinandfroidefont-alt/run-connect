@@ -11,7 +11,6 @@ import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, formatCalendarDistance, isExplicitRestDay, kmForSession, toCalendarSummarySport } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
 import { sportDotClass } from "./sportTokens";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { useAuth } from "@/hooks/useAuth";
@@ -256,18 +255,17 @@ export function AthleteMyPlanView(props: Props) {
             <p className="truncate text-[15px] font-semibold text-foreground">Exporte tes entraînements</p>
             <p className="truncate text-[13px] text-muted-foreground">Vers Garmin et les autres apps compatibles.</p>
           </div>
-          <Button
+          <button
             type="button"
-            size="sm"
-            className="shrink-0 rounded-full px-3"
+            className="apple-pill apple-pill-secondary inline-flex shrink-0 items-center gap-1.5"
             onClick={() => {
               props.onOpenExportApps?.();
               setExportDialogOpen(true);
             }}
           >
-            <Share2 className="mr-1.5 h-4 w-4" />
+            <Share2 className="h-[15px] w-[15px]" aria-hidden />
             Exporter
-          </Button>
+          </button>
         </div>
       </section>
 

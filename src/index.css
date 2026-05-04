@@ -797,6 +797,117 @@ html, body {
     background: rgba(118, 118, 128, 0.24);
   }
 
+  /* Coaching maquettes 14–17 : mêmes contrôles que apple-screens.jsx / apple-tokens PillBtn & FAB */
+  .handoff-ios-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 400;
+    color: #0a84ff;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-ios-link:active {
+    opacity: 0.65;
+  }
+  .handoff-role-track {
+    display: flex;
+    border-radius: 9px;
+    padding: 2px;
+    background: rgba(118, 118, 128, 0.12);
+  }
+  .dark .handoff-role-track {
+    background: rgba(118, 118, 128, 0.24);
+  }
+  .handoff-role-thumb {
+    flex: 1;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-role-thumb-active {
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+  .handoff-role-thumb-idle {
+    background: transparent;
+    color: hsl(var(--foreground));
+  }
+  .handoff-coaching-fab {
+    display: flex;
+    height: 50px;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    border-radius: 14px;
+    background: #0a84ff;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 8px 20px -4px rgba(0, 102, 204, 0.45);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-coaching-fab:active {
+    opacity: 0.92;
+  }
+  .handoff-coaching-fab:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .handoff-week-nav {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    font-size: 18px;
+    font-weight: 400;
+    color: #0a84ff;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-week-btn {
+    flex: 1;
+    display: flex;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 12px;
+    background: hsl(var(--card));
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-week-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .handoff-week-btn--primary {
+    color: #0a84ff;
+  }
+  .handoff-week-btn--muted {
+    color: rgba(60, 60, 67, 0.4);
+  }
+  .dark .handoff-week-btn--muted {
+    color: rgba(235, 235, 245, 0.4);
+  }
+
   /* Tab bar Apple (blur + bord supérieur fin) */
   .apple-tabbar {
     background: rgba(249, 249, 249, 0.94);

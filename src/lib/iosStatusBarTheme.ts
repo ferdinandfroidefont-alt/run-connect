@@ -8,7 +8,7 @@
  *   utilisent `bg-card` ; si la barre native reprend `--background` (plus sombre), iOS montre une frange nette.
  *   Couleur native dérivée du rendu calculé du navigateur pour coller au pixel près au Web.
  *
- * Splash : overlay true + fond bleu Action (#0066CC) + Style.Dark Capacitor (icônes / texte clairs sur fond sombre).
+ * Splash (`LoadingScreen`) : barre masquée via `StatusBar.hide` + visuel edge-to-edge ; rétablie après via `applyIosStatusBarForTheme`.
  */
 import { Capacitor } from '@capacitor/core';
 

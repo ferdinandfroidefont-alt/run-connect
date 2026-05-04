@@ -154,7 +154,9 @@ export function CoachPlanificationLanding({
       <div className="mt-5 px-4">
         <div className="mb-2.5 flex items-baseline justify-between">
           <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-muted-foreground">Calendrier</p>
-          <span className="text-[13px] text-[#0a84ff]">Mois</span>
+          <button type="button" className="handoff-ios-link">
+            Mois
+          </button>
         </div>
         <div className="overflow-hidden rounded-[14px] bg-card">
           <WeekSelectorPremium
@@ -176,7 +178,7 @@ export function CoachPlanificationLanding({
             Mes athlètes · {athletesActive}
           </p>
           {onSeeAllAthletes ? (
-            <button type="button" className="text-[13px] text-[#0a84ff]" onClick={onSeeAllAthletes}>
+            <button type="button" className="handoff-ios-link" onClick={onSeeAllAthletes}>
               Voir tout
             </button>
           ) : null}
@@ -231,12 +233,8 @@ export function CoachPlanificationLanding({
       </div>
 
       <div className="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 px-4">
-        <button
-          type="button"
-          onClick={onCreateSession}
-          className="pointer-events-auto flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#0a84ff] text-[17px] font-semibold tracking-[-0.03em] text-white shadow-[0_8px_20px_-4px_rgba(0,102,204,0.45)] active:opacity-95"
-        >
-          <Plus className="h-3.5 w-3.5 stroke-[2.4px]" stroke="currentColor" />
+        <button type="button" onClick={onCreateSession} className="pointer-events-auto handoff-coaching-fab">
+          <Plus className="h-3.5 w-3.5 stroke-[2.4px]" stroke="currentColor" aria-hidden />
           Créer une séance
         </button>
       </div>

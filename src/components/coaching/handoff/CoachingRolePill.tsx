@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 
 type Role = "athlete" | "coach";
 
+/** Segmented control identique à la maquette (fond search-fill, segments 7px, ombre segment actif). */
 export function CoachingRolePill({
   active,
   onSelect,
@@ -12,8 +13,8 @@ export function CoachingRolePill({
   className?: string;
 }) {
   return (
-    <div className={cn("px-4 pb-3.5", className)}>
-      <div className="flex rounded-[9px] bg-muted p-0.5">
+    <div className={cn("px-4 pb-3.5 pt-0", className)}>
+      <div className="handoff-role-track">
         {(
           [
             { id: "athlete" as const, label: "Athlète" },
@@ -26,12 +27,7 @@ export function CoachingRolePill({
               key={item.id}
               type="button"
               onClick={() => onSelect(item.id)}
-              className={cn(
-                "min-h-[44px] flex-1 touch-manipulation rounded-[7px] py-1.5 text-center text-[13px] font-medium tracking-[-0.02em] transition-shadow",
-                selected
-                  ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
-                  : "bg-transparent text-muted-foreground"
-              )}
+              className={cn("handoff-role-thumb", selected ? "handoff-role-thumb-active" : "handoff-role-thumb-idle")}
             >
               {item.label}
             </button>

@@ -4,6 +4,7 @@ import {
   applyWebChromeForTheme,
   getPreferredDarkFromStorage,
 } from '@/lib/iosStatusBarTheme';
+import { RunConnectSplashChrome } from '@/plugins/runConnectSplashChrome';
 
 /**
  * Splash RunConnect : même bleu Action (#0066CC) que le Launch Screen iOS natif.
@@ -15,7 +16,7 @@ export const RUCONNECT_SPLASH_PRIMARY = '#0066CC';
 /** Icône seule (cartes de chargement, fallback boot, etc.). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
 
-/** Écran de chargement initial (visuel complet : logo + titre + baseline). */
+/** Écran de chargement initial — visuel plein écran edge-to-edge (`LoadingScreen`). */
 export const RUCONNECT_LOADING_SCREEN_URL = '/brand/runconnect-loading-splash.png';
 
 /** Chrome web (Safari / in-app) pendant le splash */
@@ -37,22 +38,19 @@ export function applyRuconnectSplashWebChrome(): void {
 }
 
 /**
- * Barre d’état **système** uniquement (pas de doublon HTML) :
- * - overlay true → le fond du Web remonte sous la barre ; une seule bande visible.
- * - Style.Dark → pictogrammes/heure sombres sur fond blanc.
- * - padding env(safe-area-inset-*) sur l’écran de chargement = marge contenu, pas une 2e barre.
+ * Barre d’état et insets natifs pendant le splash :
+ * - Home indicator masqué côté iOS (`RunConnectBridgeViewController`) tant que le splash plein écran est affiché.
+ * - StatusBar masquée (`hide`) pour coller au rendu edge-to-edge ; rétablie dans `restoreChromeAfterRuconnectSplash`.
  */
 export async function applyRuconnectSplashNativeChrome(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
-    const { StatusBar, Style } = await import('@capacitor/status-bar');
-    await StatusBar.setOverlaysWebView({ overlay: true });
-    await StatusBar.setStyle({ style: Style.Dark });
-    try {
-      await StatusBar.setBackgroundColor({ color: RUCONNECT_SPLASH_BACKGROUND });
-    } catch {
-      /* iOS peut ignorer setBackgroundColor ; overlay + fond HTML suffit */
+    if (Capacitor.getPlatform() === 'ios') {
+      await RunConnectSplashChrome.setLoadingPresentationActive({ active: true });
     }
+    const { StatusBar } = await import('@capacitor/status-bar');
+    await StatusBar.setOverlaysWebView({ overlay: true });
+    await StatusBar.hide({ animation: 'NONE' });
   } catch {
     /* Web ou plugin indisponible */
   }
@@ -65,6 +63,13 @@ export async function restoreChromeAfterRuconnectSplash(): Promise<void> {
   const isDark = getPreferredDarkFromStorage();
   applyWebChromeForTheme(isDark);
   if (Capacitor.isNativePlatform()) {
+    if (Capacitor.getPlatform() === 'ios') {
+      try {
+        await RunConnectSplashChrome.setLoadingPresentationActive({ active: false });
+      } catch {
+        /* ignore */
+      }
+    }
     await applyIosStatusBarForTheme(isDark);
   }
 }

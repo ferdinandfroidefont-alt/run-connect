@@ -132,27 +132,45 @@ export function WeekSelectorPremium({
         else onPreviousWeek();
       }}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onPreviousWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
-          aria-label="Semaine précédente"
-        >
-          <ChevronLeft className="h-5 w-5 text-foreground" />
-        </button>
+      <div className="mb-3 flex items-center justify-between px-1">
+        {variant === "embed" ? (
+          <button type="button" onClick={onPreviousWeek} className="handoff-week-nav" aria-label="Semaine précédente">
+            ‹
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onPreviousWeek}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
+            aria-label="Semaine précédente"
+          >
+            <ChevronLeft className="h-5 w-5 text-foreground" />
+          </button>
+        )}
         <div className="text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">SEMAINE</p>
-          <p className="text-[16px] font-semibold text-foreground">{weekLabel}</p>
+          {variant === "embed" ? (
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-foreground">{weekLabel}</p>
+          ) : (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">SEMAINE</p>
+              <p className="text-[16px] font-semibold text-foreground">{weekLabel}</p>
+            </>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={onNextWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
-          aria-label="Semaine suivante"
-        >
-          <ChevronRight className="h-5 w-5 text-foreground" />
-        </button>
+        {variant === "embed" ? (
+          <button type="button" onClick={onNextWeek} className="handoff-week-nav" aria-label="Semaine suivante">
+            ›
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onNextWeek}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
+            aria-label="Semaine suivante"
+          >
+            <ChevronRight className="h-5 w-5 text-foreground" />
+          </button>
+        )}
       </div>
 
       <div className="no-scrollbar flex items-stretch gap-2 overflow-x-auto pb-0.5">
@@ -163,7 +181,11 @@ export function WeekSelectorPremium({
             onClick={() => onSelectDate(day.date)}
             className={cn(
               "flex min-w-[44px] flex-1 flex-col items-center rounded-lg px-1.5 py-2 transition-all",
-              day.isSelected ? "bg-[#2563EB] text-white" : "bg-secondary text-foreground"
+              day.isSelected
+                ? "bg-[#0a84ff] text-white"
+                : variant === "embed"
+                  ? "bg-[rgba(120,120,128,0.09)] text-foreground dark:bg-white/10"
+                  : "bg-secondary text-foreground"
             )}
           >
             <p className={cn("text-[16px] font-semibold leading-none", day.isSelected ? "text-primary-foreground" : "text-foreground")}>

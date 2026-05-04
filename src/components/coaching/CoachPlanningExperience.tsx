@@ -2712,13 +2712,13 @@ export function CoachPlanningExperience() {
               <div className="pt-[var(--safe-area-top)]">
                 <IosPageHeaderBar
                   left={
-                    <button type="button" className="px-1 text-[17px] leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
+                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
                       Annuler
                     </button>
                   }
                   title=""
                   right={
-                    <button type="button" className="px-1 text-[17px] font-semibold leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
+                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-semibold leading-none text-[#0a84ff]" onClick={clearWeekPlannerTarget}>
                       OK
                     </button>
                   }
@@ -2985,24 +2985,32 @@ export function CoachPlanningExperience() {
                 </Group>
 
                 {weekPlannerMode ? (
-                  <div className="flex gap-2.5 bg-card px-4 py-2 pb-[calc(7rem+env(safe-area-inset-bottom))]">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-11 flex-1 rounded-xl text-[15px] font-semibold text-primary shadow-none"
-                      onClick={() => copyAthleteWeek()}
-                    >
+                  <div className="flex gap-2.5 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
+                    <button type="button" className="handoff-week-btn handoff-week-btn--primary" onClick={() => copyAthleteWeek()}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 text-[#0a84ff]">
+                        <rect x="4" y="4" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+                        <path d="M4 11H3a1 1 0 01-1-1V3a1 1 0 011-1h7a1 1 0 011 1v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
                       Copier la semaine
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                       type="button"
-                      variant="secondary"
-                      className="h-11 flex-1 rounded-xl text-[15px] font-semibold text-muted-foreground shadow-none"
+                      className="handoff-week-btn handoff-week-btn--muted"
                       onClick={() => void pasteAthleteWeek()}
                       disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
                     >
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 opacity-70">
+                        <path
+                          d="M5 3h6l2 2v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path d="M6 3V2a1 1 0 011-1h2a1 1 0 011 1v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
                       Coller la semaine
-                    </Button>
+                    </button>
                   </div>
                 ) : null}
               </>

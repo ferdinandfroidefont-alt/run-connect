@@ -1,4 +1,4 @@
-import { Copy, EllipsisVertical, Send, Trash2 } from "lucide-react";
+import { Copy, Send, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface SessionActionMenuProps {
@@ -7,18 +7,24 @@ interface SessionActionMenuProps {
   onDelete: () => void;
 }
 
+/** Déclencheur « ··· » sur fond search-fill, 28×28 — comme DayPlanRow non envoyé maquette. */
 export function SessionActionMenu({ onSend, onDuplicate, onDelete }: SessionActionMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-secondary">
-          <EllipsisVertical className="h-4.5 w-4.5 text-foreground" />
+        <button
+          type="button"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[17px] font-medium leading-none tracking-[0.06em] text-muted-foreground"
+          style={{ background: "rgba(118, 118, 128, 0.12)" }}
+          aria-label="Actions séance"
+        >
+          ···
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={onSend}>
           <Send className="mr-2 h-4 w-4" />
-          Envoyer à l'athlète
+          Envoyer à l&apos;athlète
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onDuplicate}>
           <Copy className="mr-2 h-4 w-4" />
@@ -32,4 +38,3 @@ export function SessionActionMenu({ onSend, onDuplicate, onDelete }: SessionActi
     </DropdownMenu>
   );
 }
-
