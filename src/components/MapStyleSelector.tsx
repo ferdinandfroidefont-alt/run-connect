@@ -17,6 +17,8 @@ interface MapStyleSelectorProps {
    * `fab` : bottom sheet léger (accueil).
    */
   panelAnchor?: 'fab' | 'viewport-left';
+  /** Déclencheur pastille emoji (ex. création d’itinéraire sur la carte). */
+  triggerEmoji?: boolean;
 }
 
 /** Tuiles d’aperçu */
@@ -379,6 +381,7 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
   currentStyle,
   onStyleChange,
   panelAnchor = 'fab',
+  triggerEmoji = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const leftPanel = panelAnchor === 'viewport-left';
@@ -414,7 +417,16 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
           setIsOpen((open) => !open);
         }}
       >
-        <Palette className="h-[15px] w-[15px]" strokeWidth={2} />
+        {triggerEmoji ? (
+          <span
+            className="text-[17px] leading-none select-none text-black dark:text-white"
+            aria-hidden
+          >
+            🎨
+          </span>
+        ) : (
+          <Palette className="h-[15px] w-[15px]" strokeWidth={2} />
+        )}
       </MapIosColoredFab>
 
       {leftPanel ? (

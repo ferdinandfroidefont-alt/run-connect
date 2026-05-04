@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Undo, Redo, Trash2, Navigation, MapPin, FileText, Plus, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -1154,62 +1154,6 @@ export const RouteCreation = () => {
               {isManualMode ? 'Tracé libre hors-piste' : 'Suit les chemins et sentiers'}
             </p>
 
-            <div className="flex flex-wrap items-center justify-end gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleUndo}
-                disabled={waypoints.current.length === 0}
-                className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
-              >
-                <Undo className="h-4 w-4" />
-                Annuler
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleRedo}
-                disabled={!canRedo}
-                className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
-              >
-                <Redo className="h-4 w-4" />
-                Rétablir
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleClear}
-                disabled={waypoints.current.length === 0}
-                className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
-              >
-                <Trash2 className="h-4 w-4" />
-                Effacer
-              </Button>
-              <div
-                className={cn(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/90',
-                  '[&_.map-ios-colored-fab]:h-8 [&_.map-ios-colored-fab]:w-8 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:border-0 [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/85 [&_span_svg]:!stroke-current',
-                )}
-              >
-                <MapStyleSelector currentStyle={mapStyleId} onStyleChange={handleMapStyleChange} />
-              </div>
-              {!isEditMode ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => navigate('/drafts/routes')}
-                  className="h-8 gap-1 px-2 text-[15px] font-normal text-primary"
-                >
-                  <FileText className="h-4 w-4" />
-                  Brouillons
-                </Button>
-              ) : null}
-            </div>
-
             <div
               className="relative h-[420px] w-full min-w-0 overflow-hidden rounded-[18px] bg-card shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.25)]"
               data-tutorial="tutorial-route-creation-map"
@@ -1257,19 +1201,69 @@ export const RouteCreation = () => {
                 <button
                   type="button"
                   onClick={() => void handleRecenter()}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[#0066cc] shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 dark:text-[#0A84FF] [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
                   aria-label="Recentrer sur ma position"
                 >
-                  <Navigation className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  <span aria-hidden>📍</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleZoomIn}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[#0066cc] shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 dark:text-[#0A84FF] [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
                   aria-label="Zoom avant"
                 >
-                  <Plus className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  <span aria-hidden>➕</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => void handleUndo()}
+                  disabled={waypointCount === 0}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 disabled:pointer-events-none disabled:opacity-35 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  aria-label="Annuler le dernier point"
+                >
+                  <span aria-hidden>↩️</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRedo()}
+                  disabled={!canRedo}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 disabled:pointer-events-none disabled:opacity-35 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  aria-label="Rétablir"
+                >
+                  <span aria-hidden>↪️</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  disabled={waypointCount === 0}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 disabled:pointer-events-none disabled:opacity-35 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                  aria-label="Effacer tout"
+                >
+                  <span aria-hidden>🗑️</span>
+                </button>
+                {!isEditMode ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/drafts/routes')}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border-0 bg-white/90 text-[19px] leading-none shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90 [-webkit-tap-highlight-color:transparent] active:scale-[0.97]"
+                    aria-label="Brouillons d’itinéraire"
+                  >
+                    <span aria-hidden>📄</span>
+                  </button>
+                ) : null}
+                <div
+                  className={cn(
+                    'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md dark:bg-zinc-900/90',
+                    '[&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:min-h-0 [&_.map-ios-colored-fab]:min-w-0 [&_.map-ios-colored-fab]:rounded-full [&_.map-ios-colored-fab]:p-0 [&_.map-ios-colored-fab]:shadow-none',
+                  )}
+                >
+                  <MapStyleSelector
+                    currentStyle={mapStyleId}
+                    onStyleChange={handleMapStyleChange}
+                    panelAnchor="viewport-left"
+                    triggerEmoji
+                  />
+                </div>
               </div>
 
               {waypointCount === 0 && !mapError ? (

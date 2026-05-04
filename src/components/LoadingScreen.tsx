@@ -4,7 +4,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   RUCONNECT_SPLASH_BACKGROUND,
-  RUCONNECT_LOADING_SCREEN_URL,
+  RUCONNECT_LOADING_SCREEN_FALLBACK_URL,
+  RUCONNECT_LOADING_SCREEN_GIF_URL,
   applyRuconnectSplashNativeChrome,
   applyRuconnectSplashWebChrome,
   restoreChromeAfterRuconnectSplash,
@@ -27,6 +28,8 @@ function waitMs(ms: number): Promise<void> {
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [exiting, setExiting] = useState(false);
   const [assetFailed, setAssetFailed] = useState(false);
+  const [splashSrc, setSplashSrc] = useState(RUCONNECT_LOADING_SCREEN_GIF_URL);
+  const splashTierRef = useRef<"gif" | "jpg">("gif");
   const { t } = useLanguage();
   const onCompleteRef = useRef(onLoadingComplete);
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,12 +98,19 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           <span className="sr-only">{t("loading.splashAria")}</span>
           {!assetFailed ? (
             <img
-              src={RUCONNECT_LOADING_SCREEN_URL}
+              src={splashSrc}
               alt=""
               decoding="async"
               draggable={false}
               className="pointer-events-none absolute inset-0 block h-full w-full select-none object-cover object-center"
-              onError={() => setAssetFailed(true)}
+              onError={() => {
+                if (splashTierRef.current === "gif") {
+                  splashTierRef.current = "jpg";
+                  setSplashSrc(RUCONNECT_LOADING_SCREEN_FALLBACK_URL);
+                  return;
+                }
+                setAssetFailed(true);
+              }}
             />
           ) : null}
         </motion.div>

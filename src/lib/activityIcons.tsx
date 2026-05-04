@@ -71,7 +71,8 @@ const ACTIVITY_TYPE_ALIASES: Record<string, string> = {
   natation_libre: "natation",
 };
 
-function normalizeActivityKey(raw: string): string {
+function normalizeActivityKey(raw: string | null | undefined): string {
+  if (raw == null || typeof raw !== "string") return "course";
   const k = raw.toLowerCase().trim().replace(/-/g, "_");
   if (!k) return "course";
   if (activityConfig[k]) return k;
@@ -161,27 +162,27 @@ const ACTIVITY_SOLID_BG: Record<string, string> = {
 };
 
 /** Bordure gauche carte : alignée sur ActivityIcon / carousel filtres Découvrir */
-export function getActivityBorderLeftClass(activityType: string): string {
+export function getActivityBorderLeftClass(activityType: string | null | undefined): string {
   const key = normalizeActivityKey(activityType);
   return ACTIVITY_BORDER_LEFT[key] ?? ACTIVITY_BORDER_LEFT.course;
 }
 
-export function getActivitySolidBgClass(activityType: string): string {
+export function getActivitySolidBgClass(activityType: string | null | undefined): string {
   const key = normalizeActivityKey(activityType);
   return ACTIVITY_SOLID_BG[key] ?? ACTIVITY_SOLID_BG.course;
 }
 
-export const getActivityConfig = (activityType: string): ActivityIconConfig => {
+export const getActivityConfig = (activityType: string | null | undefined): ActivityIconConfig => {
   const key = normalizeActivityKey(activityType);
   return activityConfig[key] || activityConfig.course;
 };
 
-export const getActivityLabel = (activityType: string): string => {
+export const getActivityLabel = (activityType: string | null | undefined): string => {
   return getActivityConfig(activityType).label;
 };
 
 interface ActivityIconProps {
-  activityType: string;
+  activityType: string | null | undefined;
   size?: "sm" | "md" | "lg";
   className?: string;
 }

@@ -7,6 +7,7 @@ import {
   format,
   isSameDay,
   isSameMonth,
+  isValid,
   startOfMonth,
   startOfWeek,
   getISODay,
@@ -133,7 +134,7 @@ export const SessionCalendarView = ({
     if (!q) return sessions;
     return sessions.filter(
       (s) =>
-        s.title.toLowerCase().includes(q) ||
+        (s.title ?? "").toLowerCase().includes(q) ||
         (s.location_name && s.location_name.toLowerCase().includes(q))
     );
   }, [sessions, searchQuery]);
@@ -147,7 +148,9 @@ export const SessionCalendarView = ({
   const sessionsByDate = useMemo(() => {
     const map = new Map<string, SessionCalendarSession[]>();
     for (const session of sessionsFiltered) {
-      const dateKey = format(new Date(session.scheduled_at), "yyyy-MM-dd");
+      const d = new Date(session.scheduled_at ?? "");
+      if (!isValid(d)) continue;
+      const dateKey = format(d, "yyyy-MM-dd");
       const existing = map.get(dateKey) ?? [];
       existing.push(session);
       map.set(dateKey, existing);
@@ -158,7 +161,7 @@ export const SessionCalendarView = ({
   const selectedKey = format(selectedDate, "yyyy-MM-dd");
   const selectedDaySessions = useMemo(() => {
     const list = sessionsByDate.get(selectedKey) ?? [];
-    return [...list].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+    return [...list].sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""));
   }, [sessionsByDate, selectedKey]);
 
   const isToday = isSameDay(selectedDate, today);
@@ -339,6 +342,10 @@ export const SessionCalendarView = ({
               const friendsLabel =
                 friends <= 0 ? "" : friends === 1 ? "· 1 ami" : `· ${friends} amis`;
               const isLastRow = rowIdx === selectedDaySessions.length - 1;
+              const schedAt = new Date(session.scheduled_at ?? "");
+              const timeLabel = isValid(schedAt)
+                ? format(schedAt, "HH:mm", { locale: fr })
+                : "—";
 
               const rowInner = (
                 <div
@@ -366,7 +373,7 @@ export const SessionCalendarView = ({
                       {session.title}
                     </p>
                     <p className="mt-px truncate text-[13px] text-muted-foreground">
-                      {format(new Date(session.scheduled_at), "HH:mm", { locale: fr })} ·{" "}
+                      {timeLabel} ·{" "}
                       {getActivityLabel(session.activity_type)}
                       {session.location_name ? ` · ${session.location_name}` : ""} {friendsLabel}
                       {org ? ` · ${org.display_name || org.username}` : ""}

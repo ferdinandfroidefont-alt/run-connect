@@ -16,8 +16,17 @@ export const RUCONNECT_SPLASH_PRIMARY = '#0066CC';
 /** Icône seule (cartes de chargement, fallback boot, etc.). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
 
-/** Écran de chargement initial — visuel plein écran edge-to-edge (`LoadingScreen`). */
-export const RUCONNECT_LOADING_SCREEN_URL = '/brand/runconnect-loading-splash.png';
+/**
+ * GIF animé si présent (fichier **GIF89a** dans `public/brand/`).
+ * Les exports via le chat Cursor sont souvent du **JPEG/PNG** renommé : utiliser le fallback `.jpg` pour une image fixe correcte.
+ * `LoadingScreen` essaie d’abord le `.gif`, puis bascule sur le `.jpg` si absent ou invalide.
+ */
+export const RUCONNECT_LOADING_SCREEN_GIF_URL = '/brand/runconnect-loading-splash.gif';
+/** Image fixe (export design / chat) — JPEG attendu. */
+export const RUCONNECT_LOADING_SCREEN_FALLBACK_URL = '/brand/runconnect-loading-splash.jpg';
+
+/** @deprecated Préférer `RUCONNECT_LOADING_SCREEN_GIF_URL` + fallback côté `LoadingScreen`. */
+export const RUCONNECT_LOADING_SCREEN_URL = RUCONNECT_LOADING_SCREEN_GIF_URL;
 
 /** Chrome web (Safari / in-app) pendant le splash */
 export function applyRuconnectSplashWebChrome(): void {
