@@ -55,7 +55,7 @@ import {
   Camera,
   ChevronRight
 } from "lucide-react";
-import { format, isToday, isYesterday, startOfDay } from "date-fns";
+import { format, isToday, isYesterday, isValid, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 import { MessageSectionHeader, shouldShowSectionHeader } from "../components/MessageTimestamp";
@@ -186,6 +186,8 @@ const Messages = () => {
   /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
   const [conversationsHydrated, setConversationsHydrated] = useState(false);
   const [conversationSearch, setConversationSearch] = useState("");
+  /** Filtre liste inbox (maquette 17) — chips Conversations / Clubs / Groupes */
+  const [messagesInboxSegment, setMessagesInboxSegment] = useState<"all" | "clubs" | "groups">("all");
   const [activeRootTab, setActiveRootTab] = useState<MessagesRootTab>("conversations");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -763,13 +765,22 @@ const Messages = () => {
     }
   };
 
-  const handleSessionClick = (session: any) => {
-    // Redirect to map with session location
+  const handleSessionClick = (session: {
+    id: string;
+    location_lat?: number | null;
+    location_lng?: number | null;
+  }) => {
+    const lat = session.location_lat;
+    const lng = session.location_lng;
+    if (typeof lat !== "number" || typeof lng !== "number" || Number.isNaN(lat) || Number.isNaN(lng)) {
+      navigate(`/?sessionId=${encodeURIComponent(session.id)}`);
+      return;
+    }
     const params = new URLSearchParams({
-      lat: session.location_lat.toString(),
-      lng: session.location_lng.toString(),
-      zoom: '15',
-      sessionId: session.id
+      lat: String(lat),
+      lng: String(lng),
+      zoom: "15",
+      sessionId: session.id,
     });
     navigate(`/?${params.toString()}`);
   };
@@ -796,26 +807,37 @@ const Messages = () => {
     });
   };
 
-  // Filter and sort conversations
-  const filteredAndSortedConversations = [...conversations]
-    .filter(conv => {
-      if (!conversationSearch.trim()) return true;
-      const query = conversationSearch.toLowerCase();
-      if (conv.is_group) {
-        return conv.group_name?.toLowerCase().includes(query);
-      }
-      return (
-        conv.other_participant?.username?.toLowerCase().includes(query) ||
-        conv.other_participant?.display_name?.toLowerCase().includes(query)
-      );
-    })
-    .sort((a, b) => {
-      const aPinned = pinnedConversations.has(a.id);
-      const bPinned = pinnedConversations.has(b.id);
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
-      return 0;
-    });
+  const { inboxClubCount, inboxGroupCount, filteredAndSortedConversations } = useMemo(() => {
+    const inboxClubCount = conversations.filter((c) => c.is_group && !!c.club_code).length;
+    const inboxGroupCount = conversations.filter((c) => c.is_group && !c.club_code).length;
+
+    const list = [...conversations]
+      .filter((conv) => {
+        if (messagesInboxSegment === "clubs") return !!(conv.is_group && conv.club_code);
+        if (messagesInboxSegment === "groups") return !!(conv.is_group && !conv.club_code);
+        return true;
+      })
+      .filter((conv) => {
+        if (!conversationSearch.trim()) return true;
+        const query = conversationSearch.toLowerCase();
+        if (conv.is_group) {
+          return !!conv.group_name?.toLowerCase().includes(query);
+        }
+        return (
+          !!conv.other_participant?.username?.toLowerCase().includes(query) ||
+          !!conv.other_participant?.display_name?.toLowerCase().includes(query)
+        );
+      })
+      .sort((a, b) => {
+        const aPinned = pinnedConversations.has(a.id);
+        const bPinned = pinnedConversations.has(b.id);
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        return 0;
+      });
+
+    return { inboxClubCount, inboxGroupCount, filteredAndSortedConversations: list };
+  }, [conversations, conversationSearch, pinnedConversations, messagesInboxSegment]);
 
   const handleLongPressEnd = () => {
     if (longPressTimer) {
@@ -2985,12 +3007,16 @@ const Messages = () => {
                                           : act.includes("trail") || act.includes("rando") || act.includes("marche") || act.includes("walk") || act.includes("hike")
                                             ? "Marche · trail"
                                             : "Course";
-                                    const rawWhen = format(
-                                      new Date(message.session.scheduled_at),
-                                      "EEEE · HH:mm",
-                                      { locale: fr }
-                                    );
-                                    const whenLabel = rawWhen.charAt(0).toUpperCase() + rawWhen.slice(1);
+                                    const sched = message.session.scheduled_at
+                                      ? new Date(message.session.scheduled_at)
+                                      : null;
+                                    const whenLabel =
+                                      sched && isValid(sched)
+                                        ? format(sched, "EEEE · HH:mm", { locale: fr }).replace(
+                                            /^./,
+                                            (ch) => ch.toUpperCase()
+                                          )
+                                        : "—";
                                     return (
                                     <div
                                       className="mb-ios-2 w-full max-w-[240px] cursor-pointer overflow-hidden rounded-[18px] border border-[#E2DBD0] bg-white active:scale-[0.98] dark:border-[#1f1f1f] dark:bg-[#2c2c2e]"
@@ -3117,7 +3143,7 @@ const Messages = () => {
               
               {/* Typing indicators */}
               {Object.entries(typingUsers).map(([userId]) => (
-                <TypingIndicator key={userId} isTyping variant="caption" />
+                <TypingIndicator key={userId} isTyping={true} variant="caption" />
               ))}
               
               <div ref={messagesEndRef} />
