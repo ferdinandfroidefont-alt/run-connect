@@ -21,7 +21,7 @@ export function getDiscoverSportTileClass(activityType: string): string {
     return "bg-[#ff375f]";
   if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf"))
     return "bg-[#5ac8fa]";
-  if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk"))
+  if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike"))
     return "bg-[#34c759]";
   return "bg-[#007AFF]";
 }

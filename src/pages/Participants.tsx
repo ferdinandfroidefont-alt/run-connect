@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Calendar, ChevronLeft, ChevronRight, Clock, Expand, Minimize2, Navigation, Search, Settings, Users } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, Expand, Minimize2, Navigation, Search, Users } from "lucide-react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
-import { MapIosColoredFab } from "@/components/map/MapIosColoredFab";
-import { NotificationCenter } from "@/components/NotificationCenter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -17,7 +15,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { Badge } from "@/components/ui/badge";
 import { ActivityIcon } from "@/lib/activityIcons";
-import { MainTopHeader } from "@/components/layout/MainTopHeader";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { setLiveShareOptIn } from "@/lib/liveTrackingStorage";
+import { haversineMeters, formatDistanceLabel } from "@/lib/geo";
+import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 
 type Participant = {
   id: string;
@@ -104,11 +108,11 @@ function createParticipantMarkerEl(avatar: string, active: boolean): HTMLDivElem
 export default function Participants() {
   const navigate = useNavigate();
   const { user, session: authSession } = useAuth();
+  const { unit } = useDistanceUnits();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("sessionId") ?? undefined;
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [mapReady, setMapReady] = useState(false);
-  const [peopleSearch, setPeopleSearch] = useState("");
   const [sessionsSearch, setSessionsSearch] = useState("");
   const [showLiveSessionsPanel, setShowLiveSessionsPanel] = useState(false);
   const [liveSessions, setLiveSessions] = useState<LiveSessionRow[]>([]);
@@ -122,10 +126,11 @@ export default function Participants() {
     userPosition,
     sessionAllowsLive,
     inLiveWindow,
-    isBroadcasting,
+    sharingOptIn,
   } = useSessionTracking(sessionId);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapFrameRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const userMarkerRef = useRef<Marker | null>(null);
   const rdvMarkerRef = useRef<Marker | null>(null);
@@ -451,11 +456,20 @@ export default function Participants() {
     };
   }, [showLiveSessionsPanel, authSession?.user?.id]);
 
-  const filteredParticipants = useMemo(() => {
-    const q = peopleSearch.trim().toLowerCase();
-    if (!q) return participants;
-    return participants.filter((p) => p.name.toLowerCase().includes(q));
-  }, [participants, peopleSearch]);
+  const otherParticipantsSorted = useMemo(() => {
+    const me = effectiveUserPosition;
+    const others = participants.filter((p) => p.id !== user?.id);
+    const withDist = others.map((p) => ({
+      participant: p,
+      distM: me ? haversineMeters(me.lat, me.lng, p.lat, p.lng) : Number.NaN,
+    }));
+    withDist.sort((a, b) => {
+      const da = Number.isFinite(a.distM) ? a.distM : Number.POSITIVE_INFINITY;
+      const db = Number.isFinite(b.distM) ? b.distM : Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+    return withDist;
+  }, [participants, user?.id, effectiveUserPosition]);
 
   const filteredLiveSessions = useMemo(() => {
     const now = Date.now();
@@ -485,174 +499,205 @@ export default function Participants() {
     });
   }, [participants]);
 
-  const banner = useMemo(() => {
-    const participantsCount = participants.length;
-    if (computedLiveState === "none") {
-      return {
-        tone: "bg-[#F2F2F7] border-[#E5E5EA] text-[#3A3A3C]",
-        title: "Aucune séance en cours",
-        subtitle: "",
-      };
+  const toggleMapFullscreen = useCallback(async () => {
+    const el = mapFrameRef.current;
+    if (!el) return;
+    try {
+      if (!document.fullscreenElement) {
+        await el.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      /* ignore */
     }
-    if (computedLiveState === "upcoming") {
-      return {
-        tone: "bg-[#FFF7D6] border-[#FFE28A] text-[#6A4A00]",
-        title: "Séance dans 25 min",
-        subtitle: `${participantsCount} participants inscrits`,
-      };
-    }
-    return {
-      tone: "bg-[#FFE5E5] border-[#FFB8B8] text-[#7A1212]",
-      title: `🔴 En direct • ${participantsCount} participants`,
-      subtitle: session
-        ? `${session.title || "Séance running"} • ${new Date(session.scheduled_at).toLocaleTimeString("fr-FR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}`
-        : "Séance running • 10:00 • 8 km",
-    };
-  }, [computedLiveState, participants.length, session]);
+  }, []);
+
+  useEffect(() => {
+    const onFs = () => setIsMapFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = mapContainerRef.current;
+    if (!map || !container || !mapReady) return;
+    const ro = new ResizeObserver(() => {
+      safeMapResize(map);
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [mapReady]);
 
   return (
-    <div className="fixed inset-0 bg-background">
-      <div className="absolute inset-0 z-0" style={{ isolation: "isolate" }}>
-        <div ref={mapContainerRef} className="h-full w-full bg-muted" />
-      </div>
-      {!mapReady ? <div className="pointer-events-none absolute inset-0 z-[2] bg-muted/60" aria-hidden /> : null}
-
-      <div className="absolute left-0 right-0 top-0 z-20 bg-white/95 backdrop-blur-md">
-        <MainTopHeader
-          title="Découvrir"
-          tabsAriaLabel="Navigation découvrir"
-          tabs={[
-            { id: "planning", label: "Planification", active: false, onClick: () => navigate("/") },
-            { id: "tracking", label: "Suivi", active: true },
-            { id: "routes", label: "Création itinéraire", active: false, onClick: () => navigate("/route-create") },
-          ]}
-          right={
-            <>
-              <div className="flex shrink-0 items-center justify-center">
-                <NotificationCenter />
-              </div>
+    <div className="relative flex h-[100dvh] min-h-0 min-w-0 flex-col overflow-hidden bg-secondary">
+      <IosFixedPageHeaderShell
+        className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden bg-secondary"
+        headerWrapperClassName="shrink-0"
+        contentScroll
+        scrollClassName="min-h-0 bg-secondary"
+        header={
+          <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
+            <IosPageHeaderBar
+              leadingBack={{ onClick: () => navigate("/"), label: "Retour" }}
+              title="Suivi"
+            />
+          </div>
+        }
+      >
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+          <div className="min-w-0 max-w-full space-y-3 px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 ios-shell:px-2.5">
+            <div
+              className="rounded-[14px] p-1 shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)]"
+              style={{ background: "hsl(var(--card))" }}
+            >
               <button
                 type="button"
-                className="flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] border border-[#E5E5EA] bg-white text-[#1A1A1A] shadow-none transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:text-foreground"
-                aria-label="Paramètres"
-                onClick={() => navigate("/profile/edit")}
+                onClick={() => setShowLiveSessionsPanel(true)}
+                className="min-w-0 w-full rounded-lg bg-background py-[10px] text-center text-[13px] font-semibold text-foreground shadow-[0_0_0_0.5px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)] transition-colors active:opacity-90 dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.2)] [-webkit-tap-highlight-color:transparent]"
               >
-                <Settings className="h-[20px] w-[20px]" />
+                Voir mes séances live
               </button>
-            </>
-          }
-        />
-      </div>
+            </div>
 
-      <div className="absolute left-0 right-0 top-[calc(var(--safe-area-top)+104px)] z-20 px-4">
-        <div
-          className={cn(
-            "rounded-2xl border px-4 py-3 shadow-[0_10px_24px_-20px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-            banner.tone
-          )}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold">{banner.title}</p>
-              {computedLiveState !== "none" && (
-                <p className="mt-0.5 truncate text-[13px] opacity-80">{banner.subtitle}</p>
+            <div
+              className={cn(
+                "rounded-[14px] border px-4 py-3 shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)]",
+                computedLiveState === "none" && "border-border/70 bg-card",
+                computedLiveState === "upcoming" && "border-[#FFE28A] bg-[#FFF7D6] text-[#6A4A00]",
+                computedLiveState === "live" && "border-[#FFB8B8] bg-[#FFE5E5] text-[#7A1212]"
               )}
+            >
               {computedLiveState === "none" && (
+                <p className="text-[15px] font-medium leading-snug text-foreground">
+                  Vous ne participez à aucune séance live actuellement.
+                </p>
+              )}
+              {computedLiveState === "upcoming" && session && (
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[15px] font-semibold leading-snug">
+                    Séance « {session.title || "Séance"} »
+                  </p>
+                  <p className="text-[13px] opacity-90">
+                    Le suivi en direct sera disponible à{" "}
+                    {new Date(session.scheduled_at).toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    .
+                  </p>
+                </div>
+              )}
+              {computedLiveState === "live" && session && (
+                <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-[15px] font-semibold leading-snug">
+                      En direct — {session.title || "Séance"}
+                    </p>
+                    <p className="text-[13px] opacity-90">
+                      Partagez votre position pour apparaître sur la carte des autres participants.
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+                    <div className="flex items-center gap-2 rounded-xl bg-background/80 px-2 py-1.5">
+                      <span className="max-w-[140px] truncate text-[13px] font-medium text-foreground">
+                        Partager ma position
+                      </span>
+                      <Switch
+                        checked={sharingOptIn}
+                        onCheckedChange={(on) => {
+                          if (sessionId) setLiveShareOptIn(sessionId, on);
+                        }}
+                        disabled={!sessionId}
+                        aria-label="Partager ma position en direct"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-9 rounded-full px-3 text-[12px] font-semibold"
+                      onClick={() => sessionId && navigate(`/session-tracking/${sessionId}`)}
+                    >
+                      Carte pleine
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              ref={mapFrameRef}
+              className="relative h-[420px] w-full min-w-0 overflow-hidden rounded-[18px] bg-card shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.25)]"
+              style={{ isolation: "isolate" }}
+            >
+              <div ref={mapContainerRef} className="absolute inset-0 z-[1] min-h-0 w-full bg-muted" />
+              {!mapReady ? (
+                <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center bg-secondary/90" aria-hidden>
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : null}
+              <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowLiveSessionsPanel(true)}
-                  className="mt-1 text-[13px] font-semibold text-[#0A84FF]"
+                  onClick={() => fitDefaultView()}
+                  className="map-overlay-fab-btn"
+                  aria-label="Recentrer sur ma position"
                 >
-                  Voir mes séances live
+                  <Navigation strokeWidth={2} className="h-[17px] w-[17px]" aria-hidden />
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => void toggleMapFullscreen()}
+                  className="map-overlay-fab-btn"
+                  aria-label={isMapFullscreen ? "Quitter le plein écran" : "Plein écran"}
+                >
+                  {isMapFullscreen ? (
+                    <Minimize2 strokeWidth={2} className="h-[17px] w-[17px]" aria-hidden />
+                  ) : (
+                    <Expand strokeWidth={2} className="h-[17px] w-[17px]" aria-hidden />
+                  )}
+                </button>
+              </div>
             </div>
+
             {computedLiveState === "live" && (
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 rounded-full bg-white/90 px-3 text-[12px] font-semibold text-[#0A84FF]"
-                onClick={() => sessionId && navigate(`/session-tracking/${sessionId}`)}
-              >
-                Détails
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute bottom-[calc(190px+max(14px,env(safe-area-inset-bottom)))] right-[max(1rem,env(safe-area-inset-right))] z-30">
-        <div className="pointer-events-auto flex flex-col overflow-hidden rounded-[16px] border border-black/[0.08] bg-white/88 shadow-[0_12px_30px_-16px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-          <MapIosColoredFab
-            tone="gray"
-            title="Recentrer"
-            onClick={fitDefaultView}
-            className="h-11 w-11 rounded-none bg-transparent shadow-none"
-          >
-            <Navigation className="h-[17px] w-[17px] text-foreground" />
-          </MapIosColoredFab>
-          <div className="mx-2 h-px bg-border/80" />
-          <MapIosColoredFab
-            tone="gray"
-            title={isFullscreen ? "Quitter plein écran" : "Plein écran"}
-            onClick={() => setIsFullscreen((v) => !v)}
-            className="h-11 w-11 rounded-none bg-transparent shadow-none"
-          >
-            {isFullscreen ? (
-              <Minimize2 className="h-[17px] w-[17px] text-foreground" />
-            ) : (
-              <Expand className="h-[17px] w-[17px] text-foreground" />
-            )}
-          </MapIosColoredFab>
-        </div>
-      </div>
-
-      {computedLiveState === "live" && (
-        <div className="absolute bottom-0 left-0 right-0 z-30 px-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-          <div className="rounded-[18px] border border-border/60 bg-card/94 px-3 py-3 shadow-[0_-10px_28px_rgba(0,0,0,0.1)] backdrop-blur-2xl">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-[14px] font-semibold text-foreground">
-                {participants.length} personne{participants.length > 1 ? "s" : ""} en live tracking
-              </p>
-              <Users className="h-4 w-4 text-primary" />
-            </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={peopleSearch}
-                onChange={(e) => setPeopleSearch(e.target.value)}
-                placeholder="Rechercher une personne en live"
-                className="h-10 rounded-xl border-border/70 bg-background pl-9"
-              />
-            </div>
-            {peopleSearch.trim().length > 0 && (
-              <div className="mt-2 max-h-28 space-y-1 overflow-y-auto">
-                {filteredParticipants.length === 0 ? (
-                  <p className="px-1 py-1 text-[12px] text-muted-foreground">Aucun participant trouvé.</p>
+              <div className="space-y-2">
+                <p className="px-0.5 text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  En direct près de vous
+                </p>
+                {otherParticipantsSorted.length === 0 ? (
+                  <div className="rounded-[14px] border border-border/60 bg-card px-4 py-4 text-center text-[14px] text-muted-foreground">
+                    Aucun autre participant en direct pour le moment.
+                  </div>
                 ) : (
-                  filteredParticipants.slice(0, 8).map((p) => (
+                  otherParticipantsSorted.map(({ participant: p, distM }) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => centerOnParticipant(p.id)}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left active:bg-secondary"
+                      className="ios-list-row flex min-w-0 w-full items-center gap-3 border border-white px-4 py-3 text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] active:bg-secondary dark:border-white/10 dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)] [-webkit-tap-highlight-color:transparent]"
                     >
-                      <Avatar className="h-7 w-7">
+                      <Avatar className="h-11 w-11 shrink-0 border border-border/40">
                         <AvatarImage src={p.avatar ?? undefined} />
-                        <AvatarFallback>{p.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="text-sm font-semibold">{p.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <span className="truncate text-[13px] text-foreground">{p.name}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[17px] font-medium text-foreground">{p.name}</p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {Number.isFinite(distM) ? `À ${formatDistanceLabel(distM, unit)} de vous` : "Distance indisponible"}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/45" aria-hidden />
                     </button>
                   ))
                 )}
               </div>
             )}
           </div>
-        </div>
-      )}
+        </ScrollArea>
+      </IosFixedPageHeaderShell>
 
       {showLiveSessionsPanel && (
         <div className="absolute inset-0 z-50 bg-background">

@@ -29,6 +29,10 @@ interface PlanningHeaderProps {
   coachLandingBrand?: boolean;
   /** Maquette Mon plan : pas de cloche ni de bouton paramètres dans la barre (menu via drawer ailleurs). */
   hideDrawerActions?: boolean;
+  /** Photo du club : même action que dans Messages (fiche club). Remplace le jeton RC quand défini. */
+  clubAvatarUrl?: string | null;
+  clubName?: string | null;
+  onPressClubAvatar?: () => void;
 }
 
 export function PlanningHeader({
@@ -38,8 +42,13 @@ export function PlanningHeader({
   tabs,
   coachLandingBrand,
   hideDrawerActions,
+  clubAvatarUrl,
+  clubName,
+  onPressClubAvatar,
 }: PlanningHeaderProps) {
   const showBellAndSettings = !coachLandingBrand && !hideDrawerActions;
+  const showClubMark = Boolean(onPressClubAvatar && (clubAvatarUrl || (clubName && clubName.trim())));
+  const clubInitial = (clubName || "Club").trim().slice(0, 1).toUpperCase() || "C";
   return (
     <MainTopHeader
       title={title}
@@ -48,7 +57,22 @@ export function PlanningHeader({
       tabsAriaLabel={`Navigation ${title}`}
       right={
         <>
-          <RunConnectHeaderMark />
+          {showClubMark ? (
+            <button
+              type="button"
+              onClick={onPressClubAvatar}
+              className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary active:opacity-80"
+              aria-label="Fiche du club"
+            >
+              {clubAvatarUrl ? (
+                <img src={clubAvatarUrl} alt={clubName || "Club"} className="h-full w-full object-cover" />
+              ) : (
+                clubInitial
+              )}
+            </button>
+          ) : (
+            <RunConnectHeaderMark />
+          )}
           {showBellAndSettings ? (
             <>
               <div className="flex shrink-0 items-center justify-center">

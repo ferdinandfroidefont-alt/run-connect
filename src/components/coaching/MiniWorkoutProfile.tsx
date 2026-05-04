@@ -151,7 +151,7 @@ export function MiniWorkoutProfile({
         <div
           className={cn(
             "flex min-h-0 w-full flex-1 flex-col justify-end",
-            "pt-1.5 pb-2.5",
+            "py-0",
             variant === "premiumCompact" ? "px-0.5" : "px-2"
           )}
           onPointerDown={handleBackgroundPointerDown}

@@ -13,10 +13,10 @@ import {
   getISODay,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronDown, ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
-import { getActivitySolidBgClass } from "@/lib/activityIcons";
+import { getActivityLabel, getActivitySolidBgClass } from "@/lib/activityIcons";
+import { getActivityEmoji, getDiscoverSportTileClass } from "@/lib/discoverSessionVisual";
 
 export type SessionCalendarSession = {
   id: string;
@@ -349,37 +349,47 @@ export const SessionCalendarView = ({
 
               const rowInner = (
                 <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSessionClick(session)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSessionClick(session);
-                    }
-                  }}
                   className={cn(
-                    "flex cursor-pointer items-center gap-3 bg-card px-4 py-[11px] text-left transition-colors active:bg-secondary/60",
+                    "flex w-full items-center gap-3 bg-card/80 px-3 py-2.5 text-left transition-colors active:bg-secondary/60",
                     !isLastRow && "border-b-[0.5px] border-border"
                   )}
                 >
-                  <ActivityIcon
-                    activityType={session.activity_type}
-                    size="md"
-                    className="!h-11 !w-11 shrink-0 !rounded-[10px] [&>svg]:!h-[22px] [&>svg]:!w-[22px]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[16px] font-semibold leading-[1.15] tracking-[-0.4px] text-foreground">
-                      {session.title}
-                    </p>
-                    <p className="mt-px truncate text-[13px] text-muted-foreground">
-                      {timeLabel} ·{" "}
-                      {getActivityLabel(session.activity_type)}
-                      {session.location_name ? ` · ${session.location_name}` : ""} {friendsLabel}
-                      {org ? ` · ${org.display_name || org.username}` : ""}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-[15px] w-[15px] shrink-0 text-muted-foreground/55" aria-hidden />
+                  <button
+                    type="button"
+                    onClick={() => onSessionClick(session)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left active:opacity-80"
+                  >
+                    <div
+                      className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[22px] leading-none text-white shadow-sm",
+                        getDiscoverSportTileClass(session.activity_type)
+                      )}
+                      aria-hidden
+                    >
+                      {getActivityEmoji(session.activity_type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-[16px] font-semibold leading-tight tracking-[-0.4px] text-foreground">
+                        {session.title}
+                      </p>
+                      <p className="mt-px truncate text-[13px] text-muted-foreground">
+                        {timeLabel} ·{" "}
+                        {getActivityLabel(session.activity_type)}
+                        {session.location_name ? ` · ${session.location_name}` : ""} {friendsLabel}
+                        {org ? ` · ${org.display_name || org.username}` : ""}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSessionClick(session);
+                    }}
+                    className="shrink-0 rounded-full bg-[rgba(118,118,128,0.12)] px-3.5 py-1.5 text-[13px] font-semibold tracking-[-0.2px] text-primary active:opacity-70 dark:bg-white/10"
+                  >
+                    Ouvrir
+                  </button>
                 </div>
               );
 

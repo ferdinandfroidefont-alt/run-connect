@@ -930,21 +930,21 @@ html, body {
   }
   .handoff-coaching-fab {
     display: flex;
-    height: 50px;
+    height: 42px;
     width: 100%;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     border: none;
-    border-radius: 14px;
+    border-radius: 12px;
     background: hsl(var(--primary));
     color: #fff;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.25px;
     font-family: inherit;
     cursor: pointer;
-    box-shadow: 0 8px 20px -4px rgba(0, 102, 204, 0.45);
+    box-shadow: 0 6px 16px -4px rgba(0, 102, 204, 0.4);
     -webkit-tap-highlight-color: transparent;
   }
   .handoff-coaching-fab:active {

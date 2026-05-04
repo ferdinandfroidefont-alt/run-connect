@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    /** Évite deux copies de React (erreur runtime « Cannot read properties of null (reading 'useContext') »). */
+    dedupe: ["react", "react-dom"],
   },
   build: {
     rollupOptions: {
@@ -34,7 +36,10 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("framer-motion")) return "motion";
           if (id.includes("@radix-ui")) return "radix";
           if (id.includes("lucide-react")) return "icons";
-          if (id.includes("react-dom") || id.includes("/react/")) return "react-vendor";
+          // Uniquement le cœur React — pas `id.includes("/react/")` (attrape @emotion/react, etc. → double React).
+          if (/\/node_modules\/react\//.test(id)) return "react-vendor";
+          if (/\/node_modules\/react-dom\//.test(id)) return "react-vendor";
+          if (/\/node_modules\/scheduler\//.test(id)) return "react-vendor";
         },
       },
     },

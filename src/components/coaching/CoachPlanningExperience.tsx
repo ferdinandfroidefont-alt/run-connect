@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { addDays, addWeeks, format, getISOWeek, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -77,6 +86,10 @@ import { formatCalendarDistance, isExplicitRestDay, toCalendarSummarySport } fro
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
+
+const ClubProfileDialog = lazy(() =>
+  import("@/components/ClubProfileDialog").then((m) => ({ default: m.ClubProfileDialog }))
+);
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -942,7 +955,13 @@ export function CoachPlanningExperience() {
   const [clubAvatarUrl, setClubAvatarUrl] = useState<string | null>(null);
   const [nextClubEvent, setNextClubEvent] = useState<ClubMaquetteNextEvent | null>(null);
   const [trackingSelectedAthleteId, setTrackingSelectedAthleteId] = useState<string | null>(null);
+  /** Fiche athlète ouverte depuis la landing planification : le retour renvoie vers Planification. */
+  const [trackingDetailFromPlanification, setTrackingDetailFromPlanification] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [clubProfileOpen, setClubProfileOpen] = useState(false);
+  const [clubProfileNotifMuted, setClubProfileNotifMuted] = useState(false);
+  const [clubConversationCreatedAt, setClubConversationCreatedAt] = useState("");
+  const [coachClubsReloadToken, setCoachClubsReloadToken] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenuKey, setActiveMenuKey] = useState<CoachMenuKey>("planning");
   const [showExitDraftDialog, setShowExitDraftDialog] = useState(false);
@@ -1057,13 +1076,17 @@ export function CoachPlanningExperience() {
       }));
       setIsCoachMode(isCoach);
       setClubs(nextClubs);
-      setActiveClubId((prev) => prev ?? nextClubs[0]?.id ?? null);
+      setActiveClubId((prev) => {
+        const ids = nextClubs.map((c) => c.id);
+        if (prev && ids.includes(prev)) return prev;
+        return nextClubs[0]?.id ?? null;
+      });
     };
     void loadCoachClubs();
     return () => {
       ignore = true;
     };
-  }, [user]);
+  }, [user, coachClubsReloadToken]);
 
   useEffect(() => {
     if (!activeClubId) return;
@@ -1135,7 +1158,7 @@ export function CoachPlanningExperience() {
       const [{ data: clubRow }, { data: groupRows }, { data: gmRows }, { data: invitationRows }, nextRes] = await Promise.all([
         supabase
           .from("conversations")
-          .select("group_name, group_avatar_url, location, group_description, club_code, created_by")
+          .select("group_name, group_avatar_url, location, group_description, club_code, created_by, created_at")
           .eq("id", activeClubId)
           .maybeSingle(),
         supabase.from("club_groups").select("id, name").eq("club_id", activeClubId).order("name", { ascending: true }),
@@ -1227,6 +1250,7 @@ export function CoachPlanningExperience() {
       setClubCode(clubRow?.club_code || null);
       setClubCreatedBy(clubRow?.created_by || null);
       setClubAvatarUrl(clubRow?.group_avatar_url || null);
+      setClubConversationCreatedAt(clubRow?.created_at || "");
       const nextSess = nextRes.data;
       if (nextSess?.scheduled_at) {
         setNextClubEvent({
@@ -2348,30 +2372,51 @@ export function CoachPlanningExperience() {
     [draft.blocks.length, draft.title]
   );
 
-  const goToCoachSection = useCallback(
-    (key: CoachMenuKey) => {
-      if (key !== "planning") setCoachWeekProgrammerOpen(false);
-      setActiveMenuKey(key);
-      setDrawerOpen(false);
-      if (key === "planning" || key === "my-plan") {
-        setViewAsAthlete(key === "my-plan");
-        setCoachingTab("planning");
-        return;
-      }
-      if (key === "messages") {
-        navigate("/messages");
-        return;
-      }
-      if (key === "settings") {
-        navigate("/profile/edit");
-        return;
-      }
-      if (key === "tracking") {
-        setTrackingSelectedAthleteId(null);
-      }
+  const goToCoachSection = useCallback((key: CoachMenuKey, opts?: { trackingAthleteId?: string | null }) => {
+    if (key !== "planning") setCoachWeekProgrammerOpen(false);
+    setActiveMenuKey(key);
+    setDrawerOpen(false);
+    if (key === "planning" || key === "my-plan") {
+      setViewAsAthlete(key === "my-plan");
+      setTrackingDetailFromPlanification(false);
       setCoachingTab("planning");
+      return;
+    }
+    if (key === "messages") {
+      setTrackingDetailFromPlanification(false);
+      navigate("/messages");
+      return;
+    }
+    if (key === "settings") {
+      setTrackingDetailFromPlanification(false);
+      navigate("/profile/edit");
+      return;
+    }
+    if (key === "tracking") {
+      const athleteId = opts?.trackingAthleteId ?? null;
+      setTrackingSelectedAthleteId(athleteId);
+      setTrackingDetailFromPlanification(Boolean(athleteId));
+      setCoachingTab("planning");
+      return;
+    }
+    setTrackingDetailFromPlanification(false);
+    setCoachingTab("planning");
+  }, [navigate]);
+
+  const handleOpenPlanForAthleteFromTracking = useCallback(
+    (athleteId: string, _athleteName: string, _groupId?: string, weekDate?: Date) => {
+      setTrackingSelectedAthleteId(null);
+      setTrackingDetailFromPlanification(false);
+      setActiveGroupId(undefined);
+      setActiveAthleteId(athleteId);
+      setCoachWeekProgrammerOpen(true);
+      setActiveMenuKey("planning");
+      setCoachingTab("planning");
+      if (weekDate) {
+        setWeekAnchor(startOfWeek(weekDate, { weekStartsOn: 1 }));
+      }
     },
-    [navigate]
+    []
   );
 
   useEffect(() => {
@@ -2383,10 +2428,23 @@ export function CoachPlanningExperience() {
     navigate(location.pathname, { replace: true, state: {} });
   }, [location.state, location.pathname, user, navigate, goToCoachSection]);
 
-  const openClubSettingsFromDrawerAvatar = useCallback(() => {
+  useEffect(() => {
+    if (!user) return;
+    let ignore = false;
+    void (async () => {
+      const { data } = await supabase.from("profiles").select("notif_message").eq("user_id", user.id).maybeSingle();
+      if (ignore) return;
+      setClubProfileNotifMuted(data?.notif_message === false);
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [user]);
+
+  const openClubProfileSheet = useCallback(() => {
     if (!activeClubId) return;
-    goToCoachSection("club");
-  }, [activeClubId, goToCoachSection]);
+    setClubProfileOpen(true);
+  }, [activeClubId]);
 
   const handleDrawerSelect = (key: CoachMenuKey) => {
     // Athlète sans rôle coach : tous les items "coach" déclenchent une popup d'invitation à créer un club.
@@ -2527,7 +2585,23 @@ export function CoachPlanningExperience() {
     activeMenuKey === "planning" && !effectiveAthleteMode && !activeAthleteId && !activeGroupId && !coachWeekProgrammerOpen;
   const weekPlannerMode =
     activeMenuKey === "planning" && !effectiveAthleteMode && (!!activeAthleteId || !!activeGroupId || coachWeekProgrammerOpen);
-  const coachingHeaderTitle = !isCoachMode || effectiveAthleteMode ? "Mon plan" : "Planification";
+  const coachingHeaderTitle = useMemo(() => {
+    if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
+    switch (activeMenuKey) {
+      case "tracking":
+        return "Suivi athlète";
+      case "dashboard":
+        return "Tableau de bord";
+      case "templates":
+        return "Modèles";
+      case "groups":
+        return "Brouillons";
+      case "club":
+        return "Club";
+      default:
+        return "Planification";
+    }
+  }, [activeMenuKey, effectiveAthleteMode, isCoachMode]);
 
   const clearWeekPlannerTarget = useCallback(() => {
     setActiveAthleteId(undefined);
@@ -2884,13 +2958,20 @@ export function CoachPlanningExperience() {
                 title={coachingHeaderTitle}
                 coachLandingBrand={showCoachLanding}
                 hideDrawerActions={coachingHeaderTitle === "Mon plan"}
+                clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
+                clubName={activeClubId ? activeClubName : undefined}
+                onPressClubAvatar={activeClubId ? openClubProfileSheet : undefined}
               />
             )
           }
-          scrollClassName={showCoachLanding || weekPlannerMode || activeMenuKey === "club" ? "apple-grouped-bg" : "bg-white"}
+          scrollClassName={
+            showCoachLanding || weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking"
+              ? "apple-grouped-bg"
+              : "bg-white"
+          }
           footer={null}
         >
-          <div className={cn("space-y-0", activeMenuKey === "planning" ? "pb-0" : "pb-6")}>
+          <div className={cn("space-y-0", activeMenuKey === "planning" || activeMenuKey === "tracking" ? "pb-0" : "pb-6")}>
             {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") ? (
               <CoachingRolePill
                 active={effectiveAthleteMode ? "athlete" : "coach"}
@@ -3068,9 +3149,7 @@ export function CoachPlanningExperience() {
                 monthLine={landingMonthLine}
                 athletes={landingAthleteCards}
                 onSelectAthlete={(id) => {
-                  setActiveAthleteId(id);
-                  setActiveGroupId(undefined);
-                  setCoachWeekProgrammerOpen(false);
+                  goToCoachSection("tracking", { trackingAthleteId: id });
                 }}
                 onSeeAllAthletes={
                   athletes.length > 6
@@ -3237,6 +3316,15 @@ export function CoachPlanningExperience() {
                   onClose={() => undefined}
                   selectedAthleteId={trackingSelectedAthleteId}
                   onSelectAthlete={setTrackingSelectedAthleteId}
+                  athleteDetailBackLabel={trackingDetailFromPlanification ? "Planification" : "Athlètes"}
+                  onAthleteDetailBack={() => {
+                    setTrackingSelectedAthleteId(null);
+                    if (trackingDetailFromPlanification) {
+                      setActiveMenuKey("planning");
+                      setTrackingDetailFromPlanification(false);
+                    }
+                  }}
+                  onOpenPlanForAthlete={handleOpenPlanForAthleteFromTracking}
                 />
               ) : (
                 <div className="border-b border-border bg-secondary/30 px-4 py-6">
@@ -3329,8 +3417,47 @@ export function CoachPlanningExperience() {
         userMode={effectiveAthleteMode ? "athlete" : "coach"}
         otherClubsCount={Math.max(clubs.length - 1, 0)}
         onPressClubSwitcher={rotateActiveClub}
-        onPressClubAvatar={openClubSettingsFromDrawerAvatar}
+        onPressClubAvatar={openClubProfileSheet}
       />
+
+      <Suspense fallback={null}>
+        <ClubProfileDialog
+          isOpen={clubProfileOpen}
+          onClose={() => setClubProfileOpen(false)}
+          conversationId={activeClubId || ""}
+          groupName={activeClubName || "Club"}
+          groupDescription={clubDescription}
+          groupAvatarUrl={clubAvatarUrl}
+          isAdmin={clubCreatedBy === user?.id}
+          clubCode={clubCode || ""}
+          createdBy={clubCreatedBy || ""}
+          createdAt={clubConversationCreatedAt}
+          isClub={Boolean(clubCode)}
+          isMuted={clubProfileNotifMuted}
+          onToggleMute={() => {
+            const newMuted = !clubProfileNotifMuted;
+            setClubProfileNotifMuted(newMuted);
+            if (user) {
+              void supabase.from("profiles").update({ notif_message: !newMuted }).eq("user_id", user.id);
+            }
+          }}
+          groupsCount={clubGroupsAdmin.length}
+          dismissBackLabel="Coaching"
+          onEditClub={() => {
+            setClubProfileOpen(false);
+            void editClubInfo();
+          }}
+          onClubLeftOrDeleted={() => {
+            setClubProfileOpen(false);
+            setCoachClubsReloadToken((t) => t + 1);
+          }}
+          onOpenManageClubInCoaching={() => {
+            if (!activeClubId || !clubCode) return;
+            setClubProfileOpen(false);
+            goToCoachSection("club");
+          }}
+        />
+      </Suspense>
 
       <AlertDialog open={showCoachRequiredDialog} onOpenChange={setShowCoachRequiredDialog}>
         <AlertDialogContent>
@@ -3552,7 +3679,7 @@ export function CoachPlanningExperience() {
                     <div className="min-w-0">
                       <div className="rounded-[18px] border border-border/65 bg-card px-2 py-2">
                         <div className="flex min-w-0 gap-2">
-                          <div className="flex min-h-[200px] shrink-0 flex-col justify-between py-1 text-[9px] font-semibold text-muted-foreground/80">
+                          <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-between py-0 text-[9px] font-semibold text-muted-foreground/80">
                             <span className="text-[#BF5AF2]">Z6</span>
                             <span className="text-[#FF453A]">Z5</span>
                             <span className="text-[#FF9F0A]">Z4</span>
@@ -3596,7 +3723,7 @@ export function CoachPlanningExperience() {
                                 const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
                                 if (block) setSelectedBlockId(block.id);
                               }}
-                              className="relative z-[2] h-[200px] w-full border-l border-b border-border/70 bg-white/70"
+                              className="relative z-[2] h-[220px] w-full border-l border-b border-border/70 bg-white/70"
                             />
                             {schemaDropRatio != null ? (
                               <div

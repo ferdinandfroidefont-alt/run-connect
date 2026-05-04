@@ -32,18 +32,22 @@ export function MainTopHeader({
   // - SF Pro Display 34px / bold / -0.5px tracking (apple-navbar-large)
   // - Compact bar 44h pour leading/trailing
   // - Tabs underline → bord 0.5px hairline iOS
+  const showCompactBar = Boolean(left || right);
+
   return (
     <div className={cn("shrink-0 pt-[var(--safe-area-top)]", className)}>
       {/* Compact bar (trailing actions) */}
-      <div
-        className={cn(
-          "relative flex h-11 shrink-0 items-center gap-2 px-4",
-          left ? "justify-between" : "justify-end"
-        )}
-      >
-        {left ? <div className="flex min-w-0 flex-1 items-center justify-start">{left}</div> : null}
-        {right ? <div className="flex shrink-0 items-center gap-4">{right}</div> : null}
-      </div>
+      {showCompactBar ? (
+        <div
+          className={cn(
+            "relative flex h-11 shrink-0 items-center gap-2 px-4",
+            left ? "justify-between" : "justify-end"
+          )}
+        >
+          {left ? <div className="flex min-w-0 flex-1 items-center justify-start">{left}</div> : null}
+          {right ? <div className="flex shrink-0 items-center gap-4">{right}</div> : null}
+        </div>
+      ) : null}
 
       {/* Large title — Apple iOS Settings.app/Mail.app spec : marginTop 6 / marginBottom 6 */}
       <div className="px-4 pt-1.5 pb-1.5">

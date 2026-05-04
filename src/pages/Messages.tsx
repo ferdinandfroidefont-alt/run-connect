@@ -317,6 +317,16 @@ const Messages = () => {
     }
   }, [user]);
 
+  /** Même flux que l’entrée « Créer un club » : formulaire club / groupe conversation. */
+  const openCreateClubTab = useCallback(() => {
+    setActiveRootTab("create-club");
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "create-club");
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
   useEffect(() => {
     if (!user?.id) return;
     void supabase
@@ -2794,14 +2804,23 @@ const Messages = () => {
           >
             {threadSearchOpen && (
               <div className="shrink-0 border-b border-[#E2DBD0] bg-white px-4 py-2 dark:border-border dark:bg-card">
-                <div className="flex items-center gap-ios-2">
-                  <Input
-                    value={threadSearch}
-                    onChange={(e) => setThreadSearch(e.target.value)}
-                    placeholder="Rechercher dans la conversation…"
-                    className="h-9 flex-1 rounded-ios-md border-border/60 bg-secondary text-ios-subheadline"
-                    autoFocus
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="apple-search min-h-9 min-w-0 flex-1 gap-1.5 px-2 py-0">
+                    <Search
+                      className="pointer-events-none h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                      strokeWidth={1.8}
+                      aria-hidden
+                    />
+                    <input
+                      value={threadSearch}
+                      onChange={(e) => setThreadSearch(e.target.value)}
+                      placeholder="Rechercher dans la conversation…"
+                      className="min-h-9 min-w-0 flex-1 border-0 bg-transparent py-1 text-[17px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
+                      autoFocus
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                    />
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
@@ -3426,51 +3445,52 @@ const Messages = () => {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-primary text-primary-foreground shadow-none transition-[transform] duration-200 active:scale-95"
-                        aria-label="Nouveau message ou club"
+                        className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md text-foreground active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                        aria-label="Nouvelle conversation, club ou groupe"
                       >
-                        <Plus className="h-5 w-5" strokeWidth={2.2} />
+                        <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuContent
+                      align="end"
+                      className="z-[130] w-56"
+                    >
                       <DropdownMenuItem
-                        onClick={() => setShowNewConversation(true)}
                         className="gap-2"
+                        onSelect={() => {
+                          setShowNewConversation(true);
+                        }}
                       >
                         <MessageCircle className="h-4 w-4" />
                         Nouvelle conversation
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setActiveRootTab("create-club");
-                          setSearchParams((prev) => {
-                            const next = new URLSearchParams(prev);
-                            next.set("tab", "create-club");
-                            return next;
-                          }, { replace: true });
-                        }}
-                        className="gap-2"
-                      >
+                      <DropdownMenuItem className="gap-2" onSelect={openCreateClubTab}>
                         <Users className="h-4 w-4" />
                         Créer un club
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/search")} className="gap-2">
-                        <Search className="h-4 w-4" />
-                        Recherche
+                      <DropdownMenuItem className="gap-2" onSelect={openCreateClubTab}>
+                        <UserPlus className="h-4 w-4" />
+                        Créer un groupe
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
 
-                <div className="mt-3.5 px-5">
-                  <div className="flex h-11 items-center gap-2 rounded-[22px] border border-border bg-card px-3.5 shadow-none">
-                    <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <Input
+                <div className="mt-3.5 px-5 py-2">
+                  <div className="apple-search min-h-9 w-full gap-1.5 px-2 py-0">
+                    <Search
+                      className="pointer-events-none h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                      strokeWidth={1.8}
+                      aria-hidden
+                    />
+                    <input
                       value={conversationSearch}
                       onChange={(e) => setConversationSearch(e.target.value)}
                       placeholder="Rechercher amis · clubs · groupes"
-                      className="h-9 min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="min-h-9 min-w-0 flex-1 border-0 bg-transparent py-1 text-[17px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
                       aria-label="Rechercher une conversation"
+                      autoCorrect="off"
+                      autoCapitalize="none"
                     />
                   </div>
                 </div>

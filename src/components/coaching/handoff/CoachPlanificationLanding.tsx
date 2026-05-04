@@ -245,9 +245,9 @@ export function CoachPlanificationLanding({
         </Group>
       </div>
 
-      <div className="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px)-10px)] left-0 right-0 z-40 px-4">
+      <div className="pointer-events-none fixed bottom-[calc(var(--layout-bottom-inset)+6px)] left-0 right-0 z-40 px-4">
         <button type="button" onClick={onCreateSession} className="pointer-events-auto handoff-coaching-fab">
-          <Plus className="h-3.5 w-3.5 stroke-[2.4px]" stroke="currentColor" aria-hidden />
+          <Plus className="h-3 w-3 stroke-[2.4px]" stroke="currentColor" aria-hidden />
           Créer une séance
         </button>
       </div>

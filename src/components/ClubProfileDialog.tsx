@@ -76,6 +76,8 @@ interface ClubProfileDialogProps {
   onClubLeftOrDeleted?: () => void;
   /** Ouvre l’onglet Coaching « Gérer le club » pour ce conversation id (coachs / admins). */
   onOpenManageClubInCoaching?: () => void;
+  /** Libellé du bouton retour (défaut : Messages). */
+  dismissBackLabel?: string;
 }
 
 export const ClubProfileDialog = ({
@@ -96,6 +98,7 @@ export const ClubProfileDialog = ({
   onOpenManageClubInCoaching,
   groupsCount = 0,
   onEditClub,
+  dismissBackLabel = "Messages",
 }: ClubProfileDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -350,7 +353,7 @@ export const ClubProfileDialog = ({
         <DialogContent fullScreen hideCloseButton className="flex flex-col gap-0 bg-background p-0">
           <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-[hsl(var(--muted))] pt-[max(0.75rem,var(--safe-area-top))]">
             <IosPageHeaderBar
-              leadingBack={{ onClick: onClose, label: "Messages" }}
+              leadingBack={{ onClick: onClose, label: dismissBackLabel }}
               title=""
               titleClassName="sr-only"
               right={

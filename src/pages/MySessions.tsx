@@ -16,7 +16,9 @@ import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
-import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
+import { getActivityLabel } from '@/lib/activityIcons';
+import { getActivityEmoji, getDiscoverSportTileClass } from '@/lib/discoverSessionVisual';
+import { cn } from '@/lib/utils';
 
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
@@ -666,7 +668,15 @@ export default function MySessions() {
             <IOSListGroup>
               <div className="p-4">
                 <div className="flex items-start gap-3">
-                  <ActivityIcon activityType={selectedSession.activity_type} size="lg" />
+                  <div
+                    className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[26px] leading-none text-white shadow-sm",
+                      getDiscoverSportTileClass(selectedSession.activity_type),
+                    )}
+                    aria-hidden
+                  >
+                    {getActivityEmoji(selectedSession.activity_type)}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       {isViewingJoinedSession ? (
@@ -971,33 +981,7 @@ export default function MySessions() {
       >
         {/* Maquette 13 — en-tête large title, fond grouped (pas de carte séparée) */}
         <div className="z-50 shrink-0 apple-grouped-bg">
-          <MainTopHeader
-            title="Séances"
-            className="bg-transparent"
-            left={
-              <button
-                type="button"
-                onClick={() => {
-                  const t = new Date();
-                  setCalendarMonth(startOfMonth(t));
-                  setSelectedDate(t);
-                }}
-                className="tap-highlight-none py-1 text-[17px] font-normal leading-none text-primary active:opacity-70"
-              >
-                Calendriers
-              </button>
-            }
-            right={
-              <button
-                type="button"
-                onClick={() => openCreateSession()}
-                className="tap-highlight-none -mr-1 flex h-10 w-10 min-w-[44px] items-center justify-center rounded-full text-primary active:opacity-70"
-                aria-label="Créer une séance"
-              >
-                <Plus className="h-7 w-7" strokeWidth={2.5} />
-              </button>
-            }
-          />
+          <MainTopHeader title="Séances" className="bg-transparent" />
         </div>
 
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg">
