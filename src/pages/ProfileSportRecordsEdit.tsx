@@ -13,12 +13,16 @@ import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsD
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import { kmToMiles, milesToKm } from "@/lib/distanceUnits";
 import { cn } from "@/lib/utils";
+import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 
 /** Maquette 21 · RunConnect accent & surfaces */
 const RC = {
-  fire: "#FF4D1A",
-  surface: "#FAFAF7",
-  prBadgeBg: "#FFF6F2",
+  primary: "#0066cc",
+  canvas: "#ffffff",
+  parchment: "#f5f5f7",
+  ink: "#1d1d1f",
+  muted: "#7a7a7a",
+  hairline: "#e0e0e0",
 } as const;
 
 const DISTANCE_CHIPS: Array<{ id: string; label: string; km: number | null }> = [
@@ -31,10 +35,10 @@ const DISTANCE_CHIPS: Array<{ id: string; label: string; km: number | null }> = 
 ];
 
 const SPORT_EMOJI: Partial<Record<ProfileSportRecordKey, string>> & Record<string, string> = {
-  running: "🏃",
-  cycling: "🚴",
-  swimming: "🏊",
-  walking: "🥾",
+  running: getActivityEmoji("running"),
+  cycling: getActivityEmoji("cycling"),
+  swimming: getActivityEmoji("swimming"),
+  walking: getActivityEmoji("walking"),
   triathlon: "🔱",
   other: "➕",
 };
@@ -79,6 +83,13 @@ function speedKmhFromDuration(distanceKm: number, durationSec: number): number {
 
 function durationSecFromSpeed(distanceKm: number, kmh: number): number {
   return Math.round((distanceKm / Math.max(0.1, kmh)) * 3600);
+}
+
+function formatPaceDisplay(seconds: number, suffix: "/km" | "/100m"): string {
+  const safe = Math.max(0, Math.round(seconds));
+  const mm = Math.floor(safe / 60);
+  const ss = safe % 60;
+  return `${mm}'${String(ss).padStart(2, "0")}''${suffix}`;
 }
 
 function formatDistanceByUnit(km: number, unit: "km" | "mi"): string {
@@ -160,10 +171,10 @@ export default function ProfileSportRecordsEdit() {
   const recordValue = useMemo(() => {
     const distText = formatDistanceByUnit(distanceKm, unit);
     if (sportKey === "running" || sportKey === "walking") {
-      return `${formatDuration(durationSec)} - ${distText} - ${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")}/km`;
+      return `${formatDuration(durationSec)} - ${distText} - ${formatPaceDisplay(paceSecPerKm, "/km")}`;
     }
     if (sportKey === "swimming") {
-      return `${formatDuration(durationSec)} - ${distText} - ${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")}/100m`;
+      return `${formatDuration(durationSec)} - ${distText} - ${formatPaceDisplay(paceSecPerKm, "/100m")}`;
     }
     return `${formatDuration(durationSec)} - ${distText} - ${speedKmh.toFixed(1)} km/h`;
   }, [distanceKm, durationSec, paceSecPerKm, speedKmh, sportKey, unit]);
@@ -173,9 +184,9 @@ export default function ProfileSportRecordsEdit() {
 
   const performanceLineValue =
     sportKey === "swimming"
-      ? `${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")} /100m`
+      ? formatPaceDisplay(paceSecPerKm, "/100m")
       : sportKey === "running" || sportKey === "walking"
-        ? `${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")} /km`
+        ? formatPaceDisplay(paceSecPerKm, "/km")
         : `${speedKmh.toFixed(1)} km/h`;
 
   const showNewPrBadge = useMemo(() => {
@@ -269,12 +280,12 @@ export default function ProfileSportRecordsEdit() {
   const timeParts = formatDurationParts(durationSec);
 
   const iconBtnClass =
-    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#E2DBD0] bg-white text-[#0E0E0F] shadow-none transition-transform active:scale-95";
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#e0e0e0] bg-white text-[#1d1d1f] shadow-none transition-transform active:scale-95";
 
   return (
     <IosFixedPageHeaderShell
       className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-white"
-      headerWrapperClassName="shrink-0 border-b border-[rgba(226,219,208,0.6)] bg-white"
+      headerWrapperClassName="shrink-0 border-b border-[#e0e0e0] bg-white"
       contentScroll
       scrollClassName="min-h-0 bg-white"
       header={
@@ -283,13 +294,13 @@ export default function ProfileSportRecordsEdit() {
             <button type="button" className={iconBtnClass} aria-label="Fermer" onClick={() => navigate(-1)}>
               <X className="h-[18px] w-[18px] stroke-[1.75]" />
             </button>
-            <h1 className="min-w-0 flex-1 text-center font-display text-[18px] font-bold leading-tight tracking-[-0.72px] text-[#0E0E0F]">
+            <h1 className="min-w-0 flex-1 text-center font-display text-[18px] font-bold leading-tight tracking-[-0.72px] text-[#1d1d1f]">
               Ajouter un record
             </h1>
             <button
               type="button"
               className={cn(iconBtnClass, "border-0 text-white")}
-              style={{ backgroundColor: RC.fire }}
+              style={{ backgroundColor: RC.primary }}
               aria-label="Enregistrer le record"
               disabled={!canSave || saving}
               onClick={() => void handleAdd()}
@@ -305,7 +316,7 @@ export default function ProfileSportRecordsEdit() {
           {/* Sport — maquette 21 */}
           <section>
             <div
-              className="text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]"
+              className="text-[12px] font-bold uppercase tracking-[0.6px] text-[#7a7a7a]"
               style={{ letterSpacing: "0.6px" }}
             >
               Sport
@@ -318,7 +329,7 @@ export default function ProfileSportRecordsEdit() {
                   onClick={() => setSportKey(k)}
                   className={cn(
                     "flex h-14 w-14 items-center justify-center rounded-[14px] text-2xl leading-none transition-transform active:scale-95",
-                    sportKey === k ? "bg-[#0E0E0F] text-white" : "border-[1.5px] border-[#E2DBD0] bg-[#FAFAF7] text-[#0E0E0F]",
+                    sportKey === k ? "bg-[#1d1d1f] text-white" : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
                   )}
                   aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
                   aria-pressed={sportKey === k}
@@ -337,7 +348,7 @@ export default function ProfileSportRecordsEdit() {
                     onClick={() => setSportKey(k)}
                     className={cn(
                       "flex h-14 w-14 items-center justify-center rounded-[14px] text-xl transition-transform active:scale-95",
-                      sportKey === k ? "bg-[#0E0E0F] text-white" : "border-[1.5px] border-[#E2DBD0] bg-[#FAFAF7] text-[#0E0E0F]",
+                      sportKey === k ? "bg-[#1d1d1f] text-white" : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
                     )}
                     aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
                     aria-pressed={sportKey === k}
@@ -351,7 +362,7 @@ export default function ProfileSportRecordsEdit() {
 
           {/* Distance chips */}
           <section>
-            <div className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">Distance</div>
+            <div className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.6px] text-[#7a7a7a]">Distance</div>
             <div className="flex flex-wrap gap-1.5">
               {DISTANCE_CHIPS.map((d) => (
                 <button
@@ -360,9 +371,9 @@ export default function ProfileSportRecordsEdit() {
                   onClick={() => handleSelectChip(d.id, d.label, d.km)}
                   className={cn(
                     "rounded-full px-4 py-2.5 text-[13px] font-bold transition-transform active:scale-[0.98]",
-                    presetId === d.id ? "text-white" : "border border-[#E2DBD0] bg-[#FAFAF7] text-[#0E0E0F]",
+                    presetId === d.id ? "text-white" : "border border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
                   )}
-                  style={presetId === d.id ? { backgroundColor: RC.fire, border: "none" } : undefined}
+                  style={presetId === d.id ? { backgroundColor: RC.primary, border: "none" } : undefined}
                 >
                   {d.label}
                 </button>
@@ -372,35 +383,35 @@ export default function ProfileSportRecordsEdit() {
 
           {/* Temps + performance — card */}
           <section
-            className="rounded-[18px] border-[1.5px] border-[#E2DBD0] p-[18px]"
-            style={{ backgroundColor: RC.surface }}
+            className="rounded-[18px] border-[1.5px] border-[#e0e0e0] p-[18px]"
+            style={{ backgroundColor: RC.parchment }}
           >
-            <div className="text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">Temps</div>
+            <div className="text-[12px] font-bold uppercase tracking-[0.6px] text-[#7a7a7a]">Temps</div>
             <button
               type="button"
               onClick={openDurationPicker}
               className="mt-2.5 flex w-full items-baseline justify-start gap-1.5 text-left font-display font-bold leading-none tracking-[-2.5px] active:opacity-80"
             >
-              <span className="text-[56px] text-[#0E0E0F]">{timeParts.h}</span>
-              <span className="pb-1 text-[20px] font-medium text-[#7A7771]">h</span>
-              <span className="text-[56px]" style={{ color: RC.fire }}>
+              <span className="text-[56px] text-[#1d1d1f]">{timeParts.h}</span>
+              <span className="pb-1 text-[20px] font-medium text-[#7a7a7a]">h</span>
+              <span className="text-[56px]" style={{ color: RC.primary }}>
                 {timeParts.m}
               </span>
-              <span className="pb-1 text-[20px] font-medium text-[#7A7771]">m</span>
-              <span className="text-[56px] text-[#0E0E0F]">{timeParts.s}</span>
-              <span className="pb-1 text-[20px] font-medium text-[#7A7771]">s</span>
+              <span className="pb-1 text-[20px] font-medium text-[#7a7a7a]">m</span>
+              <span className="text-[56px] text-[#1d1d1f]">{timeParts.s}</span>
+              <span className="pb-1 text-[20px] font-medium text-[#7a7a7a]">s</span>
             </button>
 
             {runningLike ? (
               <div className="mt-3.5 flex w-full items-center justify-between rounded-xl bg-white p-3 text-left">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">{performanceLineLabel}</div>
-                  <div className="mt-0.5 font-display text-[18px] font-bold text-[#0E0E0F]">{performanceLineValue}</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7a7a7a]">{performanceLineLabel}</div>
+                  <div className="mt-0.5 font-display text-[18px] font-bold text-[#1d1d1f]">{performanceLineValue}</div>
                 </div>
                 {showNewPrBadge ? (
                   <span
                     className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
-                    style={{ color: RC.fire, backgroundColor: RC.prBadgeBg }}
+                    style={{ color: RC.primary, backgroundColor: RC.canvas }}
                   >
                     NOUVEAU PR
                   </span>
@@ -413,13 +424,13 @@ export default function ProfileSportRecordsEdit() {
                 className="mt-3.5 flex w-full items-center justify-between rounded-xl bg-white p-3 text-left active:opacity-90"
               >
                 <div className="min-w-0">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">{performanceLineLabel}</div>
-                  <div className="mt-0.5 font-display text-[18px] font-bold text-[#0E0E0F]">{performanceLineValue}</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7a7a7a]">{performanceLineLabel}</div>
+                  <div className="mt-0.5 font-display text-[18px] font-bold text-[#1d1d1f]">{performanceLineValue}</div>
                 </div>
                 {showNewPrBadge ? (
                   <span
                     className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
-                    style={{ color: RC.fire, backgroundColor: RC.prBadgeBg }}
+                    style={{ color: RC.primary, backgroundColor: RC.canvas }}
                   >
                     NOUVEAU PR
                   </span>
@@ -430,23 +441,23 @@ export default function ProfileSportRecordsEdit() {
 
           {/* Liste existante — backend conservé */}
           <section className="pb-4">
-            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-[0.6px] text-[#7A7771]">Mes records</h2>
+            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-[0.6px] text-[#7a7a7a]">Mes records</h2>
             {loading ? (
               <div className="flex justify-center py-10">
-                <Loader2 className="h-7 w-7 animate-spin text-[#FF4D1A]" />
+                <Loader2 className="h-7 w-7 animate-spin text-[#0066cc]" />
               </div>
             ) : rows.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-[#E2DBD0] bg-[#FAFAF7] py-8 text-center text-[15px] text-[#7A7771]">
+              <p className="rounded-2xl border border-dashed border-[#e0e0e0] bg-[#f5f5f7] py-8 text-center text-[15px] text-[#7a7a7a]">
                 Aucun record pour l'instant.
               </p>
             ) : (
-              <ul className="divide-y divide-[rgba(226,219,208,0.55)] rounded-2xl border border-[#E2DBD0] bg-white px-1">
+              <ul className="divide-y divide-[#e0e0e0] rounded-2xl border border-[#e0e0e0] bg-white px-1">
                 {rows.map((r) => (
                   <li key={r.id} className="flex items-center gap-3 py-3 pl-3 pr-1">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] text-[#7A7771]">{isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}</p>
-                      <p className="truncate font-display text-[16px] font-bold text-[#0E0E0F]">{r.event_label}</p>
-                      <p className="font-mono text-[14px] tabular-nums" style={{ color: RC.fire }}>
+                      <p className="text-[13px] text-[#7a7a7a]">{isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}</p>
+                      <p className="truncate font-display text-[16px] font-bold text-[#1d1d1f]">{r.event_label}</p>
+                      <p className="font-mono text-[14px] tabular-nums" style={{ color: RC.primary }}>
                         {r.record_value}
                       </p>
                     </div>

@@ -27,11 +27,10 @@ import { buildSessionSharePayload } from "@/lib/sessionSharePayload";
 import { getSessionPublicUrl } from "@/lib/appLinks";
 import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { generateSessionShareImage } from "@/services/sessionShareService";
-import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import {
   ArrowLeft, Camera, Image, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
-  AlignLeft, AlignCenter, AlignRight, Trash2, Search
+  AlignLeft, AlignCenter, AlignRight, Trash2, Search, X, ChevronRight
 } from "lucide-react";
 
 type CaptureMode = "photo" | "video" | "boomerang";
@@ -165,16 +164,12 @@ export default function StoryCreate() {
   const { isPreviewMode } = useAppPreview();
   const { toast } = useToast();
   const { takePicture, checkPermissions, requestPermissions } = useCamera();
-  const profileHeaderTabs = [
-    { id: "profile", label: "Profil", active: false, onClick: () => navigate("/profile") },
-    { id: "records", label: "Record", active: false, onClick: () => navigate("/profile/records") },
-    { id: "story", label: "Créer une story", active: true },
-  ];
 
   // Flow
-  const [step, setStep] = useState<StoryStep>("entry");
+  const [step, setStep] = useState<StoryStep>("capture");
   const [sourceMode, setSourceMode] = useState<"camera" | "gallery">("camera");
   const [captureMode, setCaptureMode] = useState<CaptureMode>("photo");
+  const [flashActive, setFlashActive] = useState(true);
 
   // Media
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -285,6 +280,7 @@ export default function StoryCreate() {
   const autoRestoreDoneRef = useRef(false);
   const autoSessionShareDoneRef = useRef(false);
   const [resumedFromDraft, setResumedFromDraft] = useState(false);
+  const cameraPermissionRequestedRef = useRef(false);
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
   const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
@@ -441,7 +437,7 @@ export default function StoryCreate() {
 
   const resetEditorState = useCallback(() => {
     setMediaFile(null);
-    setStep("entry");
+    setStep("capture");
     setTextOverlay("");
     setSelectedMusic(null);
     setPendingMusic(null);
@@ -606,11 +602,11 @@ export default function StoryCreate() {
       if (draft.mediaDataUrl && draft.mediaType) {
         const restoredFile = dataUrlToFile(draft.mediaDataUrl, draft.mediaName || "story-draft", draft.mediaType);
         setMediaFile(restoredFile);
-        setStep(restoredFile ? "edit" : "entry");
+        setStep(restoredFile ? "edit" : "capture");
         setResumedFromDraft(!!restoredFile);
       } else {
         setMediaFile(null);
-        setStep("entry");
+        setStep("capture");
         setResumedFromDraft(false);
       }
       toast({ title: "Brouillon repris", description: "Ton brouillon a été restauré." });
@@ -899,6 +895,22 @@ export default function StoryCreate() {
     };
   }, [step, sourceMode, captureMode, facingMode]);
 
+  useEffect(() => {
+    if (step !== "capture") return;
+    if (cameraPermissionRequestedRef.current) return;
+    cameraPermissionRequestedRef.current = true;
+    void (async () => {
+      try {
+        const permission = await checkPermissions();
+        if (permission !== "granted") {
+          await requestPermissions();
+        }
+      } catch {
+        // ignore permission failures: UI stays black fallback
+      }
+    })();
+  }, [checkPermissions, requestPermissions, step]);
+
   // Recording timer
   useEffect(() => {
     if (!isRecording) return;
@@ -1102,23 +1114,6 @@ export default function StoryCreate() {
     if (captureMode === "boomerang") {
       setTimeout(() => { if (rec.state !== "inactive") { rec.stop(); setIsRecording(false); } }, 1800);
     }
-  };
-
-  const onTakePhoto = async () => {
-    setSourceMode("camera");
-    setCaptureMode("photo");
-
-    // On mobile native, open system camera app directly for best quality.
-    if (Capacitor.isNativePlatform()) {
-      const file = await takePicture({ facing: "environment" });
-      if (file) {
-        setMediaFile(file);
-        setStep("edit");
-      }
-      return;
-    }
-
-    setStep("capture");
   };
 
   const onPickGallery = () => {
@@ -2151,130 +2146,33 @@ export default function StoryCreate() {
   ]);
 
   // ═══════════════════════════════════════
-  // STEP 0: ENTRY CHOICE
+  // STEP 0/1: CAPTURE (full-screen modal camera)
   // ═══════════════════════════════════════
-  if (step === "entry") {
-    return (
-      <>
-      <div className="relative flex min-h-0 flex-1 flex-col bg-background">
-        <MainTopHeader
-          title="Mon profil"
-          tabs={profileHeaderTabs}
-          tabsAriaLabel="Navigation du profil"
-        />
-        <div className="flex min-h-0 flex-1 items-center justify-center px-5">
-          <div className="w-full max-w-sm space-y-3">
-            <button
-              type="button"
-              onClick={() => void onTakePhoto()}
-              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-            >
-              <Camera className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Prendre une photo</p>
-                <p className="text-xs text-muted-foreground">Partager depuis la caméra</p>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSourceMode("gallery");
-                onPickGallery();
-              }}
-              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-            >
-              <Image className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Choisir dans la galerie</p>
-                <p className="text-xs text-muted-foreground">Image ou vidéo existante</p>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowSessionPicker((v) => !v)}
-              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-            >
-              <CalendarPlus className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Partager une séance programmée</p>
-                <p className="text-xs text-muted-foreground">Carte, pin et itinéraire</p>
-              </div>
-            </button>
-            {hasDraft && (
-              <button
-                type="button"
-                onClick={() => navigate("/drafts/stories")}
-                className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-              >
-                <RefreshCw className="h-5 w-5 text-primary" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">Reprendre un brouillon</p>
-                  <p className="text-xs text-muted-foreground">Voir tous les brouillons</p>
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-        {showSessionPicker && (
-          <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Sélectionne une séance</p>
-              <button type="button" className="text-xs text-muted-foreground" onClick={() => setShowSessionPicker(false)}>
-                Fermer
-              </button>
-            </div>
-            <div className="max-h-56 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
-              {sessions.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Aucune séance disponible</p>
-              ) : (
-                sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={async () => {
-                      const generated = await createSessionStoryImage(s);
-                      if (!generated) {
-                        toast({ title: "Erreur", description: "Impossible de préparer la story de séance", variant: "destructive" });
-                        return;
-                      }
-                      setSelectedSession(s);
-                      setMediaFile(generated);
-                      setShowSessionPicker(false);
-                      setStep("edit");
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-secondary"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-                      <CalendarPlus className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{s.title}</p>
-                      <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-      {exitDraftDialog}
-      </>
-    );
-  }
+  if (step === "entry" || step === "capture") {
+    const cameraModeLabel = facingMode === "user" ? "Caméra · avant" : "Caméra · arrière";
+    const lastSession = sessions[0] ?? null;
+    const sessionMeta = lastSession?.scheduled_at
+      ? `${lastSession.title || "Séance"} · ${new Date(lastSession.scheduled_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+      : "14,2 km · 1:18 · il y a 3h";
+    const activeTab = sourceMode === "gallery" ? "GALERIE" : captureMode === "video" ? "VIDÉO" : "PHOTO";
+    const modeTabs: Array<"SÉANCE" | "GALERIE" | "PHOTO" | "VIDÉO"> = ["SÉANCE", "GALERIE", "PHOTO", "VIDÉO"];
 
-  // ═══════════════════════════════════════
-  // STEP 1: CAPTURE (Camera / Gallery)
-  // ═══════════════════════════════════════
-  if (step === "capture") {
+    const onModeTabPress = (tab: "SÉANCE" | "GALERIE" | "PHOTO" | "VIDÉO") => {
+      if (tab === "SÉANCE") {
+        setShowSessionPicker(true);
+        return;
+      }
+      if (tab === "GALERIE") {
+        setSourceMode("gallery");
+        onPickGallery();
+        return;
+      }
+      setSourceMode("camera");
+      setCaptureMode(tab === "VIDÉO" ? "video" : "photo");
+    };
+
     return (
       <div className="relative flex min-h-0 flex-1 flex-col bg-black">
-        <MainTopHeader
-          title="Mon profil"
-          tabs={profileHeaderTabs}
-          tabsAriaLabel="Navigation du profil"
-        />
-
         {/* Camera viewfinder */}
         {sourceMode === "camera" ? (
           <div className="relative flex-1">
@@ -2295,69 +2193,91 @@ export default function StoryCreate() {
             )}
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center">
-            <button
-              type="button"
-              onClick={onPickGallery}
-              className="flex flex-col items-center gap-3 text-white/70"
-            >
-              <div className="rounded-2xl border-2 border-dashed border-white/30 p-10">
-                <Image className="h-12 w-12" />
-              </div>
-              <span className="text-sm font-medium">Choisir depuis la galerie</span>
-            </button>
-          </div>
+          <div className="flex flex-1 items-center justify-center bg-black" />
         )}
 
-        {/* Bottom controls */}
-        <div className="absolute inset-x-0 bottom-0 z-10 pb-[max(24px,env(safe-area-inset-bottom,24px))]">
-          {/* Mode selector (style bandeau type Stories) */}
-          <div className="mb-6 flex flex-col items-center gap-1">
-            <div className="flex items-center justify-center gap-6">
-              {(["photo", "video", "boomerang"] as CaptureMode[]).map((mode) => (
+        <div className="pointer-events-none absolute inset-0 z-20">
+          {/* top controls */}
+          <div className="pointer-events-auto flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top,12px))]">
+            <button
+              type="button"
+              onClick={() => requestExitWithDraftPrompt("back")}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+              aria-label="Fermer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFlashActive((v) => !v)}
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm",
+                  flashActive ? "text-orange-400" : "text-white/90",
+                )}
+                aria-label="Flash"
+              >
+                <Zap className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+                aria-label="Changer de caméra"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* center camera indicator */}
+          <div className="pointer-events-auto absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 text-center">
+            <button
+              type="button"
+              onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+            >
+              <Camera className="h-6 w-6" />
+            </button>
+            <p className="mt-2 text-xs font-semibold text-white/90">{cameraModeLabel}</p>
+          </div>
+
+          {/* Bottom controls */}
+          <div className="pointer-events-auto absolute inset-x-0 bottom-0 px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))]">
+            {/* mode tabs */}
+            <div className="mb-6 flex items-center justify-center gap-6">
+              {modeTabs.map((tab) => (
                 <button
-                  key={mode}
+                  key={tab}
                   type="button"
-                  onClick={() => setCaptureMode(mode)}
-                  className={`text-xs font-bold uppercase tracking-wider ${
-                    captureMode === mode ? "text-white" : "text-white/50"
-                  }`}
+                  onClick={() => onModeTabPress(tab)}
+                  className={cn(
+                    "relative pb-3 text-xs font-bold uppercase tracking-[0.18em]",
+                    activeTab === tab ? "text-white" : "text-white/55",
+                  )}
                 >
-                  {mode === "photo" ? "PHOTO" : mode === "video" ? "VIDEO" : "BOOMERANG"}
+                  {tab}
+                  {activeTab === tab && <span className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" />}
                 </button>
               ))}
             </div>
-            {sourceMode === "camera" && (
-              <p className="text-[11px] font-medium text-white/45">
-                {facingMode === "user" ? "Selfie" : "Caméra arrière"}
-              </p>
-            )}
-          </div>
 
-          {/* Capture + gallery toggle */}
-          <div className="flex items-center justify-center gap-8">
-            {/* Gallery toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                if (sourceMode === "gallery") {
-                  setSourceMode("camera");
-                } else {
-                  setSourceMode("gallery");
-                  onPickGallery();
-                }
-              }}
-              className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white/30 bg-white/10 backdrop-blur-sm"
-            >
-              <Image className="h-5 w-5 text-white" />
-            </button>
+            {/* shutter row */}
+            <div className="mb-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={onPickGallery}
+                className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/90 text-white"
+                aria-label="Ouvrir la galerie"
+              >
+                <Image className="h-6 w-6" />
+              </button>
 
-            {/* Shutter button */}
-            {sourceMode === "camera" && (
               <button
                 type="button"
                 onClick={() => void onCapture()}
                 className="relative flex h-[76px] w-[76px] items-center justify-center"
+                aria-label="Capturer"
               >
                 <div className="absolute inset-0 rounded-full border-[3px] border-white" />
                 <div className={`h-[62px] w-[62px] rounded-full transition-all ${
@@ -2368,25 +2288,84 @@ export default function StoryCreate() {
                       : "bg-destructive"
                 }`} />
               </button>
-            )}
 
-            {/* Inverser la caméra (comme Snapchat / Instagram) */}
-            {sourceMode === "camera" ? (
               <button
                 type="button"
-                onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
-                className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white/30 bg-white/10 backdrop-blur-sm text-white transition-transform active:scale-95"
-                aria-label={
-                  facingMode === "user" ? "Passer à la caméra arrière" : "Passer à la caméra avant (selfie)"
-                }
+                onClick={() => setShowSessionPicker(true)}
+                className="flex h-14 w-14 items-center justify-center rounded-2xl bg-black/35 text-orange-400 backdrop-blur-sm"
+                aria-label="Partager une séance"
               >
-                <RefreshCw className="h-5 w-5" />
+                <span className="text-2xl leading-none">🏃</span>
               </button>
-            ) : (
-              <div className="h-12 w-12" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSessionPicker(true)}
+              className="mb-1 flex w-full items-center gap-3 rounded-2xl bg-zinc-900/75 px-3 py-3 text-left backdrop-blur-sm"
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/85 text-white">
+                <span className="text-base leading-none">🏃</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">Story-fier ma dernière séance</p>
+                <p className="truncate text-xs text-white/70">{sessionMeta}</p>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-white/70" />
+            </button>
+            {hasDraft && (
+              <button
+                type="button"
+                onClick={() => navigate("/drafts/stories")}
+                className="mx-auto mt-2 block text-xs text-white/65 underline underline-offset-2"
+              >
+                Reprendre un brouillon
+              </button>
             )}
           </div>
         </div>
+        {showSessionPicker && (
+          <div className="absolute inset-x-0 bottom-0 z-30 rounded-t-3xl bg-zinc-950/96 px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4 backdrop-blur-md">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">Sélectionne une séance</p>
+              <button type="button" className="text-xs text-white/65" onClick={() => setShowSessionPicker(false)}>
+                Fermer
+              </button>
+            </div>
+            <div className="max-h-56 space-y-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-2">
+              {sessions.length === 0 ? (
+                <p className="px-3 py-4 text-center text-sm text-white/65">Aucune séance disponible</p>
+              ) : (
+                sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={async () => {
+                      const generated = await createSessionStoryImage(s);
+                      if (!generated) {
+                        toast({ title: "Erreur", description: "Impossible de préparer la story de séance", variant: "destructive" });
+                        return;
+                      }
+                      setSelectedSession(s);
+                      setMediaFile(generated);
+                      setShowSessionPicker(false);
+                      setStep("edit");
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-white transition-colors hover:bg-white/10"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                      <CalendarPlus className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{s.title}</p>
+                      <p className="truncate text-xs text-white/65">{s.location_name}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       {exitDraftDialog}
       </div>
     );
@@ -2399,28 +2378,31 @@ export default function StoryCreate() {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-black">
-      <MainTopHeader
-        title="Mon profil"
-        tabs={profileHeaderTabs}
-        tabsAriaLabel="Navigation du profil"
-        right={
-          <Button
-            type="button"
-            size="sm"
-            disabled={sharing || (editorMode === "idle" && !mediaFile)}
-            onClick={() => {
-              if (editorMode !== "idle") {
-                closeEditorMode();
-                return;
-              }
-              setPublishConfirmOpen(true);
-            }}
-            className="h-9 rounded-full px-4 text-xs font-semibold"
-          >
-            {sharing ? "Envoi…" : "Publier"}
-          </Button>
-        }
-      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top,12px))]">
+        <button
+          type="button"
+          onClick={() => requestExitWithDraftPrompt("capture")}
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+          aria-label="Retour à la caméra"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={sharing || (editorMode === "idle" && !mediaFile)}
+          onClick={() => {
+            if (editorMode !== "idle") {
+              closeEditorMode();
+              return;
+            }
+            setPublishConfirmOpen(true);
+          }}
+          className="pointer-events-auto h-9 rounded-full bg-white px-4 text-xs font-semibold text-black hover:bg-white/90"
+        >
+          {sharing ? "Envoi…" : "Publier"}
+        </Button>
+      </div>
       {/* Preview fullscreen */}
       <div
         className="relative flex-1 overflow-hidden"

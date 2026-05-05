@@ -2910,7 +2910,7 @@ export function CoachPlanningExperience() {
               ? "shrink-0 border-0 apple-grouped-bg"
               : activeMenuKey === "club"
                 ? "shrink-0 border-b border-border apple-grouped-bg"
-                : "shrink-0 border-b border-border bg-card"
+                : "shrink-0 border-0 apple-grouped-bg"
           }
           header={
             weekPlannerMode ? (

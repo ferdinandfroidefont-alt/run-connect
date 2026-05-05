@@ -478,7 +478,7 @@ const Messages = () => {
     };
     if (inThread) {
       const dark = root.classList.contains("dark");
-      const threadBg = dark ? hslVar("--secondary") || "" : "#F6F2EC";
+      const threadBg = dark ? hslVar("--secondary") || "" : "#f5f5f7";
       if (threadBg) {
         root.style.backgroundColor = threadBg;
         document.body.style.backgroundColor = threadBg;
@@ -2306,12 +2306,12 @@ const Messages = () => {
     
     return (
       <>
-        <div className="flex h-full min-h-0 flex-col bg-[#F6F2EC] dark:bg-secondary">
+        <div className="flex h-full min-h-0 flex-col bg-[#f5f5f7] dark:bg-secondary">
           <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col">
             <IosFixedPageHeaderShell
               className="min-h-0 flex-1"
               scrollRef={threadScrollRef}
-              headerWrapperClassName="z-50 shrink-0 border-b border-[#E2DBD0] bg-white dark:border-border dark:bg-card"
+              headerWrapperClassName="z-50 shrink-0 border-b border-[#e0e0e0] bg-white dark:border-border dark:bg-card"
               header={
                 isDirectMessage ? (
                   <div className="flex items-center gap-2.5 px-4 py-2">
@@ -2322,7 +2322,7 @@ const Messages = () => {
                       className="h-9 w-9 shrink-0 rounded-full p-0 hover:bg-transparent dark:hover:bg-secondary"
                       aria-label="Retour"
                     >
-                      <ChevronLeft className="h-4 w-4 text-[#0E0E0F] dark:text-foreground" strokeWidth={2.5} />
+                      <ChevronLeft className="h-4 w-4 text-[#1d1d1f] dark:text-foreground" strokeWidth={2.5} />
                     </Button>
                     <button
                       type="button"
@@ -2334,7 +2334,7 @@ const Messages = () => {
                     >
                       <Avatar className="h-9 w-9 shrink-0">
                         <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                        <AvatarFallback className="bg-[#EDE6DC] text-[13px] font-semibold text-[#0E0E0F] dark:bg-secondary dark:text-foreground">
+                        <AvatarFallback className="bg-[#f5f5f7] text-[13px] font-semibold text-[#1d1d1f] dark:bg-secondary dark:text-foreground">
                           {(selectedConversation.other_participant?.username ||
                             selectedConversation.other_participant?.display_name ||
                             "").charAt(0).toUpperCase()}
@@ -2342,7 +2342,7 @@ const Messages = () => {
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <p
-                          className="truncate font-bold leading-tight text-[15px] tracking-tight text-[#0E0E0F] dark:text-foreground"
+                          className="truncate font-bold leading-tight text-[15px] tracking-tight text-[#1d1d1f] dark:text-foreground"
                           style={{ fontFamily: "Inter Tight, ui-sans-serif, system-ui, sans-serif" }}
                         >
                           {selectedConversation.other_participant?.username ||
@@ -2361,7 +2361,7 @@ const Messages = () => {
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#0E0E0F] dark:text-foreground"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1d1d1f] dark:text-foreground"
                           aria-label="Plus d’options"
                         >
                           <MoreVertical className="h-4 w-4" />
@@ -2639,13 +2639,13 @@ const Messages = () => {
                     <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 rounded-[26px] border border-transparent bg-white py-1 pl-3 pr-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.08)] dark:border-[#1f1f1f] dark:bg-[#1c1c1e]">
+                <div className="flex items-center gap-2 rounded-[26px] border border-[#e0e0e0] bg-white py-1 pl-3 pr-1.5 dark:border-[#1f1f1f] dark:bg-[#1c1c1e]">
                   {!isRecording && (
                     <>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EDE6DC] text-[#0E0E0F] disabled:opacity-50 dark:bg-secondary dark:text-foreground"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5f7] text-[#1d1d1f] disabled:opacity-50 dark:bg-secondary dark:text-foreground"
                             disabled={isLoading}
                             type="button"
                             aria-label="Pièces jointes"
@@ -2658,7 +2658,7 @@ const Messages = () => {
                             onClick={() => fileInputRef.current?.click()}
                             className="py-ios-3"
                           >
-                            <Paperclip className="h-4 w-4 mr-ios-3 text-[#007AFF]" />
+                            <Paperclip className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
                             Document
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -2676,7 +2676,7 @@ const Messages = () => {
                             }}
                             className="py-ios-3"
                           >
-                            <Camera className="h-4 w-4 mr-ios-3 text-[#FF3B30]" />
+                            <Camera className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
                             Caméra
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -2694,14 +2694,14 @@ const Messages = () => {
                             }}
                             className="py-ios-3"
                           >
-                            <Image className="h-4 w-4 mr-ios-3 text-[#34C759]" />
+                            <Image className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
                             Photo
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                             className="py-ios-3"
                           >
-                            <Smile className="h-4 w-4 mr-ios-3 text-[#FF9500]" />
+                            <Smile className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
                             Emoji
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -2710,7 +2710,7 @@ const Messages = () => {
                             }}
                             className="py-ios-3"
                           >
-                            <BarChart3 className="h-4 w-4 mr-ios-3 text-[#5856D6]" />
+                            <BarChart3 className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
                             Sondage
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -2747,7 +2747,7 @@ const Messages = () => {
                           handleTyping();
                         }}
                         onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                        className="min-w-0 flex-1 bg-transparent py-2 text-[14px] text-[#0E0E0F] outline-none placeholder:text-[#7A7771] dark:text-foreground dark:placeholder:text-muted-foreground"
+                        className="min-w-0 flex-1 bg-transparent py-2 text-[14px] text-[#1d1d1f] outline-none placeholder:text-[#7a7a7a] dark:text-foreground dark:placeholder:text-muted-foreground"
                         disabled={isLoading}
                       />
                       {newMessage.trim() ? (
@@ -2755,7 +2755,7 @@ const Messages = () => {
                           type="button"
                           onClick={sendMessage}
                           disabled={loading || !newMessage.trim()}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FF4D1A] text-white disabled:opacity-50 dark:bg-primary"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0066cc] text-white disabled:opacity-50 dark:bg-primary"
                           aria-label="Envoyer"
                         >
                           <Send className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -2765,7 +2765,7 @@ const Messages = () => {
                           type="button"
                           onClick={handleVoiceRecording}
                           disabled={loading}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FF4D1A] text-white dark:bg-primary"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0066cc] text-white dark:bg-primary"
                           aria-label="Message vocal"
                         >
                           <Mic className="h-[18px] w-[18px]" strokeWidth={2.25} />
@@ -2803,7 +2803,7 @@ const Messages = () => {
             }
           >
             {threadSearchOpen && (
-              <div className="shrink-0 border-b border-[#E2DBD0] bg-white px-4 py-2 dark:border-border dark:bg-card">
+              <div className="shrink-0 border-b border-[#e0e0e0] bg-white px-4 py-2 dark:border-border dark:bg-card">
                 <div className="flex items-center gap-2">
                   <div className="apple-search min-h-9 min-w-0 flex-1 gap-1.5 px-2 py-0">
                     <Search
@@ -2843,7 +2843,7 @@ const Messages = () => {
               </div>
             )}
             <div
-              className="flex flex-1 flex-col gap-2 bg-[#F6F2EC] px-4 pb-2 pt-2 dark:bg-secondary"
+              className="flex flex-1 flex-col gap-2 bg-[#f5f5f7] px-4 pb-2 pt-2 dark:bg-secondary"
               style={{ paddingBottom: composerHeight + keyboardInsetBottom + 8 }}
             >
               {visibleMessages.map((message, index) => {
@@ -2995,10 +2995,10 @@ const Messages = () => {
                                   "rounded-[18px] px-[14px] py-[10px] text-[14px] leading-[1.4] tracking-normal",
                                 !sessionShareOnly &&
                                   (isOwnMessage
-                                    ? "rounded-br-[6px] bg-[#0E0E0F] text-white dark:bg-primary dark:text-primary-foreground"
-                                    : "rounded-bl-[6px] border border-[#E2DBD0] bg-white text-[#0E0E0F] dark:border-[#1f1f1f] dark:bg-[#2c2c2e] dark:text-foreground"),
+                                    ? "rounded-br-[6px] bg-[#1d1d1f] text-white dark:bg-primary dark:text-primary-foreground"
+                                    : "rounded-bl-[6px] border border-[#e0e0e0] bg-white text-[#1d1d1f] dark:border-[#1f1f1f] dark:bg-[#2c2c2e] dark:text-foreground"),
                                 sessionShareOnly &&
-                                  "max-w-[min(240px,78vw)] rounded-[18px] border-0 bg-transparent p-0 text-[#0E0E0F] dark:bg-transparent dark:text-foreground"
+                                  "max-w-[min(240px,78vw)] rounded-[18px] border-0 bg-transparent p-0 text-[#1d1d1f] dark:bg-transparent dark:text-foreground"
                               )}
                             >
                               {/* Reply context */}
@@ -3055,42 +3055,42 @@ const Messages = () => {
                                         : "—";
                                     return (
                                     <div
-                                      className="mb-ios-2 w-full max-w-[240px] cursor-pointer overflow-hidden rounded-[18px] border border-[#E2DBD0] bg-white active:scale-[0.98] dark:border-[#1f1f1f] dark:bg-[#2c2c2e]"
+                                      className="mb-ios-2 w-full max-w-[240px] cursor-pointer overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white active:scale-[0.98] dark:border-[#1f1f1f] dark:bg-[#2c2c2e]"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleSessionClick(message.session);
                                       }}
                                     >
-                                      <div className="relative h-20 shrink-0 overflow-hidden bg-[#EFE8DA] dark:bg-muted">
+                                      <div className="relative h-20 shrink-0 overflow-hidden bg-[#f5f5f7] dark:bg-muted">
                                         {/* mini « carte » + tracé type maquette */}
                                         <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 240 80">
                                           <path
                                             d="M20 50 Q60 30 110 42 T216 34"
                                             fill="none"
-                                            stroke="#FF4D1A"
+                                            stroke="#0066cc"
                                             strokeLinecap="round"
                                             strokeWidth="2"
                                           />
                                         </svg>
-                                        <div className="absolute left-2 top-2 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-[#0E0E0F] shadow-sm dark:bg-card dark:text-foreground">
+                                        <div className="absolute left-2 top-2 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-[#1d1d1f] dark:bg-card dark:text-foreground">
                                           {emoji} {sportWord}
                                         </div>
                                       </div>
                                       <div className="px-3 py-3">
                                         <div
-                                          className="truncate font-bold leading-tight text-[14px] text-[#0E0E0F] dark:text-foreground"
+                                          className="truncate font-bold leading-tight text-[14px] text-[#1d1d1f] dark:text-foreground"
                                           style={{ fontFamily: "Inter Tight, ui-sans-serif, system-ui, sans-serif" }}
                                         >
                                           {message.session.title}
                                         </div>
-                                        <div className="mt-0.5 text-[11px] font-normal leading-snug text-[#7A7771] dark:text-muted-foreground">
+                                        <div className="mt-0.5 text-[11px] font-normal leading-snug text-[#7a7a7a] dark:text-muted-foreground">
                                           {whenLabel}
                                           {message.session.location_name
                                             ? ` · ${message.session.location_name}`
                                             : ""}
                                         </div>
                                         <div
-                                          className="mt-2 flex h-8 w-full cursor-pointer select-none items-center justify-center rounded-lg bg-[#FF4D1A] text-[12px] font-bold text-white dark:bg-primary"
+                                          className="mt-2 flex h-8 w-full cursor-pointer select-none items-center justify-center rounded-lg bg-[#0066cc] text-[12px] font-bold text-white dark:bg-primary"
                                           role="presentation"
                                         >
                                           Rejoindre
@@ -3436,51 +3436,51 @@ const Messages = () => {
                 }
               />
             ) : (
-              <div className="apple-grouped-bg pt-[var(--safe-area-top)]">
-                <div className="flex items-center justify-between px-5">
-                  <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
-                    Messages
-                  </h1>
-                  <div className="flex items-center text-primary">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
-                          aria-label="Nouvelle conversation, club ou groupe"
+              <div className="apple-grouped-bg">
+                <MainTopHeader
+                  title="Messages"
+                  right={
+                    <div className="flex items-center text-primary">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                            aria-label="Nouvelle conversation, club ou groupe"
+                          >
+                            <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="z-[130] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
                         >
-                          <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="z-[130] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
-                      >
-                        <DropdownMenuItem
-                          className="cursor-pointer gap-2 py-ios-3"
-                          onClick={() => setShowNewConversation(true)}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          Nouvelle conversation
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer gap-2 py-ios-3"
-                          onClick={() => openCreateClubTab()}
-                        >
-                          <Users className="h-4 w-4" />
-                          Créer un club
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer gap-2 py-ios-3"
-                          onClick={() => openCreateClubTab()}
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          Créer un groupe
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-2 py-ios-3"
+                            onClick={() => setShowNewConversation(true)}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            Nouvelle conversation
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-2 py-ios-3"
+                            onClick={() => openCreateClubTab()}
+                          >
+                            <Users className="h-4 w-4" />
+                            Créer un club
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-2 py-ios-3"
+                            onClick={() => openCreateClubTab()}
+                          >
+                            <UserPlus className="h-4 w-4" />
+                            Créer un groupe
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  }
+                />
 
                 <div className="mt-3.5 px-5 py-2">
                   <div className="apple-search min-h-9 w-full gap-1.5 px-2 py-0">

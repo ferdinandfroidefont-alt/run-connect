@@ -7,33 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Settings, LogOut, Crown, BadgeCheck, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
+import { Camera, Share2, ChevronRight, Trophy } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
-import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
-import { PushNotificationButton } from "@/components/PushNotificationButton";
 
 import { StravaConnect } from "@/components/StravaConnect";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 
-import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { PersonalGoals } from "@/components/profile/PersonalGoals";
-import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
-import { ProfileSportsCard } from "@/components/profile/ProfileSportsCard";
-import { Group, Cell } from "@/components/apple";
 import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { QRShareDialog } from "@/components/QRShareDialog";
-import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
-import { MainTopHeader } from "@/components/layout/MainTopHeader";
-import { cn } from "@/lib/utils";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
@@ -638,17 +627,24 @@ const Profile = () => {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
+  const runningRecords = profile?.running_records && typeof profile.running_records === "object" ? profile.running_records : {};
+  const record5k = runningRecords["5k"] || runningRecords["5 km"] || runningRecords["5km"] || "19:42";
+  const record10k = runningRecords["10k"] || runningRecords["10 km"] || runningRecords["10km"] || "41:18";
+
   return (
     <div
-      className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
+      className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-white"
       data-tutorial="tutorial-profile-page"
     >
-      <MainTopHeader
-        title="Profil"
-        tabs={profileHeaderTabs}
-        tabsAriaLabel="Navigation du profil"
-        right={
-          <div className="flex items-center gap-0.5">
+      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-white">
+      {isEditing && !isViewingOtherUser && (
+        <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
+      )}
+
+      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden bg-white pb-[calc(2rem+var(--safe-area-bottom))]">
+        <div className="box-border min-h-0 min-w-0 max-w-full space-y-6 px-5 pt-[calc(var(--safe-area-top)+14px)] sm:mx-auto sm:max-w-2xl">
+          <div className="flex items-center justify-between">
+            <h1 className="text-[34px] font-semibold leading-none tracking-[-0.6px] text-foreground">Profil</h1>
             {profile ? (
               <button
                 type="button"
@@ -659,246 +655,119 @@ const Profile = () => {
                     avatarUrl: profile.avatar_url,
                   })
                 }
-                className="flex h-9 w-9 items-center justify-center rounded-full text-primary transition-colors active:bg-secondary"
+                className="inline-flex h-8 items-center text-[17px] text-foreground active:opacity-70"
                 aria-label="Partager le profil"
               >
-                <Share2 className="h-5 w-5" strokeWidth={2.2} />
+                <Share2 className="h-5 w-5" strokeWidth={2} />
               </button>
             ) : null}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Avatar className="h-[60px] w-[60px] shrink-0">
+              <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
+              <AvatarFallback className="bg-secondary text-[22px] font-semibold text-foreground">
+                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[20px] font-semibold leading-tight text-foreground">
+                {profile?.display_name || profile?.username}
+              </p>
+              <p className="mt-1 truncate text-[13px] text-muted-foreground">
+                @{profile?.username} {profile?.country ? `· ${profile.country}` : ""} {profile?.is_premium ? "· Premium ✓" : ""}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-[22px] font-semibold leading-none text-foreground">{userRoutes.length}</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">Séances</p>
+            </div>
             <button
               type="button"
-              onClick={() => setShowSettingsDialog(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
-              aria-label="Ouvrir les paramètres"
+              onClick={() => {
+                setFollowDialogType('followers');
+                setShowFollowDialog(true);
+              }}
             >
-              <Settings className="h-5 w-5" />
+              <p className="text-[22px] font-semibold leading-none text-foreground">{followerCount}</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">Abonnés</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFollowDialogType('following');
+                setShowFollowDialog(true);
+              }}
+            >
+              <p className="text-[22px] font-semibold leading-none text-foreground">{followingCount}</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">Suivis</p>
             </button>
           </div>
-        }
-      />
-      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full">
-      {/* Refonte Apple Profil (mockup 19) — Apple-ID banner inline (carte blanche, avatar 64, nom display 22, handle line muted, chevron). */}
-      {isEditing && !isViewingOtherUser && (
-        <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
-      )}
 
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden pt-3 pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border min-h-0 min-w-0 max-w-full space-y-4 sm:mx-auto sm:max-w-2xl">
-        {/* Apple-ID banner (mockup 19) */}
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <div
-            role={!isViewingOtherUser && profile ? "button" : undefined}
-            tabIndex={!isViewingOtherUser && profile ? 0 : undefined}
-            onClick={() => {
-              if (!isViewingOtherUser && profile) setIsEditing(true);
-            }}
-            onKeyDown={(e) => {
-              if (!isViewingOtherUser && profile && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                setIsEditing(true);
-              }
-            }}
-            className={cn(
-              "flex w-full min-w-0 items-center gap-3.5 rounded-[14px] border border-border/60 bg-card p-4 text-left shadow-[var(--shadow-card)] transition-colors",
-              !isViewingOtherUser && profile && "cursor-pointer active:bg-muted/40"
-            )}
-          >
-            <div className="relative shrink-0">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-                <AvatarFallback className="bg-primary text-[24px] font-semibold tracking-[-0.3px] text-primary-foreground">
-                  {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              {isEditing && !isViewingOtherUser && (
-                <button
-                  type="button"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    try {
-                      const file = await selectFromGallery();
-                      if (file) {
-                        handleAvatarChange({ target: { files: [file] } } as never);
-                      }
-                    } catch (error) {
-                      console.error('❌ Erreur sélection galerie:', error);
-                      toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
-                    }
-                  }}
-                  disabled={cameraLoading}
-                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md disabled:opacity-50"
-                  aria-label="Changer l'avatar"
-                >
-                  <Camera className="h-3.5 w-3.5" />
-                </button>
-              )}
-              {coverUploading && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
-                  <Loader2 className="h-5 w-5 animate-spin text-white" />
-                </div>
-              )}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-[20px] font-semibold text-foreground">Stories à la une</h2>
+              <button type="button" className="text-[14px] font-medium text-muted-foreground">Voir tout</button>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <div className="font-display text-[22px] font-semibold leading-tight tracking-[-0.4px] text-foreground truncate">
-                  {profile?.display_name || profile?.username}
-                </div>
-                {profile?.is_admin || isAdmin ? (
-                  <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-amber-500 text-white" />
-                ) : profile?.is_premium ? (
-                  <BadgeCheck className="h-[18px] w-[18px] shrink-0 fill-[hsl(var(--primary))] text-white" />
-                ) : null}
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              <button className="flex h-[108px] w-[84px] shrink-0 flex-col items-center justify-center rounded-2xl border border-border bg-white text-foreground">
+                <span className="mb-1 text-[22px] leading-none">+</span>
+                <span className="text-[12px]">Nouvelle</span>
+              </button>
+              <div className="h-[108px] w-[168px] shrink-0 rounded-2xl bg-[#4c8dff] p-3 text-white">
+                <p className="text-[15px] font-semibold">Morning Run</p>
+                <p className="mt-1 text-[12px]/4 opacity-90">8 km • 42 min</p>
               </div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground truncate">
-                <span>@{profile?.username}</span>
-                {profile?.country && (
-                  <>
-                    <span aria-hidden>·</span>
-                    <span className="truncate">{profile.country}</span>
-                  </>
-                )}
-                {profile?.is_premium && (
-                  <>
-                    <span aria-hidden>·</span>
-                    <span className="text-[hsl(var(--primary))]">Premium ✓</span>
-                  </>
-                )}
+              <div className="h-[108px] w-[168px] shrink-0 rounded-2xl bg-[#ff8a34] p-3 text-white">
+                <p className="text-[15px] font-semibold">Sortie Club</p>
+                <p className="mt-1 text-[12px]/4 opacity-90">12 km • 1h03</p>
               </div>
-              {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate('/subscription');
-                  }}
-                  className="mt-2 inline-flex h-7 items-center gap-1 rounded-full bg-[hsl(var(--primary))]/10 px-3 text-[12px] font-medium text-[hsl(var(--primary))] active:opacity-70"
-                >
-                  <Crown className="h-3 w-3" />
-                  Devenir Premium
-                </button>
-              )}
-              {isViewingOtherUser && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowReportDialog(true);
-                  }}
-                  className="mt-2 inline-flex h-7 items-center gap-1 rounded-full bg-destructive/10 px-3 text-[12px] font-medium text-destructive active:opacity-70"
-                >
-                  <Flag className="h-3 w-3" />
-                  Signaler
-                </button>
-              )}
+              <div className="h-[108px] w-[168px] shrink-0 rounded-2xl bg-[#31b36b] p-3 text-white">
+                <p className="text-[15px] font-semibold">Trail Session</p>
+                <p className="mt-1 text-[12px]/4 opacity-90">15 km • 1h28</p>
+              </div>
             </div>
-            <ChevronGlyph className="apple-cell-chevron shrink-0" />
           </div>
-        </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <ProfileQuickStats
-            layout="tiles"
-            userId={viewingUserId || user?.id || ''}
-            followerCount={followerCount}
-            followingCount={followingCount}
-            onFollowersClick={() => {
-              setFollowDialogType('followers');
-              setShowFollowDialog(true);
-            }}
-            onFollowingClick={() => {
-              setFollowDialogType('following');
-              setShowFollowDialog(true);
-            }}
-          />
-        </div>
-
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <ProfileSportsCard
-            favoriteSport={profile?.favorite_sport}
-            isOwnProfile={!isViewingOtherUser}
-            onUpdated={(value) => {
-              setProfile((p) => (p ? { ...p, favorite_sport: value } : null));
-              setFormData((fd) => ({ ...fd, favorite_sport: value }));
-            }}
-          />
-        </div>
-
-
-        {!isViewingOtherUser && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-            <PersonalGoals />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-border bg-white p-4">
+              <p className="text-[14px] font-semibold text-foreground">Créer une story</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Partage ta sortie</p>
+              <div className="mt-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fff1e8] text-[#ff8a34]">
+                <Camera className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-white p-4">
+              <p className="text-[14px] font-semibold text-foreground">Nouveau record</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Bats ton PR</p>
+              <div className="mt-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eaf1ff] text-[#4c8dff]">
+                <Trophy className="h-4 w-4" />
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* Refonte Apple Profil (mockup 19) — Group avec icônes 29×29 colorées
-            (📅 Historique séances, 📸 Stories, 📍 Itinéraires) */}
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <Group inset={false} className="mb-0 shadow-[var(--shadow-card)]">
-            <Cell
-              icon={<Calendar className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
-              iconBg="#0066CC"
-              title="Historique des séances"
-              subtitle={!isViewingOtherUser ? "Tes séances passées et à venir" : undefined}
-              onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
-              last={isViewingOtherUser}
-            />
-            {!isViewingOtherUser && (
-              <Cell
-                icon={<Camera className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
-                iconBg="#ff9500"
-                title="Mes stories"
-                subtitle="Publiées par toi"
-                onClick={() => navigate('/drafts/stories')}
-                last={false}
-              />
-            )}
-            {!isViewingOtherUser && (
-              <Cell
-                icon={<Route className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
-                iconBg="#34c759"
-                title="Mes itinéraires"
-                subtitle="Parcours enregistrés"
-                onClick={() => navigate('/itinerary/my-routes')}
-                last={false}
-              />
-            )}
-            {!isViewingOtherUser && (
-              <Cell
-                icon={<MapPin className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
-                iconBg="#af52de"
-                title="Créer un parcours"
-                onClick={() => navigate('/route-creation')}
-                last
-              />
-            )}
-          </Group>
-        </div>
-
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <Collapsible className="apple-group-stack mb-0 w-full min-w-0 overflow-hidden shadow-[var(--shadow-card)]">
-            <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-4 py-3 ios-shell:px-3.5">
-              <p className="text-[13px] font-medium uppercase tracking-[0.3px] text-muted-foreground">
-                Records personnels
-              </p>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="border-t border-[rgba(60,60,67,0.12)] dark:border-[rgba(84,84,88,0.4)]">
-              <PersonalRecords
-                records={{
-                  running_records: profile?.running_records,
-                  cycling_records: profile?.cycling_records,
-                  swimming_records: profile?.swimming_records,
-                  triathlon_records: profile?.triathlon_records,
-                  walking_records: profile?.walking_records,
-                }}
-                canEdit={!isViewingOtherUser}
-                onRecordsChange={(nextRecords) => {
-                  setProfile((prev) => (prev ? { ...prev, ...nextRecords } : prev));
-                }}
-              />
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+          <div className="rounded-2xl border border-border bg-white">
+            <p className="px-4 pt-4 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
+            <button
+              type="button"
+              onClick={() => navigate('/profile/records')}
+              className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/50"
+            >
+              <span className="text-[16px] text-foreground">5 km — {record5k}</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/profile/records')}
+              className="flex w-full items-center justify-between border-t border-border px-4 py-3 text-left active:bg-secondary/50"
+            >
+              <span className="text-[16px] text-foreground">10 km — {record10k}</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
 
         {!isViewingOtherUser && isEditing && (
           <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
@@ -984,9 +853,9 @@ const Profile = () => {
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
-        </div>
+          <div className="box-border min-w-0 w-full max-w-full">
+            <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
+          </div>
 
         {/* Follow Dialog */}
         <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />
