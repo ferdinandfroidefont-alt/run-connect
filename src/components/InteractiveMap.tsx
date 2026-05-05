@@ -1886,10 +1886,10 @@ export const InteractiveMap = ({
                 )}
               </div>
 
-              {/* Avatar profil — remplace cloche + paramètres ; ouvre ProfileDialog */}
+              {/* Avatar profil — redirige vers la page profil principale (tab bar). */}
               <button
                 type="button"
-                onClick={() => setShowProfileDialog(true)}
+                onClick={() => navigate('/profile')}
                 aria-label="Mon profil"
                 className={cn(
                   "flex h-11 w-11 shrink-0 items-center justify-center rounded-full overflow-hidden",

@@ -16,6 +16,9 @@ import {
   Clock3,
   Crosshair,
   ChevronRight,
+  ChevronDown,
+  ChevronDown,
+  ChevronDown,
   Dumbbell,
   Flame,
   Gauge,
@@ -3703,7 +3706,7 @@ export function CoachPlanningExperience() {
                   <div className="space-y-3 px-4 py-3">
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
                     <div className="min-w-0">
-                      <div className="rounded-[18px] border border-border/65 bg-card px-2 py-2">
+                      <div className="rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
                         <div className="flex min-w-0 gap-2">
                           <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-between py-0 text-[9px] font-semibold text-muted-foreground/80">
                             <span className="text-[#BF5AF2]">Z6</span>
@@ -3739,6 +3742,7 @@ export function CoachPlanningExperience() {
                               barHeightScale={3}
                               zoneBandMode
                               interBlockGapPx={3}
+                              flatSurface
                               selectedBlockIndex={selectedSchemaPreviewIndex}
                               onBlockTap={({ index }) => {
                                 if (!draft.blocks.length) return;
@@ -3749,7 +3753,7 @@ export function CoachPlanningExperience() {
                                 const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
                                 if (block) setSelectedBlockId(block.id);
                               }}
-                              className="relative z-[2] h-[220px] w-full border-l border-b border-border/70 bg-white/70"
+                              className="relative z-[2] h-[220px] w-full border-l border-b border-border/70 bg-transparent"
                             />
                             {schemaDropRatio != null ? (
                               <div

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { PenTool, MapPin, Box, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PenTool, MapPin, Box, Navigation, ChevronRight } from 'lucide-react';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const hubItems = [
@@ -40,28 +41,16 @@ export default function ItineraryHub() {
   return (
     <IosFixedPageHeaderShell
       className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
-      headerWrapperClassName="shrink-0"
+      headerWrapperClassName="shrink-0 border-b border-border bg-card"
       contentScroll
       scrollClassName="min-h-0 bg-secondary"
       header={
-        // Refonte Apple NavBar large title — bar 44h Retour bleu + display 34/bold
-        <div className="min-w-0 bg-secondary pt-[var(--safe-area-top)]">
-          <div className="flex h-11 items-center justify-between px-4">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
-            >
-              <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
-              <span>Retour</span>
-            </button>
-            <div className="min-w-[60px]" />
-          </div>
-          <div className="px-4 pt-1 pb-3">
-            <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
-              Itinéraire
-            </h1>
-          </div>
+        <div className="min-w-0 bg-card pt-[var(--safe-area-top)]">
+          <IosPageHeaderBar
+            className="py-3"
+            leadingBack={{ onClick: () => navigate('/'), label: 'Découvrir' }}
+            title="Itinéraire"
+          />
         </div>
       }
     >

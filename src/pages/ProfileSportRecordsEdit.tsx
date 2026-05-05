@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Bike, Check, Footprints, Loader2, Plus, Trash2, Waves, Zap, X, type LucideIcon } from "lucide-react";
+import { Check, Loader2, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,6 @@ import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsD
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import { kmToMiles, milesToKm } from "@/lib/distanceUnits";
 import { cn } from "@/lib/utils";
-import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 
 /** Maquette 21 · RunConnect accent & surfaces */
 const RC = {
@@ -35,25 +34,16 @@ const DISTANCE_CHIPS: Array<{ id: string; label: string; km: number | null }> = 
 ];
 
 const SPORT_EMOJI: Partial<Record<ProfileSportRecordKey, string>> & Record<string, string> = {
-  running: getActivityEmoji("running"),
-  cycling: getActivityEmoji("cycling"),
-  swimming: getActivityEmoji("swimming"),
-  walking: getActivityEmoji("walking"),
+  running: "🏃",
+  cycling: "🚴",
+  swimming: "🏊",
+  walking: "🚶",
   triathlon: "🔱",
   other: "➕",
 };
 
 const PRIMARY_SPORT_ORDER: ProfileSportRecordKey[] = ["running", "cycling", "swimming", "walking"];
 const EXTRA_SPORTS: ProfileSportRecordKey[] = ["triathlon", "other"];
-
-const SPORT_ICONS: Record<ProfileSportRecordKey, LucideIcon> = {
-  running: Activity,
-  walking: Footprints,
-  cycling: Bike,
-  swimming: Waves,
-  triathlon: Zap,
-  other: Plus,
-};
 
 function formatDurationParts(totalSec: number): { h: string; m: string; s: string } {
   const safe = Math.max(0, Math.round(totalSec));
@@ -339,24 +329,21 @@ export default function ProfileSportRecordsEdit() {
               ))}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {EXTRA_SPORTS.map((k) => {
-                const Icon = SPORT_ICONS[k];
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setSportKey(k)}
-                    className={cn(
-                      "flex h-14 w-14 items-center justify-center rounded-[14px] text-xl transition-transform active:scale-95",
-                      sportKey === k ? "bg-[#1d1d1f] text-white" : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
-                    )}
-                    aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
-                    aria-pressed={sportKey === k}
-                  >
-                    <Icon className="h-6 w-6" />
-                  </button>
-                );
-              })}
+              {EXTRA_SPORTS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setSportKey(k)}
+                  className={cn(
+                    "flex h-14 w-14 items-center justify-center rounded-[14px] text-2xl leading-none transition-transform active:scale-95",
+                    sportKey === k ? "bg-[#1d1d1f] text-white" : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
+                  )}
+                  aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
+                  aria-pressed={sportKey === k}
+                >
+                  {SPORT_EMOJI[k]}
+                </button>
+              ))}
             </div>
           </section>
 

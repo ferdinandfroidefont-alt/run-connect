@@ -20,6 +20,7 @@ export interface WorkoutSegment {
   visualStyle?: "default" | "pyramid" | "variation";
   progressiveStartZone?: ComputedZone;
   progressiveEndZone?: ComputedZone;
+  sourceBlockOrder?: number;
 }
 
 export interface MiniProfileBlock {
@@ -32,6 +33,7 @@ export interface MiniProfileBlock {
   gradientEndColor?: string;
   /** 1=Z1 … 6=Z6 — hauteur relative aux bandes (mode schéma séance) */
   zoneBandLevel?: 1 | 2 | 3 | 4 | 5 | 6;
+  separatorBefore?: boolean;
 }
 
 interface RenderWorkoutMiniProfileOptions {
@@ -181,6 +183,7 @@ export function buildWorkoutSegments(
   const refResolution = sport === "running" ? resolveRunningReferences(options?.athleteIntensity) : { refs: null, source: "fallback" as const };
   const segments: WorkoutSegment[] = [];
   for (const raw of inputBlocks) {
+    const sourceBlockOrder = segments.length;
     const parsedRaw = raw as ParsedLikeBlock;
     const sessionRaw = raw as SessionLikeBlock;
     const repetitions = Math.max(1, raw.repetitions || 1);
@@ -274,6 +277,7 @@ export function buildWorkoutSegments(
           color: zoneToColorToken(repIntensity.zone),
           intensitySource: repIntensity.source,
           repeatCount: repetitions,
+          sourceBlockOrder,
         });
 
         if (repetitions > 1 && (recoveryDurationMin > 0 || recoveryDistanceKm > 0)) {
@@ -293,6 +297,7 @@ export function buildWorkoutSegments(
             color: zoneToColorToken(bandToComputedZone("recovery")),
             intensitySource: refResolution.source,
             repeatCount: Math.max(0, repetitions - 1),
+            sourceBlockOrder,
           });
         }
 
@@ -311,6 +316,7 @@ export function buildWorkoutSegments(
             computedZone: bandToComputedZone("recovery"),
             color: zoneToColorToken(bandToComputedZone("recovery")),
             intensitySource: refResolution.source,
+            sourceBlockOrder,
           });
         }
       }
@@ -378,6 +384,7 @@ export function buildWorkoutSegments(
         visualStyle: isPyramid ? "pyramid" : isVariation ? "variation" : "default",
         progressiveStartZone,
         progressiveEndZone,
+        sourceBlockOrder,
       });
       continue;
     }
@@ -394,6 +401,7 @@ export function buildWorkoutSegments(
       visualStyle: isPyramid ? "pyramid" : isVariation ? "variation" : "default",
       progressiveStartZone,
       progressiveEndZone,
+      sourceBlockOrder,
     });
   }
 
@@ -466,8 +474,17 @@ export function renderWorkoutMiniProfile(
       } else {
         block.zoneBandLevel = zoneToBandLevel(previewZone);
       }
+      block.separatorBefore = false;
     }
     return block;
+  }).map((block, index, all) => {
+    if (!sessionSchema || index === 0) return block;
+    const prev = expanded[index - 1];
+    const current = expanded[index];
+    return {
+      ...block,
+      separatorBefore: prev?.sourceBlockOrder !== current?.sourceBlockOrder,
+    };
   });
 }
 

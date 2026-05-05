@@ -197,7 +197,13 @@ const Auth = () => {
     }
 
     const urlParams = new URLSearchParams(window.location.search);
-    const isReset = urlParams.get('reset') === 'true' || urlParams.get('type') === 'recovery' || urlParams.has('code');
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const isRecoveryFlow = urlParams.get('reset') === 'true' || urlParams.get('type') === 'recovery';
+    const hasOAuthCallbackParams =
+      urlParams.has("code") ||
+      hashParams.has("code") ||
+      hashParams.has("access_token") ||
+      hashParams.has("refresh_token");
     
     const error = urlParams.get('error');
     const errorCode = urlParams.get('error_code');
@@ -211,7 +217,12 @@ const Auth = () => {
       return;
     }
     
-    if (isReset) {
+    if (hasOAuthCallbackParams && !isRecoveryFlow) {
+      navigate(`/auth/callback${window.location.search}${window.location.hash}`, { replace: true });
+      return;
+    }
+
+    if (isRecoveryFlow) {
       setView('reset');
       return;
     }
@@ -1420,8 +1431,7 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   const isPasswordResetFlow =
     searchParams.get("reset") === "true" ||
-    searchParams.get("type") === "recovery" ||
-    searchParams.has("code");
+    searchParams.get("type") === "recovery";
 
   if (authLoading) {
     return (
