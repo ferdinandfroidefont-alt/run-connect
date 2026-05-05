@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ACTIVITY_TYPES, SESSION_TYPES } from '../types';
 import { cn } from '@/lib/utils';
 import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
+import { SportIcon } from '@/components/ui/SportIcon';
 
 interface ActivityStepProps {
   activityType: string;
@@ -116,14 +117,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                     idx < popularActivities.length - 1 && 'border-b border-border/40'
                   )}
                 >
-                  <div
-                    className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-base text-white',
-                      ACTIVITY_BG[activity.value] || 'bg-primary'
-                    )}
-                  >
-                    <span aria-hidden>{activity.icon}</span>
-                  </div>
+                  <SportIcon sport={activity.value} size={36} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[17px] font-normal tracking-tight text-foreground">
                       {activity.label.replace(/^[^\s]+\s/, '')}
@@ -153,14 +147,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                       idx < otherActivities.length - 1 && 'border-b border-border/40'
                     )}
                   >
-                    <div
-                      className={cn(
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-base text-white',
-                        ACTIVITY_BG[activity.value] || 'bg-primary'
-                      )}
-                    >
-                      <span aria-hidden>{activity.icon}</span>
-                    </div>
+                    <SportIcon sport={activity.value} size={36} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[17px] font-normal tracking-tight text-foreground">
                         {activity.label.replace(/^[^\s]+\s/, '')}
