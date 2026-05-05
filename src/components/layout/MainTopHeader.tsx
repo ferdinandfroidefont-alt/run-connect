@@ -77,8 +77,8 @@ export function MainTopHeader({
       ref={containerRef}
       className={cn("shrink-0 pt-[var(--safe-area-top)]", className)}
       style={{
-        backgroundColor: `hsl(var(--background) / ${0.62 * progress})`,
-        backdropFilter: progress > 0.02 ? `saturate(${1 + progress * 0.35}) blur(${14 * progress}px)` : "none",
+        backgroundColor: `hsl(var(--background) / ${0.72 * progress})`,
+        backdropFilter: progress > 0.02 ? `saturate(${1 + progress * 0.45}) blur(${18 * progress}px)` : "none",
       }}
     >
       {/* Compact bar (trailing actions) */}
@@ -91,10 +91,11 @@ export function MainTopHeader({
         <div className="flex min-w-0 flex-1 items-center justify-start">{left ?? <span aria-hidden className="h-9 w-9" />}</div>
         <h2
           aria-hidden={progress < 0.95}
-          className="pointer-events-none absolute left-1/2 top-1/2 w-[60%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-[17px] font-semibold leading-snug text-foreground"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 truncate text-center text-[17px] font-semibold leading-snug text-foreground"
           style={{
             opacity: progress,
             transform: `translate(-50%, calc(-50% + ${(1 - progress) * 6}px))`,
+            width: `${58 - progress * 24}%`,
           }}
         >
           {title}

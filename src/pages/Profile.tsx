@@ -23,6 +23,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
@@ -705,16 +706,12 @@ const Profile = () => {
       className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
-      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-secondary">
-      {isEditing && !isViewingOtherUser && (
-        <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
-      )}
-
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden bg-secondary pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border min-h-0 min-w-0 max-w-full space-y-6 px-5 pt-[calc(var(--safe-area-top)+14px)] sm:mx-auto sm:max-w-2xl">
-          <div className="flex items-center justify-between">
-            <h1 className="text-[34px] font-semibold leading-none tracking-[-0.6px] text-foreground">Profil</h1>
-            {profile ? (
+      <div className="z-50 shrink-0 bg-secondary">
+        <MainTopHeader
+          title="Profil"
+          className="bg-transparent"
+          right={
+            profile ? (
               <button
                 type="button"
                 onClick={() =>
@@ -729,9 +726,17 @@ const Profile = () => {
               >
                 <Share className="h-5 w-5" strokeWidth={2} />
               </button>
-            ) : null}
-          </div>
+            ) : undefined
+          }
+        />
+      </div>
+      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-secondary">
+      {isEditing && !isViewingOtherUser && (
+        <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
+      )}
 
+      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden bg-secondary pb-[calc(2rem+var(--safe-area-bottom))]">
+        <div className="box-border min-h-0 min-w-0 max-w-full space-y-6 px-5 pt-3 sm:mx-auto sm:max-w-2xl">
           <button
             type="button"
             onClick={() => navigate("/profile?tab=settings")}

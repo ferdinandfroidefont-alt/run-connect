@@ -3417,8 +3417,9 @@ const Messages = () => {
           headerWrapperClassName="z-50 apple-grouped-bg"
           header={
             activeRootTab === "create-club" ? (
-              <div className="px-5 pt-[calc(var(--safe-area-top)+14px)] pb-3">
-                <div className="flex items-center justify-between gap-3">
+              <MainTopHeader
+                title="Créer un club"
+                left={
                   <button
                     type="button"
                     onClick={() => {
@@ -3434,19 +3435,13 @@ const Messages = () => {
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </button>
-                  <h1 className="min-w-0 flex-1 truncate text-[34px] font-semibold leading-none tracking-[-0.6px] text-foreground">
-                    Créer un club
-                  </h1>
-                  <span aria-hidden className="h-10 w-10 shrink-0" />
-                </div>
-              </div>
+                }
+              />
             ) : (
               <div className="apple-grouped-bg">
-                <div className="px-5 pt-[calc(var(--safe-area-top)+14px)] pb-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <h1 className="min-w-0 truncate text-[34px] font-semibold leading-none tracking-[-0.6px] text-foreground">
-                      Messages
-                    </h1>
+                <MainTopHeader
+                  title="Messages"
+                  right={
                     <div className="flex items-center text-primary">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -3486,8 +3481,8 @@ const Messages = () => {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </div>
-                </div>
+                  }
+                />
 
                 <div className="mt-3.5 px-5 py-2">
                   <div className="apple-search min-h-9 w-full gap-1.5 px-2 py-0">

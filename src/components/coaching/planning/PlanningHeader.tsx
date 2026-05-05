@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { MainTopHeader } from "@/components/layout/MainTopHeader";
 
 /** Maquettes 14–15 · jeton RunConnect (32×32, dégradé #0a84ff → #5e5ce6). */
 function RunConnectHeaderMark() {
@@ -65,13 +66,14 @@ export function PlanningHeader({
     </button>
   );
   return (
-    <div className="shrink-0 px-5 pt-[calc(var(--safe-area-top)+14px)] pb-3">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="min-w-0 truncate text-[34px] font-semibold leading-none tracking-[-0.6px] text-foreground">
-          {title}
-        </h1>
-        <div className="flex shrink-0 items-center gap-3">
-          {showOnlyClubAction ? clubMarkButton : null}
+    <MainTopHeader
+      title={title}
+      subtitle={subtitle}
+      tabs={tabs}
+      tabsAriaLabel={`Navigation ${title}`}
+      largeTitleRight={showOnlyClubAction ? clubMarkButton : undefined}
+      right={
+        <>
           {showClubMark && !showOnlyClubAction ? clubMarkButton : null}
           {!showClubMark ? <RunConnectHeaderMark /> : null}
           {showBellAndSettings ? (
@@ -89,38 +91,8 @@ export function PlanningHeader({
               </button>
             </>
           ) : null}
-        </div>
-      </div>
-      {subtitle ? (
-        <p className="mt-1 line-clamp-1 text-[13px] font-normal leading-snug text-muted-foreground">
-          {subtitle}
-        </p>
-      ) : null}
-      {tabs && tabs.length > 0 ? (
-        <div
-          role="tablist"
-          aria-label={`Navigation ${title}`}
-          className="mt-2 flex min-h-0 flex-nowrap items-end gap-6 overflow-x-auto overscroll-x-contain border-b-[0.5px] border-[rgba(60,60,67,0.18)] dark:border-[rgba(84,84,88,0.65)] pb-1.5 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-8 [&::-webkit-scrollbar]:hidden"
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={tab.active}
-              className={`shrink-0 touch-manipulation whitespace-nowrap pb-1 pt-0.5 text-[15px] font-semibold leading-tight tracking-[-0.2px] transition-colors ${
-                tab.active ? "text-primary" : "text-muted-foreground"
-              }`}
-              onClick={tab.onClick}
-            >
-              <span className="relative inline-block pb-2">
-                {tab.label}
-                {tab.active ? <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-primary" aria-hidden /> : null}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+        </>
+      }
+    />
   );
 }
