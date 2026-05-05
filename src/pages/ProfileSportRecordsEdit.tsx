@@ -312,38 +312,50 @@ export default function ProfileSportRecordsEdit() {
               Sport
             </div>
             <div className="mt-2.5 flex flex-wrap gap-2">
-              {PRIMARY_SPORT_ORDER.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setSportKey(k)}
-                  className={cn(
-                    "flex h-14 w-14 items-center justify-center rounded-[14px] text-2xl leading-none transition-transform active:scale-95",
-                    sportKey === k ? "bg-[#1d1d1f] text-white" : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
-                  )}
-                  aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
-                  aria-pressed={sportKey === k}
-                >
-                  {SPORT_EMOJI[k]}
-                </button>
-              ))}
+              {PRIMARY_SPORT_ORDER.map((k) => {
+                const active = sportKey === k;
+                const Icon = getSportIconComponent(k);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setSportKey(k)}
+                    className={cn(
+                      "flex h-14 w-14 items-center justify-center rounded-[14px] transition-transform active:scale-95",
+                      active
+                        ? cn(getSportColorClass(k), "text-white")
+                        : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
+                    )}
+                    aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
+                    aria-pressed={active}
+                  >
+                    <Icon className="h-6 w-6" strokeWidth={2.25} aria-hidden />
+                  </button>
+                );
+              })}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {EXTRA_SPORTS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setSportKey(k)}
-                  className={cn(
-                    "flex h-14 w-14 items-center justify-center rounded-[14px] text-2xl leading-none transition-transform active:scale-95",
-                    sportKey === k ? "bg-[#1d1d1f] text-white" : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
-                  )}
-                  aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
-                  aria-pressed={sportKey === k}
-                >
-                  {SPORT_EMOJI[k]}
-                </button>
-              ))}
+              {EXTRA_SPORTS.map((k) => {
+                const active = sportKey === k;
+                const Icon = getSportIconComponent(k);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setSportKey(k)}
+                    className={cn(
+                      "flex h-14 w-14 items-center justify-center rounded-[14px] transition-transform active:scale-95",
+                      active
+                        ? cn(getSportColorClass(k), "text-white")
+                        : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
+                    )}
+                    aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
+                    aria-pressed={active}
+                  >
+                    <Icon className="h-6 w-6" strokeWidth={2.25} aria-hidden />
+                  </button>
+                );
+              })}
             </div>
           </section>
 
