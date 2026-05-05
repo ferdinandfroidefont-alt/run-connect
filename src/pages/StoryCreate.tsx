@@ -1117,7 +1117,7 @@ export default function StoryCreate() {
     void (async () => {
       try {
         const permission = await checkPermissions();
-        if (permission !== "granted") {
+        if (permission.camera !== "granted") {
           await requestPermissions();
         }
       } catch {
@@ -2596,7 +2596,7 @@ export default function StoryCreate() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top,12px))]">
         <button
           type="button"
-          onClick={() => requestExitWithDraftPrompt("capture")}
+          onClick={() => requestExitWithDraftPrompt("back")}
           className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
           aria-label="Retour à la caméra"
         >
