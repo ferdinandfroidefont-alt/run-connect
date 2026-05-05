@@ -27,7 +27,6 @@ import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
-import { MainTopHeader } from '@/components/layout/MainTopHeader';
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
@@ -979,9 +978,12 @@ export default function MySessions() {
         className="flex h-full min-h-0 flex-col overflow-hidden apple-grouped-bg"
         data-tutorial="tutorial-my-sessions"
       >
-        {/* Maquette 13 — en-tête large title, fond grouped (pas de carte séparée) */}
         <div className="z-50 shrink-0 apple-grouped-bg">
-          <MainTopHeader title="Séances" className="bg-transparent" />
+          <div className="px-5 pt-[calc(var(--safe-area-top)+14px)] pb-3">
+            <div className="flex items-center justify-between">
+              <h1 className="text-[34px] font-semibold leading-none tracking-[-0.6px] text-foreground">Séances</h1>
+            </div>
+          </div>
         </div>
 
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg">

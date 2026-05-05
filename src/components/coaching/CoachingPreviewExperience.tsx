@@ -158,6 +158,7 @@ export function CoachingPreviewExperience({ identity }: Props) {
     <IosFixedPageHeaderShell
       className="coaching-flat min-h-0 flex-1"
       headerWrapperClassName="shrink-0"
+      contentTopOffsetPx={0}
       contentScroll
       scrollClassName="min-h-0 bg-background"
       header={

@@ -3063,6 +3063,7 @@ export function CoachPlanningExperience() {
       <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden" data-tutorial="tutorial-coaching">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
+          contentTopOffsetPx={0}
           headerWrapperClassName={
             weekPlannerMode
               ? "shrink-0 border-0 apple-grouped-bg"

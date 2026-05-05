@@ -36,8 +36,9 @@ html, body {
     /* Bande sous la tab bar (home indicator / marge bas écran) — remonte la nav d’autant. */
     --tab-bar-ground-strip: 6px;
     /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
+    /* Insets bas conservé pour la zone home indicator. */
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-top: 0px;
     /* Réserve scroll / pages fixed : hauteur onglets + bandeau sous la barre (aligné sur BottomNavigation `bottom: var(--tab-bar-ground-strip)`). */
     --bottom-nav-offset: calc(var(--nav-height) + var(--tab-bar-ground-strip));
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
