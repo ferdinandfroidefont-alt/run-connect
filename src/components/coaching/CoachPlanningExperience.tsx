@@ -22,6 +22,7 @@ import {
   Gauge,
   GripVertical,
   Leaf,
+  Lock,
   Minus,
   MoreHorizontal,
   Plus,
@@ -96,6 +97,7 @@ type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
 type IntensityMode = "zones" | "rpe";
 type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
+type PyramidMode = "symetrique" | "croissante" | "decroissante" | "manuelle";
 
 type SchemaToolKind = "steady" | "interval" | "pyramid" | "variation" | "libre" | "repetition";
 type SchemaDragToolKind = "steady" | "interval" | "pyramid" | "variation";
@@ -173,6 +175,27 @@ type SessionBlock = {
   zone?: ZoneKey;
   rpe?: number;
   notes?: string;
+};
+
+type PyramidStepSource = {
+  id: string;
+  paceSecPerKm?: number;
+  distanceM?: number;
+  durationSec?: number;
+  recoveryDurationSec?: number;
+  repetitions?: number;
+  zone?: ZoneKey;
+};
+
+type PyramidConfig = {
+  mode: PyramidMode;
+  steps: PyramidStepSource[];
+};
+
+type PyramidDisplayStep = PyramidStepSource & {
+  isMirror: boolean;
+  mirrorOf?: number;
+  sourceIndex: number;
 };
 
 type TrainingSession = {
@@ -327,6 +350,98 @@ const athleteIntensityFromRunningRecords = (
 ) => buildAthleteIntensityContext({ runningRecords: runningRecords ?? null, coachRunningRecords: coachRunningRecords ?? null });
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const PYRAMID_NOTES_PREFIX = "[Pyramid]";
+const PYRAMID_MODE_HINTS: Record<PyramidMode, string> = {
+  symetrique: "🔒 Chaque palier est dupliqué à l'identique en miroir. Modifier un palier source met à jour son miroir automatiquement.",
+  croissante: "Les paliers s'enchaînent du plus facile au plus difficile, sans miroir.",
+  decroissante: "Les paliers s'enchaînent du plus difficile au plus facile, sans miroir.",
+  manuelle: "Tu construis la séquence comme tu veux, aucune contrainte.",
+};
+
+function parsePyramidConfig(block: SessionBlock): PyramidConfig {
+  const fallbackZone = block.zone || "Z4";
+  const fallbackStep: PyramidStepSource = {
+    id: uid(),
+    paceSecPerKm: block.paceSecPerKm,
+    distanceM: block.distanceM,
+    durationSec: block.durationSec,
+    recoveryDurationSec: block.recoveryDurationSec,
+    repetitions: block.repetitions || 1,
+    zone: fallbackZone,
+  };
+  const fallback: PyramidConfig = {
+    mode: "symetrique",
+    steps: [fallbackStep, { ...fallbackStep, id: uid() }, { ...fallbackStep, id: uid() }],
+  };
+  const rawNotes = block.notes || "";
+  if (!rawNotes.includes(PYRAMID_NOTES_PREFIX)) return fallback;
+  const payload = rawNotes.slice(rawNotes.indexOf(PYRAMID_NOTES_PREFIX) + PYRAMID_NOTES_PREFIX.length).trim();
+  if (!payload.startsWith("{")) return fallback;
+  try {
+    const parsed = JSON.parse(payload) as Partial<PyramidConfig>;
+    const mode: PyramidMode =
+      parsed.mode === "symetrique" || parsed.mode === "croissante" || parsed.mode === "decroissante" || parsed.mode === "manuelle"
+        ? parsed.mode
+        : "symetrique";
+    const steps = Array.isArray(parsed.steps)
+      ? parsed.steps
+          .map((step) => ({
+            id: typeof step?.id === "string" && step.id ? step.id : uid(),
+            paceSecPerKm: isPositive(step?.paceSecPerKm) ? Number(step?.paceSecPerKm) : undefined,
+            distanceM: isPositive(step?.distanceM) ? Number(step?.distanceM) : undefined,
+            durationSec: isPositive(step?.durationSec) ? Number(step?.durationSec) : undefined,
+            recoveryDurationSec: isPositive(step?.recoveryDurationSec) ? Number(step?.recoveryDurationSec) : undefined,
+            repetitions: isPositive(step?.repetitions) ? Number(step?.repetitions) : 1,
+            zone:
+              typeof step?.zone === "string" &&
+              ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(step.zone.toUpperCase())
+                ? (step.zone.toUpperCase() as ZoneKey)
+                : fallbackZone,
+          }))
+          .filter((step) => step.id)
+      : [];
+    return {
+      mode,
+      steps: steps.length > 0 ? steps : fallback.steps,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function serializePyramidConfig(config: PyramidConfig) {
+  return `${PYRAMID_NOTES_PREFIX} ${JSON.stringify(config)}`;
+}
+
+function buildPyramidDisplaySteps(config: PyramidConfig): PyramidDisplayStep[] {
+  const sources = config.steps.map((step, sourceIndex) => ({
+    ...step,
+    sourceIndex,
+    isMirror: false,
+  }));
+  if (config.mode !== "symetrique" || sources.length <= 1) return sources;
+  const mirrors = sources
+    .slice(0, -1)
+    .reverse()
+    .map((source) => ({
+      ...source,
+      id: `mirror-${source.id}`,
+      isMirror: true,
+      mirrorOf: source.sourceIndex + 1,
+    }));
+  return [...sources, ...mirrors];
+}
+
+function pyramidSubtitle(config: PyramidConfig) {
+  const sourceCount = config.steps.length;
+  if (config.mode === "symetrique") {
+    const mirrors = Math.max(0, sourceCount - 1);
+    return `${sourceCount} paliers + ${mirrors} miroirs · symétrique`;
+  }
+  if (config.mode === "croissante") return `${sourceCount} paliers · croissante`;
+  if (config.mode === "decroissante") return `${sourceCount} paliers · décroissante`;
+  return `${sourceCount} paliers · manuelle`;
+}
 
 function secondsToLabel(total: number | undefined) {
   if (!total || total <= 0) return "";
@@ -691,6 +806,15 @@ function paceStringToSecPerKm(pace?: string) {
   return min * 60 + sec;
 }
 
+function parsePaceInputToSec(value: string): number | undefined {
+  const cleaned = value.trim().replace(/"/g, "").replace(/''/g, "").replace(/'/g, ":");
+  const [mStr, sStr = "0"] = cleaned.split(":");
+  const min = Number.parseInt(mStr ?? "", 10);
+  const sec = Number.parseInt(sStr ?? "0", 10);
+  if (!Number.isFinite(min) || !Number.isFinite(sec) || min < 0 || sec < 0 || sec > 59) return undefined;
+  return min * 60 + sec;
+}
+
 function parseNumericField(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) return Math.round(value);
   if (typeof value === "string") {
@@ -910,6 +1034,7 @@ export function CoachPlanningExperience() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [pendingInsertIndex, setPendingInsertIndex] = useState<number | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [expandedPyramidSteps, setExpandedPyramidSteps] = useState<Record<string, boolean>>({});
   const [schemaDraggingTool, setSchemaDraggingTool] = useState<SchemaDragToolKind | null>(null);
   const [schemaAddMoreOpen, setSchemaAddMoreOpen] = useState(false);
   const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
@@ -2067,10 +2192,19 @@ export function CoachPlanningExperience() {
   const createQuickSchemaBlock = useCallback((kind: SchemaToolKind): SessionBlock => {
     const nextOrder = draft.blocks.length + 1;
     if (kind === "pyramid") {
+      const defaultStep = {
+        id: uid(),
+        paceSecPerKm: 330,
+        distanceM: 200,
+        durationSec: 60,
+        recoveryDurationSec: 60,
+        repetitions: 1,
+        zone: "Z4" as ZoneKey,
+      };
       return {
         ...createDefaultBlock("steady", nextOrder),
-        repetitions: 5,
-        notes: "[Pyramid]",
+        repetitions: 3,
+        notes: serializePyramidConfig({ mode: "symetrique", steps: [defaultStep, { ...defaultStep, id: uid() }, { ...defaultStep, id: uid() }] }),
         zone: "Z4",
       };
     }
@@ -2198,6 +2332,29 @@ export function CoachPlanningExperience() {
       blocks: prev.blocks.map((block) => (block.id === blockId ? updater(block) : block)),
     }));
   }, []);
+
+  const updatePyramidBlock = useCallback(
+    (blockId: string, updater: (config: PyramidConfig) => PyramidConfig) => {
+      updateDraftBlock(blockId, (current) => {
+        const currentConfig = parsePyramidConfig(current);
+        const nextConfig = updater(currentConfig);
+        const safeSteps = nextConfig.steps.length
+          ? nextConfig.steps
+          : [{ id: uid(), zone: current.zone || "Z4", repetitions: 1 }];
+        return {
+          ...current,
+          notes: serializePyramidConfig({ ...nextConfig, steps: safeSteps }),
+          paceSecPerKm: safeSteps[0]?.paceSecPerKm ?? current.paceSecPerKm,
+          distanceM: safeSteps[0]?.distanceM ?? current.distanceM,
+          durationSec: safeSteps[0]?.durationSec ?? current.durationSec,
+          recoveryDurationSec: safeSteps[0]?.recoveryDurationSec ?? current.recoveryDurationSec,
+          repetitions: safeSteps.length,
+          zone: safeSteps[0]?.zone ?? current.zone ?? "Z4",
+        };
+      });
+    },
+    [updateDraftBlock]
+  );
 
   const removeDraftBlock = useCallback((blockId: string) => {
     setDraft((prev) => {
@@ -3703,8 +3860,7 @@ export function CoachPlanningExperience() {
                 >
                   <div className="space-y-3 px-4 py-3">
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
-                    <div className="min-w-0">
-                      <div className="rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
+                    <div className="min-w-0 rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
                         <div className="flex min-w-0 gap-2">
                           <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-between py-0 text-[9px] font-semibold text-muted-foreground/80">
                             <span className="text-[#BF5AF2]">Z6</span>
@@ -3739,7 +3895,7 @@ export function CoachPlanningExperience() {
                               variant="premiumCompact"
                               barHeightScale={3}
                               zoneBandMode
-                              interBlockGapPx={3}
+                              interBlockGapPx={4}
                               flatSurface
                               selectedBlockIndex={selectedSchemaPreviewIndex}
                               onBlockTap={({ index }) => {
@@ -3751,7 +3907,7 @@ export function CoachPlanningExperience() {
                                 const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
                                 if (block) setSelectedBlockId(block.id);
                               }}
-                              className="relative z-[2] h-[220px] w-full border-l border-b border-border/70 bg-transparent"
+                              className="relative z-[2] h-[220px] w-full bg-transparent"
                             />
                             {schemaDropRatio != null ? (
                               <div
@@ -3787,7 +3943,6 @@ export function CoachPlanningExperience() {
                             Temps
                           </p>
                         </div>
-                      </div>
                     </div>
 
                     <p className="mb-2 mt-5 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
@@ -3920,8 +4075,17 @@ export function CoachPlanningExperience() {
                         const isDropTarget = dragOverBlockId === block.id;
                         const isSelected = selectedBlockId === block.id;
                         const typeMeta = blockTypeMeta(block.type);
-                        const accents = blockAccent(block.type);
                         const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
+                        const isPyramidBlock = Boolean(block.notes?.includes(PYRAMID_NOTES_PREFIX));
+                        const accents = isPyramidBlock
+                          ? {
+                              iconWrap: "bg-[#F97316]",
+                              iconColor: "text-white",
+                              tint: "from-[#F97316]/18 via-[#F97316]/8 to-transparent",
+                            }
+                          : blockAccent(block.type);
+                        const pyramidConfig = isPyramidBlock ? parsePyramidConfig(block) : null;
+                        const pyramidSteps = pyramidConfig ? buildPyramidDisplaySteps(pyramidConfig) : [];
 
                         return (
                           <div key={block.id} className="relative">
@@ -3966,12 +4130,16 @@ export function CoachPlanningExperience() {
                                   )}
                                   aria-hidden
                                 >
-                                  <typeMeta.icon className={cn("h-4 w-4", accents.iconColor)} />
+                                  {isPyramidBlock ? (
+                                    <span className={cn("text-[13px] font-bold leading-none", accents.iconColor)}>▲</span>
+                                  ) : (
+                                    <typeMeta.icon className={cn("h-4 w-4", accents.iconColor)} />
+                                  )}
                                 </span>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <p className="text-[14px] font-bold uppercase tracking-[0.06em] text-foreground">
-                                      {label}
+                                      {isPyramidBlock ? "PYRAMIDE" : label}
                                     </p>
                                     {block.type === "interval" ? (
                                       <span className="rounded-full bg-[#2563EB]/12 px-2 py-0.5 text-[11px] font-semibold text-[#2563EB]">
@@ -3980,7 +4148,7 @@ export function CoachPlanningExperience() {
                                     ) : null}
                                   </div>
                                   <p className="text-[12px] text-muted-foreground">
-                                    {index + 1}. {blockSummary(block)}
+                                    {index + 1}. {isPyramidBlock && pyramidConfig ? pyramidSubtitle(pyramidConfig) : blockSummary(block)}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -4199,113 +4367,257 @@ export function CoachPlanningExperience() {
                                   </div>
 
                                 </div>
-                              ) : block.notes?.includes("[Pyramid]") ? (
-                                <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Allure"
-                                      value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
-                                      placeholder="5'30"
-                                      onClick={() => {
-                                        const pace = block.paceSecPerKm || 330;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure du bloc",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
-                                                : { ...current, paceSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Distance"
-                                      value={simpleBlockDistanceValue(block.distanceM)}
-                                      placeholder="5"
-                                      onClick={() => {
-                                        const meters = block.distanceM || 0;
-                                        const wholeKm = Math.floor(meters / 1000);
-                                        const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                        setWheelAValue(String(wholeKm));
-                                        setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                        setWheelUnit("km");
-                                        openWheelColumns(
-                                          "Distance du bloc",
-                                          [
-                                            { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                            { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                          ],
-                                          () => {
-                                            const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
-                                                : { ...current, distanceM: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Temps"
-                                      value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                      placeholder="30"
-                                      onClick={() => {
-                                        const total = block.durationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Durée du bloc",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
-                                                : { ...current, durationSec: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
+                              ) : isPyramidBlock && pyramidConfig ? (
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-4 gap-1.5">
+                                    {(
+                                      [
+                                        { mode: "symetrique", label: "Symétrique", bars: [8, 13, 19, 13, 8] },
+                                        { mode: "croissante", label: "Croiss.", bars: [8, 13, 19] },
+                                        { mode: "decroissante", label: "Décroiss.", bars: [19, 13, 8] },
+                                        { mode: "manuelle", label: "Manuelle", bars: [13, 19, 8, 17] },
+                                      ] as const
+                                    ).map((modeCard) => (
+                                      <button
+                                        key={`${block.id}-${modeCard.mode}`}
+                                        type="button"
+                                        className={cn(
+                                          "rounded-[10px] border px-1 py-2 text-center transition-all",
+                                          pyramidConfig.mode === modeCard.mode
+                                            ? "border-[#F97316] bg-white shadow-[0_2px_8px_rgba(249,115,22,0.25)]"
+                                            : "border-transparent bg-[#F2F2F7] text-muted-foreground"
+                                        )}
+                                        onClick={() => updatePyramidBlock(block.id, (cfg) => ({ ...cfg, mode: modeCard.mode }))}
+                                      >
+                                        <span className="mb-1 inline-flex h-5 items-end justify-center gap-[2px]">
+                                          {modeCard.bars.map((height, glyphIndex) => (
+                                            <span
+                                              key={`${modeCard.mode}-glyph-${glyphIndex}`}
+                                              className={cn(
+                                                "w-1 rounded-[1px]",
+                                                pyramidConfig.mode === modeCard.mode ? "bg-[#F97316]" : "bg-[#C7C7CC]"
+                                              )}
+                                              style={{ height }}
+                                            />
+                                          ))}
+                                        </span>
+                                        <span className="block text-[10px] font-semibold leading-tight">{modeCard.label}</span>
+                                      </button>
+                                    ))}
                                   </div>
 
-                                  <div className="grid grid-cols-1 gap-2">
-                                    <CoachingMetricPill
-                                      label="Paliers"
-                                      value={`${block.repetitions ?? 5}`}
-                                      placeholder="5"
-                                      onClick={() =>
-                                        openWheel(
-                                          "Paliers",
-                                          Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.repetitions ?? 5),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, repetitions: Number(next) }))
-                                        )
-                                      }
-                                    />
+                                  <div className="rounded-[9px] border-l-[3px] border-[#F97316] bg-[#FFF7ED] px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                                    {PYRAMID_MODE_HINTS[pyramidConfig.mode]}
                                   </div>
+
+                                  <div className="space-y-2">
+                                    {pyramidSteps.map((step, stepIndex) => {
+                                      const stepNumber = stepIndex + 1;
+                                      const stepKey = `${block.id}:${step.id}`;
+                                      const isOpen = Boolean(expandedPyramidSteps[stepKey]);
+                                      const zone = step.zone || "Z4";
+                                      const isMirror = step.isMirror;
+                                      const sourcePalier = (step.mirrorOf ?? 0) || step.sourceIndex + 1;
+                                      return (
+                                        <div
+                                          key={stepKey}
+                                          className={cn(
+                                            "overflow-hidden rounded-[12px] border bg-white",
+                                            isMirror
+                                              ? "border-[rgba(249,115,22,0.35)] bg-[linear-gradient(180deg,#ffffff_0%,#fffaf3_100%)]"
+                                              : "border-border/80"
+                                          )}
+                                        >
+                                          <button
+                                            type="button"
+                                            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                                            onClick={() =>
+                                              setExpandedPyramidSteps((prev) => ({
+                                                ...prev,
+                                                [stepKey]: !prev[stepKey],
+                                              }))
+                                            }
+                                          >
+                                            <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-border/70 bg-[#F2F2F7] text-[10px] font-bold">
+                                              {stepNumber}
+                                            </span>
+                                            <span
+                                              className={cn(
+                                                "inline-flex h-[18px] w-8 shrink-0 items-center justify-center rounded-[4px] text-[10px] font-bold",
+                                                zoneToPreviewColorClass(zone),
+                                                zone === "Z3" ? "text-black" : "text-white"
+                                              )}
+                                            >
+                                              {zone}
+                                            </span>
+                                            <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground">
+                                              {(step.distanceM ? metersToLabel(step.distanceM) : "Distance ?")} ·{" "}
+                                              {(step.paceSecPerKm ? compactPaceLabel(step.paceSecPerKm) : "Allure ?")} · récup{" "}
+                                              {step.recoveryDurationSec ? secondsToLabel(step.recoveryDurationSec) : "0 s"}
+                                            </span>
+                                            {isMirror ? (
+                                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F97316]/12 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.04em] text-[#F97316]">
+                                                <Lock className="h-2.5 w-2.5" />
+                                                MIROIR P{sourcePalier}
+                                              </span>
+                                            ) : null}
+                                            <span className={cn("inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F2F2F7] transition-transform", isOpen ? "rotate-180" : "")}>
+                                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                            </span>
+                                          </button>
+                                          {isOpen ? (
+                                            <div className="border-t border-border/70 px-3 pb-3 pt-2">
+                                              {isMirror ? (
+                                                <div className="mb-2 rounded-[8px] bg-[#F97316]/10 px-2.5 py-2 text-[11px] text-[#C2410C]">
+                                                  🔒 Ce palier est le miroir verrouillé du Palier {sourcePalier}. Modifie le palier source pour changer ses valeurs.
+                                                </div>
+                                              ) : null}
+                                              <div className="grid grid-cols-3 gap-2">
+                                                {[
+                                                  { key: "paceSecPerKm", label: "Allure", value: step.paceSecPerKm ? compactPaceLabel(step.paceSecPerKm) : "" },
+                                                  { key: "distanceM", label: "Distance", value: step.distanceM ? String(step.distanceM) : "" },
+                                                  { key: "durationSec", label: "Temps", value: step.durationSec ? String(step.durationSec) : "" },
+                                                ].map((field) => (
+                                                  <label key={`${stepKey}-${field.key}`} className="space-y-1">
+                                                    <span className="block text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{field.label}</span>
+                                                    <input
+                                                      value={field.value}
+                                                      disabled={isMirror}
+                                                      onChange={(event) => {
+                                                        if (isMirror) return;
+                                                        updatePyramidBlock(block.id, (cfg) => {
+                                                          const steps = [...cfg.steps];
+                                                          const source = steps[step.sourceIndex];
+                                                          if (!source) return cfg;
+                                                          const raw = event.target.value;
+                                                          const nextValue =
+                                                            field.key === "paceSecPerKm"
+                                                              ? parsePaceInputToSec(raw)
+                                                              : (() => {
+                                                                  const numeric = Number.parseInt(raw.replace(/[^\d]/g, ""), 10);
+                                                                  return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+                                                                })();
+                                                          if (field.key === "paceSecPerKm") source.paceSecPerKm = nextValue;
+                                                          if (field.key === "distanceM") source.distanceM = nextValue;
+                                                          if (field.key === "durationSec") source.durationSec = nextValue;
+                                                          return { ...cfg, steps };
+                                                        });
+                                                      }}
+                                                      className={cn(
+                                                        "h-8 w-full rounded-full border border-border/80 px-2 text-center text-[12px] font-semibold",
+                                                        isMirror ? "cursor-not-allowed bg-[#F9F4EE] text-muted-foreground" : "bg-white text-foreground"
+                                                      )}
+                                                    />
+                                                  </label>
+                                                ))}
+                                              </div>
+                                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                                {[
+                                                  { key: "recoveryDurationSec", label: "Récup", value: step.recoveryDurationSec ? String(step.recoveryDurationSec) : "" },
+                                                  { key: "repetitions", label: "Répétitions", value: String(step.repetitions ?? 1) },
+                                                ].map((field) => (
+                                                  <label key={`${stepKey}-${field.key}`} className="space-y-1">
+                                                    <span className="block text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{field.label}</span>
+                                                    <input
+                                                      value={field.value}
+                                                      disabled={isMirror}
+                                                      onChange={(event) => {
+                                                        if (isMirror) return;
+                                                        const numeric = Number.parseInt(event.target.value.replace(/[^\d]/g, ""), 10);
+                                                        updatePyramidBlock(block.id, (cfg) => {
+                                                          const steps = [...cfg.steps];
+                                                          const source = steps[step.sourceIndex];
+                                                          if (!source) return cfg;
+                                                          const nextValue = Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+                                                          if (field.key === "recoveryDurationSec") source.recoveryDurationSec = nextValue;
+                                                          if (field.key === "repetitions") source.repetitions = nextValue ?? 1;
+                                                          return { ...cfg, steps };
+                                                        });
+                                                      }}
+                                                      className={cn(
+                                                        "h-8 w-full rounded-full border border-border/80 px-2 text-center text-[12px] font-semibold",
+                                                        isMirror ? "cursor-not-allowed bg-[#F9F4EE] text-muted-foreground" : "bg-white text-foreground"
+                                                      )}
+                                                    />
+                                                  </label>
+                                                ))}
+                                              </div>
+                                              <div className="mt-2">
+                                                <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">Zone</p>
+                                                <div className="flex gap-1">
+                                                  {(PREVIEW_ZONE_ORDER as readonly ZoneKey[]).map((zoneKey) => (
+                                                    <button
+                                                      key={`${stepKey}-${zoneKey}`}
+                                                      type="button"
+                                                      disabled={isMirror}
+                                                      className={cn(
+                                                        "flex-1 rounded-md py-1 text-[10px] font-bold text-white transition-transform",
+                                                        zoneToPreviewColorClass(zoneKey),
+                                                        step.zone === zoneKey ? "scale-[1.04] ring-1 ring-black" : "",
+                                                        isMirror ? "cursor-not-allowed opacity-70" : ""
+                                                      )}
+                                                      onClick={() =>
+                                                        updatePyramidBlock(block.id, (cfg) => {
+                                                          const steps = [...cfg.steps];
+                                                          const source = steps[step.sourceIndex];
+                                                          if (!source) return cfg;
+                                                          source.zone = zoneKey;
+                                                          return { ...cfg, steps };
+                                                        })
+                                                      }
+                                                    >
+                                                      {zoneKey}
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                              {!isMirror ? (
+                                                <div className="mt-2 flex justify-end">
+                                                  <button
+                                                    type="button"
+                                                    className="rounded-full bg-red-50 px-3 py-1 text-[11px] font-bold text-red-500"
+                                                    onClick={() =>
+                                                      updatePyramidBlock(block.id, (cfg) => ({
+                                                        ...cfg,
+                                                        steps: cfg.steps.filter((_, sourceIdx) => sourceIdx !== step.sourceIndex),
+                                                      }))
+                                                    }
+                                                  >
+                                                    Supprimer
+                                                  </button>
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    className="w-full rounded-[10px] border border-dashed border-border/90 bg-[#F2F2F7] py-2.5 text-[12px] font-bold text-[#2563EB]"
+                                    onClick={() => {
+                                      const newStepId = uid();
+                                      updatePyramidBlock(block.id, (cfg) => ({
+                                        ...cfg,
+                                        steps: [
+                                          ...cfg.steps,
+                                          {
+                                            id: newStepId,
+                                            zone: "Z4",
+                                            repetitions: 1,
+                                          },
+                                        ],
+                                      }));
+                                      setExpandedPyramidSteps((prev) => ({
+                                        ...prev,
+                                        [`${block.id}:${newStepId}`]: true,
+                                      }));
+                                    }}
+                                  >
+                                    + Ajouter un palier
+                                  </button>
                                 </div>
                               ) : isProgressiveBlock(block) ? (
                                 <div className="space-y-2">
@@ -4648,11 +4960,20 @@ export function CoachPlanningExperience() {
                       return;
                     }
                     if (entry.id === "pyramid") {
+                      const defaultStep = {
+                        id: uid(),
+                        paceSecPerKm: 330,
+                        distanceM: 200,
+                        durationSec: 60,
+                        recoveryDurationSec: 60,
+                        repetitions: 1,
+                        zone: "Z4" as ZoneKey,
+                      };
                       insertDraftBlock(
                         {
                           ...createDefaultBlock("steady", nextOrder),
-                          repetitions: 5,
-                          notes: "[Pyramid]",
+                          repetitions: 3,
+                          notes: serializePyramidConfig({ mode: "symetrique", steps: [defaultStep, { ...defaultStep, id: uid() }, { ...defaultStep, id: uid() }] }),
                           zone: "Z4",
                         },
                         pendingInsertIndex
