@@ -5,6 +5,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,6 +64,8 @@ type TextFontMode = "modern" | "clean" | "signature";
 type StoryEditorMode = "idle" | "text" | "music" | "sticker" | "draw";
 type MusicSheetTab = "forYou" | "popular" | "original";
 type ShareAudience = "friends" | "public";
+type ShareFriend = { user_id: string; display_name: string; username: string; avatar_url: string | null };
+type ShareConversation = { id: string; group_name: string };
 
 type ScheduledSession = {
   id: string;
@@ -115,24 +119,6 @@ type StoryDraftPayload = {
 };
 
 const STORY_DRAFT_STORAGE_KEY = "runconnect_story_create_draft_v1";
-
-const STORY_SHARE_MOCK_FRIENDS = [
-  { id: "f-1", name: "Lucas" },
-  { id: "f-2", name: "Camille" },
-  { id: "f-3", name: "Nora" },
-  { id: "f-4", name: "Anis" },
-  { id: "f-5", name: "Mina" },
-];
-const STORY_SHARE_MOCK_CLUBS = [
-  { id: "c-1", name: "Annecy Runners" },
-  { id: "c-2", name: "Morning 5k" },
-  { id: "c-3", name: "Trail Dimanche" },
-];
-const STORY_SHARE_MOCK_GROUPS = [
-  { id: "g-1", name: "Sortie du lac" },
-  { id: "g-2", name: "Prépa 10K" },
-  { id: "g-3", name: "Afterwork run" },
-];
 
 /** Zoom média éditeur story (approx. Instagram : dézoom pour voir le cadre) */
 const STORY_MEDIA_MIN_SCALE = 0.38;
@@ -295,6 +281,10 @@ export default function StoryCreate() {
   const [sharing, setSharing] = useState(false);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [shareAudience, setShareAudience] = useState<ShareAudience>("friends");
+  const [shareFriends, setShareFriends] = useState<ShareFriend[]>([]);
+  const [shareClubs, setShareClubs] = useState<ShareConversation[]>([]);
+  const [shareGroups, setShareGroups] = useState<ShareConversation[]>([]);
+  const [shareDataLoading, setShareDataLoading] = useState(false);
   const [selectedClubIds, setSelectedClubIds] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [hideStoryOpen, setHideStoryOpen] = useState(false);
@@ -735,10 +725,77 @@ export default function StoryCreate() {
     </AlertDialog>
   );
 
-  const hideCandidates = useMemo(
-    () => STORY_SHARE_MOCK_FRIENDS.filter((friend) => friend.name.toLowerCase().includes(hideSearchQuery.toLowerCase())),
-    [hideSearchQuery]
-  );
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+
+    const loadShareSheetData = async () => {
+      setShareDataLoading(true);
+      try {
+        const [followingRes, followersRes, membershipsRes] = await Promise.all([
+          supabase.from("user_follows").select("following_id").eq("follower_id", user.id).eq("status", "accepted"),
+          supabase.from("user_follows").select("follower_id").eq("following_id", user.id).eq("status", "accepted"),
+          supabase.from("group_members").select("conversation_id").eq("user_id", user.id),
+        ]);
+
+        const followingIds = (followingRes.data ?? []).map((row: { following_id: string }) => row.following_id);
+        const followerIds = (followersRes.data ?? []).map((row: { follower_id: string }) => row.follower_id);
+        const mutualFriendIds = followingIds.filter((id) => followerIds.includes(id));
+        const conversationIds = (membershipsRes.data ?? []).map((row: { conversation_id: string }) => row.conversation_id);
+
+        const [profilesRes, conversationsRes] = await Promise.all([
+          mutualFriendIds.length
+            ? supabase
+                .from("profiles")
+                .select("user_id, display_name, username, avatar_url")
+                .in("user_id", mutualFriendIds)
+            : Promise.resolve({ data: [], error: null } as any),
+          conversationIds.length
+            ? supabase
+                .from("conversations")
+                .select("id, group_name, is_group, club_code")
+                .in("id", conversationIds)
+                .eq("is_group", true)
+            : Promise.resolve({ data: [], error: null } as any),
+        ]);
+
+        if (!mounted) return;
+
+        const friends = ((profilesRes.data ?? []) as any[]).map((profile) => ({
+          user_id: profile.user_id ?? "",
+          display_name: profile.display_name || profile.username || "Utilisateur",
+          username: profile.username || "",
+          avatar_url: profile.avatar_url ?? null,
+        }));
+
+        const convs = (conversationsRes.data ?? []) as Array<{ id: string; group_name: string | null; club_code: string | null }>;
+        const clubs = convs
+          .filter((conv) => !!conv.club_code)
+          .map((conv) => ({ id: conv.id, group_name: conv.group_name || "Club" }));
+        const groups = convs
+          .filter((conv) => !conv.club_code)
+          .map((conv) => ({ id: conv.id, group_name: conv.group_name || "Groupe" }));
+
+        setShareFriends(friends);
+        setShareClubs(clubs);
+        setShareGroups(groups);
+      } finally {
+        if (mounted) setShareDataLoading(false);
+      }
+    };
+
+    void loadShareSheetData();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
+  const hideCandidates = useMemo(() => {
+    const q = hideSearchQuery.toLowerCase();
+    return shareFriends.filter(
+      (friend) => friend.display_name.toLowerCase().includes(q) || friend.username.toLowerCase().includes(q)
+    );
+  }, [hideSearchQuery, shareFriends]);
 
   const toggleId = useCallback((prev: string[], id: string) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]), []);
 
@@ -762,108 +819,130 @@ export default function StoryCreate() {
     {
       id: "club",
       title: "Club",
-      subtitle: selectedClubIds.length > 0 ? `${selectedClubIds.length} sélectionné(s)` : "Aucun",
+      subtitle: selectedClubIds.length > 1 ? `${selectedClubIds.length} clubs` : selectedClubIds.length === 1 ? "1 club" : "Aucun",
       active: selectedClubIds.length > 0,
-      onClick: () => setSelectedClubIds((prev) => toggleId(prev, STORY_SHARE_MOCK_CLUBS[(prev.length ?? 0) % STORY_SHARE_MOCK_CLUBS.length].id)),
+      onClick: () => {
+        if (!shareClubs.length) return;
+        setSelectedClubIds((prev) => toggleId(prev, shareClubs[(prev.length ?? 0) % shareClubs.length].id));
+      },
       className: "bg-green-500 text-white",
     },
     {
       id: "group",
       title: "Groupe",
-      subtitle: selectedGroupIds.length > 0 ? `${selectedGroupIds.length} sélectionné(s)` : "Aucun",
+      subtitle: selectedGroupIds.length > 1 ? `${selectedGroupIds.length} groupes` : selectedGroupIds.length === 1 ? "1 groupe" : "Aucun",
       active: selectedGroupIds.length > 0,
-      onClick: () => setSelectedGroupIds((prev) => toggleId(prev, STORY_SHARE_MOCK_GROUPS[(prev.length ?? 0) % STORY_SHARE_MOCK_GROUPS.length].id)),
+      onClick: () => {
+        if (!shareGroups.length) return;
+        setSelectedGroupIds((prev) => toggleId(prev, shareGroups[(prev.length ?? 0) % shareGroups.length].id));
+      },
       className: "bg-amber-500 text-black",
     },
   ] as const;
 
   const publishConfirmDialog = (
-    <AlertDialog open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
-      <AlertDialogContent className="max-w-md rounded-3xl border-0 bg-white/95 p-0 text-zinc-900 shadow-2xl dark:bg-zinc-950/95 dark:text-white">
-        <div className="px-4 pb-[max(14px,env(safe-area-inset-bottom,14px))] pt-3">
-          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-zinc-300/90 dark:bg-zinc-700/90" />
-          <p className="mb-3 text-xl font-semibold">Partager avec…</p>
+    <Sheet open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="z-[120] rounded-t-[22px] border-0 bg-[#f5f7fb] px-3 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-2 text-zinc-900 shadow-2xl dark:bg-[#17191f] dark:text-zinc-100"
+        overlayClassName="z-[119] bg-black/40 dark:bg-black/55"
+      >
+        <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+        <p className="mb-3 px-1 text-[29px] font-bold leading-none">Partager avec…</p>
 
-          <div className="mb-3 grid grid-cols-4 gap-2">
-            {shareChips.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={chip.onClick}
-                className={cn(
-                  "rounded-2xl px-2 py-2.5 text-center transition",
-                  chip.className,
-                  chip.active ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950 ring-white/90" : "opacity-85"
-                )}
-              >
-                <p className="text-xs font-semibold leading-tight">{chip.title}</p>
-                <p className="mt-0.5 text-[10px] opacity-90">{chip.subtitle}</p>
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-1.5 rounded-2xl border border-zinc-200 bg-white/80 p-1.5 dark:border-zinc-800 dark:bg-zinc-900/80">
+        <div className="mb-3 flex items-start gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {shareChips.map((chip) => (
             <button
+              key={chip.id}
               type="button"
-              onClick={() => setHideStoryOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80"
+              onClick={chip.onClick}
+              className={cn(
+                "min-w-[72px] rounded-2xl px-2 py-2 text-center transition",
+                chip.className,
+                chip.active ? "ring-2 ring-white/95 shadow-sm" : "opacity-85"
+              )}
             >
-              <span>Masquer</span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {hiddenFriendIds.length > 0 ? `${hiddenFriendIds.length} ami(s)` : "Personne"}
-              </span>
+              <p className="text-[12px] font-semibold leading-tight">{chip.title}</p>
+              <p className="mt-0.5 text-[10px] opacity-90">{chip.subtitle}</p>
             </button>
-            {hideStoryOpen && (
-              <div className="space-y-1 rounded-xl bg-zinc-100/70 p-2 dark:bg-zinc-800/70">
-                <div className="flex items-center gap-2 rounded-lg bg-white px-2 dark:bg-zinc-900">
-                  <Search className="h-4 w-4 text-zinc-500" />
-                  <input
-                    value={hideSearchQuery}
-                    onChange={(e) => setHideSearchQuery(e.target.value)}
-                    placeholder="Rechercher un ami"
-                    className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-zinc-500"
-                  />
-                </div>
-                <div className="max-h-28 space-y-1 overflow-auto pr-1">
-                  {hideCandidates.map((friend) => (
-                    <button
-                      key={friend.id}
-                      type="button"
-                      onClick={() => setHiddenFriendIds((prev) => toggleId(prev, friend.id))}
-                      className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/70 dark:hover:bg-zinc-900/60"
-                    >
-                      <span>{friend.name}</span>
-                      {hiddenFriendIds.includes(friend.id) ? <Check className="h-4 w-4 text-blue-500" /> : null}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm">
-              <span>Basculer en story à la une automatiquement</span>
-              <Switch checked={autoHighlightStory} onCheckedChange={setAutoHighlightStory} />
-            </div>
-            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm">
-              <span>Autoriser les réponses</span>
-              <Switch checked={allowReplies} onCheckedChange={setAllowReplies} />
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            disabled={sharing || !mediaFile}
-            onClick={() => {
-              void onShare();
-            }}
-            className="mt-3 h-11 w-full rounded-2xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            {sharing ? "Envoi…" : "Publier la story"}
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
+          ))}
         </div>
-      </AlertDialogContent>
-    </AlertDialog>
+
+        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={() => setHideStoryOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between px-3 py-3 text-left text-[17px] hover:bg-zinc-50 dark:hover:bg-zinc-800"
+          >
+            <span>Masquer</span>
+            <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+              {hiddenFriendIds.length > 0 ? `${hiddenFriendIds.length} ami(s)` : "Personne"}
+            </span>
+          </button>
+          {hideStoryOpen && (
+            <div className="border-t border-zinc-200 px-2 py-2 dark:border-zinc-800">
+              <div className="mb-2 flex items-center gap-2 rounded-xl bg-zinc-100 px-2.5 dark:bg-zinc-800">
+                <Search className="h-4 w-4 text-zinc-500" />
+                <input
+                  value={hideSearchQuery}
+                  onChange={(e) => setHideSearchQuery(e.target.value)}
+                  placeholder="Rechercher un ami"
+                  className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-zinc-500"
+                />
+              </div>
+              <div className="max-h-36 space-y-1 overflow-auto pr-1">
+                {hideCandidates.map((friend) => (
+                  <button
+                    key={friend.user_id}
+                    type="button"
+                    onClick={() => setHiddenFriendIds((prev) => toggleId(prev, friend.user_id))}
+                    className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={friend.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">{friend.display_name.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1 truncate text-sm">{friend.display_name}</span>
+                    {hiddenFriendIds.includes(friend.user_id) ? <Check className="h-4 w-4 text-blue-500" /> : null}
+                  </button>
+                ))}
+                {!shareDataLoading && hideCandidates.length === 0 ? (
+                  <p className="px-2 py-3 text-center text-xs text-zinc-500">Aucun ami trouvé</p>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
+            <span className="text-[16px]">Basculer en story à la une automatiquement</span>
+            <Switch checked={autoHighlightStory} onCheckedChange={setAutoHighlightStory} />
+          </div>
+          <div className="flex items-center justify-between border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
+            <span className="text-[16px]">Autoriser les réponses</span>
+            <Switch checked={allowReplies} onCheckedChange={setAllowReplies} />
+          </div>
+        </div>
+
+        <div className="mt-2 px-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+          {shareDataLoading
+            ? "Chargement des amis, clubs et groupes…"
+            : `${shareFriends.length} amis · ${shareClubs.length} club(s) · ${shareGroups.length} groupe(s)`}
+        </div>
+
+        <Button
+          type="button"
+          disabled={sharing || !mediaFile}
+          onClick={() => {
+            void onShare();
+          }}
+          className="mt-2 h-11 w-full rounded-2xl bg-[#0a84ff] text-base font-semibold text-white hover:bg-[#0976e6]"
+        >
+          {sharing ? "Envoi…" : "Publier la story"}
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </SheetContent>
+    </Sheet>
   );
 
   useEffect(() => {

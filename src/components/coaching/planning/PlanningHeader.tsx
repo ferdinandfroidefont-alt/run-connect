@@ -49,31 +49,37 @@ export function PlanningHeader({
   const showBellAndSettings = !coachLandingBrand && !hideDrawerActions;
   /** Dès qu’une action fiche club est fournie, afficher le bouton (initiale de secours si pas encore nom/photo). */
   const showClubMark = Boolean(onPressClubAvatar);
+  const showOnlyClubAction = showClubMark && !showBellAndSettings;
   const clubInitial = (clubName || "Club").trim().slice(0, 1).toUpperCase() || "C";
+  const clubMarkButton = (
+    <button
+      type="button"
+      onClick={onPressClubAvatar}
+      className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary active:opacity-80"
+      aria-label="Fiche du club"
+    >
+      {clubAvatarUrl ? (
+        <img src={clubAvatarUrl} alt={clubName || "Club"} className="h-full w-full object-cover" />
+      ) : (
+        clubInitial
+      )}
+    </button>
+  );
   return (
     <MainTopHeader
       title={title}
       subtitle={subtitle}
       tabs={tabs}
       tabsAriaLabel={`Navigation ${title}`}
+      largeTitleRight={showOnlyClubAction ? clubMarkButton : undefined}
       right={
         <>
-          {showClubMark ? (
-            <button
-              type="button"
-              onClick={onPressClubAvatar}
-              className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary active:opacity-80"
-              aria-label="Fiche du club"
-            >
-              {clubAvatarUrl ? (
-                <img src={clubAvatarUrl} alt={clubName || "Club"} className="h-full w-full object-cover" />
-              ) : (
-                clubInitial
-              )}
-            </button>
-          ) : (
+          {showClubMark && !showOnlyClubAction ? (
+            clubMarkButton
+          ) : null}
+          {!showClubMark ? (
             <RunConnectHeaderMark />
-          )}
+          ) : null}
           {showBellAndSettings ? (
             <>
               <div className="flex shrink-0 items-center justify-center">

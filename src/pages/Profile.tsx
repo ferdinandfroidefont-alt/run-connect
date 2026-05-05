@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Camera, Share2, ChevronRight, Trophy } from "lucide-react";
+import { Camera, ChevronRight, Trophy, SquareArrowOutUp } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -60,6 +60,7 @@ interface UserRoute {
   total_distance: number | null;
   total_elevation_gain: number | null;
   created_at: string;
+  coordinates: any;
 }
 const Profile = () => {
   const {
@@ -271,7 +272,7 @@ const Profile = () => {
       const {
         data,
         error
-      } = await supabase.from('routes').select('id, name, description, total_distance, total_elevation_gain, created_at').eq('created_by', user.id).order('created_at', {
+      } = await supabase.from('routes').select('id, name, description, total_distance, total_elevation_gain, created_at, coordinates').eq('created_by', user.id).order('created_at', {
         ascending: false
       });
       if (error) throw error;
@@ -630,18 +631,86 @@ const Profile = () => {
   const runningRecords = profile?.running_records && typeof profile.running_records === "object" ? profile.running_records : {};
   const record5k = runningRecords["5k"] || runningRecords["5 km"] || runningRecords["5km"] || "19:42";
   const record10k = runningRecords["10k"] || runningRecords["10 km"] || runningRecords["10km"] || "41:18";
+  const formatCompactCount = (value: number) =>
+    new Intl.NumberFormat("fr-FR", {
+      notation: "compact",
+      compactDisplay: "short",
+      maximumFractionDigits: 1,
+    }).format(value ?? 0);
+  const getInitials = (fullName: string | null | undefined, username: string | null | undefined) => {
+    const source = (fullName || username || "U").trim();
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+    }
+    return source.slice(0, 2).toUpperCase();
+  };
+  const routePathFromCoordinates = (coordinates: any): string => {
+    if (!Array.isArray(coordinates) || coordinates.length < 2) {
+      return "M 8 74 Q 38 58 68 62 T 128 48";
+    }
+    const points = coordinates
+      .map((coord: any) => {
+        if (coord?.lat != null && coord?.lng != null) {
+          return { lat: Number(coord.lat), lng: Number(coord.lng) };
+        }
+        if (Array.isArray(coord) && coord.length >= 2) {
+          return { lat: Number(coord[0]), lng: Number(coord[1]) };
+        }
+        return null;
+      })
+      .filter((point: any) => point && Number.isFinite(point.lat) && Number.isFinite(point.lng));
+    if (points.length < 2) return "M 8 74 Q 38 58 68 62 T 128 48";
+    const minLat = Math.min(...points.map((p: any) => p.lat));
+    const maxLat = Math.max(...points.map((p: any) => p.lat));
+    const minLng = Math.min(...points.map((p: any) => p.lng));
+    const maxLng = Math.max(...points.map((p: any) => p.lng));
+    const latRange = Math.max(maxLat - minLat, 0.0001);
+    const lngRange = Math.max(maxLng - minLng, 0.0001);
+    const chartPoints = points.map((p: any, index: number) => {
+      const x = 8 + (index / (points.length - 1)) * 124;
+      const y = 18 + (1 - (p.lat - minLat) / latRange) * 64 + ((p.lng - minLng) / lngRange - 0.5) * 10;
+      return { x, y: Math.max(14, Math.min(84, y)) };
+    });
+    let d = `M ${chartPoints[0].x.toFixed(2)} ${chartPoints[0].y.toFixed(2)}`;
+    for (let i = 1; i < chartPoints.length; i += 1) {
+      const prev = chartPoints[i - 1];
+      const curr = chartPoints[i];
+      const cx = ((prev.x + curr.x) / 2).toFixed(2);
+      const cy = ((prev.y + curr.y) / 2).toFixed(2);
+      d += ` Q ${prev.x.toFixed(2)} ${prev.y.toFixed(2)} ${cx} ${cy}`;
+    }
+    const last = chartPoints[chartPoints.length - 1];
+    d += ` T ${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
+    return d;
+  };
+  const storyColors = ["#4C8DFF", "#FF8A34", "#34C759", "#5AC8FA"];
+  const highlightedStories = userRoutes.slice(0, 3).map((route, index) => {
+    const distanceKm = (route.total_distance ?? 0) / 1000;
+    const pseudoDurationMinutes = Math.max(1, Math.round(distanceKm * 5.5));
+    const hours = Math.floor(pseudoDurationMinutes / 60);
+    const minutes = pseudoDurationMinutes % 60;
+    return {
+      id: route.id,
+      title: route.name || "Parcours",
+      meta: `${distanceKm > 0 ? `${distanceKm.toFixed(1).replace(".", ",")} km` : "0 km"} · ${hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}` : `${pseudoDurationMinutes} min`}`,
+      ageLabel: index === 0 ? "il y a 2j" : index === 1 ? "il y a 5j" : "il y a 7j",
+      color: storyColors[index % storyColors.length],
+      path: routePathFromCoordinates(route.coordinates),
+    };
+  });
 
   return (
     <div
-      className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-white"
+      className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
-      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-white">
+      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-secondary">
       {isEditing && !isViewingOtherUser && (
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden bg-white pb-[calc(2rem+var(--safe-area-bottom))]">
+      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden bg-secondary pb-[calc(2rem+var(--safe-area-bottom))]">
         <div className="box-border min-h-0 min-w-0 max-w-full space-y-6 px-5 pt-[calc(var(--safe-area-top)+14px)] sm:mx-auto sm:max-w-2xl">
           <div className="flex items-center justify-between">
             <h1 className="text-[34px] font-semibold leading-none tracking-[-0.6px] text-foreground">Profil</h1>
@@ -658,16 +727,20 @@ const Profile = () => {
                 className="inline-flex h-8 items-center text-[17px] text-foreground active:opacity-70"
                 aria-label="Partager le profil"
               >
-                <Share2 className="h-5 w-5" strokeWidth={2} />
+                <SquareArrowOutUp className="h-5 w-5" strokeWidth={2} />
               </button>
             ) : null}
           </div>
 
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate("/profile?tab=settings")}
+            className="flex w-full items-center gap-3 rounded-2xl bg-white px-3 py-3 text-left active:bg-secondary/60"
+          >
             <Avatar className="h-[60px] w-[60px] shrink-0">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="bg-secondary text-[22px] font-semibold text-foreground">
-                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
+              <AvatarFallback className="bg-[#0A84FF] text-[22px] font-semibold text-white">
+                {getInitials(profile?.display_name, profile?.username)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
@@ -678,11 +751,12 @@ const Profile = () => {
                 @{profile?.username} {profile?.country ? `· ${profile.country}` : ""} {profile?.is_premium ? "· Premium ✓" : ""}
               </p>
             </div>
-          </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+          </button>
 
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <p className="text-[22px] font-semibold leading-none text-foreground">{userRoutes.length}</p>
+              <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(userRoutes.length)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Séances</p>
             </div>
             <button
@@ -692,7 +766,7 @@ const Profile = () => {
                 setShowFollowDialog(true);
               }}
             >
-              <p className="text-[22px] font-semibold leading-none text-foreground">{followerCount}</p>
+              <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followerCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Abonnés</p>
             </button>
             <button
@@ -702,7 +776,7 @@ const Profile = () => {
                 setShowFollowDialog(true);
               }}
             >
-              <p className="text-[22px] font-semibold leading-none text-foreground">{followingCount}</p>
+              <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followingCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Suivis</p>
             </button>
           </div>
@@ -710,62 +784,78 @@ const Profile = () => {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[20px] font-semibold text-foreground">Stories à la une</h2>
-              <button type="button" className="text-[14px] font-medium text-muted-foreground">Voir tout</button>
+              <button type="button" className="text-[14px] font-medium text-primary">Voir tout</button>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1">
-              <button className="flex h-[108px] w-[84px] shrink-0 flex-col items-center justify-center rounded-2xl border border-border bg-white text-foreground">
-                <span className="mb-1 text-[22px] leading-none">+</span>
-                <span className="text-[12px]">Nouvelle</span>
-              </button>
-              <div className="h-[108px] w-[168px] shrink-0 rounded-2xl bg-[#4c8dff] p-3 text-white">
-                <p className="text-[15px] font-semibold">Morning Run</p>
-                <p className="mt-1 text-[12px]/4 opacity-90">8 km • 42 min</p>
+              <div className="shrink-0">
+                <button
+                  onClick={() => navigate("/stories/create")}
+                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-2xl border border-border bg-white text-foreground"
+                >
+                  <span className="text-[34px] leading-none text-primary">+</span>
+                  <span className="mt-1 text-[12px] font-medium text-primary">Nouvelle</span>
+                </button>
+                <p className="mt-2 text-center text-[12px] text-muted-foreground">Créer</p>
               </div>
-              <div className="h-[108px] w-[168px] shrink-0 rounded-2xl bg-[#ff8a34] p-3 text-white">
-                <p className="text-[15px] font-semibold">Sortie Club</p>
-                <p className="mt-1 text-[12px]/4 opacity-90">12 km • 1h03</p>
-              </div>
-              <div className="h-[108px] w-[168px] shrink-0 rounded-2xl bg-[#31b36b] p-3 text-white">
-                <p className="text-[15px] font-semibold">Trail Session</p>
-                <p className="mt-1 text-[12px]/4 opacity-90">15 km • 1h28</p>
-              </div>
+              {highlightedStories.map((story) => (
+                <div key={story.id} className="shrink-0">
+                  <button className="relative h-[150px] w-[110px] overflow-hidden rounded-2xl p-3 text-left" style={{ backgroundColor: story.color }}>
+                    <svg viewBox="0 0 140 100" className="absolute inset-0 h-full w-full p-2" aria-hidden="true">
+                      <path d={story.path} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.8" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-x-0 bottom-0 p-3">
+                      <p className="truncate text-[14px] font-semibold text-white">{story.title}</p>
+                      <p className="truncate text-[12px] text-white/80">{story.meta}</p>
+                    </div>
+                  </button>
+                  <p className="mt-2 text-center text-[12px] text-muted-foreground">{story.ageLabel}</p>
+                </div>
+              ))}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-border bg-white p-4">
-              <p className="text-[14px] font-semibold text-foreground">Créer une story</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">Partage ta sortie</p>
-              <div className="mt-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fff1e8] text-[#ff8a34]">
-                <Camera className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-white p-4">
-              <p className="text-[14px] font-semibold text-foreground">Nouveau record</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">Bats ton PR</p>
-              <div className="mt-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eaf1ff] text-[#4c8dff]">
-                <Trophy className="h-4 w-4" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-white">
-            <p className="px-4 pt-4 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
             <button
               type="button"
-              onClick={() => navigate('/profile/records')}
-              className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/50"
+              onClick={() => navigate('/stories/create')}
+              className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
             >
-              <span className="text-[16px] text-foreground">5 km — {record5k}</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#ff8a34] text-white">
+                <Camera className="h-4 w-4" />
+              </div>
+              <p className="text-[14px] font-semibold text-foreground">Créer une story</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Partage ta sortie</p>
             </button>
             <button
               type="button"
               onClick={() => navigate('/profile/records')}
-              className="flex w-full items-center justify-between border-t border-border px-4 py-3 text-left active:bg-secondary/50"
+              className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
             >
-              <span className="text-[16px] text-foreground">10 km — {record10k}</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#4c8dff] text-white">
+                <Trophy className="h-4 w-4" />
+              </div>
+              <p className="text-[14px] font-semibold text-foreground">Nouveau record</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Bats ton PR</p>
+            </button>
+          </div>
+
+          <div className="bg-white">
+            <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
+            <button
+              type="button"
+              onClick={() => navigate('/profile/records')}
+              className="flex w-full items-center justify-between border-t border-border px-1 py-3 text-left active:bg-secondary/50"
+            >
+              <span className="text-[16px] text-foreground">5 km</span>
+              <span className="text-[16px] text-foreground">{record5k} &gt;</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/profile/records')}
+              className="flex w-full items-center justify-between border-t border-border px-1 py-3 text-left active:bg-secondary/50"
+            >
+              <span className="text-[16px] text-foreground">10 km</span>
+              <span className="text-[16px] text-foreground">{record10k} &gt;</span>
             </button>
           </div>
 

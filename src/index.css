@@ -1557,7 +1557,7 @@ html, body {
 .rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__circle,
 .rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__circle,
 .rc-session-pin__shape[data-rc-pin-variant="premium"] .rc-session-pin__circle {
-  background: hsl(var(--primary));
+  background: var(--rc-session-pin-color, hsl(var(--primary)));
   box-shadow: none;
 }
 

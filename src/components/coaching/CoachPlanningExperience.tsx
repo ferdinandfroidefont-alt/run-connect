@@ -2589,7 +2589,7 @@ export function CoachPlanningExperience() {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
     switch (activeMenuKey) {
       case "tracking":
-        return "Suivi athlète";
+        return "Planification";
       case "dashboard":
         return "Tableau de bord";
       case "templates":
@@ -2966,6 +2966,16 @@ export function CoachPlanningExperience() {
                       {clubPageVariant === "admin" ? <span className="font-semibold">Modifier</span> : "Partager"}
                     </button>
                   }
+                />
+              </div>
+            ) : activeMenuKey === "tracking" ? (
+              <div className="pt-[var(--safe-area-top)]">
+                <IosPageHeaderBar
+                  leadingBack={{
+                    onClick: () => setActiveMenuKey("planning"),
+                    label: "Coaching",
+                  }}
+                  title="Planification"
                 />
               </div>
             ) : (

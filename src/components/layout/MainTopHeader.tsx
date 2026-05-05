@@ -16,6 +16,8 @@ type MainTopHeaderProps = {
   /** Barre compacte 44px — côté début (ex. « Calendriers ») */
   left?: ReactNode;
   right?: ReactNode;
+  /** Action alignée au grand titre (ex. avatar club). */
+  largeTitleRight?: ReactNode;
   className?: string;
 };
 
@@ -26,6 +28,7 @@ export function MainTopHeader({
   tabsAriaLabel,
   left,
   right,
+  largeTitleRight,
   className,
 }: MainTopHeaderProps) {
   // Refonte Apple NavBar large title (mockup 13/17/19) :
@@ -107,9 +110,12 @@ export function MainTopHeader({
           transform: `translateY(${-10 * progress}px) scale(${1 - progress * 0.18})`,
         }}
       >
-        <h1 className="font-display select-none text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
-          {title}
-        </h1>
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <h1 className="font-display min-w-0 select-none truncate text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
+            {title}
+          </h1>
+          {largeTitleRight ? <div className="shrink-0">{largeTitleRight}</div> : null}
+        </div>
         {subtitle ? (
           <p className="mt-1 line-clamp-1 text-[13px] font-normal leading-snug text-muted-foreground">
             {subtitle}

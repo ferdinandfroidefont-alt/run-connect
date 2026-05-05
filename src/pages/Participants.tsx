@@ -336,6 +336,12 @@ export default function Participants() {
     const sessionLng = Number(session?.location_lng);
     const hasValidSessionPoint = Number.isFinite(sessionLat) && Number.isFinite(sessionLng);
 
+    if (session && hasValidSessionPoint) {
+      if (rdvMarkerRef.current) {
+        rdvMarkerRef.current.setLngLat([sessionLng, sessionLat]);
+      }
+    }
+
     if (session && hasValidSessionPoint && !rdvMarkerRef.current) {
       const rdvEl = document.createElement("div");
       rdvEl.className =
@@ -343,7 +349,7 @@ export default function Participants() {
       void (async () => {
         const mapboxgl = await loadMapboxGl();
         if (cancelled || !mapRef.current || rdvMarkerRef.current) return;
-        rdvMarkerRef.current = new mapboxgl.Marker({ element: rdvEl })
+        rdvMarkerRef.current = new mapboxgl.Marker({ element: rdvEl, anchor: "bottom" })
           .setLngLat([sessionLng, sessionLat])
           .addTo(mapRef.current);
       })();

@@ -2,17 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { useDiscoverFeed, type DiscoverSession } from "@/hooks/useDiscoverFeed";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
+import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 import { cn } from "@/lib/utils";
 
@@ -200,6 +202,11 @@ export function FeedActivitiesMaquette() {
     sessions: discoverSessions,
     loading: discoverLoading,
     hasLocation,
+    maxDistance,
+    setMaxDistance,
+    selectedActivities,
+    toggleActivity,
+    toggleAllActivities,
     joinSession,
     refresh: refreshDiscover,
     resetFilters,
@@ -277,21 +284,12 @@ export function FeedActivitiesMaquette() {
       scrollClassName="min-h-0 bg-secondary"
       header={
         <div className="min-w-0 bg-secondary pt-[var(--safe-area-top)]">
-          <div className="flex h-11 items-center px-4">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="-ml-1 flex h-11 min-w-[44px] items-center justify-start text-primary active:opacity-60"
-              aria-label="Retour"
-            >
-              <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
-            </button>
-          </div>
-          <div className="px-4 pb-2 pt-1">
-            <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
-              Activités
-            </h1>
-          </div>
+          <IosPageHeaderBar
+            className="py-1.5"
+            leadingBack={{ onClick: () => navigate(-1), label: "Retour" }}
+            title="Activités"
+            titleClassName="text-[17px] text-primary"
+          />
           <div className="flex gap-1.5 px-4 pb-1">
             <button
               type="button"
@@ -318,6 +316,17 @@ export function FeedActivitiesMaquette() {
               Découvrir
             </button>
           </div>
+          {mode === "discover" ? (
+            <div className="px-4 pb-2 pt-1">
+              <DiscoverFilters
+                maxDistance={maxDistance}
+                setMaxDistance={setMaxDistance}
+                selectedActivities={selectedActivities}
+                toggleActivity={toggleActivity}
+                toggleAllActivities={toggleAllActivities}
+              />
+            </div>
+          ) : null}
         </div>
       }
     >

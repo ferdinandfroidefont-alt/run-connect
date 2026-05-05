@@ -15,6 +15,20 @@ export type SessionPinMeta = {
 /** Variante affichée sur la carte : `depth` = relief léger + dégradé discret (défaut). */
 export const DEFAULT_SESSION_PIN_VARIANT: SessionPinVariant = "depth";
 
+function resolveSessionPinColor(activityType?: string): string {
+  const t = (activityType ?? "").toLowerCase();
+  if (t.includes("velo") || t.includes("vtt") || t.includes("bike") || t.includes("cycl") || t.includes("gravel")) {
+    return "#ff375f";
+  }
+  if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf")) {
+    return "#5ac8fa";
+  }
+  if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike")) {
+    return "#34c759";
+  }
+  return "#007aff";
+}
+
 /** `VITE_MAP_PIN_VARIANT` = `minimal` | `depth` | `premium` (sinon défaut). */
 export function resolveSessionPinVariant(): SessionPinVariant {
   const v = import.meta.env.VITE_MAP_PIN_VARIANT as string | undefined;
@@ -30,8 +44,10 @@ export function createSessionPinButton(opts: {
   ariaLabel: string;
   variant?: SessionPinVariant;
   meta?: SessionPinMeta;
+  activityType?: string;
 }): HTMLButtonElement {
   const variant = opts.variant ?? resolveSessionPinVariant();
+  const pinColor = resolveSessionPinColor(opts.activityType);
 
   const pin = document.createElement("button");
   pin.type = "button";
@@ -47,6 +63,7 @@ export function createSessionPinButton(opts: {
   pin.style.margin = "0";
   pin.style.background = "transparent";
   pin.style.cursor = "pointer";
+  pin.style.setProperty("--rc-session-pin-color", pinColor);
   (pin.style as CSSStyleDeclaration & { webkitTapHighlightColor?: string }).webkitTapHighlightColor = "transparent";
 
   const visual = document.createElement("span");
@@ -63,7 +80,7 @@ export function createSessionPinButton(opts: {
     "d",
     "M36 80 L26 64 Q4 58 4 34 A32 32 0 1 1 68 34 Q68 58 46 64 Z"
   );
-  shellPath.setAttribute("fill", "#ffffff");
+  shellPath.setAttribute("fill", "var(--rc-session-pin-color, #007aff)");
   shell.appendChild(shellPath);
 
   const ground = document.createElement("span");

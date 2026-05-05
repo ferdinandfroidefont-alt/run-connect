@@ -44,7 +44,6 @@ import {
   createSessionPinButton,
   resolveSessionPinVariant,
 } from '@/lib/mapSessionPin';
-import { formatMapPinScheduleLine } from '@/lib/formatMapPinSchedule';
 import {
   getPersistedHomeMapPosition,
   HOME_HOT_PREFETCH_MAX_AGE_MS,
@@ -62,7 +61,7 @@ import {
 import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
 import { pathLengthMeters, resamplePathEvenlyMapCoords } from '@/lib/geoUtils';
-import { fetchMapboxDirectionsPath, fetchMapboxFastestDrivingDistanceMeters } from '@/lib/mapboxDirections';
+import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
@@ -181,21 +180,6 @@ const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: num
   return R * c;
 };
 
-const formatPinDistanceLabel = (distanceMeters: number): string => {
-  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return "";
-  if (distanceMeters < 1000) return `${Math.round(distanceMeters)}m`;
-  const km = distanceMeters / 1000;
-  const rounded = km >= 10 ? Math.round(km) : Math.round(km * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}km` : `${rounded.toFixed(1)}km`;
-};
-
-const updatePinMetaDistance = (pin: HTMLButtonElement, distanceLabel: string) => {
-  if (!distanceLabel) return;
-  const distEl = pin.querySelector<HTMLElement>('.rc-session-pin__meta-distance');
-  if (!distEl) return;
-  distEl.textContent = `à ${distanceLabel}`;
-  distEl.classList.remove('is-empty');
-};
 interface Filter {
   activity_types: string[];
   session_types: string[];
@@ -469,8 +453,6 @@ export const InteractiveMap = ({
     lat: number;
     lng: number;
   } | null>(null);
-  const routeDistanceLabelCacheRef = useRef<globalThis.Map<string, string>>(new globalThis.Map());
-
   /**
    * Géoloc « fast » lancée au montage : tourne en parallèle du chargement Mapbox (une seule requête,
    * réutilisée dans la course au lieu d’un 2e appel au `load`).
@@ -932,18 +914,6 @@ export const InteractiveMap = ({
         const now = new Date();
         const isPastSession = sessionDate.getTime() < now.getTime();
         const isSelected = selectedSession?.id === session.id;
-        let distanceLabel = "";
-        if (userLocation) {
-          const cacheKey = `${userLocation.lat.toFixed(4)}:${userLocation.lng.toFixed(4)}:${lat.toFixed(4)}:${lng.toFixed(4)}`;
-          const cached = routeDistanceLabelCacheRef.current.get(cacheKey);
-          if (cached !== undefined) {
-            distanceLabel = cached;
-          } else {
-            const fallbackMeters = calculateDistanceKm(userLocation.lat, userLocation.lng, lat, lng) * 1000;
-            distanceLabel = formatPinDistanceLabel(fallbackMeters);
-            routeDistanceLabelCacheRef.current.set(cacheKey, distanceLabel);
-          }
-        }
         const wrap = document.createElement('div');
         wrap.className = cn(
           'rc-session-pin',
@@ -958,42 +928,12 @@ export const InteractiveMap = ({
         wrap.style.height = '1px';
         wrap.style.overflow = 'visible';
 
-        const scheduleLine = (() => {
-          const trimmed = formatMapPinScheduleLine(session.scheduled_at).trim();
-          if (trimmed) return trimmed;
-          const d = new Date(session.scheduled_at);
-          if (!Number.isNaN(d.getTime())) {
-            const t = format(d, "HH:mm").replace(":", "h");
-            return `${format(d, "d MMM", { locale: fr })} ${t}`;
-          }
-          return "Séance";
-        })();
         const pin = createSessionPinButton({
           avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
           ariaLabel: session.title || 'Séance',
           variant: resolveSessionPinVariant(),
-          meta: {
-            scheduleLine,
-            distanceLine: distanceLabel ? `à ${distanceLabel}` : undefined,
-          },
+          activityType: session.activity_type,
         });
-
-        if (userLocation) {
-          const cacheKey = `${userLocation.lat.toFixed(4)}:${userLocation.lng.toFixed(4)}:${lat.toFixed(4)}:${lng.toFixed(4)}`;
-          void fetchMapboxFastestDrivingDistanceMeters(
-            { lat: userLocation.lat, lng: userLocation.lng },
-            { lat, lng },
-          ).then((routedDistance) => {
-            if (runId !== markersRunIdRef.current) return;
-            if (!routedDistance) return;
-            const nextLabel = formatPinDistanceLabel(routedDistance);
-            if (!nextLabel) return;
-            routeDistanceLabelCacheRef.current.set(cacheKey, nextLabel);
-            updatePinMetaDistance(pin, nextLabel);
-          }).catch(() => {
-            // Keep fallback distance label when routed distance lookup fails.
-          });
-        }
 
         wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {

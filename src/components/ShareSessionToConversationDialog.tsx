@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -33,6 +33,7 @@ interface Conversation {
   participant_1: string | null;
   participant_2: string | null;
   is_group: boolean;
+  club_code?: string | null;
   group_name?: string;
   group_avatar_url?: string;
   profiles?: {
@@ -65,6 +66,7 @@ export const ShareSessionToConversationDialog = ({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [sharingTo, setSharingTo] = useState<string | null>(null);
+  const [inboxFilter, setInboxFilter] = useState<"all" | "clubs" | "groups">("all");
 
 
   useEffect(() => {
@@ -289,6 +291,24 @@ Ouvre directement dans RunConnect : ${shareUrl}`;
 
   if (!session) return null;
 
+  const clubCount = useMemo(
+    () => conversations.filter((conversation) => conversation.is_group && !!conversation.club_code).length,
+    [conversations]
+  );
+  const groupCount = useMemo(
+    () => conversations.filter((conversation) => conversation.is_group && !conversation.club_code).length,
+    [conversations]
+  );
+  const filteredConversations = useMemo(() => {
+    if (inboxFilter === "clubs") {
+      return conversations.filter((conversation) => conversation.is_group && !!conversation.club_code);
+    }
+    if (inboxFilter === "groups") {
+      return conversations.filter((conversation) => conversation.is_group && !conversation.club_code);
+    }
+    return conversations;
+  }, [conversations, inboxFilter]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -356,58 +376,97 @@ Ouvre directement dans RunConnect : ${shareUrl}`;
               <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">
                 Envoyer dans une conversation
               </p>
-              <div className="bg-background rounded-xl overflow-hidden">
+              <div
+                role="tablist"
+                aria-label="Filtrer les conversations"
+                className="mb-3 flex items-center gap-1 rounded-full border border-[#c9d4e6] bg-[#e8effa] p-1"
+              >
+                {[
+                  { id: "all" as const, label: "Conversations" },
+                  { id: "clubs" as const, label: `Clubs · ${clubCount}` },
+                  { id: "groups" as const, label: `Groupes · ${groupCount}` },
+                ].map((chip) => {
+                  const active = inboxFilter === chip.id;
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setInboxFilter(chip.id)}
+                      className={`h-9 min-w-0 flex-1 rounded-full px-2 text-[13px] font-semibold transition active:scale-[0.98] ${
+                        active
+                          ? "bg-[#0a74db] text-white shadow-[0_2px_6px_rgba(10,116,219,0.35)]"
+                          : "text-[#35679a]"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-2.5">
                 {loading ? (
-                  <div className="flex items-center justify-center py-8">
+                  <div className="rounded-2xl bg-background flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
                   </div>
                 ) : conversations.length === 0 ? (
-                  <div className="text-center py-8 px-4">
+                  <div className="rounded-2xl bg-background text-center py-8 px-4">
                     <p className="text-[15px] text-muted-foreground">Aucune conversation</p>
                     <p className="text-[13px] text-muted-foreground mt-1">
                       Créez des conversations pour partager
                     </p>
                   </div>
+                ) : filteredConversations.length === 0 ? (
+                  <div className="rounded-2xl bg-background text-center py-8 px-4">
+                    <p className="text-[15px] text-muted-foreground">Aucun fil dans ce filtre</p>
+                    <p className="text-[13px] text-muted-foreground mt-1">
+                      Essaie un autre onglet ou crée une conversation.
+                    </p>
+                  </div>
                 ) : (
-                  conversations.map((conversation, index) => (
-                    <div key={conversation.id}>
-                      {index > 0 && <SettingsSeparator />}
-                      <button
-                        onClick={() => shareToConversation(conversation.id)}
-                        disabled={sharingTo === conversation.id}
-                        className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
-                      >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage 
-                            src={conversation.is_group 
-                              ? conversation.group_avatar_url || "" 
-                              : conversation.profiles?.avatar_url || ""} 
-                          />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {conversation.is_group ? (
-                              <Users className="h-4 w-4" />
-                            ) : (
-                              (conversation.profiles?.username || conversation.profiles?.display_name)?.charAt(0)?.toUpperCase() || "U"
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0 text-left">
-                          <p className="text-[15px] font-medium text-foreground truncate">
-                            {conversation.is_group 
-                              ? conversation.group_name 
-                              : conversation.profiles?.display_name || conversation.profiles?.username}
-                          </p>
-                          <p className="text-[13px] text-muted-foreground">
-                            {conversation.is_group ? "Club" : "Conversation"}
-                          </p>
-                        </div>
-                        {sharingTo === conversation.id ? (
-                          <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </div>
+                  filteredConversations.map((conversation) => (
+                    <button
+                      key={conversation.id}
+                      onClick={() => shareToConversation(conversation.id)}
+                      disabled={sharingTo === conversation.id}
+                      className="w-full rounded-2xl bg-background flex items-center gap-3 px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.08)] active:scale-[0.995] active:bg-secondary/40 disabled:opacity-50"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={conversation.is_group
+                            ? conversation.group_avatar_url || ""
+                            : conversation.profiles?.avatar_url || ""}
+                        />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {conversation.is_group ? (
+                            <Users className="h-4 w-4" />
+                          ) : (
+                            (conversation.profiles?.username || conversation.profiles?.display_name)?.charAt(0)?.toUpperCase() || "U"
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-medium text-foreground truncate">
+                          {conversation.is_group
+                            ? conversation.group_name
+                            : conversation.profiles?.display_name || conversation.profiles?.username}
+                        </p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {conversation.is_group
+                            ? conversation.club_code
+                              ? "Club"
+                              : "Groupe"
+                            : "Conversation"}
+                        </p>
+                      </div>
+                      {sharingTo === conversation.id ? (
+                        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
                   ))
                 )}
               </div>
