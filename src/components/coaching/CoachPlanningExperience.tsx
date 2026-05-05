@@ -17,8 +17,6 @@ import {
   Crosshair,
   ChevronRight,
   ChevronDown,
-  ChevronDown,
-  ChevronDown,
   Dumbbell,
   Flame,
   Gauge,

@@ -57,7 +57,7 @@ export async function applyRuconnectSplashNativeChrome(): Promise<void> {
     }
     const { StatusBar } = await import('@capacitor/status-bar');
     await StatusBar.setOverlaysWebView({ overlay: true });
-    await StatusBar.hide({ animation: 'NONE' });
+    await StatusBar.hide();
   } catch {
     /* Web ou plugin indisponible */
   }

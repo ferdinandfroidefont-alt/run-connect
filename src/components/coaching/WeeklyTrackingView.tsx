@@ -633,7 +633,7 @@ export const WeeklyTrackingView = ({
   const handleNudgeThisAthlete = useCallback(async () => {
     if (!selectedAthlete || !user) return;
     if (!athleteHasLateSessions) {
-      toast.info("Rappel", "Aucune séance en retard à relancer pour cet athlète.");
+      toast.info("Rappel", { description: "Aucune séance en retard à relancer pour cet athlète." });
       return;
     }
     setNudgingAthlete(true);
@@ -1071,7 +1071,7 @@ export const WeeklyTrackingView = ({
             );
             return;
           }
-          toast.info("Planification", "Ouvre la planification depuis l’onglet Coaching pour envoyer une séance.");
+          toast.info("Planification", { description: "Ouvre la planification depuis l’onglet Coaching pour envoyer une séance." });
         }}
         sessionTitle={
           selectedDayData

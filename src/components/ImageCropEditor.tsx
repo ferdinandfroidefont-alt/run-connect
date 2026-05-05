@@ -355,7 +355,7 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
                 transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
                 touchAction: 'none',
                 userSelect: 'none',
-                WebkitUserDrag: 'none',
+                ...({ WebkitUserDrag: 'none' } as React.CSSProperties),
               }}
               draggable={false}
               onLoad={onImageLoad}
