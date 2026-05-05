@@ -13,6 +13,7 @@ import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsD
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import { kmToMiles, milesToKm } from "@/lib/distanceUnits";
 import { cn } from "@/lib/utils";
+import { getSportIconComponent, getSportColorClass } from "@/components/ui/SportIcon";
 
 /** Maquette 21 · RunConnect accent & surfaces */
 const RC = {
