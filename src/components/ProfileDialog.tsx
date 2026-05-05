@@ -20,6 +20,7 @@ import { QRShareDialog } from "@/components/QRShareDialog";
 import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
+import { FollowDialog } from "@/components/FollowDialog";
 
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { COUNTRY_LABELS } from "@/lib/countryLabels";

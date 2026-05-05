@@ -21,6 +21,7 @@ import {
   AuthLegalFooter,
   authCardShadowStyle,
 } from "@/components/auth/AuthChrome";
+import { AuthLandingAppleGallery } from "@/components/auth/AuthLandingAppleGallery";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
@@ -824,88 +825,14 @@ const Auth = () => {
   );
 
   // ══════════════════════════════════════════════
-  // ██  LANDING VIEW — Mockup 01 (Apple Splash) ██
-  // Mockup spec : <Phone bg="#fff"> (canvas pur, pas grouped)
-  // Icon hero 96×96 rounded-22, title 34/bold/-0.6px, 4 features, pill CTA + link
+  // ██  LANDING VIEW — Carrousel marketing (maquette runconnect-landing + DESIGN-apple)
   // ══════════════════════════════════════════════
   const renderLanding = () => (
-    <div
-      className="relative flex min-h-[100dvh] flex-col bg-card"
-      style={{
-        paddingTop: "max(env(safe-area-inset-top, 0px), 90px)",
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
-      }}
-    >
-      {/* Hero — icône + titre + sous-titre (centré) */}
-      <div className="px-8 text-center">
-        <div
-          className="mx-auto flex h-24 w-24 items-center justify-center rounded-[22px]"
-          style={{
-            background: "hsl(var(--primary))",
-            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
-          }}
-        >
-          <svg width="46" height="46" viewBox="0 0 46 46" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="30" cy="9" r="4" fill="#fff" stroke="none" />
-            <path d="M14 38 L20 24 L30 28 L26 38" />
-            <path d="M20 24 L32 22 L38 30" />
-            <path d="M14 30 L8 30" />
-          </svg>
-        </div>
-        <h1 className="mt-7 font-display text-[34px] font-bold leading-[1.1] tracking-[-0.6px] text-foreground">
-          Bienvenue dans
-          <br />
-          RunConnect
-        </h1>
-        <p className="mx-auto mt-2.5 max-w-[280px] text-[17px] leading-[1.4] text-muted-foreground">
-          Trouve, programme et partage tes séances de sport avec tes amis.
-        </p>
-      </div>
-
-      {/* Features list — 4 lignes (icône emoji 28 + titre 17/600 + body 15/muted) */}
-      <div className="mt-8 flex flex-col gap-[18px] px-8">
-        {[
-          { icon: "📍", title: "La carte", body: "Vois où tes amis courent en temps réel." },
-          { icon: "📅", title: "Planification", body: "Programme une séance en quelques touches." },
-          { icon: "👥", title: "Communauté", body: "Rejoins des clubs, ouvre des groupes." },
-          { icon: "💬", title: "Coaching", body: "Échange avec ton coach, suis ton plan." },
-        ].map((f) => (
-          <div key={f.title} className="flex gap-3.5">
-            <div className="w-9 shrink-0 text-[28px] leading-none">{f.icon}</div>
-            <div>
-              <div className="text-[17px] font-semibold tracking-[-0.4px] text-foreground">
-                {f.title}
-              </div>
-              <div className="mt-0.5 text-[15px] leading-[1.35] text-muted-foreground">
-                {f.body}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex-1" />
-
-      {/* CTA bottom : pill Action Blue + lien (mockup spec) */}
-      <div className="mx-auto w-full max-w-[340px] px-6">
-        <button
-          type="button"
-          onClick={() => setView("email-signup")}
-          disabled={isLoading}
-          className="apple-pill apple-pill-large w-full disabled:opacity-50"
-        >
-          Continuer
-        </button>
-        <button
-          type="button"
-          onClick={() => setView("email-signin")}
-          disabled={isLoading}
-          className="mt-3.5 flex h-[44px] w-full items-center justify-center rounded-full bg-transparent text-[15px] font-normal text-primary transition-colors active:bg-primary/5 disabled:opacity-50"
-        >
-          J&apos;ai déjà un compte
-        </button>
-      </div>
-    </div>
+    <AuthLandingAppleGallery
+      onSignUp={() => setView("email-signup")}
+      onSignIn={() => setView("email-signin")}
+      disabled={isLoading}
+    />
   );
 
   // ══════════════════════════════════════════════
@@ -1562,8 +1489,15 @@ const Auth = () => {
             </div>
           )}
 
-          <div className="min-h-0 flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-            {view === "landing" && renderLanding()}
+          <div
+            className={`min-h-0 flex-1 ${view === "landing" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
+            style={view === "landing" ? undefined : { WebkitOverflowScrolling: "touch" }}
+          >
+            {view === "landing" && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                {renderLanding()}
+              </div>
+            )}
             {view === "email-signin" && renderEmailSignin()}
           </div>
         </>
