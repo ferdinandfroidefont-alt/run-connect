@@ -4,6 +4,7 @@ import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +31,7 @@ import { generateSessionShareImage } from "@/services/sessionShareService";
 import {
   ArrowLeft, Camera, Image, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
-  AlignLeft, AlignCenter, AlignRight, Trash2, Search, X, ChevronRight
+  AlignLeft, AlignCenter, AlignRight, Trash2, Search, X, ChevronRight, ArrowDown
 } from "lucide-react";
 
 type CaptureMode = "photo" | "video" | "boomerang";
@@ -60,6 +61,7 @@ type TextStyleMode = "plain" | "bubble" | "outline" | "band";
 type TextFontMode = "modern" | "clean" | "signature";
 type StoryEditorMode = "idle" | "text" | "music" | "sticker" | "draw";
 type MusicSheetTab = "forYou" | "popular" | "original";
+type ShareAudience = "friends" | "public";
 
 type ScheduledSession = {
   id: string;
@@ -113,6 +115,24 @@ type StoryDraftPayload = {
 };
 
 const STORY_DRAFT_STORAGE_KEY = "runconnect_story_create_draft_v1";
+
+const STORY_SHARE_MOCK_FRIENDS = [
+  { id: "f-1", name: "Lucas" },
+  { id: "f-2", name: "Camille" },
+  { id: "f-3", name: "Nora" },
+  { id: "f-4", name: "Anis" },
+  { id: "f-5", name: "Mina" },
+];
+const STORY_SHARE_MOCK_CLUBS = [
+  { id: "c-1", name: "Annecy Runners" },
+  { id: "c-2", name: "Morning 5k" },
+  { id: "c-3", name: "Trail Dimanche" },
+];
+const STORY_SHARE_MOCK_GROUPS = [
+  { id: "g-1", name: "Sortie du lac" },
+  { id: "g-2", name: "Prépa 10K" },
+  { id: "g-3", name: "Afterwork run" },
+];
 
 /** Zoom média éditeur story (approx. Instagram : dézoom pour voir le cadre) */
 const STORY_MEDIA_MIN_SCALE = 0.38;
@@ -274,6 +294,14 @@ export default function StoryCreate() {
   // Share
   const [sharing, setSharing] = useState(false);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [shareAudience, setShareAudience] = useState<ShareAudience>("friends");
+  const [selectedClubIds, setSelectedClubIds] = useState<string[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [hideStoryOpen, setHideStoryOpen] = useState(false);
+  const [hideSearchQuery, setHideSearchQuery] = useState("");
+  const [hiddenFriendIds, setHiddenFriendIds] = useState<string[]>([]);
+  const [autoHighlightStory, setAutoHighlightStory] = useState(false);
+  const [allowReplies, setAllowReplies] = useState(true);
   const [hasDraft, setHasDraft] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [pendingExitTarget, setPendingExitTarget] = useState<"back" | "feed" | "entry" | null>(null);
@@ -707,25 +735,133 @@ export default function StoryCreate() {
     </AlertDialog>
   );
 
+  const hideCandidates = useMemo(
+    () => STORY_SHARE_MOCK_FRIENDS.filter((friend) => friend.name.toLowerCase().includes(hideSearchQuery.toLowerCase())),
+    [hideSearchQuery]
+  );
+
+  const toggleId = useCallback((prev: string[], id: string) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]), []);
+
+  const shareChips = [
+    {
+      id: "friends",
+      title: "Tes amis",
+      subtitle: "342",
+      active: shareAudience === "friends",
+      onClick: () => setShareAudience("friends"),
+      className: "bg-sky-500 text-white",
+    },
+    {
+      id: "public",
+      title: "Public",
+      subtitle: "Tout le monde",
+      active: shareAudience === "public",
+      onClick: () => setShareAudience("public"),
+      className: "bg-fuchsia-500 text-white",
+    },
+    {
+      id: "club",
+      title: "Club",
+      subtitle: selectedClubIds.length > 0 ? `${selectedClubIds.length} sélectionné(s)` : "Aucun",
+      active: selectedClubIds.length > 0,
+      onClick: () => setSelectedClubIds((prev) => toggleId(prev, STORY_SHARE_MOCK_CLUBS[(prev.length ?? 0) % STORY_SHARE_MOCK_CLUBS.length].id)),
+      className: "bg-green-500 text-white",
+    },
+    {
+      id: "group",
+      title: "Groupe",
+      subtitle: selectedGroupIds.length > 0 ? `${selectedGroupIds.length} sélectionné(s)` : "Aucun",
+      active: selectedGroupIds.length > 0,
+      onClick: () => setSelectedGroupIds((prev) => toggleId(prev, STORY_SHARE_MOCK_GROUPS[(prev.length ?? 0) % STORY_SHARE_MOCK_GROUPS.length].id)),
+      className: "bg-amber-500 text-black",
+    },
+  ] as const;
+
   const publishConfirmDialog = (
     <AlertDialog open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Publier la story ?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Ta story sera visible immédiatement par tes abonnés.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction
+      <AlertDialogContent className="max-w-md rounded-3xl border-0 bg-white/95 p-0 text-zinc-900 shadow-2xl dark:bg-zinc-950/95 dark:text-white">
+        <div className="px-4 pb-[max(14px,env(safe-area-inset-bottom,14px))] pt-3">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-zinc-300/90 dark:bg-zinc-700/90" />
+          <p className="mb-3 text-xl font-semibold">Partager avec…</p>
+
+          <div className="mb-3 grid grid-cols-4 gap-2">
+            {shareChips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={chip.onClick}
+                className={cn(
+                  "rounded-2xl px-2 py-2.5 text-center transition",
+                  chip.className,
+                  chip.active ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950 ring-white/90" : "opacity-85"
+                )}
+              >
+                <p className="text-xs font-semibold leading-tight">{chip.title}</p>
+                <p className="mt-0.5 text-[10px] opacity-90">{chip.subtitle}</p>
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-1.5 rounded-2xl border border-zinc-200 bg-white/80 p-1.5 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <button
+              type="button"
+              onClick={() => setHideStoryOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80"
+            >
+              <span>Masquer</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {hiddenFriendIds.length > 0 ? `${hiddenFriendIds.length} ami(s)` : "Personne"}
+              </span>
+            </button>
+            {hideStoryOpen && (
+              <div className="space-y-1 rounded-xl bg-zinc-100/70 p-2 dark:bg-zinc-800/70">
+                <div className="flex items-center gap-2 rounded-lg bg-white px-2 dark:bg-zinc-900">
+                  <Search className="h-4 w-4 text-zinc-500" />
+                  <input
+                    value={hideSearchQuery}
+                    onChange={(e) => setHideSearchQuery(e.target.value)}
+                    placeholder="Rechercher un ami"
+                    className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-zinc-500"
+                  />
+                </div>
+                <div className="max-h-28 space-y-1 overflow-auto pr-1">
+                  {hideCandidates.map((friend) => (
+                    <button
+                      key={friend.id}
+                      type="button"
+                      onClick={() => setHiddenFriendIds((prev) => toggleId(prev, friend.id))}
+                      className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/70 dark:hover:bg-zinc-900/60"
+                    >
+                      <span>{friend.name}</span>
+                      {hiddenFriendIds.includes(friend.id) ? <Check className="h-4 w-4 text-blue-500" /> : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm">
+              <span>Basculer en story à la une automatiquement</span>
+              <Switch checked={autoHighlightStory} onCheckedChange={setAutoHighlightStory} />
+            </div>
+            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm">
+              <span>Autoriser les réponses</span>
+              <Switch checked={allowReplies} onCheckedChange={setAllowReplies} />
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            disabled={sharing || !mediaFile}
             onClick={() => {
               void onShare();
             }}
+            className="mt-3 h-11 w-full rounded-2xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            Publier
-          </AlertDialogAction>
-        </AlertDialogFooter>
+            {sharing ? "Envoi…" : "Publier la story"}
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
       </AlertDialogContent>
     </AlertDialog>
   );
@@ -2390,17 +2526,19 @@ export default function StoryCreate() {
         <Button
           type="button"
           size="sm"
-          disabled={sharing || (editorMode === "idle" && !mediaFile)}
-          onClick={() => {
-            if (editorMode !== "idle") {
-              closeEditorMode();
-              return;
+          disabled={sharing}
+          onClick={async () => {
+            try {
+              await saveDraft();
+              toast({ title: "Brouillon enregistré", description: "Ta story a été sauvegardée en brouillon." });
+            } catch {
+              toast({ title: "Erreur", description: "Impossible d'enregistrer le brouillon.", variant: "destructive" });
             }
-            setPublishConfirmOpen(true);
           }}
-          className="pointer-events-auto h-9 rounded-full bg-white px-4 text-xs font-semibold text-black hover:bg-white/90"
+          className="pointer-events-auto h-9 rounded-full bg-black/50 px-4 text-xs font-semibold text-white backdrop-blur-sm hover:bg-black/60"
         >
-          {sharing ? "Envoi…" : "Publier"}
+          <ArrowDown className="mr-1.5 h-3.5 w-3.5" />
+          Sauvegarder
         </Button>
       </div>
       {/* Preview fullscreen */}
@@ -2710,21 +2848,34 @@ export default function StoryCreate() {
               className="pointer-events-auto relative px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-20"
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <label htmlFor="story-caption-input" className="sr-only">
-                Légende de la story
-              </label>
-              <Input
-                id="story-caption-input"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Ajouter une légende…"
-                autoComplete="off"
-                autoCorrect="off"
-                className="h-auto min-h-[44px] border-0 bg-transparent px-2.5 py-2.5 text-[16px] text-white shadow-none placeholder:text-white/55 focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
-                style={{
-                  textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.45)",
-                }}
-              />
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="story-caption-input" className="sr-only">
+                    Légende de la story
+                  </label>
+                  <Input
+                    id="story-caption-input"
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Ajouter une légende…"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    className="h-auto min-h-[44px] border-0 bg-transparent px-2.5 py-2.5 text-[16px] text-white shadow-none placeholder:text-white/55 focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
+                    style={{
+                      textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.45)",
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={sharing || !mediaFile}
+                  onClick={() => setPublishConfirmOpen(true)}
+                  className="h-9 rounded-full bg-blue-500 px-4 text-xs font-semibold text-white hover:bg-blue-600"
+                >
+                  {sharing ? "Envoi…" : "Suivant"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
