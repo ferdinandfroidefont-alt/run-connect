@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Camera, ChevronRight, Trophy, SquareArrowOutUp } from "lucide-react";
+import { Camera, ChevronRight, Trophy, Share } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -727,7 +727,7 @@ const Profile = () => {
                 className="inline-flex h-8 items-center text-[17px] text-foreground active:opacity-70"
                 aria-label="Partager le profil"
               >
-                <SquareArrowOutUp className="h-5 w-5" strokeWidth={2} />
+                <Share className="h-5 w-5" strokeWidth={2} />
               </button>
             ) : null}
           </div>
