@@ -3317,7 +3317,7 @@ const Messages = () => {
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           contentTopOffsetPx={0}
-          headerWrapperClassName="z-50 bg-card"
+          headerWrapperClassName="z-50"
           header={
             <MainTopHeader
               title="Mes séances"
@@ -3414,7 +3414,7 @@ const Messages = () => {
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           contentTopOffsetPx={0}
-          headerWrapperClassName="z-50 apple-grouped-bg"
+          headerWrapperClassName="z-50"
           header={
             activeRootTab === "create-club" ? (
               <MainTopHeader
