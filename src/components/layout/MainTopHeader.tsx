@@ -77,9 +77,9 @@ export function MainTopHeader({
       ref={containerRef}
       className={cn("shrink-0 pt-[var(--safe-area-top)]", className)}
       style={{
-        backgroundColor: `hsl(var(--background) / ${0.55 * progress})`,
-        backdropFilter: progress > 0.02 ? `saturate(${1 + progress * 0.6}) blur(${22 * progress}px)` : "none",
-        WebkitBackdropFilter: progress > 0.02 ? `saturate(${1 + progress * 0.6}) blur(${22 * progress}px)` : "none",
+        backgroundColor: progress > 0.02 ? `hsl(var(--muted) / ${0.44 + progress * 0.28})` : "transparent",
+        backdropFilter: progress > 0.02 ? `blur(${18 + progress * 10}px) saturate(${1.45 + progress * 0.35})` : "none",
+        WebkitBackdropFilter: progress > 0.02 ? `blur(${18 + progress * 10}px) saturate(${1.45 + progress * 0.35})` : "none",
       }}
     >
       {/* Compact bar (trailing actions) */}
