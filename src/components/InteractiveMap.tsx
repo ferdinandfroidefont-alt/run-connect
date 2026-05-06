@@ -216,6 +216,39 @@ const ACTIVITY_OPTIONS: { id: string; label: string; values: string[] }[] = [
   })),
 ];
 
+const ACTIVITY_FILTER_SUBTITLE: Record<string, string> = {
+  course: 'Trail · route',
+  trail: 'Trail · route',
+  velo: 'Route · gravel · MTB',
+  vtt: 'Route · gravel · MTB',
+  bmx: 'Route · gravel · MTB',
+  gravel: 'Route · gravel · MTB',
+  natation: 'Piscine · open water',
+  marche: 'Marche · trek',
+  randonnee: 'Marche · trek',
+  ski: 'Alpin · rando',
+  snowboard: 'Alpin · rando',
+  yoga: 'Étirements · mobilité',
+  football: 'Match · entraînement',
+  basket: 'Terrain · match',
+  volley: 'Indoor · beach',
+  badminton: 'Simple · double',
+  pingpong: 'Loisir · compétition',
+  tennis: 'Simple · double',
+  escalade: 'Bloc · voie',
+  petanque: 'Loisir · concours',
+  rugby: 'XV · VII',
+  handball: 'Indoor · match',
+  fitness: 'Cardio · renfo',
+  musculation: 'Force · hypertrophie',
+  crossfit: 'WOD · force',
+  boxe: 'Technique · sparring',
+  arts_martiaux: 'Kata · combat',
+  golf: 'Practice · parcours',
+  kayak: 'Rivière · mer',
+  surf: 'Vagues · technique',
+};
+
 const SESSION_TYPE_OPTIONS = [
   { id: 'all', label: 'Tous types', values: [] as string[] },
   { id: 'footing', label: 'Footing', values: ['footing'] },
@@ -1998,6 +2031,7 @@ export const InteractiveMap = ({
                       <HomeMapFilterRow
                         key={opt.id}
                         label={opt.label}
+                        hint={opt.id === 'all' ? 'Toutes disciplines' : ACTIVITY_FILTER_SUBTITLE[activityKey ?? '']}
                         selected={active}
                         leading={
                           <div

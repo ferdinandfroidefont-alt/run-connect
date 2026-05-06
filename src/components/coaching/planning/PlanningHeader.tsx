@@ -70,6 +70,7 @@ export function PlanningHeader({
       title={title}
       subtitle={subtitle}
       className="apple-grouped-bg"
+      disableScrollCollapse
       tabs={tabs}
       tabsAriaLabel={`Navigation ${title}`}
       largeTitleRight={showOnlyClubAction ? clubMarkButton : undefined}

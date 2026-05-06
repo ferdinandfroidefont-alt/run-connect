@@ -19,6 +19,8 @@ type MainTopHeaderProps = {
   /** Action alignée au grand titre (ex. avatar club). */
   largeTitleRight?: ReactNode;
   className?: string;
+  /** Désactive la compaction au scroll et garde le header fixe/étendu. */
+  disableScrollCollapse?: boolean;
 };
 
 export function MainTopHeader({
@@ -30,6 +32,7 @@ export function MainTopHeader({
   right,
   largeTitleRight,
   className,
+  disableScrollCollapse = false,
 }: MainTopHeaderProps) {
   // Refonte Apple NavBar large title (mockup 13/17/19) :
   // - SF Pro Display 34px / bold / -0.5px tracking (apple-navbar-large)
@@ -39,6 +42,10 @@ export function MainTopHeader({
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    if (disableScrollCollapse) {
+      setProgress(0);
+      return;
+    }
     const root = containerRef.current;
     if (!root) return;
 
@@ -70,7 +77,7 @@ export function MainTopHeader({
       if (raf) window.cancelAnimationFrame(raf);
       scrollEl.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [disableScrollCollapse]);
 
   return (
     <div

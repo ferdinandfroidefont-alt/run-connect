@@ -5,7 +5,77 @@ import { Input } from '@/components/ui/input';
 import { ACTIVITY_TYPES, SESSION_TYPES } from '../types';
 import { cn } from '@/lib/utils';
 import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
-import { SportIcon } from '@/components/ui/SportIcon';
+
+const ACTIVITY_EMOJI_BG: Record<string, string> = {
+  course: 'bg-[#0A66D0]',
+  trail: 'bg-[#0A66D0]',
+  velo: 'bg-[#FF9500]',
+  vtt: 'bg-[#FF9500]',
+  bmx: 'bg-[#FF9500]',
+  gravel: 'bg-[#FF9500]',
+  natation: 'bg-[#5AC8FA]',
+  marche: 'bg-[#34C759]',
+  randonnee: 'bg-[#34C759]',
+  ski: 'bg-[#AF52DE]',
+  snowboard: 'bg-[#AF52DE]',
+  yoga: 'bg-[#FF2D55]',
+  football: 'bg-[#34C759]',
+  basket: 'bg-[#FF9500]',
+  volley: 'bg-[#FFCC00]',
+  badminton: 'bg-[#65A30D]',
+  pingpong: 'bg-[#FB7185]',
+  tennis: 'bg-[#F59E0B]',
+  escalade: 'bg-[#8E8E93]',
+  petanque: 'bg-[#8E8E93]',
+  rugby: 'bg-[#15803D]',
+  handball: 'bg-[#0A66D0]',
+  fitness: 'bg-[#FF2D55]',
+  musculation: 'bg-[#3F3F46]',
+  crossfit: 'bg-[#F97316]',
+  boxe: 'bg-[#DC2626]',
+  arts_martiaux: 'bg-[#1F2937]',
+  golf: 'bg-[#34C759]',
+  kayak: 'bg-[#06B6D4]',
+  surf: 'bg-[#06B6D4]',
+};
+
+const ACTIVITY_SUBTITLE: Record<string, string> = {
+  course: 'Trail · route',
+  trail: 'Trail · route',
+  velo: 'Route · gravel · MTB',
+  vtt: 'Route · gravel · MTB',
+  bmx: 'Route · gravel · MTB',
+  gravel: 'Route · gravel · MTB',
+  natation: 'Piscine · open water',
+  marche: 'Marche · trek',
+  randonnee: 'Marche · trek',
+  ski: 'Alpin · rando',
+  snowboard: 'Alpin · rando',
+  yoga: 'Étirements · mobilité',
+  football: 'Match · entraînement',
+  basket: 'Terrain · match',
+  volley: 'Indoor · beach',
+  badminton: 'Simple · double',
+  pingpong: 'Loisir · compétition',
+  tennis: 'Simple · double',
+  escalade: 'Bloc · voie',
+  petanque: 'Loisir · concours',
+  rugby: 'XV · VII',
+  handball: 'Indoor · match',
+  fitness: 'Cardio · renfo',
+  musculation: 'Force · hypertrophie',
+  crossfit: 'WOD · force',
+  boxe: 'Technique · sparring',
+  arts_martiaux: 'Kata · combat',
+  golf: 'Practice · parcours',
+  kayak: 'Rivière · mer',
+  surf: 'Vagues · technique',
+};
+
+const ACTIVITY_TITLE_OVERRIDE: Record<string, string> = {
+  course: 'Course',
+  velo: 'Vélo',
+};
 
 interface ActivityStepProps {
   activityType: string;
@@ -16,39 +86,6 @@ interface ActivityStepProps {
   onBack: () => void;
   hideNavigation?: boolean;
 }
-
-const ACTIVITY_BG: Record<string, string> = {
-  course: 'bg-primary',
-  trail: 'bg-amber-600',
-  velo: 'bg-orange-500',
-  vtt: 'bg-orange-600',
-  bmx: 'bg-orange-500',
-  gravel: 'bg-amber-700',
-  marche: 'bg-emerald-600',
-  natation: 'bg-sky-500',
-  randonnee: 'bg-emerald-700',
-  ski: 'bg-purple-500',
-  snowboard: 'bg-purple-600',
-  yoga: 'bg-rose-500',
-  fitness: 'bg-rose-600',
-  musculation: 'bg-zinc-700',
-  crossfit: 'bg-orange-600',
-  boxe: 'bg-rose-700',
-  arts_martiaux: 'bg-zinc-800',
-  football: 'bg-emerald-700',
-  basket: 'bg-orange-600',
-  volley: 'bg-amber-500',
-  badminton: 'bg-lime-600',
-  pingpong: 'bg-rose-500',
-  tennis: 'bg-yellow-500',
-  escalade: 'bg-stone-600',
-  petanque: 'bg-stone-500',
-  rugby: 'bg-emerald-800',
-  handball: 'bg-blue-600',
-  golf: 'bg-emerald-600',
-  kayak: 'bg-cyan-600',
-  surf: 'bg-cyan-500',
-};
 
 export const ActivityStep: React.FC<ActivityStepProps> = ({
   activityType,
@@ -117,10 +154,21 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                     idx < popularActivities.length - 1 && 'border-b border-border/40'
                   )}
                 >
-                  <SportIcon sport={activity.value} size={36} />
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[15px] leading-none',
+                      ACTIVITY_EMOJI_BG[activity.value] ?? 'bg-[#8E8E93]'
+                    )}
+                    aria-hidden="true"
+                  >
+                    {activity.icon}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[17px] font-normal tracking-tight text-foreground">
-                      {activity.label.replace(/^[^\s]+\s/, '')}
+                      {ACTIVITY_TITLE_OVERRIDE[activity.value] ?? activity.label.replace(/^[^\s]+\s/, '')}
+                    </div>
+                    <div className="truncate text-[14px] leading-tight text-muted-foreground">
+                      {ACTIVITY_SUBTITLE[activity.value] ?? 'Sport'}
                     </div>
                   </div>
                   {selected ? (
@@ -147,10 +195,21 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                       idx < otherActivities.length - 1 && 'border-b border-border/40'
                     )}
                   >
-                    <SportIcon sport={activity.value} size={36} />
+                    <div
+                      className={cn(
+                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[15px] leading-none',
+                        ACTIVITY_EMOJI_BG[activity.value] ?? 'bg-[#8E8E93]'
+                      )}
+                      aria-hidden="true"
+                    >
+                      {activity.icon}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[17px] font-normal tracking-tight text-foreground">
-                        {activity.label.replace(/^[^\s]+\s/, '')}
+                        {ACTIVITY_TITLE_OVERRIDE[activity.value] ?? activity.label.replace(/^[^\s]+\s/, '')}
+                      </div>
+                      <div className="truncate text-[14px] leading-tight text-muted-foreground">
+                        {ACTIVITY_SUBTITLE[activity.value] ?? 'Sport'}
                       </div>
                     </div>
                     {selected ? (

@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { ChevronRight, Share } from "lucide-react";
+import { ChevronRight, Settings, Share } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -698,23 +698,34 @@ const Profile = () => {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-50"><div className="pointer-events-auto">
         <MainTopHeader
           title="Profil"
+          disableScrollCollapse
           className=""
           largeTitleRight={
             profile ? (
-              <button
-                type="button"
-                onClick={() =>
-                  shareProfile({
-                    username: profile.username,
-                    displayName: profile.display_name,
-                    avatarUrl: profile.avatar_url,
-                  })
-                }
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[17px] text-primary active:opacity-70"
-                aria-label="Partager le profil"
-              >
-                <Share className="h-5 w-5 text-primary" strokeWidth={2} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    shareProfile({
+                      username: profile.username,
+                      displayName: profile.display_name,
+                      avatarUrl: profile.avatar_url,
+                    })
+                  }
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[17px] text-primary active:opacity-70"
+                  aria-label="Partager le profil"
+                >
+                  <Share className="h-5 w-5 text-primary" strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/profile?tab=settings")}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[17px] text-primary active:opacity-70"
+                  aria-label="Ouvrir les paramètres"
+                >
+                  <Settings className="h-5 w-5 text-primary" strokeWidth={2} />
+                </button>
+              </div>
             ) : undefined
           }
         />
@@ -728,7 +739,7 @@ const Profile = () => {
         <div className="box-border min-h-0 min-w-0 max-w-full space-y-6 px-5 pt-3 sm:mx-auto sm:max-w-2xl">
           <button
             type="button"
-            onClick={() => navigate("/profile?tab=settings")}
+            onClick={() => navigate("/profile/edit")}
             className="flex w-full items-center gap-3 rounded-xl bg-white px-3 py-3 text-left active:bg-secondary/60"
           >
             <Avatar className="h-[60px] w-[60px] shrink-0">
@@ -786,9 +797,12 @@ const Profile = () => {
               <div className="shrink-0">
                 <button
                   onClick={() => navigate("/feed")}
-                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-xl border border-[#0A84FF]/20 bg-[#0A84FF] text-white"
+                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#d9dbe0] bg-[#f6f7f9] text-[#0A84FF]"
                 >
-                  <span className="text-[42px] font-light leading-none">+</span>
+                  <span className="mb-3 inline-flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#0A84FF] text-[40px] font-light leading-none text-white">
+                    +
+                  </span>
+                  <span className="text-[14px] font-semibold leading-none">Nouvelle</span>
                 </button>
                 <p className="mt-2 text-center text-[12px] text-muted-foreground">Créer</p>
               </div>
@@ -820,7 +834,9 @@ const Profile = () => {
               onClick={() => navigate('/stories/create')}
               className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
             >
-              <div className="text-[24px] leading-none">📸</div>
+              <div className="mb-2 inline-flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-gradient-to-b from-[#FF5E3A] to-[#FF9500] leading-none">
+                <span className="text-[23px] leading-none">📸</span>
+              </div>
               <p className="text-[14px] font-semibold text-foreground">Créer une story</p>
               <p className="mt-1 text-[13px] text-muted-foreground">Partage ta sortie</p>
             </button>
@@ -829,7 +845,9 @@ const Profile = () => {
               onClick={() => navigate('/profile/records')}
               className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
             >
-              <div className="text-[24px] leading-none">🏆</div>
+              <div className="mb-2 inline-flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-[#0A84FF] leading-none">
+                <span className="text-[23px] leading-none">🏅</span>
+              </div>
               <p className="text-[14px] font-semibold text-foreground">Nouveau record</p>
               <p className="mt-1 text-[13px] text-muted-foreground">Bats ton PR</p>
             </button>

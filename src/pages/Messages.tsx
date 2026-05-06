@@ -3329,6 +3329,7 @@ const Messages = () => {
           header={
             <MainTopHeader
               title="Mes séances"
+              disableScrollCollapse
               tabsAriaLabel="Navigation Mes séances"
               tabs={[
                 { id: "list", label: "Liste", active: false, onClick: () => navigate("/my-sessions") },
@@ -3429,6 +3430,7 @@ const Messages = () => {
             activeRootTab === "create-club" ? (
               <MainTopHeader
                 title="Créer un club"
+                disableScrollCollapse
                 left={
                   <button
                     type="button"
@@ -3452,6 +3454,7 @@ const Messages = () => {
                 <div onClick={() => isInboxSearchMode && setIsInboxSearchMode(false)}>
                   <MainTopHeader
                     title="Messages"
+                    disableScrollCollapse
                     className="apple-grouped-bg"
                     largeTitleRight={
                       <div className="flex items-center text-primary">
