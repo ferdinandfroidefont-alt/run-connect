@@ -980,7 +980,7 @@ export default function MySessions() {
         data-tutorial="tutorial-my-sessions"
       >
         <div className="z-50 shrink-0 apple-grouped-bg">
-          <MainTopHeader title="Séances" className="bg-transparent" />
+          <MainTopHeader title="Séances" />
         </div>
 
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg">
