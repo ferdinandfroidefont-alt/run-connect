@@ -976,14 +976,16 @@ export default function MySessions() {
   return (
     <>
       <div
-        className="flex h-full min-h-0 flex-col overflow-hidden apple-grouped-bg"
+        className="relative flex h-full min-h-0 flex-col overflow-hidden apple-grouped-bg"
         data-tutorial="tutorial-my-sessions"
       >
-        <div className="z-50 shrink-0 apple-grouped-bg">
-          <MainTopHeader title="Séances" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
+          <div className="pointer-events-auto">
+            <MainTopHeader title="Séances" />
+          </div>
         </div>
 
-        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg">
+        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg" style={{ paddingTop: "calc(var(--safe-area-top) + 96px)" }}>
           <>
             {loading ? (
                 <div className="space-y-3 px-4">
