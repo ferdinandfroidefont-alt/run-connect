@@ -706,7 +706,7 @@ const Profile = () => {
       className="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
-      <div className="z-50 shrink-0 bg-secondary">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-50"><div className="pointer-events-auto">
         <MainTopHeader
           title="Profil"
           className=""
