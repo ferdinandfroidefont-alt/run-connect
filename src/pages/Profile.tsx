@@ -729,7 +729,7 @@ const Profile = () => {
           <button
             type="button"
             onClick={() => navigate("/profile?tab=settings")}
-            className="flex w-full items-center gap-3 rounded-2xl bg-white px-3 py-3 text-left active:bg-secondary/60"
+            className="flex w-full items-center gap-3 rounded-xl bg-white px-3 py-3 text-left active:bg-secondary/60"
           >
             <Avatar className="h-[60px] w-[60px] shrink-0">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
@@ -749,7 +749,7 @@ const Profile = () => {
           </button>
 
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl border border-border bg-white py-3">
+            <div className="rounded-xl border border-border bg-white py-3">
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(userRoutes.length)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Séances</p>
             </div>
@@ -759,7 +759,7 @@ const Profile = () => {
                 setFollowDialogType('followers');
                 setShowFollowDialog(true);
               }}
-              className="rounded-2xl border border-border bg-white py-3"
+              className="rounded-xl border border-border bg-white py-3"
             >
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followerCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Abonnés</p>
@@ -770,7 +770,7 @@ const Profile = () => {
                 setFollowDialogType('following');
                 setShowFollowDialog(true);
               }}
-              className="rounded-2xl border border-border bg-white py-3"
+              className="rounded-xl border border-border bg-white py-3"
             >
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followingCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Suivis</p>
@@ -786,7 +786,7 @@ const Profile = () => {
               <div className="shrink-0">
                 <button
                   onClick={() => navigate("/feed")}
-                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A84FF]/20 bg-[#0A84FF] text-white"
+                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-xl border border-[#0A84FF]/20 bg-[#0A84FF] text-white"
                 >
                   <span className="text-[42px] font-light leading-none">+</span>
                 </button>
@@ -797,7 +797,7 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedHighlightStoryId(story.story_id)}
-                    className="relative h-[150px] w-[110px] overflow-hidden rounded-2xl border border-border bg-muted text-left"
+                    className="relative h-[150px] w-[110px] overflow-hidden rounded-xl border border-border bg-muted text-left"
                   >
                     {highlightPreviewByStoryId[story.story_id] ? (
                       <img src={highlightPreviewByStoryId[story.story_id]} alt={story.title} className="h-full w-full object-cover" />
@@ -837,7 +837,7 @@ const Profile = () => {
 
           <div>
             <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
-            <div className="overflow-hidden rounded-2xl border border-border bg-white px-3">
+            <div className="overflow-hidden rounded-xl border border-border bg-white px-3">
             <button
               type="button"
               onClick={() => navigate('/profile/records')}
