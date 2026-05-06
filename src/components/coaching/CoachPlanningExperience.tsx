@@ -1014,6 +1014,7 @@ export function CoachPlanningExperience() {
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const infiniteWeekScrollRef = useRef<HTMLDivElement | null>(null);
   const myPlanScrollAnchorRef = useRef<HTMLDivElement | null>(null);
+  const centeredOnTodayRef = useRef<{ planning: boolean; myPlan: boolean }>({ planning: false, myPlan: false });
   const weekScrollSwitchingRef = useRef(false);
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
@@ -2856,29 +2857,42 @@ export function CoachPlanningExperience() {
   );
 
   useEffect(() => {
-    if (!weekPlannerMode) return;
+    if (!weekPlannerMode) {
+      centeredOnTodayRef.current.planning = false;
+      return;
+    }
     const node = infiniteWeekScrollRef.current;
     if (!node) return;
-    requestAnimationFrame(() => {
-      const todayKey = format(new Date(), "yyyy-MM-dd");
-      const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
-      if (todayRow) {
-        todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-        return;
-      }
-      node.scrollTop = Math.max(220, node.clientHeight * 0.42);
-    });
-  }, [weekPlannerMode, weekAnchor]);
+    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).getTime();
+    const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
+    if (visibleWeekStart !== currentWeekStart || centeredOnTodayRef.current.planning) return;
 
-  useEffect(() => {
-    if (activeMenuKey !== "my-plan") return;
-    const node = myPlanScrollAnchorRef.current;
-    if (!node) return;
     requestAnimationFrame(() => {
       const todayKey = format(new Date(), "yyyy-MM-dd");
       const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
       if (!todayRow) return;
       todayRow.scrollIntoView({ block: "center", behavior: "auto" });
+      centeredOnTodayRef.current.planning = true;
+    });
+  }, [weekPlannerMode, weekAnchor]);
+
+  useEffect(() => {
+    if (activeMenuKey !== "my-plan") {
+      centeredOnTodayRef.current.myPlan = false;
+      return;
+    }
+    const node = myPlanScrollAnchorRef.current;
+    if (!node) return;
+    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).getTime();
+    const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
+    if (visibleWeekStart !== currentWeekStart || centeredOnTodayRef.current.myPlan) return;
+
+    requestAnimationFrame(() => {
+      const todayKey = format(new Date(), "yyyy-MM-dd");
+      const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
+      if (!todayRow) return;
+      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
+      centeredOnTodayRef.current.myPlan = true;
     });
   }, [activeMenuKey, weekAnchor, athletePlanSessions.length]);
   const coachingHeaderTitle = useMemo(() => {
