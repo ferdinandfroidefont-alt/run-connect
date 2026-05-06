@@ -80,13 +80,13 @@ export function DayPlanningRow({
       <div
         className={cn(
           "grid grid-cols-[36px_minmax(0,1fr)_36px] items-stretch gap-2.5 px-3.5 py-1.5 transition-colors",
-          isSelected && "bg-[rgba(0,122,255,0.05)]"
+          isSelected && "bg-[rgba(0,122,255,0.08)]"
         )}
       >
         <div
           className={cn(
             "flex flex-col items-center gap-0.5 px-0 py-2.5",
-            isSelected && "rounded-xl bg-[rgba(0,122,255,0.1)]"
+            isSelected && "rounded-xl bg-[rgba(0,122,255,0.16)]"
           )}
         >
           <p className={cn("text-[10px] font-semibold uppercase tracking-[0.35px] text-muted-foreground", isSelected && "text-[#007AFF]")}>{dayAbbrev}</p>
