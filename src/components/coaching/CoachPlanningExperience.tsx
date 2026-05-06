@@ -2495,17 +2495,6 @@ export function CoachPlanningExperience() {
     return output;
   }, [enrichedFilteredSessions, weekDays]);
 
-  const dayAthleteCompletedByDate = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    if (!activeAthleteId) return map;
-    enrichedFilteredSessions.forEach((session) => {
-      if (session.athleteParticipationStatus !== "completed") return;
-      const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
-      map[key] = true;
-    });
-    return map;
-  }, [activeAthleteId, enrichedFilteredSessions]);
-
   const existingSessionsByDay = useMemo(() => {
     const map: Record<string, string | undefined> = {};
     enrichedFilteredSessions.forEach((session) => {
@@ -3071,30 +3060,10 @@ export function CoachPlanningExperience() {
                 <IosPageHeaderBar
                   leadingBack={{
                     onClick: clearWeekPlannerTarget,
-                    label: "Page précédente",
+                    label: "Planification",
                   }}
                   title="Programmer la semaine"
-                  right={
-                    <div className="flex shrink-0 items-center gap-2">
-                      {activeClubId ? (
-                        <button
-                          type="button"
-                          onClick={openClubProfileSheet}
-                          className="inline-flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[13px] font-semibold text-primary active:opacity-80"
-                          aria-label="Fiche du club"
-                        >
-                          {clubAvatarUrl ? (
-                            <img src={clubAvatarUrl} alt={activeClubName || "Club"} className="h-full w-full object-cover" />
-                          ) : (
-                            (activeClubName || "Club").trim().slice(0, 1).toUpperCase() || "C"
-                          )}
-                        </button>
-                      ) : null}
-                      <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-semibold leading-none text-[#0066cc]" onClick={clearWeekPlannerTarget}>
-                        OK
-                      </button>
-                    </div>
-                  }
+                  right={null}
                 />
               </div>
             ) : activeMenuKey === "club" ? (
@@ -3346,88 +3315,182 @@ export function CoachPlanningExperience() {
               />
             ) : activeMenuKey === "planning" ? (
               <>
-                <WeekSelectorPremium
-                  weekStart={weekAnchor}
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
-                  onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
-                  indicatorsByDate={dayIndicatorsByDate}
-                  sessionSummaryByDate={daySessionSummaryByDate}
-                  dayAthleteCompletedByDate={weekPlannerMode ? dayAthleteCompletedByDate : undefined}
-                  showLegend
-                  variant={weekPlannerMode ? "coachWeek" : "default"}
-                />
+                {weekPlannerMode ? (
+                  <div className="pb-[calc(7rem+env(safe-area-inset-bottom))]">
+                    <div className="px-5 pb-1.5 pt-4">
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
+                        <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
+                          · {format(weekAnchor, "d", { locale: fr })} - {format(addDays(weekAnchor, 6), "d MMM", { locale: fr })}
+                        </p>
+                      </div>
+                      <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
+                        <span>
+                          <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
+                            {formatCalendarDistance(
+                              enrichedFilteredSessions.reduce((acc, session) => {
+                                const metrics = resolveWorkoutMetrics({
+                                  segments: buildWorkoutSegments(session.blocks, {
+                                    sport: session.sport,
+                                    athleteIntensity: session.athleteIntensity ?? undefined,
+                                  }),
+                                });
+                                return acc + (metrics.distanceKm || 0);
+                              }, 0)
+                            )}
+                          </b>{" "}
+                          · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{enrichedFilteredSessions.length}</b> séance(s)
+                        </span>
+                      </div>
+                    </div>
 
-                <Group title="Plan de la semaine" className="mb-0">
-                  {weekDays.map((day, dayIdx) => {
-                    const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
-                    const session = daySessions[0];
-                    const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-                    const normalizedSegments = session
-                      ? buildWorkoutSegments(session.blocks, {
-                          sport: session.sport,
-                          athleteIntensity: session.athleteIntensity ?? undefined,
-                        })
-                      : [];
-                    const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
-                      ? session.sport === "cycling"
-                        ? "cycling"
-                        : session.sport === "swimming"
-                          ? "swimming"
-                          : session.sport === "strength"
-                            ? "strength"
-                            : session.sport === "running"
-                              ? "running"
-                              : "other"
-                      : undefined;
-                    const workoutMetrics = session
-                      ? resolveWorkoutMetrics({
-                          segments: normalizedSegments,
-                        })
-                      : null;
-                    const summary = session
-                      ? {
-                          title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
-                          subtitle: session.title,
-                          duration: workoutMetrics?.durationLabel,
-                          distance: workoutMetrics?.distanceLabel,
-                          intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
-                          miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
-                          isRestDay: isExplicitRestDay([session]),
-                          sportHint,
-                        }
-                      : undefined;
-                    const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
-                    return (
-                      <DayPlanningRow
-                        key={day.toISOString()}
-                        dayLabel={format(day, "EEEE", { locale: fr })}
-                        dateLabel={weekPlannerMode ? format(day, "d") : format(day, "d MMM", { locale: fr })}
-                        isSelected={isSelectedDay}
-                        session={summary}
-                        isSent={session?.sent}
-                        accentColor={accentColor}
-                        emptyLabel={weekPlannerMode ? "Ajouter une séance" : undefined}
-                        layoutVariant={weekPlannerMode ? "coachWeek" : "default"}
-                        isLast={weekPlannerMode && dayIdx === weekDays.length - 1}
-                        athleteSessionCompleted={
-                          weekPlannerMode && !!activeAthleteId && session?.athleteParticipationStatus === "completed"
-                        }
-                        onAdd={() => openCreateForDate(day)}
-                        onOpen={session ? () => openEditSession(session.id) : undefined}
-                        onEdit={session ? () => openEditSession(session.id) : undefined}
-                        onSend={
-                          session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
-                        }
-                        onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
-                        onDelete={session ? () => void removeSession(session.id) : undefined}
-                        onUnsend={session ? () => void unsendSession(session.id) : undefined}
-                        allowSessionActions={!effectiveAthleteMode}
-                      />
-                    );
-                  })}
-                </Group>
+                    <div>
+                      {weekDays.map((day, dayIdx) => {
+                        const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                        const session = daySessions[0];
+                        const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                        const normalizedSegments = session
+                          ? buildWorkoutSegments(session.blocks, {
+                              sport: session.sport,
+                              athleteIntensity: session.athleteIntensity ?? undefined,
+                            })
+                          : [];
+                        const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
+                          ? session.sport === "cycling"
+                            ? "cycling"
+                            : session.sport === "swimming"
+                              ? "swimming"
+                              : session.sport === "strength"
+                                ? "strength"
+                                : session.sport === "running"
+                                  ? "running"
+                                  : "other"
+                          : undefined;
+                        const workoutMetrics = session
+                          ? resolveWorkoutMetrics({
+                              segments: normalizedSegments,
+                            })
+                          : null;
+                        const summary = session
+                          ? {
+                              title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                              subtitle: session.title,
+                              duration: workoutMetrics?.durationLabel,
+                              distance: workoutMetrics?.distanceLabel,
+                              intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
+                              miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
+                              isRestDay: isExplicitRestDay([session]),
+                              sportHint,
+                            }
+                          : undefined;
+                        const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
+                        return (
+                          <DayPlanningRow
+                            key={day.toISOString()}
+                            dayLabel={format(day, "EEEE", { locale: fr })}
+                            dateLabel={format(day, "d")}
+                            isSelected={isSelectedDay}
+                            session={summary}
+                            isSent={session?.sent}
+                            accentColor={accentColor}
+                            emptyLabel="Repos"
+                            layoutVariant="coachWeek"
+                            isLast={dayIdx === weekDays.length - 1}
+                            athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
+                            onAdd={() => openCreateForDate(day)}
+                            onOpen={session ? () => openEditSession(session.id) : undefined}
+                            onEdit={session ? () => openEditSession(session.id) : undefined}
+                            onSend={
+                              session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
+                            }
+                            onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
+                            onDelete={session ? () => void removeSession(session.id) : undefined}
+                            onUnsend={session ? () => void unsendSession(session.id) : undefined}
+                            allowSessionActions={!effectiveAthleteMode}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <WeekSelectorPremium
+                      weekStart={weekAnchor}
+                      selectedDate={selectedDate}
+                      onSelectDate={setSelectedDate}
+                      onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
+                      onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
+                      indicatorsByDate={dayIndicatorsByDate}
+                      sessionSummaryByDate={daySessionSummaryByDate}
+                      showLegend
+                      variant="default"
+                    />
+
+                    <Group title="Plan de la semaine" className="mb-0">
+                      {weekDays.map((day) => {
+                        const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                        const session = daySessions[0];
+                        const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                        const normalizedSegments = session
+                          ? buildWorkoutSegments(session.blocks, {
+                              sport: session.sport,
+                              athleteIntensity: session.athleteIntensity ?? undefined,
+                            })
+                          : [];
+                        const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
+                          ? session.sport === "cycling"
+                            ? "cycling"
+                            : session.sport === "swimming"
+                              ? "swimming"
+                              : session.sport === "strength"
+                                ? "strength"
+                                : session.sport === "running"
+                                  ? "running"
+                                  : "other"
+                          : undefined;
+                        const workoutMetrics = session
+                          ? resolveWorkoutMetrics({
+                              segments: normalizedSegments,
+                            })
+                          : null;
+                        const summary = session
+                          ? {
+                              title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                              subtitle: session.title,
+                              duration: workoutMetrics?.durationLabel,
+                              distance: workoutMetrics?.distanceLabel,
+                              intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
+                              miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
+                              isRestDay: isExplicitRestDay([session]),
+                              sportHint,
+                            }
+                          : undefined;
+                        const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
+                        return (
+                          <DayPlanningRow
+                            key={day.toISOString()}
+                            dayLabel={format(day, "EEEE", { locale: fr })}
+                            dateLabel={format(day, "d MMM", { locale: fr })}
+                            isSelected={isSelectedDay}
+                            session={summary}
+                            isSent={session?.sent}
+                            accentColor={accentColor}
+                            onAdd={() => openCreateForDate(day)}
+                            onOpen={session ? () => openEditSession(session.id) : undefined}
+                            onEdit={session ? () => openEditSession(session.id) : undefined}
+                            onSend={
+                              session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
+                            }
+                            onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
+                            onDelete={session ? () => void removeSession(session.id) : undefined}
+                            onUnsend={session ? () => void unsendSession(session.id) : undefined}
+                            allowSessionActions={!effectiveAthleteMode}
+                          />
+                        );
+                      })}
+                    </Group>
+                  </>
+                )}
 
                 {weekPlannerMode && !activeAthlete && !activeGroup ? (
                   <div className="h-[calc(5rem+env(safe-area-inset-bottom))]" aria-hidden />
@@ -3717,26 +3780,10 @@ export function CoachPlanningExperience() {
                       }
                       setCoachingTab("planning");
                     },
-                    label: "Page précédente",
+                    label: "Planification",
                   }}
                   title=""
-                  right={
-                    editorTab === "build" ? (
-                      <button
-                        type="button"
-                        onClick={() => void saveSession()}
-                        disabled={draft.blocks.length === 0}
-                        className={cn(
-                          "text-[17px] font-semibold leading-none",
-                          draft.blocks.length ? "text-[#0a84ff]" : "text-muted-foreground"
-                        )}
-                      >
-                        OK
-                      </button>
-                    ) : (
-                      <span className="inline-block w-14" aria-hidden />
-                    )
-                  }
+                  right={null}
                 />
                 <div className="grid grid-cols-2 gap-2 px-4 pb-2">
                   <button

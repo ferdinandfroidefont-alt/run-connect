@@ -231,6 +231,11 @@ const App = () => {
             const result = await finalizeSupabaseOAuthFromDeepLink(supabase, url);
             if (!result.ok) {
               console.warn('[OAuth/App] finalize failed', result.reason);
+              if (result.reason === "duplicate") {
+                // iOS peut émettre le même deep link plusieurs fois.
+                // Le premier passage a déjà traité la session ; ne pas relancer de fallback/reload.
+                return;
+              }
               fallbackToAuthCallback(url, `finalize-failed:${result.reason ?? "unknown"}`);
               return;
             }
@@ -327,6 +332,9 @@ const App = () => {
             }
           } else {
             console.warn('[OAuth/App] cold start finalize failed', result.reason);
+            if (result.reason === "duplicate") {
+              return;
+            }
             fallbackToAuthCallback(incomingUrl, `finalize-failed:${result.reason ?? "unknown"}`);
           }
           return;

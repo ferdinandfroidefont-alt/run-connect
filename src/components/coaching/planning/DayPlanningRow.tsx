@@ -4,7 +4,7 @@ import { SessionActionMenu } from "@/components/coaching/planning/SessionActionM
 import { SessionStatusAction } from "@/components/coaching/planning/SessionStatusAction";
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { cn } from "@/lib/utils";
-import { Bike, Check, ChevronRight, Dumbbell, Footprints, Moon, Waves } from "lucide-react";
+import { Bike, Check, ChevronRight, Clock3, Dumbbell, Footprints, Moon, Plus, Ruler, Waves } from "lucide-react";
 
 interface DayPlanningRowProps {
   dayLabel: string;
@@ -29,21 +29,6 @@ interface DayPlanningRowProps {
   isLast?: boolean;
   /** Athlète ciblé : participation « completed » (maquette 16). */
   athleteSessionCompleted?: boolean;
-}
-
-function sportAbbrev(s?: SessionSummaryView["sportHint"]) {
-  switch (s) {
-    case "running":
-      return "Course";
-    case "cycling":
-      return "Vélo";
-    case "swimming":
-      return "Natation";
-    case "strength":
-      return "Renfo";
-    default:
-      return "Séance";
-  }
 }
 
 function CoachSportIcon({ sport }: { sport: NonNullable<SessionSummaryView["sportHint"]> }) {
@@ -89,92 +74,123 @@ export function DayPlanningRow({
   if (coachWeek) {
     const isRest = session?.isRestDay;
     const rowAccent = accentColor;
+    const dayNumber = dateLabel;
 
     return (
       <div
         className={cn(
-          "px-4 py-3 transition-colors",
-          !isLast && "border-b border-border",
-          isSelected && "bg-secondary/40"
+          "grid grid-cols-[36px_minmax(0,1fr)_36px] items-stretch gap-2.5 px-3.5 py-1.5 transition-colors",
+          isSelected && "bg-[rgba(0,122,255,0.05)]"
         )}
       >
-        <div className="flex items-center gap-3">
-          <div className="w-12 shrink-0 text-left">
-            <p className="text-[11px] tracking-[0.3px] text-muted-foreground">{dayAbbrev}</p>
-            <p
-              className={cn(
-                "font-display text-[22px] font-semibold leading-[1.05] tracking-[-0.02em]",
-                isSelected ? "text-[#0066cc]" : "text-foreground"
-              )}
-            >
-              {dateLabel}
-            </p>
-          </div>
+        <div
+          className={cn(
+            "flex flex-col items-center gap-0.5 px-0 py-2.5",
+            isSelected && "rounded-xl bg-[rgba(0,122,255,0.1)]"
+          )}
+        >
+          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.35px] text-muted-foreground", isSelected && "text-[#007AFF]")}>{dayAbbrev}</p>
+          <p className={cn("font-display text-[22px] font-bold leading-none tracking-[-0.03em] text-foreground", isSelected && "text-[#007AFF]")}>
+            {dayNumber}
+          </p>
+        </div>
 
-          <div className="min-w-0 flex-1">
-            {!session ? (
-              <p className="text-[15px] text-foreground/55">{emptyLabel ?? "Ajouter une séance"}</p>
-            ) : isRest ? (
-              <>
-                <p className="text-[16px] font-semibold tracking-[-0.03em] text-foreground/45">Repos</p>
-                <p className="text-[12px] text-muted-foreground">Aucune séance prévue</p>
-              </>
-            ) : (
-              <button type="button" onClick={onOpen} className="w-full min-w-0 text-left">
-                <div className="flex min-w-0 items-center gap-1.5">
+        <div className="min-w-0">
+          {!session || isRest ? (
+            <div className="flex min-h-[56px] items-center justify-center rounded-[14px] border border-dashed border-[rgba(60,60,67,0.22)] text-[13px] font-medium text-muted-foreground">
+              {emptyLabel ?? "Repos"}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpen}
+              className="w-full min-w-0 overflow-hidden rounded-[14px] border border-black/5 bg-card text-left shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+            >
+              <div className="flex items-center justify-between border-b border-[rgba(60,60,67,0.12)] px-3.5 py-2.5">
+                <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-foreground">
                   {session.sportHint ? (
-                    <span className="text-muted-foreground" style={{ color: rowAccent }}>
+                    <span style={{ color: rowAccent }}>
                       <CoachSportIcon sport={session.sportHint} />
                     </span>
                   ) : null}
-                  <span className="truncate text-[16px] font-semibold tracking-[-0.03em] text-foreground">{session.title}</span>
+                  <span className="truncate">Détail</span>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+              </div>
+              <div className="px-3.5 pb-3.5 pt-3">
+                {session.miniProfile?.length ? (
+                  <div className="mb-2.5 h-12 rounded-[6px] bg-[rgba(120,120,128,0.08)] px-1.5 py-1">
+                    <MiniWorkoutProfile
+                      blocks={session.miniProfile}
+                      isRestDay={false}
+                      compact
+                      variant="premiumCompact"
+                      zoneBandMode
+                      className="h-full w-full rounded-none border-0 bg-transparent px-0 py-0"
+                    />
+                  </div>
+                ) : null}
+                <p className="truncate text-[15px] font-semibold tracking-[-0.2px] text-foreground">{session.title}</p>
+                <div className="mt-1.5 flex items-center gap-3.5 text-[12px] text-muted-foreground">
+                  {session.duration ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock3 className="h-3 w-3" aria-hidden />
+                      <b className="font-semibold text-[color:rgba(60,60,67,0.85)]">{session.duration}</b>
+                    </span>
+                  ) : null}
+                  {session.distance ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Ruler className="h-3 w-3" aria-hidden />
+                      <b className="font-semibold text-[color:rgba(60,60,67,0.85)]">{session.distance}</b>
+                    </span>
+                  ) : null}
                   {athleteSessionCompleted ? (
-                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-[#34C759]/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#248a3d] dark:text-[#34C759]">
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-[#34C759]/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#248a3d] dark:text-[#34C759]">
                       <Check className="h-2.5 w-2.5 stroke-[2.8]" aria-hidden />
                       Fait
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
-                  {sportAbbrev(session.sportHint)}
-                  {(session.distance || session.duration) && ` · `}
-                  {[session.distance, session.duration].filter(Boolean).join(" · ")}
-                </p>
-              </button>
-            )}
-          </div>
-
-          <div className="flex w-11 shrink-0 items-center justify-end">
-            {hideActionSlot ? null : !session ? (
-              <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
-                <SessionStatusAction mode="add" onAdd={onAdd} />
               </div>
-            ) : isRest ? (
-              <ChevronRight className="h-4 w-4 text-muted-foreground/50" aria-hidden />
-            ) : isSent ? (
-              <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
-                <SessionStatusAction mode="sent" onSentClick={onUnsend} />
-              </div>
-            ) : (
-              <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
-                <SessionActionMenu onSend={onSend || onAdd} onDuplicate={onDuplicate || onAdd} onDelete={onDelete || onAdd} />
-              </div>
-            )}
-          </div>
+            </button>
+          )}
         </div>
 
-        {session && !isRest && session.miniProfile?.length ? (
-          <div className="ml-[60px] mt-2.5 flex h-[38px] items-end gap-0.5 rounded-lg bg-[rgba(120,120,128,0.08)] px-2 py-1">
-            <MiniWorkoutProfile
-              blocks={session.miniProfile}
-              isRestDay={false}
-              compact
-              variant="premiumCompact"
-              zoneBandMode
-              className="h-full w-full rounded-none border-0 bg-transparent px-0 py-0"
-            />
+        <div className="flex items-center justify-end">
+          {hideActionSlot ? null : !session ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#007AFF] text-white shadow-[0_2px_6px_rgba(0,122,255,0.25)] transition-transform",
+                !allowSessionActions && "pointer-events-none opacity-45"
+              )}
+              aria-label="Ajouter une séance"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+            </button>
+          ) : isRest ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#007AFF] text-white shadow-[0_2px_6px_rgba(0,122,255,0.25)] transition-transform",
+                !allowSessionActions && "pointer-events-none opacity-45"
+              )}
+              aria-label="Ajouter une séance"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+            </button>
+          ) : isSent ? (
+            <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
+              <SessionStatusAction mode="sent" onSentClick={onUnsend} />
+            </div>
+          ) : (
+            <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
+              <SessionActionMenu onSend={onSend || onAdd} onDuplicate={onDuplicate || onAdd} onDelete={onDelete || onAdd} />
+            </div>
           </div>
-        ) : null}
+        </div>
       </div>
     );
   }
