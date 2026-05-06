@@ -127,18 +127,20 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
           <h3 className="mb-3 text-[15px] font-semibold text-foreground">Activité</h3>
         )}
 
-        {/* Search bar — pill */}
-        <div className="relative px-1">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher un sport..."
-            className="h-12 w-full rounded-full border-border/60 bg-card pl-11 pr-4 text-[17px] tracking-tight placeholder:text-muted-foreground/70"
-          />
+        {/* Search bar — sticky like page header */}
+        <div className="sticky top-0 z-20 -mx-1 bg-secondary/95 px-1 pb-3 pt-1 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher un sport..."
+              className="h-12 w-full rounded-full border-border/60 bg-card pl-11 pr-4 text-[17px] tracking-tight placeholder:text-muted-foreground/70"
+            />
+          </div>
         </div>
 
-        <div className="mt-5 space-y-5">
+        <div className="mt-2 space-y-5">
           {/* Popular activities — list group */}
           <AppleGroup title="Populaires">
             {popularActivities.map((activity, idx) => {
