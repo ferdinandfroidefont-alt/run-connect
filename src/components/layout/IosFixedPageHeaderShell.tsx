@@ -26,6 +26,8 @@ export type IosFixedPageHeaderShellProps = {
   contentTopOffsetPx?: number;
   /** Force pinned header regardless of platform detection. */
   forcePin?: boolean;
+  /** Disable pinned header and keep header in normal scroll flow. */
+  pinHeader?: boolean;
 };
 
 /**
@@ -44,8 +46,9 @@ export function IosFixedPageHeaderShell({
   scrollProps,
   contentTopOffsetPx = 12,
   forcePin = false,
+  pinHeader = true,
 }: IosFixedPageHeaderShellProps) {
-  const [pin] = useState(() => forcePin || isIosAppShell());
+  const [pin] = useState(() => pinHeader && (forcePin || isIosAppShell()));
   const headerRef = useRef<HTMLDivElement>(null);
   const localScrollRef = useRef<HTMLDivElement>(null);
   /** Sous iOS (header fixe), valeur de secours jusqu’à la mesure — évite le contenu sous le header au 1er rendu / dans les modales. */

@@ -748,8 +748,8 @@ const Profile = () => {
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
           </button>
 
-          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white p-2 text-center">
-            <div className="rounded-xl bg-white py-2">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-2xl border border-border bg-white py-3">
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(userRoutes.length)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Séances</p>
             </div>
@@ -759,7 +759,7 @@ const Profile = () => {
                 setFollowDialogType('followers');
                 setShowFollowDialog(true);
               }}
-              className="rounded-xl bg-white py-2"
+              className="rounded-2xl border border-border bg-white py-3"
             >
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followerCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Abonnés</p>
@@ -770,7 +770,7 @@ const Profile = () => {
                 setFollowDialogType('following');
                 setShowFollowDialog(true);
               }}
-              className="rounded-xl bg-white py-2"
+              className="rounded-2xl border border-border bg-white py-3"
             >
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followingCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Suivis</p>
@@ -786,12 +786,11 @@ const Profile = () => {
               <div className="shrink-0">
                 <button
                   onClick={() => navigate("/feed")}
-                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-2xl border border-border bg-white text-foreground"
+                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A84FF]/20 bg-[#0A84FF] text-white"
                 >
-                  <span className="text-[34px] leading-none">✨</span>
-                  <span className="mt-1 text-[12px] font-medium text-primary">À la une</span>
+                  <span className="text-[42px] font-light leading-none">+</span>
                 </button>
-                <p className="mt-2 text-center text-[12px] text-muted-foreground">Nouvelle</p>
+                <p className="mt-2 text-center text-[12px] text-muted-foreground">Créer</p>
               </div>
               {highlightedStories.map((story) => (
                 <div key={story.id} className="shrink-0">
@@ -836,12 +835,13 @@ const Profile = () => {
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-border bg-white px-3">
+          <div>
             <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
+            <div className="overflow-hidden rounded-2xl border border-border bg-white px-3">
             <button
               type="button"
               onClick={() => navigate('/profile/records')}
-              className="flex w-full items-center justify-between border-t border-border px-1 py-3 text-left active:bg-secondary/50"
+              className="flex w-full items-center justify-between px-1 py-3 text-left active:bg-secondary/50"
             >
               <span className="text-[16px] text-foreground">5 km</span>
               <span className="text-[16px] text-foreground">{record5k} &gt;</span>
@@ -854,6 +854,7 @@ const Profile = () => {
               <span className="text-[16px] text-foreground">10 km</span>
               <span className="text-[16px] text-foreground">{record10k} &gt;</span>
             </button>
+            </div>
           </div>
 
         {!isViewingOtherUser && isEditing && (

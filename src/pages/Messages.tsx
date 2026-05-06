@@ -3413,6 +3413,7 @@ const Messages = () => {
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
+          pinHeader={false}
           contentTopOffsetPx={0}
           headerWrapperClassName="z-50"
           header={
@@ -3503,7 +3504,7 @@ const Messages = () => {
                   </div>
                 </div>
 
-                <div className="mt-5">
+                <div className="mt-3.5">
                   <SessionStoriesStrip
                     currentUserId={user?.id ?? null}
                     refreshToken={storiesRefreshToken}
@@ -3534,10 +3535,10 @@ const Messages = () => {
                         aria-selected={active}
                         onClick={() => setMessagesInboxSegment(chip.id)}
                         className={cn(
-                          "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3.5 text-[13px] font-semibold tracking-[-0.1px] transition-[transform,opacity] active:scale-[0.98]",
+                          "inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold tracking-[-0.1px] transition-[transform,opacity] active:scale-[0.98]",
                           active
                             ? "border-transparent bg-foreground text-background shadow-none"
-                            : "border border-border bg-card text-foreground shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]"
+                            : "border-transparent bg-secondary text-foreground"
                         )}
                       >
                         {chip.label}
@@ -3562,7 +3563,7 @@ const Messages = () => {
               {/* Liste — carte blanche arrondie (maquette 17) */}
               <div
                 className={cn(
-                  "mt-3.5 min-h-[280px] flex-1 rounded-t-[24px] bg-card pb-ios-4",
+                  "mx-4 mt-3.5 min-h-[280px] flex-1 overflow-hidden rounded-[24px] bg-card pb-ios-4",
                   filteredAndSortedConversations.length > 0 && "divide-y divide-border"
                 )}
               >
