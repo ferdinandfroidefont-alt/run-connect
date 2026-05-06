@@ -189,7 +189,7 @@ export function DayPlanningRow({
             <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
               <SessionActionMenu onSend={onSend || onAdd} onDuplicate={onDuplicate || onAdd} onDelete={onDelete || onAdd} />
             </div>
-          </div>
+          )}
         </div>
       </div>
     );
