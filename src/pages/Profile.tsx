@@ -729,8 +729,8 @@ const Profile = () => {
             ) : undefined
           }
         />
-      </div>
-      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-secondary">
+      </div></div>
+      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-secondary" style={{ paddingTop: "calc(var(--safe-area-top) + 96px)" }}>
       {isEditing && !isViewingOtherUser && (
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
