@@ -1013,6 +1013,7 @@ export function CoachPlanningExperience() {
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const infiniteWeekScrollRef = useRef<HTMLDivElement | null>(null);
+  const myPlanScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const weekScrollSwitchingRef = useRef(false);
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
@@ -2858,8 +2859,28 @@ export function CoachPlanningExperience() {
     if (!weekPlannerMode) return;
     const node = infiniteWeekScrollRef.current;
     if (!node) return;
-    node.scrollTop = Math.max(220, node.clientHeight * 0.42);
-  }, [weekPlannerMode]);
+    requestAnimationFrame(() => {
+      const todayKey = format(new Date(), "yyyy-MM-dd");
+      const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
+      if (todayRow) {
+        todayRow.scrollIntoView({ block: "center", behavior: "auto" });
+        return;
+      }
+      node.scrollTop = Math.max(220, node.clientHeight * 0.42);
+    });
+  }, [weekPlannerMode, weekAnchor]);
+
+  useEffect(() => {
+    if (activeMenuKey !== "my-plan") return;
+    const node = myPlanScrollAnchorRef.current;
+    if (!node) return;
+    requestAnimationFrame(() => {
+      const todayKey = format(new Date(), "yyyy-MM-dd");
+      const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
+      if (!todayRow) return;
+      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
+    });
+  }, [activeMenuKey, weekAnchor, athletePlanSessions.length]);
   const coachingHeaderTitle = useMemo(() => {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
     switch (activeMenuKey) {
@@ -3398,7 +3419,7 @@ export function CoachPlanningExperience() {
             ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <div className="pb-[calc(7rem+env(safe-area-inset-bottom))]">
+              <div ref={myPlanScrollAnchorRef} className="pb-[calc(7rem+env(safe-area-inset-bottom))]">
                 <div className="px-5 pb-1.5 pt-4">
                   <div className="flex items-baseline gap-2">
                     <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
@@ -3453,28 +3474,29 @@ export function CoachPlanningExperience() {
                       : undefined;
                     const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
                     return (
-                      <DayPlanningRow
-                        key={day.toISOString()}
-                        dayLabel={format(day, "EEEE", { locale: fr })}
-                        dateLabel={format(day, "d")}
-                        isSelected={isSelectedDay}
-                        session={summary}
-                        isSent={session?.participationStatus === "completed"}
-                        accentColor={accentColor}
-                        emptyLabel="Repos"
-                        layoutVariant="coachWeek"
-                        isLast={dayIdx === weekDays.length - 1}
-                        athleteSessionCompleted={session?.participationStatus === "completed"}
-                        onAdd={() => undefined}
-                        onOpen={session ? () => previewAction() : undefined}
-                        onEdit={undefined}
-                        onSend={undefined}
-                        onDuplicate={undefined}
-                        onDelete={undefined}
-                        onUnsend={undefined}
-                        allowSessionActions={false}
-                        hideActionSlot
-                      />
+                      <div key={day.toISOString()} data-day-key={format(day, "yyyy-MM-dd")}>
+                        <DayPlanningRow
+                          dayLabel={format(day, "EEEE", { locale: fr })}
+                          dateLabel={format(day, "d")}
+                          isSelected={isSelectedDay}
+                          session={summary}
+                          isSent={session?.participationStatus === "completed"}
+                          accentColor={accentColor}
+                          emptyLabel="Repos"
+                          layoutVariant="coachWeek"
+                          isLast={dayIdx === weekDays.length - 1}
+                          athleteSessionCompleted={session?.participationStatus === "completed"}
+                          onAdd={() => undefined}
+                          onOpen={session ? () => previewAction() : undefined}
+                          onEdit={undefined}
+                          onSend={undefined}
+                          onDuplicate={undefined}
+                          onDelete={undefined}
+                          onUnsend={undefined}
+                          allowSessionActions={false}
+                          hideActionSlot
+                        />
+                      </div>
                     );
                   })}
                 </div>
@@ -3596,30 +3618,31 @@ export function CoachPlanningExperience() {
                           : undefined;
                         const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
                         return (
-                          <DayPlanningRow
-                            key={day.toISOString()}
-                            dayLabel={format(day, "EEEE", { locale: fr })}
-                            dateLabel={format(day, "d")}
-                            isSelected={isSelectedDay}
-                            session={summary}
-                            isSent={session?.sent}
-                            accentColor={accentColor}
-                            emptyLabel="Repos"
-                            layoutVariant="coachWeek"
-                            isLast={dayIdx === weekDays.length - 1}
-                            athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
-                            onAdd={() => openCreateForDate(day)}
-                            onOpen={session ? () => openSessionPreview(session.id) : undefined}
-                            onEdit={session ? () => openEditSession(session.id) : undefined}
-                            onSend={
-                              session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
-                            }
-                            onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
-                            onDelete={session ? () => void removeSession(session.id) : undefined}
-                            onUnsend={session ? () => void unsendSession(session.id) : undefined}
-                            allowSessionActions={!effectiveAthleteMode}
-                            hideActionSlot={!!activeAthleteId}
-                          />
+                          <div key={day.toISOString()} data-day-key={format(day, "yyyy-MM-dd")}>
+                            <DayPlanningRow
+                              dayLabel={format(day, "EEEE", { locale: fr })}
+                              dateLabel={format(day, "d")}
+                              isSelected={isSelectedDay}
+                              session={summary}
+                              isSent={session?.sent}
+                              accentColor={accentColor}
+                              emptyLabel="Repos"
+                              layoutVariant="coachWeek"
+                              isLast={dayIdx === weekDays.length - 1}
+                              athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
+                              onAdd={() => openCreateForDate(day)}
+                              onOpen={session ? () => openSessionPreview(session.id) : undefined}
+                              onEdit={session ? () => openEditSession(session.id) : undefined}
+                              onSend={
+                                session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
+                              }
+                              onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
+                              onDelete={session ? () => void removeSession(session.id) : undefined}
+                              onUnsend={session ? () => void unsendSession(session.id) : undefined}
+                              allowSessionActions={!effectiveAthleteMode}
+                              hideActionSlot={!!activeAthleteId}
+                            />
+                          </div>
                         );
                       })}
                     </div>
