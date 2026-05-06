@@ -703,7 +703,7 @@ const Profile = () => {
 
   return (
     <div
-      className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
+      className="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
       <div className="z-50 shrink-0 bg-secondary">
