@@ -709,7 +709,7 @@ const Profile = () => {
       <div className="z-50 shrink-0 bg-secondary">
         <MainTopHeader
           title="Profil"
-          className="bg-transparent"
+          className=""
           right={
             profile ? (
               <button
