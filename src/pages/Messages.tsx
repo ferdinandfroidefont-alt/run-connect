@@ -3421,9 +3421,10 @@ const Messages = () => {
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
+          contentScroll={activeRootTab === "conversations"}
           pinHeader={false}
           contentTopOffsetPx={0}
-          headerWrapperClassName="z-50"
+          headerWrapperClassName="z-50 apple-grouped-bg"
           header={
             activeRootTab === "create-club" ? (
               <MainTopHeader
@@ -3451,13 +3452,14 @@ const Messages = () => {
                 <div onClick={() => isInboxSearchMode && setIsInboxSearchMode(false)}>
                   <MainTopHeader
                     title="Messages"
-                    right={
+                    className="apple-grouped-bg"
+                    largeTitleRight={
                       <div className="flex items-center text-primary">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                              className="tap-highlight-none flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full active:bg-black/[0.04] dark:active:bg-white/[0.06]"
                               aria-label="Nouvelle conversation, club ou groupe"
                             >
                               <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
@@ -3567,7 +3569,7 @@ const Messages = () => {
         >
         <div
           className={cn(
-            "pb-ios-2",
+            "min-h-0 pb-ios-2",
             activeRootTab === "create-club"
               ? "min-h-0 flex-1 bg-secondary pt-2.5"
               : "min-h-0 flex-1 apple-grouped-bg"
@@ -3578,7 +3580,7 @@ const Messages = () => {
               {isInboxSearchMode ? (
                 <div className="mx-4 mt-3.5 min-h-[280px] flex-1 overflow-hidden rounded-[18px] bg-card">
                   <SearchTabs activeTab={messageDiscoveryTab} onTabChange={setMessageDiscoveryTab} />
-                  <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto">
                     {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "clubs" && <ClubsTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "strava" && <StravaTab searchQuery={conversationSearch} />}
@@ -3589,7 +3591,7 @@ const Messages = () => {
                 /* Liste — carte blanche arrondie (maquette 17) */
                 <div
                   className={cn(
-                    "mx-4 mt-3.5 min-h-[280px] flex-1 overflow-hidden rounded-[18px] bg-card pb-ios-4",
+                    "ios-scroll-region mx-4 mt-3.5 min-h-[280px] flex-1 overflow-y-auto rounded-[18px] bg-card pb-ios-4",
                     filteredAndSortedConversations.length > 0 && "divide-y divide-border"
                   )}
                 >

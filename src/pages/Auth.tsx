@@ -25,6 +25,7 @@ import { AuthLandingAppleGallery } from "@/components/auth/AuthLandingAppleGalle
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
+import appIcon from "@/assets/app-icon.png";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
@@ -878,16 +879,11 @@ const Auth = () => {
 
       {/* Hero compact (mockup : icône 60×60 rounded-14 + 28px display + 15 muted) */}
       <div className="px-4 pt-6 text-center">
-        <div
-          className="mx-auto flex h-[60px] w-[60px] items-center justify-center rounded-[14px]"
-          style={{ background: "hsl(var(--primary))" }}
-        >
-          <svg width="30" height="30" viewBox="0 0 46 46" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="30" cy="9" r="4" fill="#fff" stroke="none" />
-            <path d="M14 38 L20 24 L30 28 L26 38" />
-            <path d="M20 24 L32 22 L38 30" />
-          </svg>
-        </div>
+        <img
+          src={appIcon}
+          alt="RunConnect"
+          className="mx-auto h-[60px] w-[60px] rounded-[14px] object-cover"
+        />
         <div className="mt-4 font-display text-[28px] font-semibold tracking-[-0.5px] text-foreground">
           Bon retour
         </div>

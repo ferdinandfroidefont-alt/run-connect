@@ -88,7 +88,7 @@ export function MainTopHeader({
           "relative flex shrink-0 items-center gap-2 px-4 transition-[height] duration-150",
           left || right ? "justify-between" : "justify-end"
         )}
-        style={{ height: `${44 - progress * 8}px` }}
+        style={{ height: `${50 - progress * 6}px` }}
       >
         <div className="flex min-w-0 flex-1 items-center justify-start">{left ?? <span aria-hidden className="h-9 w-9" />}</div>
         <h2

@@ -3063,11 +3063,11 @@ export function CoachPlanningExperience() {
                 ? "shrink-0 border-b border-border apple-grouped-bg"
                 : activeMenuKey === "my-plan"
                   ? "shrink-0 border-0 z-50 apple-grouped-bg"
-                  : "shrink-0 border-0 z-50"
+                  : "shrink-0 border-0 z-50 apple-grouped-bg"
           }
           header={
             weekPlannerMode ? (
-              <div className="pt-[var(--safe-area-top)]">
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
                 <IosPageHeaderBar
                   leadingBack={{
                     onClick: clearWeekPlannerTarget,
@@ -3098,7 +3098,7 @@ export function CoachPlanningExperience() {
                 />
               </div>
             ) : activeMenuKey === "club" ? (
-              <div className="pt-[var(--safe-area-top)]">
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
                 <IosPageHeaderBar
                   leadingBack={{
                     onClick: () => setActiveMenuKey(effectiveAthleteMode ? "my-plan" : "planning"),
@@ -3121,7 +3121,7 @@ export function CoachPlanningExperience() {
                 />
               </div>
             ) : activeMenuKey === "tracking" ? (
-              <div className="pt-[var(--safe-area-top)]">
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
                 <IosPageHeaderBar
                   leadingBack={{
                     onClick: () => setActiveMenuKey("planning"),
@@ -3706,7 +3706,7 @@ export function CoachPlanningExperience() {
             className="min-h-0 h-full"
             headerWrapperClassName="shrink-0 border-b border-border bg-card"
             header={
-              <div className="pt-[var(--safe-area-top)]">
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
                 <IosPageHeaderBar
                   leadingBack={{
                     onClick: () => {

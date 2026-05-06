@@ -699,7 +699,7 @@ const Profile = () => {
         <MainTopHeader
           title="Profil"
           className=""
-          right={
+          largeTitleRight={
             profile ? (
               <button
                 type="button"
@@ -710,7 +710,7 @@ const Profile = () => {
                     avatarUrl: profile.avatar_url,
                   })
                 }
-                className="inline-flex h-8 items-center text-[17px] text-primary active:opacity-70"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[17px] text-primary active:opacity-70"
                 aria-label="Partager le profil"
               >
                 <Share className="h-5 w-5 text-primary" strokeWidth={2} />

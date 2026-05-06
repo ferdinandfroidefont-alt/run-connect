@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserCheck, Send, BookOpen, Save, MapPin } from "lucide-react";
+import { Users, UserCheck, Send, BookOpen, Save, MapPin, Waves, BarChart3, Triangle, Activity } from "lucide-react";
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { RCCEditor } from "./RCCEditor";
@@ -281,6 +281,18 @@ export const CreateCoachingSessionDialog = ({
     ? format(preselectedDate, "EEE d MMM", { locale: fr })
     : format(new Date(), "EEE d MMM", { locale: fr });
   const selectedActivity = ACTIVITY_TYPES.find((type) => type.value === activityType) ?? ACTIVITY_TYPES[0];
+  const mockupPalette = {
+    actionBlue: "#007AFF",
+    z1: "#5AC8FA",
+    z2: "#34C759",
+    z3: "#FFCC00",
+    z4: "#FF9500",
+    z5: "#FF3B30",
+    z6: "#AF52DE",
+    separator: "rgba(60,60,67,0.18)",
+  } as const;
+  const schemaBars = parsedBlocks.slice(0, 6);
+  const activeTile = parsedBlocks.length > 0 ? "pyramide" : "continu";
 
   return (
     <>
@@ -303,11 +315,16 @@ export const CreateCoachingSessionDialog = ({
             scrollClassName="bg-secondary px-4 py-4"
             footer={
               <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
-                <Button onClick={handleSubmit} disabled={loading || !canSubmit} className="h-11 w-full rounded-xl">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={loading || !canSubmit}
+                  className="h-12 w-full rounded-[14px]"
+                  style={{ backgroundColor: mockupPalette.actionBlue }}
+                >
                   {loading ? "Envoi..." : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Envoyer la séance
+                      Enregistrer la séance
                     </>
                   )}
                 </Button>
@@ -316,43 +333,32 @@ export const CreateCoachingSessionDialog = ({
           >
             <div className="space-y-4">
               <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="min-w-0 space-y-1.5">
-                    <Label className="text-xs">Sport</Label>
-                    <Select value={activityType} onValueChange={setActivityType}>
-                      <SelectTrigger className="h-11 rounded-xl border-border bg-card">
-                        <SelectValue>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Sport</Label>
+                  <Select value={activityType} onValueChange={setActivityType}>
+                    <SelectTrigger className="h-11 rounded-xl border-border bg-card">
+                      <SelectValue>
+                        <span className="flex items-center gap-2">
+                          <span className="text-base leading-none" aria-hidden>
+                            {selectedActivity.icon}
+                          </span>
+                          <span>{selectedActivity.label.replace(/^[^\s]+\s+/, "")}</span>
+                        </span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTIVITY_TYPES.map(t => (
+                        <SelectItem key={t.value} value={t.value}>
                           <span className="flex items-center gap-2">
                             <span className="text-base leading-none" aria-hidden>
-                              {selectedActivity.icon}
+                              {t.icon}
                             </span>
-                            <span>{selectedActivity.label.replace(/^[^\s]+\s+/, "")}</span>
+                            <span>{t.label.replace(/^[^\s]+\s+/, "")}</span>
                           </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACTIVITY_TYPES.map(t => (
-                          <SelectItem key={t.value} value={t.value}>
-                            <span className="flex items-center gap-2">
-                              <span className="text-base leading-none" aria-hidden>
-                                {t.icon}
-                              </span>
-                              <span>{t.label.replace(/^[^\s]+\s+/, "")}</span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="min-w-0 space-y-1.5">
-                    <Label className="text-xs">Objectif *</Label>
-                    <Input
-                      placeholder="VMA, Seuil, Footing..."
-                      value={objective}
-                      onChange={e => setObjective(e.target.value)}
-                      className="h-11 rounded-xl border-border bg-card"
-                    />
-                  </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button
                   type="button"
@@ -366,19 +372,98 @@ export const CreateCoachingSessionDialog = ({
                 </Button>
               </div>
 
-              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <RCCEditor
-                  value={rccCode}
-                  onChange={setRccCode}
-                  onParsedChange={handleParsedChange}
-                />
-                {parsedBlocks.length > 0 && (
-                  <RCCBlocksPreview
-                    blocks={parsedBlocks}
-                    blockRpe={blockRpe}
-                    onBlockRpeChange={setBlockRpe}
+              <div className="space-y-2 px-1">
+                <p className="text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Schéma de séance</p>
+                <div className="rounded-[14px] bg-card p-4">
+                  <div className="grid grid-cols-3 gap-3 pb-3" style={{ borderBottom: `0.5px solid ${mockupPalette.separator}` }}>
+                    <div>
+                      <p className="text-xl font-bold tabular-nums">{parsedResult.blocks.length || 0}</p>
+                      <p className="text-[11px] uppercase text-muted-foreground">Blocs</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold tabular-nums">{parsedBlocks.length || 0}</p>
+                      <p className="text-[11px] uppercase text-muted-foreground">Paliers</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold tabular-nums">{selectedAthletes.size || members.length}</p>
+                      <p className="text-[11px] uppercase text-muted-foreground">Athlètes</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex h-[72px] items-end gap-1.5">
+                    {(schemaBars.length ? schemaBars : Array.from({ length: 5 })).map((_, idx) => {
+                      const palette = [mockupPalette.z1, mockupPalette.z2, mockupPalette.z3, mockupPalette.z4, mockupPalette.z5, mockupPalette.z6];
+                      const height = 20 + (((idx % 5) + 1) * 10);
+                      return (
+                        <span
+                          key={`bar-${idx}`}
+                          className="flex-1 rounded-t-md"
+                          style={{ height: `${height}%`, backgroundColor: palette[idx % palette.length] }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 px-1">
+                <p className="text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Ajouter un bloc</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: "continu", label: "Continu", icon: Waves, insert: "20'>5'30" },
+                    { id: "intervalle", label: "Intervalle", icon: BarChart3, insert: "6x3'>3'30" },
+                    { id: "pyramide", label: "Pyramide", icon: Triangle, insert: "200>4'00, 400>4'10, 600>4'20, 400>4'10, 200>4'00" },
+                    { id: "variation", label: "Variation", icon: Activity, insert: "10'>5'30, 10'>4'45, 10'>5'15" },
+                  ].map((tile) => {
+                    const Icon = tile.icon;
+                    const isActive = activeTile === tile.id;
+                    return (
+                      <button
+                        type="button"
+                        key={tile.id}
+                        onClick={() => setRccCode((prev) => (prev.trim() ? `${prev}, ${tile.insert}` : tile.insert))}
+                        className="aspect-[1/1.05] rounded-[12px] border p-2"
+                        style={{
+                          borderColor: isActive ? mockupPalette.actionBlue : "rgba(60,60,67,0.18)",
+                          backgroundColor: isActive ? "rgba(0,122,255,0.06)" : "white",
+                        }}
+                      >
+                        <div className="flex h-full flex-col items-center justify-between">
+                          <Icon className="mt-1 h-5 w-5" style={{ color: isActive ? mockupPalette.actionBlue : "rgba(60,60,67,0.6)" }} />
+                          <span className="text-[11px] font-semibold" style={{ color: isActive ? mockupPalette.actionBlue : "inherit" }}>{tile.label}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div
+                className="ios-card space-y-4 overflow-hidden border p-0 shadow-[var(--shadow-card)]"
+                style={{ borderColor: mockupPalette.actionBlue, boxShadow: "0 8px 22px -14px rgba(0,122,255,0.45)" }}
+              >
+                <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ backgroundColor: "rgba(0,122,255,0.06)", borderBottom: `0.5px solid ${mockupPalette.separator}` }}>
+                  <div>
+                    <p className="text-sm font-semibold">Éditeur du bloc actif</p>
+                    <p className="text-xs text-muted-foreground">RCC + aperçu du bloc</p>
+                  </div>
+                  <span className="rounded-lg px-2 py-1 text-xs font-semibold text-white" style={{ backgroundColor: mockupPalette.actionBlue }}>
+                    Actif
+                  </span>
+                </div>
+                <div className="px-4 pb-4 pt-3">
+                  <RCCEditor
+                    value={rccCode}
+                    onChange={setRccCode}
+                    onParsedChange={handleParsedChange}
                   />
-                )}
+                  {parsedBlocks.length > 0 && (
+                    <RCCBlocksPreview
+                      blocks={parsedBlocks}
+                      blockRpe={blockRpe}
+                      onBlockRpeChange={setBlockRpe}
+                    />
+                  )}
+                </div>
               </div>
 
               <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
@@ -404,6 +489,16 @@ export const CreateCoachingSessionDialog = ({
                     className="rounded-xl border-border bg-card"
                   />
                 </div>
+              </div>
+
+              <div className="ios-card space-y-1.5 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <Label className="text-xs">Nom du bloc *</Label>
+                <Input
+                  placeholder="Pyramide seuil, 10x400..."
+                  value={objective}
+                  onChange={e => setObjective(e.target.value)}
+                  className="h-11 rounded-[14px] border-border bg-card"
+                />
               </div>
 
               <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">

@@ -69,6 +69,7 @@ export function PlanningHeader({
     <MainTopHeader
       title={title}
       subtitle={subtitle}
+      className="apple-grouped-bg"
       tabs={tabs}
       tabsAriaLabel={`Navigation ${title}`}
       largeTitleRight={showOnlyClubAction ? clubMarkButton : undefined}
