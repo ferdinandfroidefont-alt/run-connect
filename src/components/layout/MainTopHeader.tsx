@@ -107,9 +107,12 @@ export function MainTopHeader({
 
       {/* Large title — Apple iOS Settings.app/Mail.app spec : marginTop 6 / marginBottom 6 */}
       <div
-        className="origin-left px-4 pt-1.5 pb-1.5"
+        className="origin-top overflow-hidden px-4"
         style={{
           opacity: 1 - progress,
+          maxHeight: `${(1 - progress) * 80}px`,
+          paddingTop: `${(1 - progress) * 6}px`,
+          paddingBottom: `${(1 - progress) * 6}px`,
           transform: `translateY(${-10 * progress}px) scale(${1 - progress * 0.18})`,
         }}
       >
