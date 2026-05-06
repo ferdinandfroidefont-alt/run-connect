@@ -119,7 +119,7 @@ export function DayPlanningRow({
               </div>
               <div className="px-3.5 pb-3.5 pt-3">
                 {session.miniProfile?.length ? (
-                  <div className="mb-2.5 h-12 rounded-[6px] bg-[rgba(120,120,128,0.08)] px-1.5 py-1">
+                  <div className="mb-2.5 h-12 px-1.5 py-1">
                     <MiniWorkoutProfile
                       blocks={session.miniProfile}
                       isRestDay={false}

@@ -876,6 +876,7 @@ export const WeeklyPlanDialog = ({
   const infiniteScrollRef = useRef<HTMLDivElement | null>(null);
   const [weekOffsets, setWeekOffsets] = useState<number[]>([-2, -1, 0, 1, 2]);
   const ROW_ESTIMATED_HEIGHT = 500;
+  const athleteReadonlyMode = Boolean(initialAthleteId || initialAthleteName);
 
   // Get base values from the selected session for override defaults
   const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find(b => b.type === "interval");
@@ -1036,24 +1037,19 @@ export const WeeklyPlanDialog = ({
             </div>
           ) : (
             <div className="px-4 pb-4">
-              <div className="mb-3 rounded-[14px] border border-border/60 bg-[#d7d7dd] p-1">
-                <div className="grid grid-cols-2 gap-1">
-                  <button className="h-10 rounded-[12px] text-[31px] font-medium text-foreground/80">Athlète</button>
-                  <button className="h-10 rounded-[12px] bg-white text-[31px] font-semibold text-foreground shadow-sm">Coach</button>
+              {!athleteReadonlyMode ? (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 rounded-[16px] bg-[#d7d7dd] px-4 py-3">
+                    <Search className="h-5 w-5 text-muted-foreground" />
+                    <Input
+                      value={athleteSearch}
+                      onChange={(e) => setAthleteSearch(e.target.value)}
+                      placeholder="Rechercher un athlète ou un groupe"
+                      className="h-auto border-0 bg-transparent p-0 text-[18px] shadow-none focus-visible:ring-0"
+                    />
+                  </div>
                 </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="flex items-center gap-2 rounded-[16px] bg-[#d7d7dd] px-4 py-3">
-                  <Search className="h-5 w-5 text-muted-foreground" />
-                  <Input
-                    value={athleteSearch}
-                    onChange={(e) => setAthleteSearch(e.target.value)}
-                    placeholder="Rechercher un athlète ou un groupe"
-                    className="h-auto border-0 bg-transparent p-0 text-[18px] shadow-none focus-visible:ring-0"
-                  />
-                </div>
-              </div>
+              ) : null}
 
               <div
                 ref={infiniteScrollRef}
@@ -1123,9 +1119,27 @@ export const WeeklyPlanDialog = ({
 
                             return (
                               <div key={`${offset}-${dayIndex}`} className="flex items-center gap-3">
-                                <div className={`w-12 text-center ${format(new Date(), "yyyy-MM-dd") === format(dayDate, "yyyy-MM-dd") ? "rounded-2xl bg-[#bfd5ee] py-2" : ""}`}>
-                                  <div className="text-[13px] font-semibold uppercase text-muted-foreground">{dayLabel}</div>
-                                  <div className="text-[42px] font-bold leading-none text-foreground">{format(dayDate, "d")}</div>
+                                <div
+                                  className={`w-12 text-center ${format(new Date(), "yyyy-MM-dd") === format(dayDate, "yyyy-MM-dd") ? "rounded-2xl bg-[rgba(0,122,255,0.16)] py-2" : ""}`}
+                                >
+                                  <div
+                                    className={`text-[13px] font-semibold uppercase ${
+                                      format(new Date(), "yyyy-MM-dd") === format(dayDate, "yyyy-MM-dd")
+                                        ? "text-[#007AFF]"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {dayLabel}
+                                  </div>
+                                  <div
+                                    className={`text-[42px] font-bold leading-none ${
+                                      format(new Date(), "yyyy-MM-dd") === format(dayDate, "yyyy-MM-dd")
+                                        ? "text-[#007AFF]"
+                                        : "text-foreground"
+                                    }`}
+                                  >
+                                    {format(dayDate, "d")}
+                                  </div>
                                 </div>
 
                                 <div className="min-w-0 flex-1">
@@ -1168,21 +1182,25 @@ export const WeeklyPlanDialog = ({
                                   )}
                                 </div>
 
-                                <button
-                                  onClick={(ev) => {
-                                    ev.stopPropagation();
-                                    if (!isActiveWeek) {
-                                      setCurrentWeek(wkStart);
-                                      setSelectedIndex(null);
-                                      toast({ title: "Semaine activée", description: "Ajoute ensuite ta séance sur cette semaine." });
-                                      return;
-                                    }
-                                    addSession(dayIndex);
-                                  }}
-                                  className="h-14 w-14 shrink-0 rounded-full bg-[#0a84ff] text-white shadow-[0_8px_20px_rgba(10,132,255,.35)]"
-                                >
-                                  <Plus className="mx-auto h-7 w-7" />
-                                </button>
+                                {!athleteReadonlyMode ? (
+                                  <button
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      if (!isActiveWeek) {
+                                        setCurrentWeek(wkStart);
+                                        setSelectedIndex(null);
+                                        toast({ title: "Semaine activée", description: "Ajoute ensuite ta séance sur cette semaine." });
+                                        return;
+                                      }
+                                      addSession(dayIndex);
+                                    }}
+                                    className="h-14 w-14 shrink-0 rounded-full bg-[#007AFF] text-white shadow-[0_8px_20px_rgba(0,122,255,.35)]"
+                                  >
+                                    <Plus className="mx-auto h-7 w-7" />
+                                  </button>
+                                ) : (
+                                  <div className="h-14 w-14 shrink-0" aria-hidden />
+                                )}
                               </div>
                             );
                           })}

@@ -50,6 +50,7 @@ export default function ItineraryHub() {
             className="py-3"
             leadingBack={{ onClick: () => navigate('/'), label: 'Découvrir' }}
             title="Itinéraire"
+            sideClassName="w-[7.5rem]"
           />
         </div>
       }

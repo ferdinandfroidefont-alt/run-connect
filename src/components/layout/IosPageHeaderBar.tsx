@@ -31,10 +31,11 @@ export function IosPageHeaderBar({
     <button
       type="button"
       onClick={leadingBack.onClick}
-      className="flex min-w-0 max-w-[min(52%,11rem)] items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-normal text-primary active:opacity-60 [-webkit-tap-highlight-color:transparent]"
+      aria-label={leadingBack.label ?? "Retour"}
+      className="flex min-w-0 items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-normal text-primary active:opacity-60 [-webkit-tap-highlight-color:transparent]"
     >
       <ChevronLeft className="h-6 w-6 shrink-0 stroke-[2.4]" aria-hidden />
-      <span className="min-w-0 truncate">{leadingBack.label ?? "Retour"}</span>
+      <span className="min-w-0 whitespace-nowrap">{leadingBack.label ?? "Retour"}</span>
     </button>
   ) : (
     left

@@ -215,6 +215,13 @@ type TrainingSession = {
   athleteCompletedAt?: string | null;
 };
 
+type SessionPreviewState = {
+  sessionId: string;
+  blockId: string | null;
+  anchorX: number;
+  anchorTop: number;
+};
+
 type SessionDraft = Omit<TrainingSession, "id" | "sent">;
 const SPORTS: Array<{ id: SportType; label: string; emoji: string }> = [
   { id: "running", label: "Course à pied", emoji: "🏃" },
@@ -1006,6 +1013,8 @@ export function CoachPlanningExperience() {
   const { setBottomNavSuppressed } = useAppContext();
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const infiniteWeekScrollRef = useRef<HTMLDivElement | null>(null);
+  const weekScrollSwitchingRef = useRef(false);
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
   const [memberClubIds, setMemberClubIds] = useState<string[]>([]);
@@ -1020,6 +1029,7 @@ export function CoachPlanningExperience() {
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
+  const [sessionPreview, setSessionPreview] = useState<SessionPreviewState | null>(null);
   const [activeAthleteId, setActiveAthleteId] = useState<string | undefined>(undefined);
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>(undefined);
   /** Maquette 16 · ouverture « Programmer la semaine » sans athlète (ex. FAB Créer une séance). */
@@ -1730,6 +1740,109 @@ export function CoachPlanningExperience() {
     setEditorTab("build");
     setCoachingTab("create");
   };
+
+  const openSessionPreview = useCallback((sessionId: string) => {
+    setSessionPreview({ sessionId, blockId: null, anchorX: 0, anchorTop: 0 });
+  }, []);
+
+  const closeSessionPreview = useCallback(() => {
+    setSessionPreview(null);
+  }, []);
+
+  const previewSessionItem = useMemo(
+    () => (sessionPreview ? sessions.find((item) => item.id === sessionPreview.sessionId) : null),
+    [sessionPreview, sessions]
+  );
+
+  const previewSessionSegments = useMemo(
+    () =>
+      previewSessionItem
+        ? buildWorkoutSegments(previewSessionItem.blocks, {
+            sport: previewSessionItem.sport,
+            athleteIntensity: previewSessionItem.athleteIntensity ?? undefined,
+          })
+        : [],
+    [previewSessionItem]
+  );
+
+  const previewSessionMiniBars = useMemo(
+    () => renderWorkoutMiniProfile(previewSessionSegments, { sessionSchema: true }),
+    [previewSessionSegments]
+  );
+
+  const previewSessionMetrics = useMemo(
+    () => resolveWorkoutMetrics({ segments: previewSessionSegments }),
+    [previewSessionSegments]
+  );
+
+  const previewSessionFocusedBlock = useMemo(() => {
+    if (!previewSessionItem || !sessionPreview?.blockId) return null;
+    return previewSessionItem.blocks.find((block) => block.id === sessionPreview.blockId) ?? null;
+  }, [previewSessionItem, sessionPreview]);
+
+  const previewSessionBubbleLabel = useMemo(() => {
+    if (!previewSessionFocusedBlock) return null;
+    const pace = paceToLabel(previewSessionFocusedBlock.paceSecPerKm);
+    const duration = secondsToLabel(previewSessionFocusedBlock.durationSec);
+    const distance = metersToLabel(previewSessionFocusedBlock.distanceM);
+    return [pace, duration || distance].filter(Boolean).join(" · ");
+  }, [previewSessionFocusedBlock]);
+
+  const previewSessionSections = useMemo(() => {
+    if (!previewSessionItem) return [];
+    type DraftSection = { id: string; key: string; title: string; lines: string[]; reps: number };
+    const sections: DraftSection[] = [];
+
+    const getSectionBase = (block: SessionBlock, index: number) => {
+      if (block.type === "warmup") return { key: "warmup", title: "Échauffement" };
+      if (block.type === "cooldown") return { key: "cooldown", title: "Retour au calme" };
+      if (block.type === "recovery" && index >= previewSessionItem.blocks.length - 2) {
+        return { key: "cooldown", title: "Retour au calme" };
+      }
+      if (block.type === "interval") {
+        const reps = Math.max(1, block.repetitions || 1);
+        const shortActivation = (block.durationSec ?? 999) <= 120 && reps <= 4 && index <= 2;
+        return shortActivation
+          ? { key: "activation", title: "Activation" }
+          : { key: "main", title: "Série principale" };
+      }
+      if (block.type === "recovery") return { key: "recovery", title: "Récupération" };
+      return { key: "main", title: "Série principale" };
+    };
+
+    for (const [index, block] of previewSessionItem.blocks.entries()) {
+      const effortLine = blockTranscript(block);
+      const recoveryLine =
+        block.recoveryDurationSec || block.recoveryDistanceM
+          ? `${block.recoveryDurationSec ? secondsToLabel(block.recoveryDurationSec) : metersToLabel(block.recoveryDistanceM)} récup`
+          : null;
+      const base = getSectionBase(block, index);
+      const reps = block.type === "interval" ? Math.max(1, block.repetitions || 1) : 0;
+      const prev = sections[sections.length - 1];
+
+      if (prev && prev.key === base.key) {
+        prev.lines.push(...([effortLine, recoveryLine].filter(Boolean) as string[]));
+        prev.reps += reps;
+      } else {
+        sections.push({
+          id: block.id,
+          key: base.key,
+          title: base.title,
+          lines: [effortLine, recoveryLine].filter(Boolean) as string[],
+          reps,
+        });
+      }
+    }
+
+    return sections.map((section) => ({
+      id: section.id,
+      title:
+        (section.key === "activation" || section.key === "main") && section.reps > 0
+          ? `${section.title} ${section.reps}×`
+          : section.title,
+      lines: section.lines,
+    }));
+  }, [previewSessionItem]);
 
   const saveSession = async (): Promise<boolean> => {
     if (!draft.blocks.length || !activeClubId || !user) return false;
@@ -2724,6 +2837,30 @@ export function CoachPlanningExperience() {
     activeMenuKey === "planning" && !effectiveAthleteMode && !activeAthleteId && !activeGroupId && !coachWeekProgrammerOpen;
   const weekPlannerMode =
     activeMenuKey === "planning" && !effectiveAthleteMode && (!!activeAthleteId || !!activeGroupId || coachWeekProgrammerOpen);
+
+  const shiftWeekByScroll = useCallback(
+    (direction: "prev" | "next") => {
+      if (weekScrollSwitchingRef.current) return;
+      weekScrollSwitchingRef.current = true;
+      setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
+      setSelectedDate((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
+      requestAnimationFrame(() => {
+        const node = infiniteWeekScrollRef.current;
+        if (node) {
+          node.scrollTop = Math.max(220, node.clientHeight * 0.42);
+        }
+        weekScrollSwitchingRef.current = false;
+      });
+    },
+    [setSelectedDate]
+  );
+
+  useEffect(() => {
+    if (!weekPlannerMode) return;
+    const node = infiniteWeekScrollRef.current;
+    if (!node) return;
+    node.scrollTop = Math.max(220, node.clientHeight * 0.42);
+  }, [weekPlannerMode]);
   const coachingHeaderTitle = useMemo(() => {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
     switch (activeMenuKey) {
@@ -3316,7 +3453,20 @@ export function CoachPlanningExperience() {
             ) : activeMenuKey === "planning" ? (
               <>
                 {weekPlannerMode ? (
-                  <div className="pb-[calc(7rem+env(safe-area-inset-bottom))]">
+                  <div
+                    ref={infiniteWeekScrollRef}
+                    onScroll={(event) => {
+                      const el = event.currentTarget;
+                      if (el.scrollTop <= 48) {
+                        shiftWeekByScroll("prev");
+                        return;
+                      }
+                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 48) {
+                        shiftWeekByScroll("next");
+                      }
+                    }}
+                    className="max-h-[68vh] overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]"
+                  >
                     <div className="px-5 pb-1.5 pt-4">
                       <div className="flex items-baseline gap-2">
                         <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
@@ -3398,7 +3548,7 @@ export function CoachPlanningExperience() {
                             isLast={dayIdx === weekDays.length - 1}
                             athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
                             onAdd={() => openCreateForDate(day)}
-                            onOpen={session ? () => openEditSession(session.id) : undefined}
+                            onOpen={session ? () => openSessionPreview(session.id) : undefined}
                             onEdit={session ? () => openEditSession(session.id) : undefined}
                             onSend={
                               session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
@@ -3476,7 +3626,7 @@ export function CoachPlanningExperience() {
                             isSent={session?.sent}
                             accentColor={accentColor}
                             onAdd={() => openCreateForDate(day)}
-                            onOpen={session ? () => openEditSession(session.id) : undefined}
+                            onOpen={session ? () => openSessionPreview(session.id) : undefined}
                             onEdit={session ? () => openEditSession(session.id) : undefined}
                             onSend={
                               session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
@@ -5457,6 +5607,100 @@ export function CoachPlanningExperience() {
               </div>
             ) : null}
           </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={!!sessionPreview} onOpenChange={(open) => (!open ? closeSessionPreview() : undefined)}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="flex h-[88dvh] flex-col overflow-hidden rounded-t-[24px] border-border bg-[#e7e8ed] p-0"
+        >
+          {previewSessionItem ? (
+            <>
+              <div className="px-5 pb-2 pt-3">
+                <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-[#c9cad2]" />
+                <button
+                  type="button"
+                  className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground"
+                  onClick={closeSessionPreview}
+                  aria-label="Fermer"
+                >
+                  <Plus className="h-5 w-5 rotate-45" />
+                </button>
+                <h3 className="text-[47px] font-bold leading-tight tracking-[-0.03em] text-foreground">{previewSessionItem.title}</h3>
+                <div className="mt-2 flex items-center gap-5 text-[31px] font-semibold text-foreground">
+                  {previewSessionMetrics.durationLabel ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock3 className="h-4 w-4 text-muted-foreground" />
+                      {previewSessionMetrics.durationLabel}
+                    </span>
+                  ) : null}
+                  {previewSessionMetrics.distanceLabel ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Ruler className="h-4 w-4 text-muted-foreground" />
+                      {previewSessionMetrics.distanceLabel}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[max(1rem,var(--safe-area-bottom))]">
+                <div className="rounded-[24px] bg-card p-4">
+                  <div className="relative mb-5 rounded-[12px] bg-white p-2">
+                    {previewSessionBubbleLabel && sessionPreview ? (
+                      <div
+                        className="absolute z-10 -translate-x-1/2 rounded-[12px] bg-[#1c1d21] px-3 py-1.5 text-[12px] font-semibold text-white shadow-md"
+                        style={{ left: `${Math.max(12, Math.min(sessionPreview.anchorX, 280))}px`, top: `${Math.max(-6, sessionPreview.anchorTop - 36)}px` }}
+                      >
+                        {previewSessionBubbleLabel}
+                      </div>
+                    ) : null}
+                    <MiniWorkoutProfile
+                      blocks={previewSessionMiniBars}
+                      variant="premiumCompact"
+                      zoneBandMode
+                      flatSurface
+                      className="h-20 w-full rounded-none border-0 bg-transparent px-0 py-0"
+                      selectedBlockIndex={
+                        !sessionPreview?.blockId || !previewSessionItem.blocks.length || !previewSessionMiniBars.length
+                          ? null
+                          : Math.round(
+                              (Math.max(0, previewSessionItem.blocks.findIndex((b) => b.id === sessionPreview.blockId)) /
+                                Math.max(1, previewSessionItem.blocks.length - 1)) *
+                                Math.max(1, previewSessionMiniBars.length - 1)
+                            )
+                      }
+                      onBlockTap={({ index, anchorX, anchorTop }) => {
+                        if (!previewSessionItem.blocks.length || !previewSessionMiniBars.length) return;
+                        const mapped = Math.round((index / Math.max(1, previewSessionMiniBars.length - 1)) * (previewSessionItem.blocks.length - 1));
+                        const targetBlock = previewSessionItem.blocks[Math.max(0, Math.min(mapped, previewSessionItem.blocks.length - 1))];
+                        if (!targetBlock) return;
+                        setSessionPreview((prev) =>
+                          prev ? { ...prev, blockId: targetBlock.id, anchorX, anchorTop } : prev
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    {previewSessionSections.map((section) => (
+                      <div key={section.id}>
+                        <h4 className="text-[44px] font-bold tracking-[-0.02em] text-foreground">{section.title}</h4>
+                        <div className="mt-1.5 space-y-0.5">
+                          {section.lines.map((line, idx) => (
+                            <p key={`${section.id}-${idx}`} className="text-[37px] text-foreground">
+                              - {line}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
         </SheetContent>
       </Sheet>
 

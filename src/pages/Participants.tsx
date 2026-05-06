@@ -548,6 +548,7 @@ export default function Participants() {
             <IosPageHeaderBar
               leadingBack={{ onClick: () => navigate("/"), label: "Découvrir" }}
               title="Itinéraire"
+              sideClassName="w-[7.5rem]"
             />
           </div>
         }

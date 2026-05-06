@@ -101,7 +101,7 @@ export default function ItineraryMyRoutes() {
             <IosPageHeaderBar
               leadingBack={{
                 onClick: () => navigate('/profile'),
-                label: 'Page précédente',
+                label: 'Découvrir',
               }}
               title="Mes itinéraires"
               right={
