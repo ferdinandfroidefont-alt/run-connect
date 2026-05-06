@@ -255,14 +255,14 @@ export function WeekSelectorPremium({
                 onClick={() => onSelectDate(day.date)}
                 className={cn(
                   "relative flex flex-col items-center rounded-[10px] bg-card px-0.5 pb-[5px] pt-1.5 text-center [-webkit-tap-highlight-color:transparent]",
-                  day.isSelected ? "border-[1.5px] border-[#0066cc]" : "border border-transparent"
+                  day.isSelected ? "border-[1.5px] border-primary" : "border border-transparent"
                 )}
               >
                 <div className="text-[9px] tracking-[0.3px] text-muted-foreground">{day.initial}</div>
                 <div
                   className={cn(
                     "font-display text-[14px] font-semibold leading-[1.1]",
-                    day.isSelected ? "text-[#0066cc]" : "text-foreground"
+                    day.isSelected ? "text-primary" : "text-foreground"
                   )}
                 >
                   {day.dayNumber}
@@ -293,7 +293,7 @@ export function WeekSelectorPremium({
                       ))}
                     </div>
                   ) : isEmpty ? (
-                    <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-dashed border-muted-foreground/45 text-[12px] font-light leading-none text-muted-foreground">
+                    <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-dashed border-primary/45 text-[12px] font-light leading-none text-primary">
                       +
                     </div>
                   ) : null}

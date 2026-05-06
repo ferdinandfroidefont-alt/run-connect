@@ -88,7 +88,7 @@ export function AthleteMaquettePlanDayRow({
             <div
               className={cn(
                 "font-display text-[22px] font-semibold leading-[1.05] tracking-[-0.02em]",
-                isToday ? "text-[#0a84ff]" : "text-foreground"
+                isToday ? "text-primary" : "text-foreground"
               )}
             >
               {dateNum}

@@ -80,17 +80,17 @@ export function DayPlanningRow({
       <div
         className={cn(
           "grid grid-cols-[36px_minmax(0,1fr)_36px] items-stretch gap-2.5 px-3.5 py-1.5 transition-colors",
-          isSelected && "bg-[rgba(0,122,255,0.08)]"
+          isSelected && "bg-primary/10"
         )}
       >
         <div
           className={cn(
             "flex flex-col items-center gap-0.5 px-0 py-2.5",
-            isSelected && "rounded-xl bg-[rgba(0,122,255,0.16)]"
+            isSelected && "rounded-xl bg-primary/20"
           )}
         >
-          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.35px] text-muted-foreground", isSelected && "text-[#007AFF]")}>{dayAbbrev}</p>
-          <p className={cn("font-display text-[22px] font-bold leading-none tracking-[-0.03em] text-foreground", isSelected && "text-[#007AFF]")}>
+          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.35px] text-muted-foreground", isSelected && "text-primary")}>{dayAbbrev}</p>
+          <p className={cn("font-display text-[22px] font-bold leading-none tracking-[-0.03em] text-foreground", isSelected && "text-primary")}>
             {dayNumber}
           </p>
         </div>
@@ -162,7 +162,7 @@ export function DayPlanningRow({
               type="button"
               onClick={onAdd}
               className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#007AFF] text-white shadow-[0_2px_6px_rgba(0,122,255,0.25)] transition-transform",
+                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_2px_6px_rgba(0,102,204,0.25)] transition-transform",
                 !allowSessionActions && "pointer-events-none opacity-45"
               )}
               aria-label="Ajouter une séance"
@@ -174,7 +174,7 @@ export function DayPlanningRow({
               type="button"
               onClick={onAdd}
               className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#007AFF] text-white shadow-[0_2px_6px_rgba(0,122,255,0.25)] transition-transform",
+                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_2px_6px_rgba(0,102,204,0.25)] transition-transform",
                 !allowSessionActions && "pointer-events-none opacity-45"
               )}
               aria-label="Ajouter une séance"

@@ -3297,12 +3297,14 @@ export function CoachPlanningExperience() {
             )}
 
             {weekPlannerMode && !activeAthleteId ? (
-              <PlanningSearchBar
-                bare
-                value={search}
-                onChange={setSearch}
-                placeholder="Rechercher un athlète ou un groupe"
-              />
+              <div className="sticky top-0 z-20 bg-secondary/95 pt-1 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur">
+                <PlanningSearchBar
+                  bare
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Rechercher un athlète ou un groupe"
+                />
+              </div>
             ) : null}
 
             {weekPlannerMode && (activeAthlete || activeGroup) ? (

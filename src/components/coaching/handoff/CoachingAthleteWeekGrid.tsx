@@ -38,11 +38,11 @@ export function CoachingAthleteWeekGrid({
   return (
     <div className="px-4 pb-3 pt-5">
       <div className="flex items-center justify-between px-1 pb-2.5">
-        <button type="button" onClick={onPreviousWeek} className="px-2 py-1 text-[18px] text-[#0a84ff]" aria-label="Semaine précédente">
+        <button type="button" onClick={onPreviousWeek} className="px-2 py-1 text-[18px] text-primary" aria-label="Semaine précédente">
           ‹
         </button>
         <p className="text-center text-[12px] font-semibold uppercase tracking-[0.5px] text-foreground">{weekTitle}</p>
-        <button type="button" onClick={onNextWeek} className="px-2 py-1 text-[18px] text-[#0a84ff]" aria-label="Semaine suivante">
+        <button type="button" onClick={onNextWeek} className="px-2 py-1 text-[18px] text-primary" aria-label="Semaine suivante">
           ›
         </button>
       </div>
@@ -60,7 +60,7 @@ export function CoachingAthleteWeekGrid({
               onClick={() => onSelectDate(d.date)}
               className={cn(
                 "relative rounded-[10px] border bg-card pb-[5px] pl-0.5 pr-0.5 pt-1.5 text-center transition-opacity",
-                isToday && "border-[#0a84ff] border-[1.5px]",
+                isToday && "border-primary border-[1.5px]",
                 !isToday && "border-transparent",
                 isDone && "opacity-[0.65]"
               )}
@@ -69,7 +69,7 @@ export function CoachingAthleteWeekGrid({
               <div
                 className={cn(
                   "font-display text-[14px] font-semibold leading-tight",
-                  isToday ? "text-[#0a84ff]" : "text-foreground"
+                  isToday ? "text-primary" : "text-foreground"
                 )}
               >
                 {format(d.date, "d")}
@@ -85,7 +85,7 @@ export function CoachingAthleteWeekGrid({
                     <AthletePlanSportGlyph sport={summ.sport} size={14} />
                     <span
                       className="max-w-full truncate px-0.5 text-[8.5px] font-semibold leading-none"
-                      style={{ color: ATHLETE_PLAN_SPORT_STROKE[summ.sport] ?? "#0a84ff" }}
+                      style={{ color: ATHLETE_PLAN_SPORT_STROKE[summ.sport] ?? "#0066cc" }}
                     >
                       {summ.value}
                     </span>
