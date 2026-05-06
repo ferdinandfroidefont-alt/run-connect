@@ -611,7 +611,7 @@ export default function MySessions() {
                   stopParticipantTracking();
                   setSelectedSession(null);
                 }}
-                className="gap-1 text-primary p-0 h-auto font-normal"
+                className="gap-1 text-primary h-9 w-auto px-2 font-normal rounded-full"
               >
                 <ArrowLeft className="h-5 w-5" />
                 Retour

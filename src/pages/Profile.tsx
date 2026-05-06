@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Camera, ChevronRight, Trophy, Share } from "lucide-react";
+import { ChevronRight, Share } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -24,6 +24,7 @@ import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScree
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
+import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
@@ -62,6 +63,12 @@ interface UserRoute {
   total_elevation_gain: number | null;
   created_at: string;
   coordinates: any;
+}
+interface ProfileStoryHighlight {
+  id: string;
+  story_id: string;
+  title: string;
+  position: number;
 }
 const Profile = () => {
   const {
@@ -115,6 +122,9 @@ const Profile = () => {
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [storyHighlights, setStoryHighlights] = useState<ProfileStoryHighlight[]>([]);
+  const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
+  const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
   const {
     toast
   } = useToast();
@@ -195,6 +205,7 @@ const Profile = () => {
       // fetchReliabilityRate removed - no longer shown on profile
       if (!isViewingOtherUser) {
         fetchUserRoutes();
+        fetchStoriesAndHighlights();
       } else {
         fetchCommonClubs();
         // Fetch connection history only for creator
@@ -208,6 +219,37 @@ const Profile = () => {
       setNotificationPermission(Notification.permission);
     }
   }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
+  const fetchStoriesAndHighlights = async () => {
+    if (!user || isViewingOtherUser) return;
+    try {
+      const { data: highlights } = await (supabase as any)
+        .from("profile_story_highlights")
+        .select("id, story_id, title, position")
+        .eq("owner_id", user.id)
+        .order("position", { ascending: true });
+      const rows = (highlights ?? []) as ProfileStoryHighlight[];
+      setStoryHighlights(rows);
+      const storyIds = rows.map((h) => h.story_id);
+      if (storyIds.length === 0) {
+        setHighlightPreviewByStoryId({});
+        return;
+      }
+      const { data: mediaRows } = await (supabase as any)
+        .from("story_media")
+        .select("story_id, media_url, created_at")
+        .in("story_id", storyIds)
+        .order("created_at", { ascending: true });
+      const previewByStoryId: Record<string, string> = {};
+      for (const row of (mediaRows ?? []) as Array<any>) {
+        if (!previewByStoryId[row.story_id] && row.media_url) {
+          previewByStoryId[row.story_id] = row.media_url;
+        }
+      }
+      setHighlightPreviewByStoryId(previewByStoryId);
+    } catch (error) {
+      console.error("Error fetching highlights:", error);
+    }
+  };
   const fetchFollowCounts = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
@@ -646,60 +688,7 @@ const Profile = () => {
     }
     return source.slice(0, 2).toUpperCase();
   };
-  const routePathFromCoordinates = (coordinates: any): string => {
-    if (!Array.isArray(coordinates) || coordinates.length < 2) {
-      return "M 8 74 Q 38 58 68 62 T 128 48";
-    }
-    const points = coordinates
-      .map((coord: any) => {
-        if (coord?.lat != null && coord?.lng != null) {
-          return { lat: Number(coord.lat), lng: Number(coord.lng) };
-        }
-        if (Array.isArray(coord) && coord.length >= 2) {
-          return { lat: Number(coord[0]), lng: Number(coord[1]) };
-        }
-        return null;
-      })
-      .filter((point: any) => point && Number.isFinite(point.lat) && Number.isFinite(point.lng));
-    if (points.length < 2) return "M 8 74 Q 38 58 68 62 T 128 48";
-    const minLat = Math.min(...points.map((p: any) => p.lat));
-    const maxLat = Math.max(...points.map((p: any) => p.lat));
-    const minLng = Math.min(...points.map((p: any) => p.lng));
-    const maxLng = Math.max(...points.map((p: any) => p.lng));
-    const latRange = Math.max(maxLat - minLat, 0.0001);
-    const lngRange = Math.max(maxLng - minLng, 0.0001);
-    const chartPoints = points.map((p: any, index: number) => {
-      const x = 8 + (index / (points.length - 1)) * 124;
-      const y = 18 + (1 - (p.lat - minLat) / latRange) * 64 + ((p.lng - minLng) / lngRange - 0.5) * 10;
-      return { x, y: Math.max(14, Math.min(84, y)) };
-    });
-    let d = `M ${chartPoints[0].x.toFixed(2)} ${chartPoints[0].y.toFixed(2)}`;
-    for (let i = 1; i < chartPoints.length; i += 1) {
-      const prev = chartPoints[i - 1];
-      const curr = chartPoints[i];
-      const cx = ((prev.x + curr.x) / 2).toFixed(2);
-      const cy = ((prev.y + curr.y) / 2).toFixed(2);
-      d += ` Q ${prev.x.toFixed(2)} ${prev.y.toFixed(2)} ${cx} ${cy}`;
-    }
-    const last = chartPoints[chartPoints.length - 1];
-    d += ` T ${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
-    return d;
-  };
-  const storyColors = ["#4C8DFF", "#FF8A34", "#34C759", "#5AC8FA"];
-  const highlightedStories = userRoutes.slice(0, 3).map((route, index) => {
-    const distanceKm = (route.total_distance ?? 0) / 1000;
-    const pseudoDurationMinutes = Math.max(1, Math.round(distanceKm * 5.5));
-    const hours = Math.floor(pseudoDurationMinutes / 60);
-    const minutes = pseudoDurationMinutes % 60;
-    return {
-      id: route.id,
-      title: route.name || "Parcours",
-      meta: `${distanceKm > 0 ? `${distanceKm.toFixed(1).replace(".", ",")} km` : "0 km"} · ${hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}` : `${pseudoDurationMinutes} min`}`,
-      ageLabel: index === 0 ? "il y a 2j" : index === 1 ? "il y a 5j" : "il y a 7j",
-      color: storyColors[index % storyColors.length],
-      path: routePathFromCoordinates(route.coordinates),
-    };
-  });
+  const highlightedStories = storyHighlights.slice(0, 8);
 
   return (
     <div
@@ -721,10 +710,10 @@ const Profile = () => {
                     avatarUrl: profile.avatar_url,
                   })
                 }
-                className="inline-flex h-8 items-center text-[17px] text-foreground active:opacity-70"
+                className="inline-flex h-8 items-center text-[17px] text-primary active:opacity-70"
                 aria-label="Partager le profil"
               >
-                <Share className="h-5 w-5" strokeWidth={2} />
+                <Share className="h-5 w-5 text-primary" strokeWidth={2} />
               </button>
             ) : undefined
           }
@@ -759,8 +748,8 @@ const Profile = () => {
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
           </button>
 
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white p-2 text-center">
+            <div className="rounded-xl bg-white py-2">
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(userRoutes.length)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Séances</p>
             </div>
@@ -770,6 +759,7 @@ const Profile = () => {
                 setFollowDialogType('followers');
                 setShowFollowDialog(true);
               }}
+              className="rounded-xl bg-white py-2"
             >
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followerCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Abonnés</p>
@@ -780,6 +770,7 @@ const Profile = () => {
                 setFollowDialogType('following');
                 setShowFollowDialog(true);
               }}
+              className="rounded-xl bg-white py-2"
             >
               <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followingCount)}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Suivis</p>
@@ -789,31 +780,36 @@ const Profile = () => {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[20px] font-semibold text-foreground">Stories à la une</h2>
-              <button type="button" className="text-[14px] font-medium text-primary">Voir tout</button>
+              <button type="button" onClick={() => navigate("/feed")} className="text-[14px] font-medium text-primary">Voir tout</button>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1">
               <div className="shrink-0">
                 <button
-                  onClick={() => navigate("/stories/create")}
+                  onClick={() => navigate("/feed")}
                   className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-2xl border border-border bg-white text-foreground"
                 >
-                  <span className="text-[34px] leading-none text-primary">+</span>
-                  <span className="mt-1 text-[12px] font-medium text-primary">Nouvelle</span>
+                  <span className="text-[34px] leading-none">✨</span>
+                  <span className="mt-1 text-[12px] font-medium text-primary">À la une</span>
                 </button>
-                <p className="mt-2 text-center text-[12px] text-muted-foreground">Créer</p>
+                <p className="mt-2 text-center text-[12px] text-muted-foreground">Nouvelle</p>
               </div>
               {highlightedStories.map((story) => (
                 <div key={story.id} className="shrink-0">
-                  <button className="relative h-[150px] w-[110px] overflow-hidden rounded-2xl p-3 text-left" style={{ backgroundColor: story.color }}>
-                    <svg viewBox="0 0 140 100" className="absolute inset-0 h-full w-full p-2" aria-hidden="true">
-                      <path d={story.path} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.8" strokeLinecap="round" />
-                    </svg>
-                    <div className="absolute inset-x-0 bottom-0 p-3">
-                      <p className="truncate text-[14px] font-semibold text-white">{story.title}</p>
-                      <p className="truncate text-[12px] text-white/80">{story.meta}</p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedHighlightStoryId(story.story_id)}
+                    className="relative h-[150px] w-[110px] overflow-hidden rounded-2xl border border-border bg-muted text-left"
+                  >
+                    {highlightPreviewByStoryId[story.story_id] ? (
+                      <img src={highlightPreviewByStoryId[story.story_id]} alt={story.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-3">
+                      <p className="truncate text-[14px] font-semibold text-white">{story.title?.trim() || "Story à la une"}</p>
                     </div>
                   </button>
-                  <p className="mt-2 text-center text-[12px] text-muted-foreground">{story.ageLabel}</p>
+                  <p className="mt-2 text-center text-[12px] text-muted-foreground">Story à la une</p>
                 </div>
               ))}
             </div>
@@ -825,9 +821,7 @@ const Profile = () => {
               onClick={() => navigate('/stories/create')}
               className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
             >
-              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#ff8a34] text-white">
-                <Camera className="h-4 w-4" />
-              </div>
+              <div className="text-[24px] leading-none">📸</div>
               <p className="text-[14px] font-semibold text-foreground">Créer une story</p>
               <p className="mt-1 text-[13px] text-muted-foreground">Partage ta sortie</p>
             </button>
@@ -836,15 +830,13 @@ const Profile = () => {
               onClick={() => navigate('/profile/records')}
               className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
             >
-              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#4c8dff] text-white">
-                <Trophy className="h-4 w-4" />
-              </div>
+              <div className="text-[24px] leading-none">🏆</div>
               <p className="text-[14px] font-semibold text-foreground">Nouveau record</p>
               <p className="mt-1 text-[13px] text-muted-foreground">Bats ton PR</p>
             </button>
           </div>
 
-          <div className="bg-white">
+          <div className="overflow-hidden rounded-2xl border border-border bg-white px-3">
             <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
             <button
               type="button"
@@ -967,6 +959,19 @@ const Profile = () => {
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
         <ProfileShareScreen open={showProfileShare} onClose={() => setShowProfileShare(false)} />
+        <SessionStoryDialog
+          open={!!selectedHighlightStoryId}
+          onOpenChange={(open) => {
+            if (!open) setSelectedHighlightStoryId(null);
+          }}
+          authorId={user?.id || ""}
+          viewerUserId={user?.id ?? null}
+          storyId={selectedHighlightStoryId}
+          onOpenFeed={() => {
+            setSelectedHighlightStoryId(null);
+            navigate("/feed");
+          }}
+        />
         {qrData ? (
           <QRShareDialog
             open={showQRDialog}
