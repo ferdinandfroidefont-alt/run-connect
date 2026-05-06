@@ -3438,7 +3438,7 @@ const Messages = () => {
                 }
               />
             ) : (
-              <div className="apple-grouped-bg">
+              <div>
                 <MainTopHeader
                   title="Messages"
                   right={
