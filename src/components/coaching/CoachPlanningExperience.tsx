@@ -2848,7 +2848,14 @@ export function CoachPlanningExperience() {
       requestAnimationFrame(() => {
         const node = infiniteWeekScrollRef.current;
         if (node) {
-          node.scrollTop = Math.max(220, node.clientHeight * 0.42);
+          // Keep continuous vertical navigation between weeks:
+          // - scrolling down lands at start of next week
+          // - scrolling up lands at end of previous week
+          if (direction === "next") {
+            node.scrollTop = 1;
+          } else {
+            node.scrollTop = Math.max(1, node.scrollHeight - node.clientHeight - 1);
+          }
         }
         weekScrollSwitchingRef.current = false;
       });
@@ -3433,7 +3440,20 @@ export function CoachPlanningExperience() {
             ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <div ref={myPlanScrollAnchorRef} className="pb-[calc(7rem+env(safe-area-inset-bottom))]">
+              <div
+                ref={myPlanScrollAnchorRef}
+                onScroll={(event) => {
+                  const el = event.currentTarget;
+                  if (el.scrollTop <= 6) {
+                    shiftWeekByScroll("prev");
+                    return;
+                  }
+                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 6) {
+                    shiftWeekByScroll("next");
+                  }
+                }}
+                className="max-h-[68vh] overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]"
+              >
                 <div className="px-5 pb-1.5 pt-4">
                   <div className="flex items-baseline gap-2">
                     <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
@@ -3554,11 +3574,11 @@ export function CoachPlanningExperience() {
                     ref={infiniteWeekScrollRef}
                     onScroll={(event) => {
                       const el = event.currentTarget;
-                      if (el.scrollTop <= 48) {
+                      if (el.scrollTop <= 6) {
                         shiftWeekByScroll("prev");
                         return;
                       }
-                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 48) {
+                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 6) {
                         shiftWeekByScroll("next");
                       }
                     }}
