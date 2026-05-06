@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Loader2, Trash2, X } from "lucide-react";
+import { Check, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 import { PROFILE_SPORT_RECORD_LABELS, isProfileSportRecordKey, type ProfileSportRecordKey } from "@/lib/profileSportRecords";
@@ -280,25 +281,27 @@ export default function ProfileSportRecordsEdit() {
       contentScroll
       scrollClassName="min-h-0 bg-white"
       header={
-        <div className="px-5 pt-[calc(var(--safe-area-top)+8px)] pb-3">
-          <div className="flex items-center justify-between gap-2">
-            <button type="button" className={iconBtnClass} aria-label="Fermer" onClick={() => navigate(-1)}>
-              <X className="h-[18px] w-[18px] stroke-[1.75]" />
-            </button>
-            <h1 className="min-w-0 flex-1 text-center font-display text-[18px] font-bold leading-tight tracking-[-0.72px] text-[#1d1d1f]">
-              Ajouter un record
-            </h1>
-            <button
-              type="button"
-              className={cn(iconBtnClass, "border-0 text-white")}
-              style={{ backgroundColor: RC.primary }}
-              aria-label="Enregistrer le record"
-              disabled={!canSave || saving}
-              onClick={() => void handleAdd()}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Check className="h-4 w-4 stroke-[2.4] text-white" />}
-            </button>
-          </div>
+        <div className="pt-[var(--safe-area-top)]">
+          <IosPageHeaderBar
+            leadingBack={{
+              onClick: () => navigate(-1),
+              label: "Page précédente",
+            }}
+            title="Ajouter un record"
+            right={
+              <button
+                type="button"
+                className={cn(iconBtnClass, "border-0 text-white")}
+                style={{ backgroundColor: RC.primary }}
+                aria-label="Enregistrer le record"
+                disabled={!canSave || saving}
+                onClick={() => void handleAdd()}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Check className="h-4 w-4 stroke-[2.4] text-white" />}
+              </button>
+            }
+          />
+          <div className="h-2" />
         </div>
       }
     >

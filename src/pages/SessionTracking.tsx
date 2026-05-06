@@ -368,7 +368,7 @@ export default function SessionTracking() {
           <div className="flex items-center px-4 py-3 border-b border-border/40">
             <Button variant="ghost" size="sm" onClick={handleBack} className="px-0 font-normal text-[17px]">
               <ArrowLeft className="h-5 w-5 mr-1" />
-              Retour
+              Page précédente
             </Button>
           </div>
         </div>
@@ -387,7 +387,7 @@ export default function SessionTracking() {
           <div className="flex items-center px-4 py-3 border-b border-border/40">
             <Button variant="ghost" size="sm" onClick={handleBack} className="px-0 font-normal text-[17px]">
               <ArrowLeft className="h-5 w-5 mr-1" />
-              Retour
+              Page précédente
             </Button>
           </div>
         </div>
@@ -414,7 +414,7 @@ export default function SessionTracking() {
             className="px-0 font-normal text-[17px] text-primary h-10"
           >
             <ArrowLeft className="h-5 w-5 mr-1" />
-            Retour
+            Page précédente
           </Button>
           <div className="flex-1 min-w-0 text-center px-2">
             <span className="text-[15px] font-semibold text-foreground truncate block">

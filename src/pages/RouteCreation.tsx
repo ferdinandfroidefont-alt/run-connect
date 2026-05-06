@@ -1100,7 +1100,7 @@ export const RouteCreation = () => {
             <IosPageHeaderBar
               leadingBack={{
                 onClick: () => requestExitWithRouteDraft('/'),
-                label: 'Retour',
+                label: 'Page précédente',
               }}
               title="Itinéraire"
               right={

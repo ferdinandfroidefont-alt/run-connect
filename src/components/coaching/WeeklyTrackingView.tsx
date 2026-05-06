@@ -76,10 +76,6 @@ interface WeeklyTrackingViewProps {
     weekDate?: Date,
     seedSessions?: WeekSession[],
   ) => void;
-  /** Libellé du bouton retour (maquette fiche athlète). */
-  athleteDetailBackLabel?: string;
-  /** Retour depuis la fiche (liste suivi, ou planification si fourni par le parent). */
-  onAthleteDetailBack?: () => void;
 }
 
 interface SessionInfo {
@@ -213,8 +209,6 @@ export const WeeklyTrackingView = ({
   selectedAthleteId,
   onSelectAthlete,
   onOpenPlanForAthlete,
-  athleteDetailBackLabel = "Athlètes",
-  onAthleteDetailBack,
 }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1024,14 +1018,6 @@ export const WeeklyTrackingView = ({
     ? `${DAY_STATUS_META[selectedStatus].label}${selectedAvgRpe != null ? ` · RPE ${selectedAvgRpe}/10` : ""}`
     : undefined;
 
-  const handleFicheBack = () => {
-    if (onAthleteDetailBack) {
-      onAthleteDetailBack();
-      return;
-    }
-    onSelectAthlete(null);
-  };
-
   return (
     <div className="mx-auto w-full max-w-[1180px] space-y-0">
       <CoachAthleteFichePanel
@@ -1039,14 +1025,11 @@ export const WeeklyTrackingView = ({
         displayName={selectedAthlete.displayName}
         avatarUrl={selectedAthlete.avatarUrl}
         subtitle={ficheSubtitle}
-        backLabel={athleteDetailBackLabel}
-        onBack={handleFicheBack}
         onMessage={() => void openConversationWithAthlete(selectedAthlete.userId)}
         onViewProfile={() => navigateToProfile(selectedAthlete.userId)}
         onNudgeAthlete={() => void handleNudgeThisAthlete()}
         nudgeLoading={nudgingAthlete}
         nudgeDisabled={!athleteHasLateSessions}
-        onMore={() => setRecordsDialogOpen(true)}
         weekLabel={weekLabel}
         onPreviousWeek={() => setCurrentWeek(subWeeks(currentWeek, 1))}
         onNextWeek={() => setCurrentWeek(addWeeks(currentWeek, 1))}

@@ -1081,8 +1081,6 @@ export function CoachPlanningExperience() {
   const [clubAvatarUrl, setClubAvatarUrl] = useState<string | null>(null);
   const [nextClubEvent, setNextClubEvent] = useState<ClubMaquetteNextEvent | null>(null);
   const [trackingSelectedAthleteId, setTrackingSelectedAthleteId] = useState<string | null>(null);
-  /** Fiche athlète ouverte depuis la landing planification : le retour renvoie vers Planification. */
-  const [trackingDetailFromPlanification, setTrackingDetailFromPlanification] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [clubProfileOpen, setClubProfileOpen] = useState(false);
   const [clubProfileNotifMuted, setClubProfileNotifMuted] = useState(false);
@@ -2536,35 +2534,29 @@ export function CoachPlanningExperience() {
     setDrawerOpen(false);
     if (key === "planning" || key === "my-plan") {
       setViewAsAthlete(key === "my-plan");
-      setTrackingDetailFromPlanification(false);
       setCoachingTab("planning");
       return;
     }
     if (key === "messages") {
-      setTrackingDetailFromPlanification(false);
       navigate("/messages");
       return;
     }
     if (key === "settings") {
-      setTrackingDetailFromPlanification(false);
       navigate("/profile/edit");
       return;
     }
     if (key === "tracking") {
       const athleteId = opts?.trackingAthleteId ?? null;
       setTrackingSelectedAthleteId(athleteId);
-      setTrackingDetailFromPlanification(Boolean(athleteId));
       setCoachingTab("planning");
       return;
     }
-    setTrackingDetailFromPlanification(false);
     setCoachingTab("planning");
   }, [navigate]);
 
   const handleOpenPlanForAthleteFromTracking = useCallback(
     (athleteId: string, _athleteName: string, _groupId?: string, weekDate?: Date) => {
       setTrackingSelectedAthleteId(null);
-      setTrackingDetailFromPlanification(false);
       setActiveGroupId(undefined);
       setActiveAthleteId(athleteId);
       setCoachWeekProgrammerOpen(true);
@@ -3069,17 +3061,18 @@ export function CoachPlanningExperience() {
               ? "shrink-0 border-0 apple-grouped-bg"
               : activeMenuKey === "club"
                 ? "shrink-0 border-b border-border apple-grouped-bg"
-                : "shrink-0 border-0 z-50"
+                : activeMenuKey === "my-plan"
+                  ? "shrink-0 border-0 z-50 apple-grouped-bg"
+                  : "shrink-0 border-0 z-50"
           }
           header={
             weekPlannerMode ? (
               <div className="pt-[var(--safe-area-top)]">
                 <IosPageHeaderBar
-                  left={
-                    <button type="button" className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#0066cc]" onClick={clearWeekPlannerTarget}>
-                      Annuler
-                    </button>
-                  }
+                  leadingBack={{
+                    onClick: clearWeekPlannerTarget,
+                    label: "Page précédente",
+                  }}
                   title="Programmer la semaine"
                   right={
                     <div className="flex shrink-0 items-center gap-2">
@@ -3132,9 +3125,9 @@ export function CoachPlanningExperience() {
                 <IosPageHeaderBar
                   leadingBack={{
                     onClick: () => setActiveMenuKey("planning"),
-                    label: "Coaching",
+                    label: "Page précédente",
                   }}
-                  title="Planification"
+                  title="Suivi athlète"
                 />
               </div>
             ) : (
@@ -3150,7 +3143,7 @@ export function CoachPlanningExperience() {
             )
           }
           scrollClassName={
-            showCoachLanding || weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking"
+            showCoachLanding || weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking" || activeMenuKey === "my-plan"
               ? "apple-grouped-bg"
               : "bg-white"
           }
@@ -3501,14 +3494,6 @@ export function CoachPlanningExperience() {
                   onClose={() => undefined}
                   selectedAthleteId={trackingSelectedAthleteId}
                   onSelectAthlete={setTrackingSelectedAthleteId}
-                  athleteDetailBackLabel={trackingDetailFromPlanification ? "Planification" : "Athlètes"}
-                  onAthleteDetailBack={() => {
-                    setTrackingSelectedAthleteId(null);
-                    if (trackingDetailFromPlanification) {
-                      setActiveMenuKey("planning");
-                      setTrackingDetailFromPlanification(false);
-                    }
-                  }}
                   onOpenPlanForAthlete={handleOpenPlanForAthleteFromTracking}
                 />
               ) : (
@@ -3723,22 +3708,17 @@ export function CoachPlanningExperience() {
             header={
               <div className="pt-[var(--safe-area-top)]">
                 <IosPageHeaderBar
-                  left={
-                    <button
-                      type="button"
-                      className="text-[17px] font-normal leading-none text-[#0a84ff]"
-                      onClick={() => {
-                        if (hasCreateDraftWork) {
-                          setPendingDrawerKey("planning");
-                          setShowExitDraftDialog(true);
-                          return;
-                        }
-                        setCoachingTab("planning");
-                      }}
-                    >
-                      Annuler
-                    </button>
-                  }
+                  leadingBack={{
+                    onClick: () => {
+                      if (hasCreateDraftWork) {
+                        setPendingDrawerKey("planning");
+                        setShowExitDraftDialog(true);
+                        return;
+                      }
+                      setCoachingTab("planning");
+                    },
+                    label: "Page précédente",
+                  }}
                   title=""
                   right={
                     editorTab === "build" ? (

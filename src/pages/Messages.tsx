@@ -70,6 +70,11 @@ import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
 import { SignedImage } from "@/components/SignedImage";
 import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
+import { SearchTabs } from "@/components/SearchTabs";
+import { ProfilesTab } from "@/components/search/ProfilesTab";
+import { ClubsTab } from "@/components/search/ClubsTab";
+import { StravaTab } from "@/components/search/StravaTab";
+import { ContactsTab } from "@/components/search/ContactsTab";
 
 const NewConversationView = lazy(() =>
   import("@/components/NewConversationView").then((m) => ({ default: m.NewConversationView }))
@@ -187,6 +192,7 @@ interface PastSessionCommentTarget {
 }
 
 type MessagesRootTab = "conversations" | "create-club";
+type MessageDiscoveryTab = "profiles" | "clubs" | "strava" | "contacts";
 
 const Messages = () => {
   const { user } = useAuth();
@@ -203,6 +209,8 @@ const Messages = () => {
   /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
   const [conversationsHydrated, setConversationsHydrated] = useState(false);
   const [conversationSearch, setConversationSearch] = useState("");
+  const [isInboxSearchMode, setIsInboxSearchMode] = useState(false);
+  const [messageDiscoveryTab, setMessageDiscoveryTab] = useState<MessageDiscoveryTab>("profiles");
   /** Filtre liste inbox (maquette 17) — chips Conversations / Clubs / Groupes */
   const [messagesInboxSegment, setMessagesInboxSegment] = useState<"all" | "clubs" | "groups">("all");
   const [activeRootTab, setActiveRootTab] = useState<MessagesRootTab>("conversations");
@@ -3440,50 +3448,52 @@ const Messages = () => {
               />
             ) : (
               <div>
-                <MainTopHeader
-                  title="Messages"
-                  right={
-                    <div className="flex items-center text-primary">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            type="button"
-                            className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
-                            aria-label="Nouvelle conversation, club ou groupe"
+                <div onClick={() => isInboxSearchMode && setIsInboxSearchMode(false)}>
+                  <MainTopHeader
+                    title="Messages"
+                    right={
+                      <div className="flex items-center text-primary">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="tap-highlight-none flex h-10 w-9 shrink-0 touch-manipulation items-center justify-center rounded-md active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                              aria-label="Nouvelle conversation, club ou groupe"
+                            >
+                              <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="z-[130] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
                           >
-                            <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="z-[130] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
-                        >
-                          <DropdownMenuItem
-                            className="cursor-pointer gap-2 py-ios-3"
-                            onClick={() => setShowNewConversation(true)}
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                            Nouvelle conversation
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer gap-2 py-ios-3"
-                            onClick={() => openCreateClubTab()}
-                          >
-                            <Users className="h-4 w-4" />
-                            Créer un club
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer gap-2 py-ios-3"
-                            onClick={() => openCreateClubTab()}
-                          >
-                            <UserPlus className="h-4 w-4" />
-                            Créer un groupe
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  }
-                />
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2 py-ios-3"
+                              onClick={() => setShowNewConversation(true)}
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              Nouvelle conversation
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2 py-ios-3"
+                              onClick={() => openCreateClubTab()}
+                            >
+                              <Users className="h-4 w-4" />
+                              Créer un club
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2 py-ios-3"
+                              onClick={() => openCreateClubTab()}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              Créer un groupe
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    }
+                  />
+                </div>
 
                 <div className="mt-3 px-5 py-1">
                   <div className="apple-search min-h-9 w-full gap-1.5 px-2 py-0">
@@ -3495,6 +3505,7 @@ const Messages = () => {
                     <input
                       value={conversationSearch}
                       onChange={(e) => setConversationSearch(e.target.value)}
+                      onFocus={() => setIsInboxSearchMode(true)}
                       placeholder="Rechercher amis · clubs · groupes"
                       className="min-h-9 min-w-0 flex-1 border-0 bg-transparent py-1 text-[17px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
                       aria-label="Rechercher une conversation"
@@ -3504,48 +3515,52 @@ const Messages = () => {
                   </div>
                 </div>
 
-                <div className="mt-2.5">
-                  <SessionStoriesStrip
-                    currentUserId={user?.id ?? null}
-                    refreshToken={storiesRefreshToken}
-                    onOpenStory={(authorId) => setStoryAuthorId(authorId)}
-                    onCreateStory={() => navigate("/stories/create")}
-                    className="border-0 bg-transparent"
-                  />
-                </div>
+                {!isInboxSearchMode && (
+                  <>
+                    <div className="mt-2.5">
+                      <SessionStoriesStrip
+                        currentUserId={user?.id ?? null}
+                        refreshToken={storiesRefreshToken}
+                        onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+                        onCreateStory={() => navigate("/stories/create")}
+                        className="border-0 bg-transparent"
+                      />
+                    </div>
 
-                <div
-                  role="tablist"
-                  aria-label="Filtrer les conversations"
-                  className="mt-3.5 flex min-h-0 flex-nowrap items-center gap-1.5 overflow-x-auto overscroll-x-contain px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                >
-                  {(
-                    [
-                      { id: "all" as const, label: "Conversations" },
-                      { id: "clubs" as const, label: `Clubs · ${inboxClubCount}` },
-                      { id: "groups" as const, label: `Groupes · ${inboxGroupCount}` },
-                    ] as const
-                  ).map((chip) => {
-                    const active = messagesInboxSegment === chip.id;
-                    return (
-                      <button
-                        key={chip.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => setMessagesInboxSegment(chip.id)}
-                        className={cn(
-                          "inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold tracking-[-0.1px] transition-[transform,opacity] active:scale-[0.98]",
-                          active
-                            ? "border-[#0066cc] bg-[#0066cc] text-white shadow-none"
-                            : "border-[#0066cc] bg-white text-[#0066cc]"
-                        )}
-                      >
-                        {chip.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                    <div
+                      role="tablist"
+                      aria-label="Filtrer les conversations"
+                      className="mt-3.5 flex min-h-0 flex-nowrap items-center gap-1.5 overflow-x-auto overscroll-x-contain px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    >
+                      {(
+                        [
+                          { id: "all" as const, label: "Conversations" },
+                          { id: "clubs" as const, label: `Clubs · ${inboxClubCount}` },
+                          { id: "groups" as const, label: `Groupes · ${inboxGroupCount}` },
+                        ] as const
+                      ).map((chip) => {
+                        const active = messagesInboxSegment === chip.id;
+                        return (
+                          <button
+                            key={chip.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setMessagesInboxSegment(chip.id)}
+                            className={cn(
+                              "inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold tracking-[-0.1px] transition-[transform,opacity] active:scale-[0.98]",
+                              active
+                                ? "border-[#0066cc] bg-[#0066cc] text-white shadow-none"
+                                : "border-[#0066cc] bg-white text-[#0066cc]"
+                            )}
+                          >
+                            {chip.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             )
           }
@@ -3560,48 +3575,59 @@ const Messages = () => {
         >
           {activeRootTab === "conversations" ? (
             <>
-              {/* Liste — carte blanche arrondie (maquette 17) */}
-              <div
-                className={cn(
-                  "mx-4 mt-3.5 min-h-[280px] flex-1 overflow-hidden rounded-[18px] bg-card pb-ios-4",
-                  filteredAndSortedConversations.length > 0 && "divide-y divide-border"
-                )}
-              >
-                {conversations.length === 0 ? (
-                  <div className={emptyStateSx.shell}>
-                    <div className={emptyStateSx.iconCircle}>
-                      <MessageCircle className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                    <div className={emptyStateSx.textBlock}>
-                      <h3 className="text-ios-title3 font-semibold text-foreground">
-                        Aucune conversation
-                      </h3>
-                      <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
-                        Envoyez un message à un ami ou créez un club pour commencer à échanger.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => setShowNewConversation(true)}
-                      className="w-full max-w-xs"
-                    >
-                      <Plus className="h-5 w-5 mr-ios-2" />
-                      Nouvelle conversation
-                    </Button>
+              {isInboxSearchMode ? (
+                <div className="mx-4 mt-3.5 min-h-[280px] flex-1 overflow-hidden rounded-[18px] bg-card">
+                  <SearchTabs activeTab={messageDiscoveryTab} onTabChange={setMessageDiscoveryTab} />
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
+                    {messageDiscoveryTab === "clubs" && <ClubsTab searchQuery={conversationSearch} />}
+                    {messageDiscoveryTab === "strava" && <StravaTab searchQuery={conversationSearch} />}
+                    {messageDiscoveryTab === "contacts" && <ContactsTab searchQuery={conversationSearch} />}
                   </div>
-                ) : filteredAndSortedConversations.length === 0 ? (
-                  <div className={cn(emptyStateSx.shell, "py-ios-8")}>
-                    <div className={emptyStateSx.textBlock}>
-                      <h3 className="text-ios-title3 font-semibold text-foreground">
-                        Aucun fil à afficher
-                      </h3>
-                      <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
-                        Aucune conversation ne correspond à ce filtre ou à ta recherche.
-                      </p>
+                </div>
+              ) : (
+                /* Liste — carte blanche arrondie (maquette 17) */
+                <div
+                  className={cn(
+                    "mx-4 mt-3.5 min-h-[280px] flex-1 overflow-hidden rounded-[18px] bg-card pb-ios-4",
+                    filteredAndSortedConversations.length > 0 && "divide-y divide-border"
+                  )}
+                >
+                  {conversations.length === 0 ? (
+                    <div className={emptyStateSx.shell}>
+                      <div className={emptyStateSx.iconCircle}>
+                        <MessageCircle className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                      <div className={emptyStateSx.textBlock}>
+                        <h3 className="text-ios-title3 font-semibold text-foreground">
+                          Aucune conversation
+                        </h3>
+                        <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
+                          Envoyez un message à un ami ou créez un club pour commencer à échanger.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => setShowNewConversation(true)}
+                        className="w-full max-w-xs"
+                      >
+                        <Plus className="h-5 w-5 mr-ios-2" />
+                        Nouvelle conversation
+                      </Button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="sm:mx-auto sm:max-w-2xl">
-                    {filteredAndSortedConversations.map((conversation) => {
+                  ) : filteredAndSortedConversations.length === 0 ? (
+                    <div className={cn(emptyStateSx.shell, "py-ios-8")}>
+                      <div className={emptyStateSx.textBlock}>
+                        <h3 className="text-ios-title3 font-semibold text-foreground">
+                          Aucun fil à afficher
+                        </h3>
+                        <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
+                          Aucune conversation ne correspond à ce filtre ou à ta recherche.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="sm:mx-auto sm:max-w-2xl">
+                      {filteredAndSortedConversations.map((conversation) => {
                       const when = formatConversationListTime(
                         conversation.last_message_date || conversation.updated_at
                       );
@@ -3781,10 +3807,11 @@ const Messages = () => {
                         </div>
                       </SwipeableConversationItem>
                       );
-                    })}
-                  </div>
-                )}
-              </div>
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <Suspense fallback={<div className="min-h-[50vh] bg-secondary" />}>

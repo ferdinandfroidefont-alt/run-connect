@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ChevronLeft, ChevronRight, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageCircle, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type WeekFicheCell = "ok" | "rest" | "miss" | "today" | "planned";
@@ -54,15 +54,12 @@ export type CoachAthleteFichePanelProps = {
   displayName: string;
   avatarUrl: string | null;
   subtitle: string;
-  backLabel: string;
-  onBack: () => void;
   onMessage: () => void;
   onViewProfile: () => void;
   /** Rappel push ciblé (maquette « Relancer ») */
   onNudgeAthlete?: () => void;
   nudgeLoading?: boolean;
   nudgeDisabled?: boolean;
-  onMore?: () => void;
   weekLabel: string;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
@@ -99,14 +96,11 @@ export function CoachAthleteFichePanel({
   displayName,
   avatarUrl,
   subtitle,
-  backLabel,
-  onBack,
   onMessage,
   onViewProfile,
   onNudgeAthlete,
   nudgeLoading,
   nudgeDisabled,
-  onMore,
   weekLabel,
   onPreviousWeek,
   onNextWeek,
@@ -129,30 +123,7 @@ export function CoachAthleteFichePanel({
 
   return (
     <div className="min-w-0 bg-[var(--ios-grouped-bg)] pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-      <div className="sticky top-0 z-20 flex items-center justify-between bg-[var(--ios-grouped-bg)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex min-w-0 max-w-[55%] items-center gap-0.5 py-1.5 text-left text-[17px] leading-none text-[#0066CC] active:opacity-65"
-        >
-          <ChevronLeft className="h-7 w-7 shrink-0 -ml-1.5" aria-hidden />
-          <span className="truncate font-normal tracking-[-0.02em]">{backLabel}</span>
-        </button>
-        {onMore ? (
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#0066CC] active:bg-black/[0.04] dark:active:bg-white/10"
-            aria-label="Plus d'options"
-            onClick={onMore}
-          >
-            <MoreHorizontal className="h-5 w-5" />
-          </button>
-        ) : (
-          <span className="w-10 shrink-0" aria-hidden />
-        )}
-      </div>
-
-      <div className="px-5 pb-1 pt-1">
+      <div className="px-5 pb-1 pt-3">
         <div className="flex min-w-0 items-start gap-3.5">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full ring-2 ring-white dark:ring-card">
             {avatarUrl ? (
