@@ -546,8 +546,8 @@ export default function Participants() {
         header={
           <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
             <IosPageHeaderBar
-              leadingBack={{ onClick: () => navigate("/"), label: "Retour" }}
-              title="Suivi"
+              leadingBack={{ onClick: () => navigate("/"), label: "Découvrir" }}
+              title="Itinéraire"
             />
           </div>
         }
