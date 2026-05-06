@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Ruler,
   X,
-  Mountain,
   Building2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -21,15 +19,9 @@ import {
   SessionFormData,
   SelectedLocation,
   ACTIVITY_TYPES,
-  TERRAIN_TYPES,
   SessionBlock,
-  SessionMode,
   VisibilityType,
   isEnduranceActivity,
-  isRunningActivity,
-  isCyclingActivity,
-  isSwimmingActivity,
-  getPacePlaceholder,
   getDistanceUnit,
 } from '../types';
 import { ClubSelector } from '@/components/ClubSelector';
@@ -58,7 +50,6 @@ import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome'
 import { Group, Cell } from '@/components/apple';
 import { SessionSchemaMiniChart, sessionSchemaLegend } from '../SessionSchemaMiniChart';
 import { VisibilitySelector } from '../VisibilitySelector';
-import { useToast } from '@/hooks/use-toast';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -86,7 +77,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onBack,
   hideNavigation = false,
 }) => {
-  const { toast } = useToast();
   const builderRef = useRef<HTMLDivElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
@@ -99,6 +89,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   const [draftDistanceMeters, setDraftDistanceMeters] = useState('0');
   const [draftElevation, setDraftElevation] = useState('150');
   const [draftParticipants, setDraftParticipants] = useState('20');
+  const [showClubSelector, setShowClubSelector] = useState(false);
 
   // Auto-generate title suggestion
   useEffect(() => {
@@ -139,9 +130,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   }, [isStructured, computedDistanceKm, formData.distance_km, onFormDataChange]);
 
   const showEnduranceFields = isEnduranceActivity(formData.activity_type);
-  const showTerrainField =
-    isRunningActivity(formData.activity_type) || isCyclingActivity(formData.activity_type);
-  const showElevationField = showTerrainField;
   const distanceUnit = getDistanceUnit(formData.activity_type);
 
   const handleBlocksChange = (blocks: SessionBlock[]) => {
@@ -212,13 +200,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     setOpenPicker('distance');
   };
 
-  const openElevationPicker = () => {
-    setDraftElevation(
-      String(Math.max(0, Number.parseInt(formData.elevation_gain || '0', 10) || 0))
-    );
-    setOpenPicker('elevation');
-  };
-
   const openParticipantsPicker = () => {
     setDraftParticipants(
       String(Math.max(1, Number.parseInt(formData.max_participants || '20', 10) || 20))
@@ -227,7 +208,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   };
 
   const setVisibility = (t: VisibilityType) => {
-    if (t === 'club' && !formData.club_id) return;
     onFormDataChange({ visibility_type: t, friends_only: t === 'friends' });
   };
 
@@ -329,9 +309,9 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </div>
         </AppleGroup>
 
-        {/* Maquette 11 — Médias (Group + Cell) */}
+        {/* Maquette 11 — Médias + Visibilité (Group + Cells) */}
         {showEnduranceFields && (
-          <Group inset={false} className="mb-0" title="Médias">
+          <Group inset={false} className="mb-0" title="Médias et visibilité">
             <Cell
               icon={<span className="text-[15px]">📷</span>}
               iconBg="#ff9500"
@@ -368,107 +348,9 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                 onAutoFill={handleRouteAutoFill}
               />
             </div>
-          </Group>
-        )}
-
-        {/* Distance, dénivelé, terrain */}
-        {showEnduranceFields && (
-          <AppleGroup title="Mesures">
-            <div className="grid grid-cols-2 gap-3 px-4 py-3">
-              <div>
-                <Label
-                  htmlFor="distance_km"
-                  className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85"
-                >
-                  <Ruler className="h-3.5 w-3.5 text-primary" />
-                  Distance ({distanceUnit})
-                  {isStructured && (
-                    <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/70">
-                      auto
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  id="distance_km"
-                  value={formData.distance_km}
-                  readOnly
-                  onClick={isStructured ? undefined : openDistancePicker}
-                  placeholder={
-                    isStructured
-                      ? '—'
-                      : isSwimmingActivity(formData.activity_type)
-                      ? '1500'
-                      : '10'
-                  }
-                  className={cn(
-                    'h-11 rounded-xl border-border/60 bg-secondary/40 text-[15px] tracking-tight',
-                    isStructured ? 'cursor-not-allowed bg-secondary/20' : 'cursor-pointer'
-                  )}
-                  title={
-                    isStructured
-                      ? 'Calculée automatiquement à partir de la structure de la séance'
-                      : undefined
-                  }
-                />
-              </div>
-              {showElevationField && (
-                <div>
-                  <Label
-                    htmlFor="elevation_gain"
-                    className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85"
-                  >
-                    <Mountain className="h-3.5 w-3.5 text-emerald-600" />
-                    D+ (m)
-                  </Label>
-                  <Input
-                    id="elevation_gain"
-                    value={formData.elevation_gain}
-                    readOnly
-                    onClick={openElevationPicker}
-                    placeholder="150"
-                    className="h-11 cursor-pointer rounded-xl border-border/60 bg-secondary/40 text-[15px] tracking-tight"
-                  />
-                </div>
-              )}
+            <div className="border-t border-[rgba(60,60,67,0.12)] px-4 py-2 text-[12px] text-muted-foreground dark:border-[rgba(84,84,88,0.4)]">
+              Le suivi live partage ta position en temps réel pendant la séance.
             </div>
-            {showTerrainField && (
-              <div className="border-t border-border/40 px-4 py-3">
-                <Label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
-                  <Mountain className="h-3.5 w-3.5 text-amber-600" />
-                  Type de terrain
-                </Label>
-                <Select
-                  value={formData.terrain_type}
-                  onValueChange={(v) => onFormDataChange({ terrain_type: v })}
-                >
-                  <SelectTrigger className="h-11 rounded-xl border-border/60 bg-secondary/40">
-                    <SelectValue placeholder="Sélectionner le terrain" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TERRAIN_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </AppleGroup>
-        )}
-
-        {/* Maquette 11 — Visibilité (Cells + suivi live + aperçu) */}
-        <Group
-          inset={false}
-          className="mb-0"
-          title="Visibilité"
-          footer={
-            <>
-              Le suivi live partage ta position en temps réel pendant la séance, comme sur la page
-              « En direct ».
-            </>
-          }
-        >
           <Cell
             icon={<span className="text-[15px]">👥</span>}
             iconBg="#0066CC"
@@ -493,21 +375,17 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             icon={<Building2 className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />}
             iconBg="#007AFF"
             title="Club"
-            subtitle={
-              formData.club_id
-                ? 'Réservé aux membres du club'
-                : 'Sélectionne un club ci-dessous'
-            }
+            subtitle={formData.club_id ? 'Réservé aux membres du club' : 'Choisir un club'}
             accessory={
-              formData.visibility_type === 'club'
-                ? 'check'
-                : formData.club_id
-                  ? 'chevron'
-                  : 'none'
+              formData.visibility_type === 'club' && formData.club_id ? 'check' : 'chevron'
             }
             last={false}
-            className={cn(!formData.club_id && 'cursor-default opacity-60')}
-            onClick={formData.club_id ? () => setVisibility('club') : undefined}
+            onClick={() => {
+              setShowClubSelector((prev) => !prev);
+              if (formData.club_id) {
+                setVisibility('club');
+              }
+            }}
           />
           {formData.visibility_type === 'friends' ? (
           <div className="border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
@@ -524,6 +402,24 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             />
           </div>
           ) : null}
+          {showClubSelector ? (
+            <div className="border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
+              <ClubSelector
+                selectedClubId={formData.club_id}
+                onClubSelect={(clubId) => {
+                  const next: Partial<SessionFormData> = { club_id: clubId };
+                  if (clubId) {
+                    next.visibility_type = 'club';
+                    next.friends_only = false;
+                  } else if (formData.visibility_type === 'club') {
+                    next.visibility_type = 'friends';
+                    next.friends_only = true;
+                  }
+                  onFormDataChange(next);
+                }}
+              />
+            </div>
+          ) : null}
           <Cell
             title="Participants max"
             subtitle="Limite d'inscriptions"
@@ -531,23 +427,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             accessory="chevron"
             onClick={openParticipantsPicker}
           />
-          <div className="border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
-            <Label className="mb-2 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground/85">
-              <Building2 className="h-3.5 w-3.5 text-blue-500" />
-              Club (optionnel)
-            </Label>
-            <ClubSelector
-              selectedClubId={formData.club_id}
-              onClubSelect={(clubId) => {
-                const next: Partial<SessionFormData> = { club_id: clubId };
-                if (clubId && formData.visibility_type !== 'club') {
-                  next.visibility_type = 'club';
-                  next.friends_only = false;
-                }
-                onFormDataChange(next);
-              }}
-            />
-          </div>
           <Cell
             icon={<span className="text-[15px]">📡</span>}
             iconBg="#ff3b30"
@@ -564,36 +443,8 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
               className="shrink-0"
             />
           </Cell>
-          <div className="flex items-center gap-3 border-t border-[rgba(60,60,67,0.12)] px-4 py-3 dark:border-[rgba(84,84,88,0.4)]">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(255,59,48,0.12)]">
-              <span
-                className="h-2 w-2 rounded-full bg-[#ff3b30]"
-                style={{ boxShadow: '0 0 0 4px rgba(255,59,48,0.18)' }}
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-semibold tracking-[-0.3px] text-foreground">
-                Aperçu live
-              </p>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">
-                Avatars visibles sur la carte · auto-stop à l'arrivée
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                toast({
-                  title: 'Aperçu',
-                  description:
-                    'Pendant la séance, les participants en live apparaissent sur la carte Découvrir.',
-                })
-              }
-              className="shrink-0 rounded-full bg-[rgba(118,118,128,0.12)] px-3.5 py-1.5 text-[13px] font-semibold tracking-[-0.2px] text-primary active:opacity-70"
-            >
-              Voir
-            </button>
-          </div>
         </Group>
+        )}
 
         {/* Description */}
         <AppleGroup title="Notes">

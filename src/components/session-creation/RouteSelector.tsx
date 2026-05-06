@@ -104,27 +104,21 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
 
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium text-foreground flex items-center gap-2">
-        <Route className="w-4 h-4 text-primary" />
-        Itinéraire (optionnel)
-      </span>
-
-      {/* Selected Route or Selector */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "rounded-xl bg-card border border-border p-3 cursor-pointer transition-all",
+          "rounded-xl bg-card border border-border/70 p-2.5 cursor-pointer transition-all",
           isExpanded && "ring-2 ring-primary/30"
         )}
       >
         {selectedRoute ? (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Route className="w-5 h-5 text-primary" />
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Route className="w-4 h-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{selectedRoute.name}</p>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <p className="text-[14px] font-medium truncate">{selectedRoute.name}</p>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                 {selectedRoute.total_distance && (
                   <span className="flex items-center gap-1">
                     <Ruler className="w-3 h-3" />
@@ -152,15 +146,15 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-muted-foreground" />
+            <div className="w-9 h-9 rounded-lg bg-[#ff9500]/15 flex items-center justify-center">
+              <MapPin className="w-4 h-4 text-[#ff9500]" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">Choisir un itinéraire</p>
-              <p className="text-xs text-muted-foreground">Auto-remplir distance et D+</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium">Choisir un itinéraire</p>
+              <p className="text-[11px] text-muted-foreground">Auto-remplir distance et D+</p>
             </div>
             <ChevronRight className={cn(
-              "w-5 h-5 text-muted-foreground transition-transform",
+              "w-4 h-4 text-muted-foreground transition-transform",
               isExpanded && "rotate-90"
             )} />
           </div>

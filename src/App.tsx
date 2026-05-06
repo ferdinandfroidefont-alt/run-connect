@@ -19,6 +19,7 @@ import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import {
   finalizeSupabaseOAuthFromDeepLink,
   isAuthCallbackDeepLink,
+  parseOAuthCallbackUrl,
 } from "@/lib/oauthMobile";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
@@ -206,6 +207,21 @@ const App = () => {
           }
 
           try {
+            const fallbackToAuthCallback = (rawUrl: string, source: string) => {
+              const parsed = parseOAuthCallbackUrl(rawUrl);
+              const params = new URLSearchParams();
+              if (parsed.code) params.set("code", parsed.code);
+              if (parsed.error) params.set("error", parsed.error);
+              if (parsed.errorDescription) params.set("error_description", parsed.errorDescription);
+              const suffix = params.toString();
+              const target = `${window.location.origin}/auth/callback${suffix ? `?${suffix}` : ""}`;
+              console.warn(`[OAuth/App] fallback -> /auth/callback (${source})`, {
+                hasCode: !!parsed.code,
+                hasError: !!parsed.error,
+              });
+              window.location.replace(target);
+            };
+
             try {
               await Browser.close();
             } catch {
@@ -215,6 +231,7 @@ const App = () => {
             const result = await finalizeSupabaseOAuthFromDeepLink(supabase, url);
             if (!result.ok) {
               console.warn('[OAuth/App] finalize failed', result.reason);
+              fallbackToAuthCallback(url, `finalize-failed:${result.reason ?? "unknown"}`);
               return;
             }
 
@@ -234,7 +251,7 @@ const App = () => {
               const path = window.location.pathname;
               if (path === '/auth' || path === '/auth/') {
                 console.warn('[OAuth/App] Auth toujours actif après 800 ms — fallback /auth/callback');
-                window.location.replace(`${window.location.origin}/auth/callback`);
+                fallbackToAuthCallback(url, "still-on-auth-after-800ms");
               }
             }, 800);
           } catch (err) {
@@ -274,6 +291,21 @@ const App = () => {
         if (!incomingUrl) return;
 
         if (isAuthCallbackDeepLink(incomingUrl)) {
+          const fallbackToAuthCallback = (rawUrl: string, source: string) => {
+            const parsed = parseOAuthCallbackUrl(rawUrl);
+            const params = new URLSearchParams();
+            if (parsed.code) params.set("code", parsed.code);
+            if (parsed.error) params.set("error", parsed.error);
+            if (parsed.errorDescription) params.set("error_description", parsed.errorDescription);
+            const suffix = params.toString();
+            const target = `${window.location.origin}/auth/callback${suffix ? `?${suffix}` : ""}`;
+            console.warn(`[OAuth/App] cold-start fallback -> /auth/callback (${source})`, {
+              hasCode: !!parsed.code,
+              hasError: !!parsed.error,
+            });
+            window.location.replace(target);
+          };
+
           console.log('[OAuth/App] cold start auth callback');
           try {
             await Browser.close();
@@ -293,6 +325,9 @@ const App = () => {
             if (path !== '/auth/callback' && path !== '/auth/callback/') {
               window.location.replace(`${window.location.origin}/auth/callback`);
             }
+          } else {
+            console.warn('[OAuth/App] cold start finalize failed', result.reason);
+            fallbackToAuthCallback(incomingUrl, `finalize-failed:${result.reason ?? "unknown"}`);
           }
           return;
         }

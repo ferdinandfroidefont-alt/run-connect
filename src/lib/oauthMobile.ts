@@ -55,6 +55,8 @@ export function parseOAuthCallbackUrl(rawUrl: string): ParsedOAuthCallback {
 }
 
 let lastProcessedCallbackUrl: string | null = null;
+const SESSION_CONFIRM_TIMEOUT_MS = 3500;
+const SESSION_CONFIRM_POLL_MS = 250;
 
 function shouldSkipDuplicate(rawUrl: string): boolean {
   if (lastProcessedCallbackUrl === rawUrl) {
@@ -95,6 +97,18 @@ export async function finalizeSupabaseOAuthFromDeepLink(
   }
 
   try {
+    const waitForSessionUser = async (): Promise<boolean> => {
+      const endAt = Date.now() + SESSION_CONFIRM_TIMEOUT_MS;
+      while (Date.now() < endAt) {
+        const {
+          data: { session },
+        } = await client.auth.getSession();
+        if (session?.user) return true;
+        await new Promise((resolve) => window.setTimeout(resolve, SESSION_CONFIRM_POLL_MS));
+      }
+      return false;
+    };
+
     if (code) {
       console.log(`${LOG_PREFIX} exchangeCodeForSession (PKCE)`);
       const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
@@ -110,6 +124,14 @@ export async function finalizeSupabaseOAuthFromDeepLink(
         hasUser: !!session?.user,
         userPrefix: session?.user?.id?.slice(0, 8),
       });
+      if (!session?.user) {
+        const sessionReady = await waitForSessionUser();
+        if (!sessionReady) {
+          console.warn(`${LOG_PREFIX} session missing after PKCE exchange timeout`);
+          lastProcessedCallbackUrl = null;
+          return { ok: false, reason: "session_not_ready" };
+        }
+      }
       return { ok: true };
     }
 
@@ -123,6 +145,12 @@ export async function finalizeSupabaseOAuthFromDeepLink(
         console.error(`${LOG_PREFIX} setSession failed`, setErr.message);
         lastProcessedCallbackUrl = null;
         return { ok: false, reason: "set_session_failed" };
+      }
+      const sessionReady = await waitForSessionUser();
+      if (!sessionReady) {
+        console.warn(`${LOG_PREFIX} session missing after setSession timeout`);
+        lastProcessedCallbackUrl = null;
+        return { ok: false, reason: "session_not_ready" };
       }
       return { ok: true };
     }
