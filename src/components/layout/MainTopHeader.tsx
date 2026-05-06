@@ -77,16 +77,18 @@ export function MainTopHeader({
       ref={containerRef}
       className={cn("shrink-0 pt-[var(--safe-area-top)]", className)}
       style={{
-        backgroundColor: `hsl(var(--background) / ${0.72 * progress})`,
-        backdropFilter: progress > 0.02 ? `saturate(${1 + progress * 0.45}) blur(${18 * progress}px)` : "none",
+        backgroundColor: `hsl(var(--background) / ${0.55 * progress})`,
+        backdropFilter: progress > 0.02 ? `saturate(${1 + progress * 0.6}) blur(${22 * progress}px)` : "none",
+        WebkitBackdropFilter: progress > 0.02 ? `saturate(${1 + progress * 0.6}) blur(${22 * progress}px)` : "none",
       }}
     >
       {/* Compact bar (trailing actions) */}
       <div
         className={cn(
-          "relative flex h-11 shrink-0 items-center gap-2 px-4",
+          "relative flex shrink-0 items-center gap-2 px-4 transition-[height] duration-150",
           left || right ? "justify-between" : "justify-end"
         )}
+        style={{ height: `${44 - progress * 8}px` }}
       >
         <div className="flex min-w-0 flex-1 items-center justify-start">{left ?? <span aria-hidden className="h-9 w-9" />}</div>
         <h2
