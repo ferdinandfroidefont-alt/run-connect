@@ -3840,25 +3840,6 @@ export function CoachPlanningExperience() {
                   className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
                 >
                   <div className="space-y-3 px-4 py-3">
-                    <Input
-                      value={draft.title}
-                      onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="Nom de la séance"
-                      className="min-h-[44px] rounded-[12px] border-0 bg-card px-3.5 font-[system-ui] text-[22px] font-semibold tracking-[-0.04em] shadow-none dark:bg-card"
-                    />
-                    <p className="px-1 text-[13px] text-muted-foreground">
-                      {[previewMetrics.distanceLabel, previewMetrics.durationLabel && `~${previewMetrics.durationLabel}`]
-                        .filter(Boolean)
-                        .join(" · ") || "Charge estimée après blocs"}
-                      {previewMetrics.feedbackLabel ? (
-                        <>
-                          {" "}
-                          ·{" "}
-                          <span className="font-semibold text-[#0a84ff]">{previewMetrics.feedbackLabel}</span>
-                        </>
-                      ) : null}
-                    </p>
-
                     <div className="grid grid-cols-4 gap-2">
                       {SPORTS.map((sport) => (
                         <button
@@ -3866,9 +3847,9 @@ export function CoachPlanningExperience() {
                           type="button"
                           onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id }))}
                           className={cn(
-                            "flex h-14 items-center justify-center rounded-2xl border transition-all",
+                            "flex flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 transition-all",
                             draft.sport === sport.id
-                              ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
+                              ? "border-[#007AFF] bg-[rgba(0,122,255,0.1)] text-[#007AFF] shadow-[0_0_0_1px_rgba(0,122,255,0.22)]"
                               : "border-border/80 bg-white text-foreground dark:bg-card"
                           )}
                           title={sport.label}
@@ -3877,6 +3858,7 @@ export function CoachPlanningExperience() {
                           <span className="text-[24px] leading-none" aria-hidden="true">
                             {sport.emoji}
                           </span>
+                          <span className="text-[12px] font-medium leading-none text-muted-foreground">{sport.label}</span>
                         </button>
                       ))}
                     </div>
@@ -3887,16 +3869,16 @@ export function CoachPlanningExperience() {
                   className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
                 >
                   <div className="space-y-3 px-4 py-3">
-                    <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
+                    <p className="px-1 text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Schéma de séance</p>
                     <div className="min-w-0 rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
                         <div className="flex min-w-0 gap-2">
                           <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-between py-0 text-[9px] font-semibold text-muted-foreground/80">
-                            <span className="text-[#BF5AF2]">Z6</span>
-                            <span className="text-[#FF453A]">Z5</span>
-                            <span className="text-[#FF9F0A]">Z4</span>
-                            <span className="text-[#FFD60A]">Z3</span>
-                            <span className="text-[#30D158]">Z2</span>
-                            <span className="text-[#4FA3FF]">Z1</span>
+                            <span className="text-[#AF52DE]">Z6</span>
+                            <span className="text-[#FF3B30]">Z5</span>
+                            <span className="text-[#FF9500]">Z4</span>
+                            <span className="text-[#FFCC00]">Z3</span>
+                            <span className="text-[#34C759]">Z2</span>
+                            <span className="text-[#5AC8FA]">Z1</span>
                           </div>
                           <div
                             ref={schemaPreviewRef}
@@ -3911,12 +3893,12 @@ export function CoachPlanningExperience() {
                             title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                           >
                             <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col-reverse rounded-[10px] overflow-hidden">
-                              <div className="flex-1 bg-[#4FA3FF]/[0.06]" />
-                              <div className="flex-1 bg-[#30D158]/[0.06]" />
-                              <div className="flex-1 bg-[#FFD60A]/[0.06]" />
-                              <div className="flex-1 bg-[#FF9F0A]/[0.06]" />
-                              <div className="flex-1 bg-[#FF453A]/[0.06]" />
-                              <div className="flex-1 bg-[#BF5AF2]/[0.06]" />
+                              <div className="flex-1 bg-[#5AC8FA]/[0.06]" />
+                              <div className="flex-1 bg-[#34C759]/[0.06]" />
+                              <div className="flex-1 bg-[#FFCC00]/[0.06]" />
+                              <div className="flex-1 bg-[#FF9500]/[0.06]" />
+                              <div className="flex-1 bg-[#FF3B30]/[0.06]" />
+                              <div className="flex-1 bg-[#AF52DE]/[0.06]" />
                             </div>
                             <MiniWorkoutProfile
                               blocks={previewBars}
@@ -3973,7 +3955,7 @@ export function CoachPlanningExperience() {
                         </div>
                     </div>
 
-                    <p className="mb-2 mt-5 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
+                    <p className="mb-2 mt-5 px-1 text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Ajouter un bloc</p>
                     <div className="grid grid-cols-4 gap-2">
                       {(
                         [
@@ -3991,9 +3973,9 @@ export function CoachPlanningExperience() {
                             title: "Intervalle",
                             mini: (
                               <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="6" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
+                                <rect x="6" y="6" width="16" height="24" rx="2" fill="#FF9500" fillOpacity="0.96" />
                                 <rect x="26" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
-                                <rect x="46" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
+                                <rect x="46" y="6" width="16" height="24" rx="2" fill="#FF9500" fillOpacity="0.96" />
                                 <rect x="66" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
                               </svg>
                             ),
@@ -4003,11 +3985,11 @@ export function CoachPlanningExperience() {
                             title: "Pyramide",
                             mini: (
                               <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
-                                <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
-                                <rect x="36" y="4" width="12" height="26" rx="2" fill="#EF4444" fillOpacity="0.95" />
-                                <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
-                                <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
+                                <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#FFCC00" fillOpacity="0.92" />
+                                <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#FF9500" fillOpacity="0.93" />
+                                <rect x="36" y="4" width="12" height="26" rx="2" fill="#FF3B30" fillOpacity="0.95" />
+                                <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#FF9500" fillOpacity="0.93" />
+                                <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#FFCC00" fillOpacity="0.92" />
                               </svg>
                             ),
                           },
@@ -4069,10 +4051,10 @@ export function CoachPlanningExperience() {
                           <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
                             <defs>
                               <linearGradient id="variationZoneGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#9CA3AF" />
-                                <stop offset="33%" stopColor="#2563EB" />
-                                <stop offset="66%" stopColor="#22C55E" />
-                                <stop offset="100%" stopColor="#FACC15" />
+                                <stop offset="0%" stopColor="#34C759" />
+                                <stop offset="33%" stopColor="#FFCC00" />
+                                <stop offset="66%" stopColor="#FF9500" />
+                                <stop offset="100%" stopColor="#FF3B30" />
                               </linearGradient>
                             </defs>
                             <polygon points="8,30 76,4 76,30" fill="url(#variationZoneGradient)" fillOpacity="0.95" />
@@ -4878,6 +4860,26 @@ export function CoachPlanningExperience() {
                       })}
                     </div>
                   ) : null}
+                  <div className="rounded-[14px] bg-white p-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+                    <Input
+                      value={draft.title}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder="Nom du bloc"
+                      className="min-h-[44px] rounded-[12px] border-0 bg-transparent px-3.5 text-[16px] tracking-[-0.02em] shadow-none"
+                    />
+                  </div>
+                  <p className="px-1 text-[12px] text-muted-foreground">
+                    {[previewMetrics.distanceLabel, previewMetrics.durationLabel && `~${previewMetrics.durationLabel}`]
+                      .filter(Boolean)
+                      .join(" · ") || "Charge estimée après blocs"}
+                    {previewMetrics.feedbackLabel ? (
+                      <>
+                        {" "}
+                        ·{" "}
+                        <span className="font-semibold text-[#007AFF]">{previewMetrics.feedbackLabel}</span>
+                      </>
+                    ) : null}
+                  </p>
                   {shouldShowAthleteZoneLegend ? (
                     <div className="mt-2 rounded-xl border border-slate-100 bg-white/95 px-2.5 py-2">
                       <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
