@@ -22,7 +22,6 @@ import {
   SessionBlock,
   VisibilityType,
   isEnduranceActivity,
-  getDistanceUnit,
 } from '../types';
 import { ClubSelector } from '@/components/ClubSelector';
 import {
@@ -80,14 +79,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   const builderRef = useRef<HTMLDivElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
-  const [openPicker, setOpenPicker] = useState<
-    null | 'pace' | 'distance' | 'elevation' | 'participants'
-  >(null);
-  const [draftPaceMin, setDraftPaceMin] = useState('5');
-  const [draftPaceSec, setDraftPaceSec] = useState('30');
-  const [draftDistanceWhole, setDraftDistanceWhole] = useState('10');
-  const [draftDistanceMeters, setDraftDistanceMeters] = useState('0');
-  const [draftElevation, setDraftElevation] = useState('150');
+  const [openPicker, setOpenPicker] = useState<null | 'participants'>(null);
   const [draftParticipants, setDraftParticipants] = useState('20');
   const [showClubSelector, setShowClubSelector] = useState(false);
 
@@ -130,8 +122,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   }, [isStructured, computedDistanceKm, formData.distance_km, onFormDataChange]);
 
   const showEnduranceFields = isEnduranceActivity(formData.activity_type);
-  const distanceUnit = getDistanceUnit(formData.activity_type);
-
   const handleBlocksChange = (blocks: SessionBlock[]) => {
     onFormDataChange({ blocks: normalizeBlocksForStorage(blocks) });
   };
@@ -140,65 +130,10 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     onFormDataChange(data);
   };
 
-  const distanceWholeOptions = Array.from({ length: 201 }, (_, i) => ({
-    value: String(i),
-    label: String(i),
-  }));
-  const distanceMetersOptions = Array.from({ length: 40 }, (_, i) => {
-    const meters = i * 25;
-    return { value: String(meters), label: String(meters).padStart(3, '0') };
-  });
-  const distanceMetersOnlyOptions = Array.from({ length: 401 }, (_, i) => {
-    const meters = i * 25;
-    return { value: String(meters), label: String(meters) };
-  });
-  const distanceMilesDecOptions = Array.from({ length: 100 }, (_, i) => ({
-    value: String(i),
-    label: String(i).padStart(2, '0'),
-  }));
-  const elevationOptions = Array.from({ length: 5001 }, (_, i) => ({
-    value: String(i),
-    label: String(i),
-  }));
   const participantsOptions = Array.from({ length: 200 }, (_, i) => ({
     value: String(i + 1),
     label: String(i + 1),
   }));
-  const paceMinOptions = Array.from({ length: 60 }, (_, i) => ({
-    value: String(i),
-    label: String(i).padStart(2, '0'),
-  }));
-  const paceSecOptions = Array.from({ length: 60 }, (_, i) => ({
-    value: String(i),
-    label: String(i).padStart(2, '0'),
-  }));
-
-  const openDistancePicker = () => {
-    const parsedKm = Math.max(
-      0,
-      Number.parseFloat((formData.distance_km || '0').replace(',', '.')) || 0
-    );
-
-    if (distanceUnit === 'mi') {
-      const parsedMi = parsedKm / 1.60934;
-      const wholeMi = Math.floor(parsedMi);
-      const decMi = Math.max(0, Math.min(99, Math.round((parsedMi - wholeMi) * 100)));
-      setDraftDistanceWhole(String(wholeMi));
-      setDraftDistanceMeters(String(decMi));
-    } else if (distanceUnit === 'm') {
-      const metersRaw = Math.round(parsedKm * 1000);
-      const snappedMeters = Math.max(0, Math.round(metersRaw / 25) * 25);
-      setDraftDistanceWhole(String(snappedMeters));
-      setDraftDistanceMeters('0');
-    } else {
-      const wholeKm = Math.floor(parsedKm);
-      const remainingMetersRaw = Math.round((parsedKm - wholeKm) * 1000);
-      const snappedMeters = Math.min(975, Math.max(0, Math.round(remainingMetersRaw / 25) * 25));
-      setDraftDistanceWhole(String(wholeKm));
-      setDraftDistanceMeters(String(snappedMeters));
-    }
-    setOpenPicker('distance');
-  };
 
   const openParticipantsPicker = () => {
     setDraftParticipants(
@@ -492,105 +427,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         </AlertDialog>
       </div>
 
-      <WheelValuePickerModal
-        open={openPicker === 'pace'}
-        onClose={() => setOpenPicker(null)}
-        title="Allure générale"
-        columns={[
-          { items: paceMinOptions, value: draftPaceMin, onChange: setDraftPaceMin, suffix: 'min' },
-          { items: paceSecOptions, value: draftPaceSec, onChange: setDraftPaceSec, suffix: 's' },
-        ]}
-        onConfirm={() => {
-          onFormDataChange({
-            pace_general: `${draftPaceMin}:${draftPaceSec.padStart(2, '0')}/km`,
-          });
-          setOpenPicker(null);
-        }}
-      />
-      <WheelValuePickerModal
-        open={openPicker === 'distance'}
-        onClose={() => setOpenPicker(null)}
-        title={`Distance (${distanceUnit})`}
-        columns={
-          distanceUnit === 'm'
-            ? [
-                {
-                  items: distanceMetersOnlyOptions,
-                  value: draftDistanceWhole,
-                  onChange: setDraftDistanceWhole,
-                  suffix: 'm',
-                },
-              ]
-            : distanceUnit === 'mi'
-            ? [
-                {
-                  items: distanceWholeOptions,
-                  value: draftDistanceWhole,
-                  onChange: setDraftDistanceWhole,
-                  suffix: 'mi',
-                },
-                {
-                  items: distanceMilesDecOptions,
-                  value: draftDistanceMeters,
-                  onChange: setDraftDistanceMeters,
-                },
-              ]
-            : [
-                {
-                  items: distanceWholeOptions,
-                  value: draftDistanceWhole,
-                  onChange: setDraftDistanceWhole,
-                },
-                {
-                  items: distanceMetersOptions,
-                  value: draftDistanceMeters,
-                  onChange: setDraftDistanceMeters,
-                  suffix: 'm',
-                },
-              ]
-        }
-        onConfirm={() => {
-          let totalKm = 0;
-          if (distanceUnit === 'mi') {
-            const wholeMi = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
-            const decMi = Math.max(
-              0,
-              Math.min(99, Number.parseInt(draftDistanceMeters, 10) || 0)
-            );
-            totalKm = (wholeMi + decMi / 100) * 1.60934;
-          } else if (distanceUnit === 'm') {
-            const meters = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
-            totalKm = meters / 1000;
-          } else {
-            const wholeKm = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
-            const meters = Math.min(
-              975,
-              Math.max(0, Number.parseInt(draftDistanceMeters, 10) || 0)
-            );
-            totalKm = wholeKm + meters / 1000;
-          }
-          const formattedDistance = Number(totalKm.toFixed(3)).toString();
-          onFormDataChange({ distance_km: formattedDistance });
-          setOpenPicker(null);
-        }}
-      />
-      <WheelValuePickerModal
-        open={openPicker === 'elevation'}
-        onClose={() => setOpenPicker(null)}
-        title="Dénivelé positif"
-        columns={[
-          {
-            items: elevationOptions,
-            value: draftElevation,
-            onChange: setDraftElevation,
-            suffix: 'm',
-          },
-        ]}
-        onConfirm={() => {
-          onFormDataChange({ elevation_gain: draftElevation });
-          setOpenPicker(null);
-        }}
-      />
       <WheelValuePickerModal
         open={openPicker === 'participants'}
         onClose={() => setOpenPicker(null)}
