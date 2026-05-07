@@ -303,7 +303,7 @@ export const CreateCoachingSessionDialog = ({
             headerWrapperClassName="shrink-0"
             header={
               <CoachingFullscreenHeader
-                title="Nouvelle séance"
+                title="Créer une séance"
                 onBack={onClose}
                 rightSlot={
                   <span className="max-w-[min(120px,32vw)] truncate text-right text-xs capitalize text-muted-foreground">
@@ -332,105 +332,112 @@ export const CreateCoachingSessionDialog = ({
             }
           >
             <div className="space-y-4">
-              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sport</Label>
-                  <Select value={activityType} onValueChange={setActivityType}>
-                    <SelectTrigger className="h-11 rounded-xl border-border bg-card">
-                      <SelectValue>
-                        <span className="flex items-center gap-2">
-                          <span className="text-base leading-none" aria-hidden>
-                            {selectedActivity.icon}
-                          </span>
-                          <span>{selectedActivity.label.replace(/^[^\s]+\s+/, "")}</span>
-                        </span>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACTIVITY_TYPES.map(t => (
-                        <SelectItem key={t.value} value={t.value}>
-                          <span className="flex items-center gap-2">
-                            <span className="text-base leading-none" aria-hidden>
-                              {t.icon}
-                            </span>
-                            <span>{t.label.replace(/^[^\s]+\s+/, "")}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
+              <div className="grid grid-cols-2 gap-2 rounded-full border border-[#d8d8dd] bg-white p-1">
+                <button type="button" className="h-10 rounded-full bg-[#0066cc] text-[15px] font-semibold text-white">
+                  Construire
+                </button>
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={() => setShowTemplates(true)}
-                  className="h-10 w-full rounded-xl border-dashed text-xs"
+                  className="h-10 rounded-full text-[15px] font-semibold text-[#1d1d1f]"
                 >
-                  <BookOpen className="mr-1 h-3.5 w-3.5" />
-                  Templates
-                </Button>
+                  Modèles
+                </button>
+              </div>
+
+              <div className="px-1">
+                <Input
+                  value={objective}
+                  onChange={e => setObjective(e.target.value)}
+                  placeholder="Nom de la séance"
+                  className="h-auto border-0 bg-transparent px-0 py-0 font-display text-[44px] font-semibold leading-[1.05] tracking-[-0.7px] text-[#1d1d1f] placeholder:text-[#7a7a7a] shadow-none focus-visible:ring-0"
+                />
+                <p className="mt-1 text-[14px] text-[#7a7a7a]">
+                  {parsedBlocks.length > 0
+                    ? `${parsedBlocks.length} blocs · ~${Math.max(20, parsedBlocks.length * 8)} min`
+                    : "Ajoute des blocs pour estimer la durée"}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: "course", emoji: "🏃", bg: "#007AFF" },
+                  { id: "velo", emoji: "🚴", bg: "#FF3B30" },
+                  { id: "natation", emoji: "🏊", bg: "#5AC8FA" },
+                  { id: "musculation", emoji: "💪", bg: "#FF9500" },
+                ].map((sport) => (
+                  <button
+                    key={sport.id}
+                    type="button"
+                    onClick={() => setActivityType(sport.id)}
+                    className="relative flex aspect-square items-center justify-center rounded-[14px] text-[33px]"
+                    style={{ backgroundColor: sport.bg }}
+                  >
+                    {activityType === sport.id ? (
+                      <span className="pointer-events-none absolute inset-0 rounded-[14px] ring-2 ring-white ring-offset-2 ring-offset-[#0066cc]" />
+                    ) : null}
+                    <span aria-hidden>{sport.emoji}</span>
+                  </button>
+                ))}
               </div>
 
               <div className="space-y-2 px-1">
-                <p className="text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Schéma de séance</p>
-                <div className="rounded-[14px] bg-card p-4">
-                  <div className="grid grid-cols-3 gap-3 pb-3" style={{ borderBottom: `0.5px solid ${mockupPalette.separator}` }}>
-                    <div>
-                      <p className="text-xl font-bold tabular-nums">{parsedResult.blocks.length || 0}</p>
-                      <p className="text-[11px] uppercase text-muted-foreground">Blocs</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold tabular-nums">{parsedBlocks.length || 0}</p>
-                      <p className="text-[11px] uppercase text-muted-foreground">Paliers</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold tabular-nums">{selectedAthletes.size || members.length}</p>
-                      <p className="text-[11px] uppercase text-muted-foreground">Athlètes</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex h-[72px] items-end gap-1.5">
-                    {(schemaBars.length ? schemaBars : Array.from({ length: 5 })).map((_, idx) => {
-                      const palette = [mockupPalette.z1, mockupPalette.z2, mockupPalette.z3, mockupPalette.z4, mockupPalette.z5, mockupPalette.z6];
-                      const height = 20 + (((idx % 5) + 1) * 10);
-                      return (
-                        <span
-                          key={`bar-${idx}`}
-                          className="flex-1 rounded-t-md"
-                          style={{ height: `${height}%`, backgroundColor: palette[idx % palette.length] }}
-                        />
-                      );
-                    })}
-                  </div>
+                <p className="text-[26px] font-semibold tracking-[-0.4px] text-[#1d1d1f]">Schéma de séance</p>
+                <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-3">
+                  <svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" className="w-full">
+                    <line x1="40" y1="20" x2="360" y2="20" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="50" x2="360" y2="50" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="80" x2="360" y2="80" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="110" x2="360" y2="110" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="140" x2="360" y2="140" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="170" x2="360" y2="170" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="200" x2="360" y2="200" stroke="#1d1d1f" strokeOpacity="0.18" />
+                    <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fontWeight="600" fill="#7a7a7a">
+                      <text x="32" y="38" textAnchor="end">Z6</text>
+                      <text x="32" y="68" textAnchor="end">Z5</text>
+                      <text x="32" y="98" textAnchor="end">Z4</text>
+                      <text x="32" y="128" textAnchor="end">Z3</text>
+                      <text x="32" y="158" textAnchor="end">Z2</text>
+                      <text x="32" y="188" textAnchor="end">Z1</text>
+                    </g>
+                    <rect x="40" y="170" width="144" height="30" fill="#B5B5BA" rx="3" />
+                    <rect x="184" y="50" width="37" height="150" fill="#FF9500" rx="3" />
+                    <rect x="221" y="170" width="6" height="30" fill="#B5B5BA" rx="2" />
+                    <rect x="227" y="50" width="37" height="150" fill="#FF9500" rx="3" />
+                    <rect x="264" y="170" width="59" height="30" fill="#B5B5BA" rx="3" />
+                    <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fill="#7a7a7a">
+                      <text x="40" y="216" textAnchor="middle">0:00</text>
+                      <text x="120" y="216" textAnchor="middle">0:15</text>
+                      <text x="200" y="216" textAnchor="middle">0:30</text>
+                      <text x="280" y="216" textAnchor="middle">0:45</text>
+                      <text x="360" y="216" textAnchor="end">1:00</text>
+                    </g>
+                  </svg>
                 </div>
               </div>
 
               <div className="space-y-2 px-1">
-                <p className="text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Ajouter un bloc</p>
+                <p className="text-[30px] font-semibold tracking-[-0.6px] text-[#1d1d1f]">Ajouter un bloc</p>
                 <div className="grid grid-cols-4 gap-2">
                   {[
-                    { id: "continu", label: "Continu", icon: Waves, insert: "20'>5'30" },
-                    { id: "intervalle", label: "Intervalle", icon: BarChart3, insert: "6x3'>3'30" },
-                    { id: "pyramide", label: "Pyramide", icon: Triangle, insert: "200>4'00, 400>4'10, 600>4'20, 400>4'10, 200>4'00" },
-                    { id: "variation", label: "Variation", icon: Activity, insert: "10'>5'30, 10'>4'45, 10'>5'15" },
+                    { id: "continu", label: "Continu", insert: "20'>5'30", svg: <rect x="2" y="9" width="40" height="6" rx="2" fill="#0066cc" /> },
+                    { id: "intervalle", label: "Intervalle", insert: "6x3'>3'30", svg: <><rect x="2" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/><rect x="11" y="14" width="3" height="6" rx="1" fill="#B5B5BA"/><rect x="17" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/><rect x="26" y="14" width="3" height="6" rx="1" fill="#B5B5BA"/><rect x="32" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/></> },
+                    { id: "pyramide", label: "Pyramide", insert: "200>4'00, 400>4'10, 600>4'20, 400>4'10, 200>4'00", svg: <><rect x="2" y="14" width="5" height="6" rx="1" fill="#34C759"/><rect x="9" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/><rect x="16" y="4" width="5" height="16" rx="1.5" fill="#FF9500"/><rect x="23" y="4" width="5" height="16" rx="1.5" fill="#FF9500"/><rect x="30" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/><rect x="37" y="14" width="5" height="6" rx="1" fill="#34C759"/></> },
+                    { id: "variation", label: "Variation", insert: "10'>5'30, 10'>4'45, 10'>5'15", svg: <><rect x="2" y="16" width="5" height="4" rx="1" fill="#B5B5BA"/><rect x="9" y="12" width="5" height="8" rx="1" fill="#34C759"/><rect x="16" y="6" width="5" height="14" rx="1.3" fill="#FF9500"/><rect x="23" y="14" width="5" height="6" rx="1" fill="#0066cc"/><rect x="30" y="4" width="5" height="16" rx="1.5" fill="#FF3B30"/><rect x="37" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/></> },
                   ].map((tile) => {
-                    const Icon = tile.icon;
                     const isActive = activeTile === tile.id;
                     return (
                       <button
                         type="button"
                         key={tile.id}
                         onClick={() => setRccCode((prev) => (prev.trim() ? `${prev}, ${tile.insert}` : tile.insert))}
-                        className="aspect-[1/1.05] rounded-[12px] border p-2"
-                        style={{
-                          borderColor: isActive ? mockupPalette.actionBlue : "rgba(60,60,67,0.18)",
-                          backgroundColor: isActive ? "rgba(0,122,255,0.06)" : "white",
-                        }}
+                        className="rounded-[14px] border bg-white px-2 py-2"
+                        style={{ borderColor: isActive ? "#0066cc" : "#e0e0e0" }}
                       >
-                        <div className="flex h-full flex-col items-center justify-between">
-                          <Icon className="mt-1 h-5 w-5" style={{ color: isActive ? mockupPalette.actionBlue : "rgba(60,60,67,0.6)" }} />
-                          <span className="text-[11px] font-semibold" style={{ color: isActive ? mockupPalette.actionBlue : "inherit" }}>{tile.label}</span>
-                        </div>
+                        <svg viewBox="0 0 44 22" className="mx-auto h-5 w-11" fill="none">
+                          {tile.svg}
+                        </svg>
+                        <span className="mt-1 block text-center text-[12px]">{tile.label}</span>
                       </button>
                     );
                   })}
