@@ -25,6 +25,7 @@ import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
 import { Group, Cell } from '@/components/apple';
 import { useToast } from '@/hooks/use-toast';
 import { MiniMapPreview } from '@/components/feed/MiniMapPreview';
+import { useUserProfile } from '@/contexts/UserProfileContext';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -80,6 +81,8 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { userProfile } = useUserProfile();
+  const pinAvatarUrl = userProfile?.avatar_url || imagePreview || null;
 
   const activityShort =
     activity?.label?.replace(/^[^\s]+\s/, '').toUpperCase() ?? 'SÉANCE';
@@ -125,7 +128,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                 <MiniMapPreview
                   lat={selectedLocation.lat}
                   lng={selectedLocation.lng}
-                  avatarUrl={imagePreview}
+                  avatarUrl={pinAvatarUrl}
                   activityType={formData.activity_type}
                   interactive={false}
                   showHint={false}

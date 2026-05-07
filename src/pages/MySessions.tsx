@@ -1133,8 +1133,9 @@ export default function MySessions() {
                 type="button"
                 className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
                 onClick={() => {
+                  if (!confirmTarget) return;
                   closeConfirmDialog();
-                  setSessionSource('to-confirm');
+                  navigate(`/my-sessions/confirm/${confirmTarget.sessionId}`);
                 }}
               >
                 <p className="text-[15px] font-semibold text-foreground">
