@@ -2842,28 +2842,36 @@ export function CoachPlanningExperience() {
     (direction: "prev" | "next", source: "planning" | "myPlan") => {
       if (weekScrollSwitchingRef.current) return;
       weekScrollSwitchingRef.current = true;
-      setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
-      requestAnimationFrame(() => {
-        const node = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
-        if (node) {
-          // Keep continuous vertical navigation between weeks:
-          // - scrolling down lands at start of next week
-          // - scrolling up lands at end of previous week
-          const edgeOffset = 28;
-          if (direction === "next") {
-            // Avoid immediate rebound to previous week by staying away from top trigger threshold.
-            node.scrollTop = edgeOffset;
-          } else {
-            node.scrollTop = Math.max(edgeOffset, node.scrollHeight - node.clientHeight - edgeOffset);
+      const node = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
+      // Smooth fade-out before swapping the week to mimic a continuous flow.
+      if (node) {
+        node.style.transition = "opacity 160ms ease";
+        node.style.opacity = "0";
+      }
+      window.setTimeout(() => {
+        setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
+        requestAnimationFrame(() => {
+          const n = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
+          if (n) {
+            // Land at the relevant edge of the newly rendered week so the header + stats
+            // appear naturally instead of teleporting mid-week.
+            if (direction === "next") {
+              n.scrollTop = 0;
+            } else {
+              n.scrollTop = Math.max(0, n.scrollHeight - n.clientHeight);
+            }
+            // Fade back in.
+            requestAnimationFrame(() => {
+              n.style.opacity = "1";
+            });
           }
-        }
-        // Keep lock briefly while the browser dispatches follow-up scroll events.
-        window.setTimeout(() => {
-          weekScrollSwitchingRef.current = false;
-        }, 90);
-      });
+          window.setTimeout(() => {
+            weekScrollSwitchingRef.current = false;
+          }, 220);
+        });
+      }, 170);
     },
-    [setSelectedDate]
+    []
   );
 
   useEffect(() => {
@@ -3445,11 +3453,11 @@ export function CoachPlanningExperience() {
                 ref={myPlanScrollAnchorRef}
                 onScroll={(event) => {
                   const el = event.currentTarget;
-                  if (el.scrollTop <= 24) {
+                  if (el.scrollTop <= 0) {
                     shiftWeekByScroll("prev", "myPlan");
                     return;
                   }
-                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 24) {
+                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 0) {
                     shiftWeekByScroll("next", "myPlan");
                   }
                 }}
@@ -3575,11 +3583,11 @@ export function CoachPlanningExperience() {
                     ref={infiniteWeekScrollRef}
                     onScroll={(event) => {
                       const el = event.currentTarget;
-                      if (el.scrollTop <= 24) {
+                      if (el.scrollTop <= 0) {
                         shiftWeekByScroll("prev", "planning");
                         return;
                       }
-                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 24) {
+                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 0) {
                         shiftWeekByScroll("next", "planning");
                       }
                     }}
