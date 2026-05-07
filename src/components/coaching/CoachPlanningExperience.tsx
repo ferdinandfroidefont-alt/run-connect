@@ -2850,13 +2850,18 @@ export function CoachPlanningExperience() {
           // Keep continuous vertical navigation between weeks:
           // - scrolling down lands at start of next week
           // - scrolling up lands at end of previous week
+          const edgeOffset = 28;
           if (direction === "next") {
-            node.scrollTop = 1;
+            // Avoid immediate rebound to previous week by staying away from top trigger threshold.
+            node.scrollTop = edgeOffset;
           } else {
-            node.scrollTop = Math.max(1, node.scrollHeight - node.clientHeight - 1);
+            node.scrollTop = Math.max(edgeOffset, node.scrollHeight - node.clientHeight - edgeOffset);
           }
         }
-        weekScrollSwitchingRef.current = false;
+        // Keep lock briefly while the browser dispatches follow-up scroll events.
+        window.setTimeout(() => {
+          weekScrollSwitchingRef.current = false;
+        }, 90);
       });
     },
     [setSelectedDate]
