@@ -427,16 +427,6 @@ export function FeedActivitiesMaquette() {
     [feedItems, discussionSessionId],
   );
 
-  if (discussionSession) {
-    return (
-      <DiscussionView
-        session={discussionSession}
-        onBack={() => setDiscussionSessionId(null)}
-        onAddComment={addComment}
-      />
-    );
-  }
-
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
   const renderFriendsWhen = useCallback((s: FeedSession) => {
@@ -472,6 +462,16 @@ export function FeedActivitiesMaquette() {
     const n = friendCount ?? 0;
     return `Amis · ${n}`;
   }, [friendCount]);
+
+  if (discussionSession) {
+    return (
+      <DiscussionView
+        session={discussionSession}
+        onBack={() => setDiscussionSessionId(null)}
+        onAddComment={addComment}
+      />
+    );
+  }
 
   return (
     <IosFixedPageHeaderShell
