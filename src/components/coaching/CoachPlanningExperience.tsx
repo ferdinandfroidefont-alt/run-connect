@@ -4019,18 +4019,28 @@ export function CoachPlanningExperience() {
                       }
                       setCoachingTab("planning");
                     },
-                    label: "Planification",
+                    label: "Retour",
                   }}
-                  title=""
-                  right={null}
+                  title="Créer une séance"
+                  right={
+                    <button
+                      type="button"
+                      onClick={() => setCoachingTab("planning")}
+                      className="text-[17px] font-semibold text-primary"
+                    >
+                      OK
+                    </button>
+                  }
                 />
                 <div className="grid grid-cols-2 gap-2 px-4 pb-2">
                   <button
                     type="button"
                     onClick={() => setEditorTab("build")}
                     className={cn(
-                      "rounded-xl py-2 text-center text-[13px] font-semibold transition-colors",
-                      editorTab === "build" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      "h-11 rounded-full border text-center text-[15px] font-semibold transition-colors",
+                      editorTab === "build"
+                        ? "border-[#0066cc] bg-[#0066cc] text-white"
+                        : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
                     )}
                   >
                     Construire
@@ -4039,8 +4049,10 @@ export function CoachPlanningExperience() {
                     type="button"
                     onClick={() => setEditorTab("models")}
                     className={cn(
-                      "rounded-xl py-2 text-center text-[13px] font-semibold transition-colors",
-                      editorTab === "models" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      "h-11 rounded-full border text-center text-[15px] font-semibold transition-colors",
+                      editorTab === "models"
+                        ? "border-[#0066cc] bg-[#0066cc] text-white"
+                        : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
                     )}
                   >
                     Modèles
@@ -4048,23 +4060,13 @@ export function CoachPlanningExperience() {
                 </div>
               </div>
             }
-            scrollClassName="bg-white pb-24"
+            scrollClassName="bg-[#f5f5f7] pb-24"
             footer={
               editorTab === "build" && (
-                <div className="border-t border-border bg-card px-4 py-3 pb-[max(0.9rem,var(--safe-area-bottom))]">
-                  <button
-                    type="button"
-                    className={cn(
-                      "mb-2 inline-flex h-8 w-full items-center rounded-full border border-slate-200 bg-white px-3 text-left text-[12px] font-medium text-foreground shadow-[0_10px_26px_-24px_rgba(15,23,42,0.45)]",
-                      savePulse && "animate-pulse"
-                    )}
-                    title={sessionTranscript}
-                  >
-                    <span className="truncate">{sessionTranscript}</span>
-                  </button>
+                <div className="border-t border-[#e0e0e0] bg-[#f5f5f7] px-[17px] pb-[max(1.4rem,var(--safe-area-bottom))] pt-[14px]">
                   <Button
                     onClick={() => void saveSession()}
-                    className="h-11 w-full rounded-xl text-[15px] font-semibold"
+                    className="h-[50px] w-full rounded-full bg-[#0066cc] text-[17px] font-semibold text-white"
                     disabled={draft.blocks.length === 0}
                   >
                     Enregistrer la séance
