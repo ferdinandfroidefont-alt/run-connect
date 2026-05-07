@@ -3470,7 +3470,6 @@ export function CoachPlanningExperience() {
                   );
                 })}
                 </div>
-              </div>
             ) : activeMenuKey === "planning" && showCoachLanding ? (
               <CoachPlanificationLanding
                 weekStart={weekAnchor}
