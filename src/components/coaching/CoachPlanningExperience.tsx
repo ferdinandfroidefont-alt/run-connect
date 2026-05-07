@@ -3448,7 +3448,7 @@ export function CoachPlanningExperience() {
                     shiftWeekByScroll("next", "myPlan");
                   }
                 }}
-                className="max-h-[68vh] overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]"
+                className="max-h-[68vh] overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
               >
                 <div className="px-5 pb-1.5 pt-4">
                   <div className="flex items-baseline gap-2">
@@ -3578,7 +3578,7 @@ export function CoachPlanningExperience() {
                         shiftWeekByScroll("next", "planning");
                       }
                     }}
-                    className="max-h-[68vh] overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]"
+                    className="max-h-[68vh] overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
                   >
                     <div className="px-5 pb-1.5 pt-4">
                       <div className="flex items-baseline gap-2">
