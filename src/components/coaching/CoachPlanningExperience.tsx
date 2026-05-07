@@ -2842,29 +2842,36 @@ export function CoachPlanningExperience() {
     (direction: "prev" | "next", source: "planning" | "myPlan") => {
       if (weekScrollSwitchingRef.current) return;
       weekScrollSwitchingRef.current = true;
-      setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
-      setSelectedDate((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
-      requestAnimationFrame(() => {
-        const node = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
-        if (node) {
-          // Keep continuous vertical navigation between weeks:
-          // - scrolling down lands at start of next week
-          // - scrolling up lands at end of previous week
-          const edgeOffset = 28;
-          if (direction === "next") {
-            // Avoid immediate rebound to previous week by staying away from top trigger threshold.
-            node.scrollTop = edgeOffset;
-          } else {
-            node.scrollTop = Math.max(edgeOffset, node.scrollHeight - node.clientHeight - edgeOffset);
+      const node = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
+      // Smooth fade-out before swapping the week to mimic a continuous flow.
+      if (node) {
+        node.style.transition = "opacity 160ms ease";
+        node.style.opacity = "0";
+      }
+      window.setTimeout(() => {
+        setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
+        requestAnimationFrame(() => {
+          const n = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
+          if (n) {
+            // Land at the relevant edge of the newly rendered week so the header + stats
+            // appear naturally instead of teleporting mid-week.
+            if (direction === "next") {
+              n.scrollTop = 0;
+            } else {
+              n.scrollTop = Math.max(0, n.scrollHeight - n.clientHeight);
+            }
+            // Fade back in.
+            requestAnimationFrame(() => {
+              n.style.opacity = "1";
+            });
           }
-        }
-        // Keep lock briefly while the browser dispatches follow-up scroll events.
-        window.setTimeout(() => {
-          weekScrollSwitchingRef.current = false;
-        }, 90);
-      });
+          window.setTimeout(() => {
+            weekScrollSwitchingRef.current = false;
+          }, 220);
+        });
+      }, 170);
     },
-    [setSelectedDate]
+    []
   );
 
   useEffect(() => {
@@ -2875,12 +2882,15 @@ export function CoachPlanningExperience() {
     const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
     if (visibleWeekStart !== currentWeekStart) return;
 
-    requestAnimationFrame(() => {
+    const recenter = () => {
       const todayKey = format(new Date(), "yyyy-MM-dd");
       const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
       if (!todayRow) return;
       todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    });
+    };
+    requestAnimationFrame(recenter);
+    const t = window.setTimeout(recenter, 140);
+    return () => window.clearTimeout(t);
   }, [weekPlannerMode, weekAnchor]);
 
   useEffect(() => {
@@ -2891,12 +2901,15 @@ export function CoachPlanningExperience() {
     const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
     if (visibleWeekStart !== currentWeekStart) return;
 
-    requestAnimationFrame(() => {
+    const recenter = () => {
       const todayKey = format(new Date(), "yyyy-MM-dd");
       const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
       if (!todayRow) return;
       todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    });
+    };
+    requestAnimationFrame(recenter);
+    const t = window.setTimeout(recenter, 140);
+    return () => window.clearTimeout(t);
   }, [activeMenuKey, weekAnchor, athletePlanSessions.length]);
   const coachingHeaderTitle = useMemo(() => {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
@@ -3440,17 +3453,17 @@ export function CoachPlanningExperience() {
                 ref={myPlanScrollAnchorRef}
                 onScroll={(event) => {
                   const el = event.currentTarget;
-                  if (el.scrollTop <= 24) {
+                  if (el.scrollTop <= 0) {
                     shiftWeekByScroll("prev", "myPlan");
                     return;
                   }
-                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 24) {
+                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 0) {
                     shiftWeekByScroll("next", "myPlan");
                   }
                 }}
                 className="max-h-[68vh] overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
               >
-                <div className="px-5 pb-1.5 pt-4">
+                <div className="px-5 pb-1.5 pt-2">
                   <div className="flex items-baseline gap-2">
                     <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
                     <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
@@ -3517,7 +3530,7 @@ export function CoachPlanningExperience() {
                           isLast={dayIdx === weekDays.length - 1}
                           athleteSessionCompleted={session?.participationStatus === "completed"}
                           onAdd={() => undefined}
-                          onOpen={session ? () => previewAction() : undefined}
+                          onOpen={session ? () => openSessionPreview(session.id) : undefined}
                           onEdit={undefined}
                           onSend={undefined}
                           onDuplicate={undefined}
@@ -3570,17 +3583,17 @@ export function CoachPlanningExperience() {
                     ref={infiniteWeekScrollRef}
                     onScroll={(event) => {
                       const el = event.currentTarget;
-                      if (el.scrollTop <= 24) {
+                      if (el.scrollTop <= 0) {
                         shiftWeekByScroll("prev", "planning");
                         return;
                       }
-                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 24) {
+                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 0) {
                         shiftWeekByScroll("next", "planning");
                       }
                     }}
                     className="max-h-[68vh] overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
                   >
-                    <div className="px-5 pb-1.5 pt-4">
+                    <div className="px-5 pb-1.5 pt-2">
                       <div className="flex items-baseline gap-2">
                         <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
                         <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
