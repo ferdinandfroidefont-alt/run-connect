@@ -2874,12 +2874,15 @@ export function CoachPlanningExperience() {
     const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
     if (visibleWeekStart !== currentWeekStart) return;
 
-    requestAnimationFrame(() => {
+    const recenter = () => {
       const todayKey = format(new Date(), "yyyy-MM-dd");
       const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
       if (!todayRow) return;
       todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    });
+    };
+    requestAnimationFrame(recenter);
+    const t = window.setTimeout(recenter, 140);
+    return () => window.clearTimeout(t);
   }, [weekPlannerMode, weekAnchor]);
 
   useEffect(() => {
@@ -2890,12 +2893,15 @@ export function CoachPlanningExperience() {
     const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
     if (visibleWeekStart !== currentWeekStart) return;
 
-    requestAnimationFrame(() => {
+    const recenter = () => {
       const todayKey = format(new Date(), "yyyy-MM-dd");
       const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
       if (!todayRow) return;
       todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    });
+    };
+    requestAnimationFrame(recenter);
+    const t = window.setTimeout(recenter, 140);
+    return () => window.clearTimeout(t);
   }, [activeMenuKey, weekAnchor, athletePlanSessions.length]);
   const coachingHeaderTitle = useMemo(() => {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
