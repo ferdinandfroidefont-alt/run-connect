@@ -44,6 +44,8 @@ interface SessionCalendarViewProps {
   onSessionClick: (session: SessionCalendarSession) => void;
   /** Swipe « confirmer » (même comportement que la liste Mes séances) */
   onConfirmSession?: (session: SessionCalendarSession) => void;
+  /** Swipe inverse « commenter » */
+  onCommentSession?: (session: SessionCalendarSession) => void;
   organizerProfiles?: Map<
     string,
     { username: string; display_name: string; avatar_url: string | null }
@@ -55,21 +57,41 @@ interface SessionCalendarViewProps {
 
 function SwipeConfirmCard({
   onConfirm,
+  onComment,
   children,
 }: {
   onConfirm: () => void;
+  onComment: () => void;
   children: React.ReactNode;
 }) {
-  const CARD_SWIPE_THRESHOLD = -80;
+  const CARD_SWIPE_THRESHOLD = 80;
   const SWIPE_ACTION_WIDTH = 148;
-  const [opened, setOpened] = useState(false);
+  const [openedSide, setOpenedSide] = useState<"left" | "right" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   return (
     <div className="relative overflow-hidden">
       <div
+        className={`absolute inset-y-0 left-0 flex w-[148px] items-center justify-center bg-[#34C759] px-3 transition-opacity ${
+          openedSide === "left" || isDragging ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onComment();
+            setOpenedSide(null);
+          }}
+          className="h-10 w-full rounded-full bg-[#34C759] text-sm font-semibold text-white"
+        >
+          Commenter une séance
+        </button>
+      </div>
+
+      <div
         className={`absolute inset-y-0 right-0 flex w-[148px] items-center justify-center bg-primary px-3 transition-opacity ${
-          opened || isDragging ? "opacity-100" : "pointer-events-none opacity-0"
+          openedSide === "right" || isDragging ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
         <button
@@ -77,7 +99,7 @@ function SwipeConfirmCard({
           onClick={(event) => {
             event.stopPropagation();
             onConfirm();
-            setOpened(false);
+            setOpenedSide(null);
           }}
           className="h-10 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
         >
@@ -87,23 +109,27 @@ function SwipeConfirmCard({
 
       <motion.div
         drag="x"
-        dragConstraints={{ left: -SWIPE_ACTION_WIDTH, right: 0 }}
+        dragConstraints={{ left: -SWIPE_ACTION_WIDTH, right: SWIPE_ACTION_WIDTH }}
         dragElastic={0.08}
-        animate={{ x: opened ? -SWIPE_ACTION_WIDTH : 0 }}
+        animate={{
+          x: openedSide === "right" ? -SWIPE_ACTION_WIDTH : openedSide === "left" ? SWIPE_ACTION_WIDTH : 0,
+        }}
         transition={{ type: "spring", stiffness: 420, damping: 32 }}
         onDragStart={() => setIsDragging(true)}
         onDragEnd={(_, info) => {
           setIsDragging(false);
-          if (info.offset.x < CARD_SWIPE_THRESHOLD) {
-            setOpened(true);
+          if (info.offset.x <= -CARD_SWIPE_THRESHOLD) {
+            setOpenedSide("right");
             return;
           }
-          if (info.offset.x > -24) {
-            setOpened(false);
+          if (info.offset.x >= CARD_SWIPE_THRESHOLD) {
+            setOpenedSide("left");
+            return;
           }
+          setOpenedSide(null);
         }}
         onTap={() => {
-          if (opened) setOpened(false);
+          if (openedSide) setOpenedSide(null);
         }}
       >
         {children}
@@ -120,6 +146,7 @@ export const SessionCalendarView = ({
   onVisibleMonthChange,
   onSessionClick,
   onConfirmSession,
+  onCommentSession,
   organizerProfiles,
   currentUserId,
   onAddSession,
@@ -395,7 +422,11 @@ export const SessionCalendarView = ({
 
               if (onConfirmSession) {
                 return (
-                  <SwipeConfirmCard key={session.id} onConfirm={() => onConfirmSession(session)}>
+                  <SwipeConfirmCard
+                    key={session.id}
+                    onConfirm={() => onConfirmSession(session)}
+                    onComment={() => (onCommentSession ? onCommentSession(session) : onSessionClick(session))}
+                  >
                     {rowInner}
                   </SwipeConfirmCard>
                 );

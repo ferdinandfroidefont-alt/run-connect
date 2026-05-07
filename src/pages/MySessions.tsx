@@ -1048,6 +1048,7 @@ export default function MySessions() {
                     onVisibleMonthChange={setCalendarMonth}
                     onSessionClick={(s) => openSessionFromList(s as UserSession)}
                     onConfirmSession={openConfirmDialog}
+                    onCommentSession={(s) => openSessionFromList(s as UserSession)}
                     organizerProfiles={organizerProfiles}
                     currentUserId={user?.id}
                     onAddSession={() => openCreateSession()}
