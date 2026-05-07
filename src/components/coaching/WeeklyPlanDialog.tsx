@@ -856,6 +856,7 @@ export const WeeklyPlanDialog = ({
   };
 
   const selectedSession = selectedIndex !== null ? sessions[selectedIndex] : null;
+  const isEditingSession = selectedSession !== null && selectedIndex !== null;
 
   // Groups available for duplication (excluding current)
   const otherGroups = useMemo(() => {
@@ -924,9 +925,25 @@ export const WeeklyPlanDialog = ({
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0"
-          header={<CoachingFullscreenHeader title="Plan de semaine" onBack={onClose} />}
-          scrollClassName="bg-secondary pb-24"
-          footer={
+          header={
+            <CoachingFullscreenHeader
+              title={isEditingSession ? "Créer une séance" : "Plan de semaine"}
+              onBack={isEditingSession ? () => setSelectedIndex(null) : onClose}
+              rightSlot={
+                isEditingSession ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIndex(null)}
+                    className="text-[17px] font-semibold text-primary"
+                  >
+                    OK
+                  </button>
+                ) : undefined
+              }
+            />
+          }
+          scrollClassName={isEditingSession ? "bg-[#f5f5f7]" : "bg-secondary pb-24"}
+          footer={isEditingSession ? undefined : (
             <div className="shrink-0 space-y-3 border-t border-border bg-card px-5 py-4 pb-[max(1rem,var(--safe-area-bottom))]">
               {draftSaveStatus !== "idle" && (
                 <p className="text-[12px] text-muted-foreground text-center">
@@ -972,8 +989,18 @@ export const WeeklyPlanDialog = ({
                 {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
               </Button>
             </div>
-          }
+          )}
         >
+          {isEditingSession ? (
+            <WeeklyPlanSessionEditor
+              session={selectedSession}
+              onChange={(s) => updateSession(selectedIndex!, s)}
+              onDuplicate={(targetDay) => duplicateToDay(selectedIndex!, targetDay)}
+              onDelete={() => deleteSession(selectedIndex!)}
+              members={getMembersForGroup(activeGroupId)}
+            />
+          ) : (
+          <>
           {/* ── Week navigator — hero card ── */}
           <div className="mt-4 mb-3 px-4">
             <div className="ios-card overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
@@ -1223,6 +1250,8 @@ export const WeeklyPlanDialog = ({
                 </div>
               )}
             </div>
+          )}
+          </>
           )}
 
         </IosFixedPageHeaderShell>

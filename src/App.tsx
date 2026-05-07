@@ -57,6 +57,7 @@ const Drafts = lazy(() => import("./pages/Drafts"));
 const OpenSessionLink = lazy(() => import("./pages/OpenSessionLink"));
 const ShortSessionLinkRedirect = lazy(() => import("./pages/ShortSessionLinkRedirect"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
+const ProfileSessions = lazy(() => import("./pages/ProfileSessions"));
 const Referral = lazy(() => import("./pages/Referral"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 const Participants = lazy(() => import("./pages/Participants"));
@@ -143,6 +144,7 @@ const App = () => {
         import("./pages/StoryCreate"),
         import("./pages/Drafts"),
         import("./pages/OpenSessionLink"),
+        import("./pages/ProfileSessions"),
         import("./pages/StoryDeleteConfirm"),
         import("./pages/Participants"),
       ]);
@@ -393,6 +395,7 @@ const App = () => {
                   <Route path="/leaderboard" element={<Navigate to="/route-create" replace />} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
+                  <Route path="/profile/sessions" element={<Layout><PageTransition><PageSuspense><ProfileSessions /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/referral" element={<Layout><PageTransition><PageSuspense><Referral /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />

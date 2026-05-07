@@ -122,6 +122,9 @@ const Profile = () => {
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reliabilityRate, setReliabilityRate] = useState(100);
+  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
+  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
   const [storyHighlights, setStoryHighlights] = useState<ProfileStoryHighlight[]>([]);
   const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
   const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
@@ -202,7 +205,7 @@ const Profile = () => {
         fetchProfile();
       }
       fetchFollowCounts();
-      // fetchReliabilityRate removed - no longer shown on profile
+      fetchReliabilityStats();
       if (!isViewingOtherUser) {
         fetchUserRoutes();
         fetchStoriesAndHighlights();
@@ -219,6 +222,22 @@ const Profile = () => {
       setNotificationPermission(Notification.permission);
     }
   }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
+  const fetchReliabilityStats = async () => {
+    if (!user || isViewingOtherUser) return;
+    try {
+      const { data } = await supabase
+        .from('user_stats')
+        .select('reliability_rate, total_sessions_joined, total_sessions_completed')
+        .eq('user_id', user.id)
+        .single();
+      if (!data) return;
+      setReliabilityRate(Math.max(0, Math.min(100, Number(data.reliability_rate) || 0)));
+      setTotalSessionsJoined(data.total_sessions_joined || 0);
+      setTotalSessionsCompleted(data.total_sessions_completed || 0);
+    } catch (error) {
+      console.error('Error fetching reliability stats:', error);
+    }
+  };
   const fetchStoriesAndHighlights = async () => {
     if (!user || isViewingOtherUser) return;
     try {
@@ -689,6 +708,10 @@ const Profile = () => {
     return source.slice(0, 2).toUpperCase();
   };
   const highlightedStories = storyHighlights.slice(0, 8);
+  const reliabilityRingRadius = 19;
+  const reliabilityRingCircumference = 2 * Math.PI * reliabilityRingRadius;
+  const reliabilityRingOffset =
+    reliabilityRingCircumference - (Math.max(0, Math.min(100, reliabilityRate)) / 100) * reliabilityRingCircumference;
 
   return (
     <div
@@ -852,6 +875,46 @@ const Profile = () => {
               <p className="mt-1 text-[13px] text-muted-foreground">Bats ton PR</p>
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/profile/sessions')}
+            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 text-left shadow-sm active:bg-[#EFEFF4]"
+          >
+            <div className="relative h-[46px] w-[46px] shrink-0">
+              <svg viewBox="0 0 46 46" className="h-full w-full -rotate-90">
+                <circle
+                  cx="23"
+                  cy="23"
+                  r={reliabilityRingRadius}
+                  fill="none"
+                  stroke="rgba(10,132,255,0.12)"
+                  strokeWidth="5"
+                />
+                <circle
+                  cx="23"
+                  cy="23"
+                  r={reliabilityRingRadius}
+                  fill="none"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeDasharray={reliabilityRingCircumference}
+                  strokeDashoffset={reliabilityRingOffset}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-[13px] font-bold leading-none text-foreground">
+                {Math.round(reliabilityRate)}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[16px] font-semibold text-foreground">Mes séances</p>
+              <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                {totalSessionsCompleted}/{totalSessionsJoined} confirmées · Fiabilité {Math.round(reliabilityRate)}%
+              </p>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+          </button>
 
           <div>
             <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
