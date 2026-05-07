@@ -2843,7 +2843,6 @@ export function CoachPlanningExperience() {
       if (weekScrollSwitchingRef.current) return;
       weekScrollSwitchingRef.current = true;
       setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
-      setSelectedDate((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
       requestAnimationFrame(() => {
         const node = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
         if (node) {
