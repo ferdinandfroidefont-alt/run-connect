@@ -5,6 +5,7 @@ import {
   type ComputedZone,
   type RunningReferenceSet,
 } from "@/lib/athleteIntensity";
+import { zoneColor } from "@/lib/zonePalette";
 
 export type { ComputedZone } from "@/lib/athleteIntensity";
 
@@ -38,18 +39,5 @@ export function zoneToFeedback(zone: ComputedZone): WorkoutIntensityFeedback {
 }
 
 export function zoneToColorToken(zone: ComputedZone): string {
-  switch (zone) {
-    case "Z1":
-      return "#9CA3AF";
-    case "Z2":
-      return "#2563EB";
-    case "Z3":
-      return "#22C55E";
-    case "Z4":
-      return "#FACC15";
-    case "Z5":
-      return "#F97316";
-    case "Z6":
-      return "#EF4444";
-  }
+  return zoneColor(zone);
 }

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { MiniProfileBlock } from "@/lib/workoutVisualization";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { zoneColor } from "@/lib/zonePalette";
 
 interface MiniWorkoutProfileProps {
   blocks?: MiniProfileBlock[];
@@ -29,12 +30,12 @@ function resolveBlockHeight(height: number, variant: MiniWorkoutProfileProps["va
 }
 
 function zonePastelColor(level: number): string {
-  if (level <= 1) return "#C8CBD2"; // Z1 gris
-  if (level === 2) return "#BFD9F4"; // Z2 bleu
-  if (level === 3) return "#CFEAD8"; // Z3 vert
-  if (level === 4) return "#F6E7BF"; // Z4 jaune
-  if (level === 5) return "#F8D7BE"; // Z5 orange
-  return "#F3C4C4"; // Z6 rouge
+  if (level <= 1) return zoneColor("Z1");
+  if (level === 2) return zoneColor("Z2");
+  if (level === 3) return zoneColor("Z3");
+  if (level === 4) return zoneColor("Z4");
+  if (level === 5) return zoneColor("Z5");
+  return zoneColor("Z6");
 }
 
 export function MiniWorkoutProfile({

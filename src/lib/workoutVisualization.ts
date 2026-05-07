@@ -5,6 +5,7 @@ import {
   type IntensityBand,
 } from "@/lib/athleteIntensity";
 import { bandToComputedZone, zoneToColorToken, type ComputedZone } from "@/lib/athleteWorkoutContext";
+import { zoneColor } from "@/lib/zonePalette";
 
 export type WorkoutSegmentKind = "warmup" | "steady" | "rep" | "recovery" | "cooldown" | "rest";
 
@@ -578,12 +579,7 @@ function bandForZone(zone: ComputedZone): IntensityBand {
 }
 
 function colorForZone(zone: ComputedZone): string {
-  if (zone === "Z1") return "#9CA3AF";
-  if (zone === "Z2") return "#2563EB";
-  if (zone === "Z3") return "#22C55E";
-  if (zone === "Z4") return "#FACC15";
-  if (zone === "Z5") return "#F97316";
-  return "#EF4444";
+  return zoneColor(zone);
 }
 
 /** Couleur des barres et des libellés d’axes zone (aligné sur le mini profil) */

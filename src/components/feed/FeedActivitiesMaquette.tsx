@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
@@ -13,14 +13,28 @@ import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
-import { FeedComments } from "@/components/feed/FeedComments";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
 import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import { MiniMapPreview } from "@/components/feed/MiniMapPreview";
 import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type FeedMode = "friends" | "discover";
+
+type DiscussionComment = {
+  id: string;
+  content: string;
+  created_at: string;
+  user: { username: string; avatar_url: string | null };
+};
+
+type DiscussionParticipant = {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+};
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371;
@@ -191,6 +205,160 @@ function FeedMaquetteTile({
   );
 }
 
+function DiscussionView({
+  session,
+  onBack,
+  onAddComment,
+}: {
+  session: FeedSession;
+  onBack: () => void;
+  onAddComment: (sessionId: string, content: string) => Promise<void> | void;
+}) {
+  const [participants, setParticipants] = useState<DiscussionParticipant[]>([]);
+  const [comments, setComments] = useState<DiscussionComment[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: rows } = await supabase
+        .from("session_participants")
+        .select("user_id")
+        .eq("session_id", session.id);
+      const ids = Array.from(new Set([session.organizer.user_id, ...(rows || []).map((r) => r.user_id)]));
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, username, display_name, avatar_url")
+        .in("user_id", ids);
+      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      const participantsData: DiscussionParticipant[] = ids.map((id) => {
+        const p = map.get(id);
+        return {
+          user_id: id,
+          username: p?.username || "user",
+          display_name: p?.display_name || p?.username || "Utilisateur",
+          avatar_url: p?.avatar_url || null,
+        };
+      });
+      setParticipants(participantsData);
+
+      const { data: commentsRows } = await supabase
+        .from("session_comments")
+        .select("id, content, created_at, user_id")
+        .eq("session_id", session.id)
+        .order("created_at", { ascending: false });
+      const discussionComments: DiscussionComment[] = (commentsRows || []).map((c) => {
+        const p = map.get(c.user_id);
+        return {
+          id: c.id,
+          content: c.content,
+          created_at: c.created_at,
+          user: { username: p?.display_name || p?.username || "Utilisateur", avatar_url: p?.avatar_url || null },
+        };
+      });
+      setComments(discussionComments);
+    };
+    void load();
+  }, [session.id, session.organizer.user_id]);
+
+  const send = async () => {
+    const content = input.trim();
+    if (!content || sending) return;
+    setSending(true);
+    await onAddComment(session.id, content);
+    setInput("");
+    const { data } = await supabase
+      .from("session_comments")
+      .select("id, content, created_at, user_id")
+      .eq("session_id", session.id)
+      .order("created_at", { ascending: false });
+    setComments(
+      (data || []).map((c) => ({
+        id: c.id,
+        content: c.content,
+        created_at: c.created_at,
+        user: { username: "Utilisateur", avatar_url: null },
+      })),
+    );
+    setSending(false);
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#f5f5f7]">
+      <div className="flex h-11 items-center px-4">
+        <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-[17px] text-[#0066cc]">
+          <ChevronLeft className="h-5 w-5" />
+          Retour
+        </button>
+        <p className="flex-1 pr-8 text-center text-[17px] font-semibold">Discussion</p>
+      </div>
+
+      <div className="space-y-2 overflow-y-auto px-4 pb-36">
+        <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-5">
+          <p className="mb-3 text-[14px] font-semibold text-[#333]">{participants.length} participants</p>
+          <div className="flex gap-4 overflow-x-auto pb-1">
+            {participants.map((p, i) => (
+              <div key={p.user_id} className="w-[60px] shrink-0 text-center">
+                <Avatar className="mx-auto h-14 w-14">
+                  <AvatarImage src={p.avatar_url || ""} />
+                  <AvatarFallback className={cn("text-white", i === 0 ? "bg-[#ff9500]" : "bg-[#8E8E93]")}>
+                    {initials(p.display_name || p.username)}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="mt-1 truncate text-[12px]">{(p.display_name || p.username).split(" ")[0]}</p>
+                {i === 0 ? <p className="text-[10px] text-[#0066cc]">ORGA</p> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-5">
+          <h2 className="mb-2 text-[21px] font-semibold">{session.title}</h2>
+          <p className="text-[14px] text-[#7a7a7a]">
+            {session.organizer.display_name || session.organizer.username} · {format(new Date(session.scheduled_at), "EEEE d MMM", { locale: fr })}
+          </p>
+        </div>
+
+        <p className="px-1 pt-2 text-[14px] font-semibold text-[#333]">{comments.length} commentaires</p>
+        {comments.map((c) => (
+          <div key={c.id} className="rounded-[18px] border border-[#e0e0e0] bg-white p-4">
+            <div className="flex gap-3">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={c.user.avatar_url || ""} />
+                <AvatarFallback>{initials(c.user.username)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-baseline gap-2">
+                  <span className="truncate text-[14px] font-semibold">{c.user.username}</span>
+                  <span className="text-[12px] text-[#7a7a7a]">
+                    {formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: fr })}
+                  </span>
+                </div>
+                <p className="text-[14px]">{c.content}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 border-t border-[#e0e0e0] bg-white/95 px-4 pb-7 pt-3">
+        <div className="mb-1 text-[12px] text-[#7a7a7a]">Visible sur Toutes les publications</div>
+        <div className="flex items-center gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ajouter un commentaire"
+            className="h-11 flex-1 rounded-full border border-[#e0e0e0] px-4 text-[17px] outline-none"
+          />
+          <button type="button" onClick={() => void send()} disabled={!input.trim() || sending} className="text-[17px] text-[#0066cc] disabled:text-[#ccc]">
+            Envoyer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function FeedActivitiesMaquette() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -200,8 +368,7 @@ export function FeedActivitiesMaquette() {
   const [friendCount, setFriendCount] = useState<number | null>(null);
   const [selectedFriendsSession, setSelectedFriendsSession] = useState<Record<string, unknown> | null>(null);
   const [selectedDiscoverSession, setSelectedDiscoverSession] = useState<Record<string, unknown> | null>(null);
-  const [forcedCommentSessionId, setForcedCommentSessionId] = useState<string | null>(null);
-  const [expandedCommentsSessionId, setExpandedCommentsSessionId] = useState<string | null>(null);
+  const [discussionSessionId, setDiscussionSessionId] = useState<string | null>(null);
 
   const { feedItems, loading: friendsLoading, hasMore, loadMore, refresh: refreshFriends, addComment } = useFeed();
 
@@ -237,8 +404,7 @@ export function FeedActivitiesMaquette() {
     const st = location.state as { openFeedCommentSessionId?: string } | null;
     if (!st?.openFeedCommentSessionId) return;
     setMode("friends");
-    setForcedCommentSessionId(st.openFeedCommentSessionId);
-    setExpandedCommentsSessionId(st.openFeedCommentSessionId);
+    setDiscussionSessionId(st.openFeedCommentSessionId);
     navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
   }, [location.state, location.pathname, location.search, navigate]);
 
@@ -256,13 +422,20 @@ export function FeedActivitiesMaquette() {
     return () => obs.disconnect();
   }, [hasMore, friendsLoading, loadMore, mode]);
 
-  useEffect(() => {
-    if (!forcedCommentSessionId) return;
-    const found = feedItems.some((item) => item.id === forcedCommentSessionId);
-    if (!found) return;
-    const timer = window.setTimeout(() => setForcedCommentSessionId(null), 600);
-    return () => window.clearTimeout(timer);
-  }, [feedItems, forcedCommentSessionId]);
+  const discussionSession = useMemo(
+    () => (discussionSessionId ? feedItems.find((s) => s.id === discussionSessionId) || null : null),
+    [feedItems, discussionSessionId],
+  );
+
+  if (discussionSession) {
+    return (
+      <DiscussionView
+        session={discussionSession}
+        onBack={() => setDiscussionSessionId(null)}
+        onAddComment={addComment}
+      />
+    );
+  }
 
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
@@ -419,18 +592,8 @@ export function FeedActivitiesMaquette() {
                         })
                       }
                       onActionPress={() => handleJoinFromFeed(s.id)}
-                      onCommentPress={() => setExpandedCommentsSessionId((curr) => (curr === s.id ? null : s.id))}
+                      onCommentPress={() => setDiscussionSessionId(s.id)}
                     />
-                    {(expandedCommentsSessionId === s.id || forcedCommentSessionId === s.id) && (
-                      <div className="rounded-b-[18px] bg-card px-1 pb-2">
-                        <FeedComments
-                          comments={s.latest_comments}
-                          totalComments={s.comments_count}
-                          onAddComment={(content) => addComment(s.id, content)}
-                          onViewAll={() => setExpandedCommentsSessionId(s.id)}
-                        />
-                      </div>
-                    )}
                   </div>
                 );
               })}
