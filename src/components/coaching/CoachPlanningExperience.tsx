@@ -3440,11 +3440,11 @@ export function CoachPlanningExperience() {
                 ref={myPlanScrollAnchorRef}
                 onScroll={(event) => {
                   const el = event.currentTarget;
-                  if (el.scrollTop <= 6) {
+                  if (el.scrollTop <= 24) {
                     shiftWeekByScroll("prev", "myPlan");
                     return;
                   }
-                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 6) {
+                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 24) {
                     shiftWeekByScroll("next", "myPlan");
                   }
                 }}
@@ -3570,11 +3570,11 @@ export function CoachPlanningExperience() {
                     ref={infiniteWeekScrollRef}
                     onScroll={(event) => {
                       const el = event.currentTarget;
-                      if (el.scrollTop <= 6) {
+                      if (el.scrollTop <= 24) {
                         shiftWeekByScroll("prev", "planning");
                         return;
                       }
-                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 6) {
+                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 24) {
                         shiftWeekByScroll("next", "planning");
                       }
                     }}
