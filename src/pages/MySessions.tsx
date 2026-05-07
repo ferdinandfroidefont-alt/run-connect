@@ -1048,7 +1048,9 @@ export default function MySessions() {
                     onVisibleMonthChange={setCalendarMonth}
                     onSessionClick={(s) => openSessionFromList(s as UserSession)}
                     onConfirmSession={openConfirmDialog}
-                    onCommentSession={(s) => openSessionFromList(s as UserSession)}
+                    onCommentSession={(s) =>
+                      navigate("/", { state: { openFeedCommentSessionId: s.id } })
+                    }
                     organizerProfiles={organizerProfiles}
                     currentUserId={user?.id}
                     onAddSession={() => openCreateSession()}

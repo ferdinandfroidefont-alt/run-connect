@@ -43,6 +43,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
     null,
   );
   const [selectedFriendsSession, setSelectedFriendsSession] = useState<Record<string, unknown> | null>(null);
+  const [forcedCommentSessionId, setForcedCommentSessionId] = useState<string | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const touchStartY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -79,15 +80,29 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
       openProfileDialog?: boolean;
       openSettingsDialog?: boolean;
       settingsFocus?: string;
+      openFeedCommentSessionId?: string;
     } | null;
-    if (!st?.openProfileDialog && !st?.openSettingsDialog) return;
+    if (!st?.openProfileDialog && !st?.openSettingsDialog && !st?.openFeedCommentSessionId) return;
     if (st.openProfileDialog) setShowProfileDialog(true);
     if (st.openSettingsDialog) {
       setShowSettingsDialog(true);
       setSettingsDialogFocus(st.settingsFocus || "");
     }
+    if (st.openFeedCommentSessionId) {
+      setMode("friends");
+      setForcedCommentSessionId(st.openFeedCommentSessionId);
+    }
     navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
   }, [location.state, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (!forcedCommentSessionId) return;
+    const existsInFeed = feedItems.some((item) => item.id === forcedCommentSessionId);
+    if (existsInFeed) {
+      const timer = window.setTimeout(() => setForcedCommentSessionId(null), 400);
+      return () => window.clearTimeout(timer);
+    }
+  }, [feedItems, forcedCommentSessionId]);
 
   useEffect(() => {
     if (mode !== "friends") return;
@@ -229,6 +244,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                       onUnlike={unlikeSession}
                       onAddComment={addComment}
                       onJoinSession={handleJoinSession}
+                      forceOpenComments={forcedCommentSessionId === session.id}
                       onOpenDetails={(s) => {
                         const feedSession = s as FeedSession;
                         setSelectedFriendsSession({

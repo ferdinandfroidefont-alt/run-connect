@@ -290,217 +290,104 @@ export const WeeklyPlanSessionEditor = ({
 
         </div>
 
-        {/* Bloc builder */}
-        <div className="space-y-2">
-          <button type="button" className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Bloc &gt;
-          </button>
-          {session.parsedBlocks.length > 0 ? (
-            <>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {session.parsedBlocks.map((b, idx) => (
-                  <button
-                    key={`${b.raw}-${idx}`}
-                    type="button"
-                    onClick={() => setSelectedBlockIndex(idx)}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                      idx === selectedBlockIndex
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    Bloc {idx + 1} · {BLOCK_TYPE_LABELS[b.type]}
-                  </button>
-                ))}
-              </div>
-              {selectedBlock && (
-                <div className="rounded-xl bg-secondary/50 p-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="justify-start rounded-xl text-[13px]"
-                      onClick={() =>
-                        (() => {
-                          const currentMeters = selectedBlock.distance || 1000;
-                          const useMeters = currentMeters < 1000;
-                          setWheelUnit(useMeters ? "m" : "km");
-                          setWheelA(String(useMeters ? currentMeters : Math.floor(currentMeters / 1000)));
-                          setWheelB(String(useMeters ? 0 : currentMeters % 1000));
-                          openWheel(
-                            "Distance",
-                            useMeters
-                              ? [
-                                  { items: Array.from({ length: 3000 }, (_, i) => ({ value: String(i * 5), label: String(i * 5) })), value: wheelA, onChange: setWheelA, suffix: "m" },
-                                  { items: [{ value: "m", label: "m" }, { value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
-                                ]
-                              : [
-                                  { items: Array.from({ length: 80 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: wheelUnit },
-                                  { items: Array.from({ length: 100 }, (_, i) => ({ value: String(i * 10), label: String(i * 10).padStart(3, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
-                                  { items: [{ value: "m", label: "m" }, { value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
-                                ],
-                            () => {
-                              const next =
-                                wheelUnit === "m"
-                                  ? Number.parseInt(wheelA, 10)
-                                  : wheelUnit === "km"
-                                  ? Number.parseInt(wheelA, 10) * 1000 + Number.parseInt(wheelB, 10)
-                                  : Math.round((Number.parseInt(wheelA, 10) + Number.parseInt(wheelB, 10) / 1000) * 1609.344);
-                            const nextBlocks = [...session.parsedBlocks];
-                            nextBlocks[selectedBlockIndex] = {
-                              ...selectedBlock,
-                              type: "interval",
-                              distance: next,
-                              duration: undefined,
-                              repetitions: Math.max(1, selectedBlock.repetitions || 1),
-                              pace: selectedBlock.pace || "5:30",
-                            };
-                            applyBlocks(nextBlocks);
-                            }
-                          );
-                        })()
-                      }
-                    >
-                      Distance
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="justify-start rounded-xl text-[13px]"
-                      onClick={() =>
-                        openWheel(
-                          "Répétitions",
-                          [{ items: REP_OPTIONS, value: String(selectedBlock.repetitions || 1), onChange: setWheelA }],
-                          () => {
-                            const next = wheelA;
-                            const reps = Number.parseInt(next, 10);
-                            const nextBlocks = [...session.parsedBlocks];
-                            nextBlocks[selectedBlockIndex] = {
-                              ...selectedBlock,
-                              type: "interval",
-                              repetitions: reps,
-                              distance: selectedBlock.distance || 1000,
-                              duration: undefined,
-                              pace: selectedBlock.pace || "5:30",
-                            };
-                            applyBlocks(nextBlocks);
-                          }
-                        )
-                      }
-                    >
-                      Répétitions
-                    </Button>
-                    {(selectedBlock.repetitions || 1) > 1 && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="justify-start rounded-xl text-[13px]"
-                        onClick={() =>
-                          (() => {
-                            const total = selectedBlock.recoveryDuration || 0;
-                            setWheelA(String(Math.floor(total / 3600)));
-                            setWheelB(String(Math.floor((total % 3600) / 60)));
-                            setWheelC(String(total % 60));
-                            openWheel(
-                              "Récup répétitions",
-                              [
-                                { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: "h" },
-                                { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
-                                { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelC, onChange: setWheelC, suffix: "s" },
-                              ],
-                              () => {
-                                const next = Number.parseInt(wheelA, 10) * 3600 + Number.parseInt(wheelB, 10) * 60 + Number.parseInt(wheelC, 10);
-                              const nextBlocks = [...session.parsedBlocks];
-                              nextBlocks[selectedBlockIndex] = {
-                                ...selectedBlock,
-                                recoveryDuration: next,
-                              };
-                              applyBlocks(nextBlocks);
-                              }
-                            );
-                          })()
-                        }
-                      >
-                        Récup répétitions
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="justify-start rounded-xl text-[13px]"
-                      onClick={() =>
-                        openWheel(
-                          "RPE",
-                          [{ items: RPE_OPTIONS, value: String(session.blockRpe[selectedBlockIndex] ?? 0), onChange: setWheelA }],
-                          () => {
-                            const next = wheelA;
-                            const nextRpe = [...session.blockRpe];
-                            nextRpe[selectedBlockIndex] = Number.parseInt(next, 10);
-                            applyBlocks([...session.parsedBlocks], nextRpe);
-                          }
-                        )
-                      }
-                    >
-                      RPE
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="col-span-2 rounded-xl border-dashed text-[13px]"
-                      onClick={() => {
-                        const nextBlocks = [
-                          ...session.parsedBlocks,
-                          {
-                            type: "interval",
-                            raw: "1x1000>5'30",
-                            distance: 1000,
-                            repetitions: 1,
-                            pace: "5:30",
-                            recoveryType: "trot",
-                          } as ParsedBlock,
-                        ];
-                        const nextRpe = normalizeBlockRpeLength(session.blockRpe, nextBlocks.length);
-                        applyBlocks(nextBlocks, nextRpe);
-                        setSelectedBlockIndex(nextBlocks.length - 1);
-                      }}
-                    >
-                      + Bloc
-                    </Button>
+        {/* Bloc builder — maquette blocs.html */}
+        <div className="space-y-3">
+          <p className="text-[14px] font-semibold text-[#333]">Blocs</p>
+          {[
+            {
+              id: "continu",
+              accent: "#34C759",
+              name: "Continu",
+              badge: "1",
+              sub: "Z1 · 5 km · 27 min",
+              action: "20'>5'30",
+              icon: <Waves className="h-4 w-4" />,
+              fields: [
+                ["Allure", "5'30", "/km"],
+                ["Distance", "5", "km"],
+                ["Temps", "27", "min"],
+              ],
+            },
+            {
+              id: "intervalle",
+              accent: "#0066cc",
+              name: "Intervalle",
+              badge: "2 × 2",
+              sub: "Z5 · 2 km @ 3'30 · récup 1 min",
+              action: "2x(2km>3'30 r1')",
+              icon: <BarChart3 className="h-4 w-4" />,
+              fields: [
+                ["Blocs", "1", ""],
+                ["Répétitions", "2", ""],
+                ["RPE", "8", ""],
+              ],
+            },
+            {
+              id: "pyramide",
+              accent: "#FF9500",
+              name: "Pyramide",
+              badge: "3 + 2 miroirs",
+              sub: "Symétrique · 5 paliers",
+              action: "200>5'30, 400>5'00, 600>4'40, 400>5'00, 200>5'30",
+              icon: <ChevronDown className="h-4 w-4 -rotate-90" />,
+              fields: [
+                ["Palier 1", "200 m", "5'30"],
+                ["Palier 2", "400 m", "5'00"],
+                ["Palier 3", "600 m", "4'40"],
+              ],
+            },
+            {
+              id: "variation",
+              accent: "#AF52DE",
+              name: "Variation",
+              badge: "7'00 → 4'30",
+              sub: "Z2 · 5 km · 30 min",
+              action: "5km de 7'00 à 4'30",
+              icon: <BarChart3 className="h-4 w-4" />,
+              fields: [
+                ["Début", "7'00", "/km"],
+                ["Fin", "4'30", "/km"],
+                ["RPE", "7", ""],
+              ],
+            },
+          ].map((card) => (
+            <div key={card.id} className="overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
+              <div className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderLeft: `3px solid ${card.accent}` }}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.accent }}>
+                      {card.icon}
+                    </span>
+                    <span className="text-[16px] font-semibold">{card.name}</span>
+                    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: card.accent, backgroundColor: `${card.accent}22` }}>
+                      {card.badge}
+                    </span>
                   </div>
-                  <div className="mt-2 rounded-lg border border-border/60 bg-card px-3 py-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bloc actif</p>
-                    <p className="mt-1 text-[13px] font-semibold text-foreground">
-                      {BLOCK_TYPE_LABELS[selectedBlock.type]} · {selectedBlock.distance ? `${selectedBlock.distance}m` : `${selectedBlock.duration || 0} min`} · x{selectedBlock.repetitions || 1}
-                    </p>
-                    <p className="mt-1 text-[12px] text-muted-foreground">Récup: {recoveryLabel(selectedBlock.recoveryDuration)}</p>
-                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{blockToRcc(selectedBlock)}</p>
-                  </div>
+                  <p className="mt-1 truncate text-[13px] text-[#7a7a7a]">{card.sub}</p>
                 </div>
-              )}
-            </>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full rounded-xl border-dashed text-[13px]"
-              onClick={() => {
-                const nextBlocks: ParsedBlock[] = [
-                  {
-                    type: "interval",
-                    raw: "1x1000>5'30",
-                    distance: 1000,
-                    repetitions: 1,
-                    pace: "5:30",
-                    recoveryType: "trot",
-                  },
-                ];
-                applyBlocks(nextBlocks, [0]);
-                setSelectedBlockIndex(0);
-              }}
-            >
-              + Bloc
-            </Button>
-          )}
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 rounded-full px-3 text-[11px] font-semibold text-white"
+                  style={{ backgroundColor: card.accent }}
+                  onClick={() => update("rccCode", session.rccCode.trim() ? `${session.rccCode}, ${card.action}` : card.action)}
+                >
+                  Ajouter
+                </Button>
+              </div>
+              <div className="border-t border-[#f0f0f0] px-4 py-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {card.fields.map(([lbl, val, unit], idx) => (
+                    <div key={`${card.id}-${idx}`}>
+                      <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.35px] text-[#7a7a7a]">{lbl}</p>
+                      <input readOnly value={val} className="h-9 w-full rounded-[11px] border border-[#e0e0e0] bg-white px-2 text-center text-[14px] font-medium text-[#1d1d1f]" />
+                      <p className="mt-1 text-center text-[10px] text-[#7a7a7a]">{unit || "\u00A0"}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* RCC Editor */}

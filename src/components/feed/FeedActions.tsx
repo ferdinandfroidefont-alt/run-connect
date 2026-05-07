@@ -114,15 +114,24 @@ export const FeedActions = ({
           </motion.button>
         </div>
 
-        {/* Join Button */}
-        <Button
-          onClick={onJoin}
-          size="sm"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 shadow-lg shadow-primary/20 font-medium"
-        >
-          <UserPlus className="h-4 w-4 mr-1.5" />
-          Rejoindre
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={onComment}
+            size="sm"
+            variant="outline"
+            className="rounded-full px-4 font-medium"
+          >
+            Commenter
+          </Button>
+          <Button
+            onClick={onJoin}
+            size="sm"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 shadow-lg shadow-primary/20 font-medium"
+          >
+            <UserPlus className="h-4 w-4 mr-1.5" />
+            Rejoindre
+          </Button>
+        </div>
       </div>
     </div>
   );
