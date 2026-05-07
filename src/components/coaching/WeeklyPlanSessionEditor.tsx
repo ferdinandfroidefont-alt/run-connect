@@ -200,244 +200,113 @@ export const WeeklyPlanSessionEditor = ({
   const currentPaceExamples = PACE_EXAMPLES[session.activityType] || PACE_EXAMPLES.running;
 
   const selectedBlock = session.parsedBlocks?.[selectedBlockIndex] || null;
+  const estimatedMin = Math.max(0, (session.parsedBlocks?.length || 0) * 8);
+  const estimatedKm = Math.max(0, Number((session.parsedBlocks?.length * 1.8 || 0).toFixed(1)));
 
   return (
-    <div className="overflow-hidden bg-transparent">
-      {/* Header with day + actions */}
-      <div className="bg-secondary/50 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-            <span className="text-[13px] font-bold text-primary">
-              {DAY_SHORT[session.dayIndex]}
-            </span>
-          </div>
-          <div>
-            <p className="text-[15px] font-semibold text-foreground leading-tight">
-              {session.objective || "Titre de la séance"}
-            </p>
-            <p className="text-[12px] text-muted-foreground">{DAY_LABELS[session.dayIndex]}</p>
-          </div>
+    <div className="overflow-hidden bg-[#f5f5f7]">
+      <div className="space-y-5 p-4">
+        <div className="grid grid-cols-2 gap-2 rounded-full border border-[#e0e0e0] bg-white p-1">
+          <button type="button" className="h-10 rounded-full bg-[#0066cc] text-[15px] font-semibold text-white">Construire</button>
+          <button type="button" onClick={() => setShowTemplates(true)} className="h-10 rounded-full text-[15px] font-semibold text-[#1d1d1f]">Modèles</button>
         </div>
-        <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" title="Dupliquer">
-                <Copy className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {otherDays.map(d => (
-                <DropdownMenuItem key={d.index} onClick={() => onDuplicate(d.index)}>
-                  {DAY_LABELS[d.index]}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-destructive" onClick={onDelete}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
-      <div className="p-4 space-y-4">
-        {/* Session title */}
-        <div>
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-            Titre de la séance
-          </label>
+        <div className="space-y-1">
           <Input
             value={session.objective}
-            onChange={e => update("objective", e.target.value)}
-            placeholder="Ex: Footing, VMA, Seuil..."
-            className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px]"
+            onChange={(e) => update("objective", e.target.value)}
+            placeholder="Nom de la séance"
+            className="h-auto border-0 bg-transparent px-0 py-0 font-display text-[36px] font-semibold tracking-[-0.5px] text-[#1d1d1f] placeholder:text-[#7a7a7a] shadow-none focus-visible:ring-0"
           />
+          <p className="text-[14px] text-[#7a7a7a]">
+            {estimatedKm > 0 ? `${estimatedKm} km · ~${estimatedMin} min` : "11 km · ~54 min"}
+          </p>
         </div>
 
-        {/* Template button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-10 rounded-xl text-[14px] w-full border-dashed border-border/80 hover:bg-primary/5"
-          onClick={() => setShowTemplates(true)}
-        >
-          <BookOpen className="h-4 w-4 mr-2 text-primary" />
-          Charger un template
-        </Button>
-
-        {/* Activity type + Objective */}
-        <div className="space-y-3">
-          <div>
-            <button type="button" className="mb-1.5 inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Type &gt;
-            </button>
-            <div className="grid grid-cols-3 gap-2">
-              {ACTIVITY_TYPES.map((a) => (
-                <button
-                  key={a.value}
-                  type="button"
-                  onClick={() => update("activityType", a.value)}
-                  className={`h-10 rounded-xl text-[13px] font-semibold transition-colors ${
-                    session.activityType === a.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary/70 text-muted-foreground"
-                  }`}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Bloc builder — maquette blocs.html */}
-        <div className="space-y-3">
-          <p className="text-[14px] font-semibold text-[#333]">Blocs</p>
+        <div className="grid grid-cols-4 gap-[10px]">
           {[
-            {
-              id: "continu",
-              accent: "#34C759",
-              name: "Continu",
-              badge: "1",
-              sub: "Z1 · 5 km · 27 min",
-              action: "20'>5'30",
-              icon: <Waves className="h-4 w-4" />,
-              fields: [
-                ["Allure", "5'30", "/km"],
-                ["Distance", "5", "km"],
-                ["Temps", "27", "min"],
-              ],
-            },
-            {
-              id: "intervalle",
-              accent: "#0066cc",
-              name: "Intervalle",
-              badge: "2 × 2",
-              sub: "Z5 · 2 km @ 3'30 · récup 1 min",
-              action: "2x(2km>3'30 r1')",
-              icon: <BarChart3 className="h-4 w-4" />,
-              fields: [
-                ["Blocs", "1", ""],
-                ["Répétitions", "2", ""],
-                ["RPE", "8", ""],
-              ],
-            },
-            {
-              id: "pyramide",
-              accent: "#FF9500",
-              name: "Pyramide",
-              badge: "3 + 2 miroirs",
-              sub: "Symétrique · 5 paliers",
-              action: "200>5'30, 400>5'00, 600>4'40, 400>5'00, 200>5'30",
-              icon: <ChevronDown className="h-4 w-4 -rotate-90" />,
-              fields: [
-                ["Palier 1", "200 m", "5'30"],
-                ["Palier 2", "400 m", "5'00"],
-                ["Palier 3", "600 m", "4'40"],
-              ],
-            },
-            {
-              id: "variation",
-              accent: "#AF52DE",
-              name: "Variation",
-              badge: "7'00 → 4'30",
-              sub: "Z2 · 5 km · 30 min",
-              action: "5km de 7'00 à 4'30",
-              icon: <BarChart3 className="h-4 w-4" />,
-              fields: [
-                ["Début", "7'00", "/km"],
-                ["Fin", "4'30", "/km"],
-                ["RPE", "7", ""],
-              ],
-            },
-          ].map((card) => (
-            <div key={card.id} className="overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
-              <div className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderLeft: `3px solid ${card.accent}` }}>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.accent }}>
-                      {card.icon}
-                    </span>
-                    <span className="text-[16px] font-semibold">{card.name}</span>
-                    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: card.accent, backgroundColor: `${card.accent}22` }}>
-                      {card.badge}
-                    </span>
-                  </div>
-                  <p className="mt-1 truncate text-[13px] text-[#7a7a7a]">{card.sub}</p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 rounded-full px-3 text-[11px] font-semibold text-white"
-                  style={{ backgroundColor: card.accent }}
-                  onClick={() => update("rccCode", session.rccCode.trim() ? `${session.rccCode}, ${card.action}` : card.action)}
-                >
-                  Ajouter
-                </Button>
-              </div>
-              <div className="border-t border-[#f0f0f0] px-4 py-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {card.fields.map(([lbl, val, unit], idx) => (
-                    <div key={`${card.id}-${idx}`}>
-                      <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.35px] text-[#7a7a7a]">{lbl}</p>
-                      <input readOnly value={val} className="h-9 w-full rounded-[11px] border border-[#e0e0e0] bg-white px-2 text-center text-[14px] font-medium text-[#1d1d1f]" />
-                      <p className="mt-1 text-center text-[10px] text-[#7a7a7a]">{unit || "\u00A0"}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            { key: "running", emoji: "🏃", bg: "#007AFF" },
+            { key: "cycling", emoji: "🚴", bg: "#FF3B30" },
+            { key: "swimming", emoji: "🏊", bg: "#5AC8FA" },
+            { key: "running", emoji: "💪", bg: "#FF9500" },
+          ].map((sport, idx) => (
+            <button
+              key={`${sport.key}-${idx}`}
+              type="button"
+              onClick={() => update("activityType", sport.key)}
+              className="relative aspect-square rounded-[14px] text-[36px]"
+              style={{ backgroundColor: sport.bg }}
+            >
+              {session.activityType === sport.key && idx < 3 ? (
+                <span className="pointer-events-none absolute inset-0 rounded-[14px] shadow-[0_0_0_2px_#f5f5f7,0_0_0_4px_#0066cc]" />
+              ) : null}
+              {sport.emoji}
+            </button>
           ))}
         </div>
 
-        {/* RCC Editor */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Contenu · Allure en {currentPaceUnit}
-            </label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-lg text-muted-foreground hover:text-foreground">
-                  <HelpCircle className="h-3.5 w-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 text-[13px] space-y-2 p-4" side="top">
-                <p className="font-semibold text-[15px]">Formats RCC — {currentPaceUnit}</p>
-                <div className="space-y-2 text-muted-foreground">
-                  {currentPaceExamples.map(ex => (
-                    <div key={ex.code}>
-                      <code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">{ex.code}</code> → {ex.label}
-                    </div>
-                  ))}
-                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">10'</code> → 10 min (allure libre)</div>
-                  <div><code className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">r1'30&gt;trot</code> → Récup 1'30 trot</div>
-                </div>
-                <p className="text-muted-foreground pt-1 text-[12px]">Séparez les blocs par des virgules.</p>
-              </PopoverContent>
-            </Popover>
+        <div className="space-y-2">
+          <p className="pl-0.5 text-[14px] font-semibold text-[#333]">Schéma de séance</p>
+          <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-3">
+            <svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" className="w-full">
+              <line x1="40" y1="20" x2="360" y2="20" stroke="#e0e0e0" strokeDasharray="2 3" />
+              <line x1="40" y1="50" x2="360" y2="50" stroke="#e0e0e0" strokeDasharray="2 3" />
+              <line x1="40" y1="80" x2="360" y2="80" stroke="#e0e0e0" strokeDasharray="2 3" />
+              <line x1="40" y1="110" x2="360" y2="110" stroke="#e0e0e0" strokeDasharray="2 3" />
+              <line x1="40" y1="140" x2="360" y2="140" stroke="#e0e0e0" strokeDasharray="2 3" />
+              <line x1="40" y1="170" x2="360" y2="170" stroke="#e0e0e0" strokeDasharray="2 3" />
+              <line x1="40" y1="200" x2="360" y2="200" stroke="#1d1d1f" strokeOpacity="0.18" />
+              <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fontWeight="600" fill="#7a7a7a">
+                <text x="32" y="38" textAnchor="end">Z6</text>
+                <text x="32" y="68" textAnchor="end">Z5</text>
+                <text x="32" y="98" textAnchor="end">Z4</text>
+                <text x="32" y="128" textAnchor="end">Z3</text>
+                <text x="32" y="158" textAnchor="end">Z2</text>
+                <text x="32" y="188" textAnchor="end">Z1</text>
+              </g>
+              <rect x="40" y="170" width="144" height="30" fill="#B5B5BA" rx="3" />
+              <rect x="184" y="50" width="37" height="150" fill="#FF9500" rx="3" />
+              <rect x="221" y="170" width="6" height="30" fill="#B5B5BA" rx="2" />
+              <rect x="227" y="50" width="37" height="150" fill="#FF9500" rx="3" />
+              <rect x="264" y="170" width="59" height="30" fill="#B5B5BA" rx="3" />
+            </svg>
           </div>
-          <RCCEditor
-            value={session.rccCode}
-            onChange={v => update("rccCode", v)}
-            onParsedChange={handleParsedChange}
-          />
         </div>
 
-        {/* Coach notes */}
-        <div>
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-            Notes coach (optionnel)
-          </label>
-          <Textarea
-            value={session.coachNotes}
-            onChange={e => update("coachNotes", e.target.value)}
-            placeholder="Consignes, rappels, motivation..."
-            className="rounded-xl bg-secondary/50 border-0 text-[14px] min-h-[60px] resize-none"
-            rows={2}
-          />
+        <div className="space-y-2">
+          <p className="pl-0.5 text-[14px] font-semibold text-[#333]">Ajouter un bloc</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: "Continu", code: "20'>5'30", svg: <rect x="2" y="9" width="40" height="6" rx="2" fill="#0066cc" /> },
+              { label: "Intervalle", code: "6x3'>3'30", svg: <><rect x="2" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/><rect x="11" y="14" width="3" height="6" rx="1" fill="#B5B5BA"/><rect x="17" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/><rect x="26" y="14" width="3" height="6" rx="1" fill="#B5B5BA"/><rect x="32" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/></> },
+              { label: "Pyramide", code: "200>4'00, 400>4'10, 600>4'20, 400>4'10, 200>4'00", svg: <><rect x="2" y="14" width="5" height="6" rx="1" fill="#34C759"/><rect x="9" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/><rect x="16" y="4" width="5" height="16" rx="1.5" fill="#FF9500"/><rect x="23" y="4" width="5" height="16" rx="1.5" fill="#FF9500"/><rect x="30" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/><rect x="37" y="14" width="5" height="6" rx="1" fill="#34C759"/></> },
+              { label: "Variation", code: "10'>5'30, 10'>4'45, 10'>5'15", svg: <><rect x="2" y="16" width="5" height="4" rx="1" fill="#B5B5BA"/><rect x="9" y="12" width="5" height="8" rx="1" fill="#34C759"/><rect x="16" y="6" width="5" height="14" rx="1.3" fill="#FF9500"/><rect x="23" y="14" width="5" height="6" rx="1" fill="#0066cc"/><rect x="30" y="4" width="5" height="16" rx="1.5" fill="#FF3B30"/><rect x="37" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/></> },
+            ].map((item, idx) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => update("rccCode", session.rccCode.trim() ? `${session.rccCode}, ${item.code}` : item.code)}
+                className={`rounded-[14px] border bg-white px-2 py-2 ${idx === 2 ? "border-2 border-[#0066cc]" : "border-[#e0e0e0]"}`}
+              >
+                <svg viewBox="0 0 44 22" className="mx-auto h-5 w-11" fill="none">{item.svg}</svg>
+                <span className="mt-1 block text-[12px]">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
+        <div className="space-y-2">
+          <p className="pl-0.5 text-[14px] font-semibold text-[#333]">Description</p>
+          <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-3">
+            <Textarea
+              value={session.coachNotes}
+              onChange={(e) => update("coachNotes", e.target.value)}
+              placeholder="27' à 5'30/km + 2 × 2 km à 3'30/km (récup 1 min) + 11' à 5'30/km"
+              rows={3}
+              className="resize-none border-0 bg-transparent p-0 text-[14px] leading-[1.4] text-[#333] shadow-none focus-visible:ring-0"
+            />
+          </div>
+        </div>
       </div>
 
       <CoachingTemplatesDialog
