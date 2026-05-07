@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
 import { Group, Cell } from '@/components/apple';
 import { useToast } from '@/hooks/use-toast';
+import { MiniMapPreview } from '@/components/feed/MiniMapPreview';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -118,37 +119,24 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         {/* Hero recap card — Apple product tile aesthetic */}
         {!embedInFinalize && (
           <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card shadow-[var(--shadow-card)]">
-            {/* Maquette 12 — carte avec carte (aperçu lieu) */}
+            {/* Carte Mapbox réelle + pin séance sur le lieu de rendez-vous */}
             <div className="relative h-40 w-full overflow-hidden bg-[#c5d9e8] dark:bg-[#1a3550]">
-              <svg
-                className="absolute inset-0 h-full w-full opacity-35 dark:opacity-25"
-                viewBox="0 0 320 140"
-                preserveAspectRatio="xMidYMid slice"
-                aria-hidden
-              >
-                <path
-                  d="M0 90 Q60 70 120 85 T240 75 L320 95 V140 H0 Z"
-                  fill="rgba(255,255,255,0.55)"
-                  className="dark:fill-white/10"
+              {selectedLocation ? (
+                <MiniMapPreview
+                  lat={selectedLocation.lat}
+                  lng={selectedLocation.lng}
+                  avatarUrl={imagePreview}
+                  activityType={formData.activity_type}
+                  interactive={false}
+                  showHint={false}
+                  zoom={13}
+                  className="h-full w-full"
                 />
-                <path
-                  d="M0 60 Q80 40 160 55 T320 45"
-                  stroke="rgba(255,255,255,0.7)"
-                  strokeWidth="2"
-                  fill="none"
-                  className="dark:stroke-white/25"
-                />
-                <path
-                  d="M40 30 Q100 100 200 80 T300 100"
-                  stroke="rgba(0,102,204,0.35)"
-                  strokeWidth="1.5"
-                  fill="none"
-                />
-              </svg>
-              <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent dark:from-black/20" />
-              <div className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-primary-foreground shadow-[0_6px_16px_rgba(0,102,204,0.35)]">
-                <MapPin className="h-5 w-5" strokeWidth={2.2} />
-              </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                  <MapPin className="h-5 w-5" />
+                </div>
+              )}
             </div>
 
             <div className="space-y-1 px-4 pb-5 pt-4">

@@ -1455,23 +1455,18 @@ html, body {
   filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.45));
 }
 
-/* Boîtier visuel carte (pastille + photo + pointe), aligné sur le mockup AvatarPin (72×84). */
+/* Boîtier visuel carte (pastille + photo + pointe), aligné maquette pin activité. */
 .rc-session-pin__marker-visual {
   position: relative;
   flex-shrink: 0;
-  width: 72px;
-  height: 84px;
-  /* Drop-shadow porté par le filtre : toute la silhouette du pin (shell + tip + disc) reçoit l'ombre. */
-  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.22));
+  width: 82px;
+  height: 96px;
+  filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24));
 }
 
-/* Shell blanc qui enveloppe le pin (mockup : svg path 72×84). Disque rond + queue collée dessous. */
+/* Legacy shell node preserved for compatibility. */
 .rc-session-pin__shell {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  display: block;
+  display: none;
 }
 
 .rc-session-pin__meta {
@@ -1538,14 +1533,14 @@ html, body {
   display: none;
 }
 
-/* Disc coloré (anneau autour de l'avatar) — mockup AvatarPin : 60×60 (avatar 54×54 + bord blanc 2px). */
+/* Disc coloré du pin (anneau externe). */
 .rc-session-pin__circle {
   position: absolute;
   left: 50%;
-  top: 6px;
+  top: 0;
   z-index: 1;
-  width: 60px;
-  height: 60px;
+  width: 74px;
+  height: 74px;
   transform: translateX(-50%);
   border-radius: 999px;
   box-sizing: border-box;
@@ -1562,33 +1557,33 @@ html, body {
   box-shadow: none;
 }
 
-/* Pointe (queue) — désormais portée par le shell blanc SVG ; on conserve l'élément pour les
- * variantes "depth" / "premium" qui colorisent encore la pointe (legacy compat). */
+/* Pointe lisse : carré arrondi rotaté pour reproduire la forme goutte de la maquette. */
 .rc-session-pin__tip {
   position: absolute;
   left: 50%;
-  top: 60px;
+  top: 55px;
   z-index: 1;
-  width: 22px;
-  height: 18px;
-  transform: translateX(-50%);
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  width: 30px;
+  height: 30px;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 0 0 9px 0;
+  background: var(--rc-session-pin-color, hsl(var(--primary)));
   pointer-events: none;
-  display: none;
+  display: block;
 }
 
-/* Avatar 54×54 + bord blanc 2px (mockup AvatarPin → 60-3-3 = 54). */
+/* Avatar centré dans le pin (photo profil). */
 .rc-session-pin__avatar-ring {
   position: absolute;
   left: 50%;
-  top: 9px;
+  top: 6px;
   z-index: 2;
   box-sizing: border-box;
-  width: 54px;
-  height: 54px;
+  width: 62px;
+  height: 62px;
   transform: translateX(-50%);
   border-radius: 999px;
-  border: 2px solid #ffffff;
+  border: 3px solid #ffffff;
   overflow: hidden;
   background: hsl(var(--muted));
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.18);

@@ -15,6 +15,7 @@ import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
 import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
+import { MiniMapPreview } from "@/components/feed/MiniMapPreview";
 import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 import { cn } from "@/lib/utils";
 
@@ -68,36 +69,6 @@ function shortLocation(name: string | null | undefined) {
   return cut || name;
 }
 
-/** Mini-carte abstraite — même SVG que la maquette 23 (`MiniMap` dans `apple-screens.jsx`). */
-export function FeedMaquetteMiniMap({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 360 220"
-      className={cn("block h-full w-full", className)}
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden
-    >
-      <rect width="360" height="220" fill="#e6ecef" />
-      <path
-        d="M120 60 Q170 40 230 70 Q280 90 240 140 Q190 175 130 150 Q90 130 100 100 Q108 70 120 60Z"
-        fill="#bbd6e6"
-      />
-      <path d="M0 110 Q80 100 180 120 Q260 130 360 100" stroke="#fff" strokeWidth="3" fill="none" />
-      <path d="M40 30 Q80 90 180 120 Q220 140 200 200" stroke="#fff" strokeWidth="2.5" fill="none" />
-      <g>
-        <circle cx="100" cy="105" r="6" fill="#0066cc" />
-        <circle cx="100" cy="105" r="3" fill="#fff" />
-        <circle cx="180" cy="118" r="6" fill="#34c759" />
-        <circle cx="180" cy="118" r="3" fill="#fff" />
-        <circle cx="240" cy="100" r="6" fill="#5ac8fa" />
-        <circle cx="240" cy="100" r="3" fill="#fff" />
-        <circle cx="290" cy="140" r="6" fill="#ff9500" />
-        <circle cx="290" cy="140" r="3" fill="#fff" />
-      </g>
-    </svg>
-  );
-}
-
 function FeedMaquetteTile({
   who,
   when,
@@ -107,6 +78,10 @@ function FeedMaquetteTile({
   tone,
   live,
   actionLabel,
+  locationLat,
+  locationLng,
+  avatarUrl,
+  activityType,
   onCardPress,
   onActionPress,
 }: {
@@ -118,6 +93,10 @@ function FeedMaquetteTile({
   tone: string;
   live: boolean;
   actionLabel: string;
+  locationLat: number;
+  locationLng: number;
+  avatarUrl?: string | null;
+  activityType?: string;
   onCardPress: () => void;
   onActionPress: (e: React.MouseEvent) => void;
 }) {
@@ -157,7 +136,15 @@ function FeedMaquetteTile({
       </div>
 
       <div className="relative h-[130px] w-full overflow-hidden">
-        <FeedMaquetteMiniMap />
+        <MiniMapPreview
+          lat={locationLat}
+          lng={locationLng}
+          onOpenSession={onCardPress}
+          avatarUrl={avatarUrl}
+          activityType={activityType}
+          showHint={false}
+          className="h-full w-full"
+        />
         <div className="absolute bottom-3.5 left-3.5 text-[#1d1d1f] dark:text-foreground">
           <span className="text-[22px] leading-none">{sportEmoji}</span>{" "}
           <span className="font-display text-[26px] font-bold leading-none tracking-[-0.5px]">{kmDisplay}</span>{" "}
@@ -376,6 +363,10 @@ export function FeedActivitiesMaquette() {
                     tone={tone}
                     live={live}
                     actionLabel={live ? "Suivre" : "Rejoindre"}
+                    locationLat={s.location_lat}
+                    locationLng={s.location_lng}
+                    avatarUrl={s.organizer.avatar_url || undefined}
+                    activityType={s.activity_type}
                     onCardPress={() =>
                       setSelectedFriendsSession({
                         ...s,
@@ -436,6 +427,10 @@ export function FeedActivitiesMaquette() {
                   tone={tone}
                   live={live}
                   actionLabel={live ? "Suivre" : "Rejoindre"}
+                  locationLat={s.location_lat}
+                  locationLng={s.location_lng}
+                  avatarUrl={s.organizer.avatar_url || undefined}
+                  activityType={s.activity_type}
                   onCardPress={() =>
                     setSelectedDiscoverSession({
                       ...s,

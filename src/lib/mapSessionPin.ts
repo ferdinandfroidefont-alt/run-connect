@@ -17,16 +17,19 @@ export const DEFAULT_SESSION_PIN_VARIANT: SessionPinVariant = "depth";
 
 function resolveSessionPinColor(activityType?: string): string {
   const t = (activityType ?? "").toLowerCase();
+  if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike")) {
+    return "#7b2cbf";
+  }
   if (t.includes("velo") || t.includes("vtt") || t.includes("bike") || t.includes("cycl") || t.includes("gravel")) {
-    return "#ff375f";
+    return "#0e8e3a";
   }
   if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf")) {
-    return "#5ac8fa";
+    return "#00858f";
   }
-  if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike")) {
-    return "#34c759";
+  if (t.includes("muscu") || t.includes("strength") || t.includes("gym") || t.includes("crossfit")) {
+    return "#cc4d00";
   }
-  return "#007aff";
+  return "#0066cc";
 }
 
 /** `VITE_MAP_PIN_VARIANT` = `minimal` | `depth` | `premium` (sinon défaut). */
@@ -45,9 +48,10 @@ export function createSessionPinButton(opts: {
   variant?: SessionPinVariant;
   meta?: SessionPinMeta;
   activityType?: string;
+  colorOverride?: string;
 }): HTMLButtonElement {
   const variant = opts.variant ?? resolveSessionPinVariant();
-  const pinColor = resolveSessionPinColor(opts.activityType);
+  const pinColor = opts.colorOverride ?? resolveSessionPinColor(opts.activityType);
 
   const pin = document.createElement("button");
   pin.type = "button";
@@ -69,17 +73,13 @@ export function createSessionPinButton(opts: {
   const visual = document.createElement("span");
   visual.className = "rc-session-pin__marker-visual";
 
-  // Shell blanc (mockup AvatarPin) — coque autour du disque coloré + queue intégrée.
-  // Path : disque rond 64×64 centré (rayon 32) + queue en V qui descend jusqu'à y=80.
+  // Legacy shell element kept for backward compatibility; shape is now fully handled by CSS.
   const shell = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  shell.setAttribute("viewBox", "0 0 72 84");
+  shell.setAttribute("viewBox", "0 0 1 1");
   shell.setAttribute("aria-hidden", "true");
   shell.classList.add("rc-session-pin__shell");
   const shellPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  shellPath.setAttribute(
-    "d",
-    "M36 80 L26 64 Q4 58 4 34 A32 32 0 1 1 68 34 Q68 58 46 64 Z"
-  );
+  shellPath.setAttribute("d", "M0 0Z");
   shellPath.setAttribute("fill", "var(--rc-session-pin-color, #007aff)");
   shell.appendChild(shellPath);
 

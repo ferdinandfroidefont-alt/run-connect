@@ -12,9 +12,25 @@ interface MiniMapPreviewProps {
   sessionId?: string;
   onOpenSession?: () => void;
   avatarUrl?: string | null;
+  activityType?: string;
+  interactive?: boolean;
+  showHint?: boolean;
+  className?: string;
+  zoom?: number;
 }
 
-export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }: MiniMapPreviewProps) => {
+export const MiniMapPreview = ({
+  lat,
+  lng,
+  sessionId,
+  onOpenSession,
+  avatarUrl,
+  activityType,
+  interactive = true,
+  showHint,
+  className,
+  zoom = 12,
+}: MiniMapPreviewProps) => {
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -23,6 +39,7 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }
   const [error, setError] = useState(false);
 
   const handleMapClick = useCallback(() => {
+    if (!interactive) return;
     if (onOpenSession) {
       onOpenSession();
       return;
@@ -34,7 +51,7 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }
       ...(sessionId && { sessionId }),
     });
     navigate(`/?${params.toString()}`);
-  }, [lat, lng, onOpenSession, sessionId, navigate]);
+  }, [interactive, lat, lng, onOpenSession, sessionId, navigate]);
 
   useEffect(() => {
     if (!mapRef.current || lat === undefined || lat === null || lng === undefined || lng === null) {
@@ -57,8 +74,8 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }
 
         const map = await createEmbeddedMapboxMap(mapRef.current, {
           center: { lat, lng },
-          zoom: 12,
-          interactive: true,
+          zoom,
+          interactive,
         });
         mapInstanceRef.current = map;
 
@@ -73,6 +90,7 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }
           avatarUrl: avatarUrl || '/placeholder.svg',
           ariaLabel: 'Séance sur la carte',
           variant: resolveSessionPinVariant(),
+          activityType,
         });
         wrap.appendChild(pin);
 
@@ -102,7 +120,7 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }
       mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
     };
-  }, [lat, lng, handleMapClick, avatarUrl]);
+  }, [lat, lng, handleMapClick, avatarUrl, zoom, interactive, activityType]);
 
   if (error) {
     return (
@@ -113,16 +131,22 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className={`relative h-full w-full ${className ?? ''}`}>
       {isLoading && (
         <div className="absolute inset-0 rounded-xl bg-muted animate-pulse flex items-center justify-center z-10">
           <span className="text-muted-foreground text-sm">Chargement...</span>
         </div>
       )}
-      <div ref={mapRef} className="w-full h-full rounded-xl cursor-pointer" onClick={handleMapClick} />
-      <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 text-xs text-muted-foreground pointer-events-none">
-        Cliquer pour voir
-      </div>
+      <div
+        ref={mapRef}
+        className={`h-full w-full rounded-xl ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
+        onClick={handleMapClick}
+      />
+      {(showHint ?? interactive) && (
+        <div className="pointer-events-none absolute bottom-2 right-2 rounded-lg bg-background/80 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+          Cliquer pour voir
+        </div>
+      )}
     </div>
   );
 };

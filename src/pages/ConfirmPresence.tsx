@@ -245,7 +245,8 @@ export default function ConfirmPresence({
 
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-ios-4',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-ios-4',
+          selectedSession && userRole === 'participant' ? 'overflow-y-hidden' : 'overflow-y-auto',
           embedded && 'pt-ios-2',
         )}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'none' }}
@@ -303,7 +304,7 @@ export default function ConfirmPresence({
           </div>
         ) : !selectedSession ? (
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
-            {embedded && (
+            {embedded && userRole !== 'creator' && userRole !== 'participant' && (
               <button
                 type="button"
                 onClick={handleBack}
@@ -361,23 +362,25 @@ export default function ConfirmPresence({
                 Retour
               </button>
             )}
-            <button
-              onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
-              className="ios-card flex w-full min-w-0 max-w-full items-center gap-3 p-4 transition-colors active:bg-secondary"
-            >
-              <div className="ios-list-row-icon shrink-0 bg-[#FF9500]">
-                <MapPin className="h-[18px] w-[18px] text-white" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-[15px] font-medium text-foreground">
-                  {t('confirmPresence.trackParticipants') || 'Suivre les participants sur la carte'}
-                </p>
-                <p className="text-[12px] text-muted-foreground">
-                  {t('confirmPresence.trackParticipantsDescription') || 'Voir en temps réel où se trouvent les autres'}
-                </p>
-              </div>
-              <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
-            </button>
+            {userRole !== 'creator' && userRole !== 'participant' && (
+              <button
+                onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
+                className="ios-card flex w-full min-w-0 max-w-full items-center gap-3 p-4 transition-colors active:bg-secondary"
+              >
+                <div className="ios-list-row-icon shrink-0 bg-[#FF9500]">
+                  <MapPin className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium text-foreground">
+                    {t('confirmPresence.trackParticipants') || 'Suivre les participants sur la carte'}
+                  </p>
+                  <p className="text-[12px] text-muted-foreground">
+                    {t('confirmPresence.trackParticipantsDescription') || 'Voir en temps réel où se trouvent les autres'}
+                  </p>
+                </div>
+                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+              </button>
+            )}
 
             {userRole === 'creator' ? (
               <CreatorValidationView

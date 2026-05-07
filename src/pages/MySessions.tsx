@@ -28,6 +28,7 @@ import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
 import { MainTopHeader } from '@/components/layout/MainTopHeader';
+import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
@@ -111,6 +112,7 @@ export default function MySessions() {
   const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [selectedSessionForDialog, setSelectedSessionForDialog] = useState<Record<string, unknown> | null>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
 
 
@@ -452,18 +454,41 @@ export default function MySessions() {
     };
   }, [user]);
 
-  const handleSessionClick = async (session: UserSession) => {
-    setSelectedSession(session);
-    await loadSessionParticipants(session.id);
+  const handleSessionClick = (session: UserSession) => {
+    const fallbackOrganizer = session.organizer_id ? organizerProfiles.get(session.organizer_id) : null;
+    const fallbackUsername =
+      typeof user?.user_metadata?.username === 'string' && user.user_metadata.username.trim().length > 0
+        ? user.user_metadata.username
+        : 'utilisateur';
+    const fallbackDisplayName =
+      typeof user?.user_metadata?.display_name === 'string' && user.user_metadata.display_name.trim().length > 0
+        ? user.user_metadata.display_name
+        : fallbackUsername;
+    const fallbackAvatar =
+      typeof user?.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : undefined;
+
+    setSelectedSessionForDialog({
+      ...session,
+      session_type: session.session_type || session.activity_type,
+      intensity: session.intensity || 'moderate',
+      organizer_id: session.organizer_id ?? user?.id ?? '',
+      location_lat: Number.isFinite(Number(session.location_lat)) ? Number(session.location_lat) : 48.8566,
+      location_lng: Number.isFinite(Number(session.location_lng)) ? Number(session.location_lng) : 2.3522,
+      profiles: {
+        username: fallbackOrganizer?.username || fallbackUsername,
+        display_name: fallbackOrganizer?.display_name || fallbackDisplayName,
+        avatar_url: fallbackOrganizer?.avatar_url || fallbackAvatar,
+      },
+    });
   };
 
-  const openSessionFromList = async (session: UserSession) => {
+  const openSessionFromList = (session: UserSession) => {
     if (session.organizer_id && user?.id && session.organizer_id !== user.id) {
       setSessionSource('joined');
     } else {
       setSessionSource('created');
     }
-    await handleSessionClick(session);
+    handleSessionClick(session);
   };
 
   const handleEditClick = () => {
@@ -1021,7 +1046,7 @@ export default function MySessions() {
                     onSelectDate={setSelectedDate}
                     visibleMonth={calendarMonth}
                     onVisibleMonthChange={setCalendarMonth}
-                    onSessionClick={(s) => void openSessionFromList(s as UserSession)}
+                    onSessionClick={(s) => openSessionFromList(s as UserSession)}
                     onConfirmSession={openConfirmDialog}
                     organizerProfiles={organizerProfiles}
                     currentUserId={user?.id}
@@ -1169,6 +1194,15 @@ export default function MySessions() {
           onSessionShared={() => setShowShareConversationDialog(false)}
         />
       )}
+
+      <SessionDetailsDialog
+        session={selectedSessionForDialog as never}
+        onClose={() => setSelectedSessionForDialog(null)}
+        onSessionUpdated={() => {
+          void loadUserSessions();
+          void loadJoinedSessions();
+        }}
+      />
 
     </>
   );
