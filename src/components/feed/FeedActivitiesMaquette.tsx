@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
+import { FeedComments } from "@/components/feed/FeedComments";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
 import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import { MiniMapPreview } from "@/components/feed/MiniMapPreview";
@@ -78,12 +79,14 @@ function FeedMaquetteTile({
   tone,
   live,
   actionLabel,
+  commentLabel,
   locationLat,
   locationLng,
   avatarUrl,
   activityType,
   onCardPress,
   onActionPress,
+  onCommentPress,
 }: {
   who: string;
   when: string;
@@ -93,12 +96,14 @@ function FeedMaquetteTile({
   tone: string;
   live: boolean;
   actionLabel: string;
+  commentLabel?: string;
   locationLat: number;
   locationLng: number;
   avatarUrl?: string | null;
   activityType?: string;
   onCardPress: () => void;
   onActionPress: (e: React.MouseEvent) => void;
+  onCommentPress?: (e: React.MouseEvent) => void;
 }) {
   return (
     <div
@@ -157,7 +162,19 @@ function FeedMaquetteTile({
         style={{ borderColor: "rgba(60, 60, 67, 0.12)" }}
       >
         <div className="min-w-0 flex-1 pr-3 text-[15px] font-semibold leading-snug text-foreground">{title}</div>
-        <span className="shrink-0">
+        <div className="shrink-0 flex items-center gap-2">
+          {onCommentPress ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCommentPress(e);
+              }}
+              className="h-9 shrink-0 rounded-full border border-border bg-transparent px-[16px] text-[15px] font-normal tracking-[-0.3px] text-foreground active:scale-95"
+            >
+              {commentLabel || "Commenter"}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={(e) => {
@@ -168,7 +185,7 @@ function FeedMaquetteTile({
           >
             {actionLabel}
           </button>
-        </span>
+        </div>
       </div>
     </div>
   );
@@ -176,14 +193,17 @@ function FeedMaquetteTile({
 
 export function FeedActivitiesMaquette() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { position } = useGeolocation();
   const [mode, setMode] = useState<FeedMode>("friends");
   const [friendCount, setFriendCount] = useState<number | null>(null);
   const [selectedFriendsSession, setSelectedFriendsSession] = useState<Record<string, unknown> | null>(null);
   const [selectedDiscoverSession, setSelectedDiscoverSession] = useState<Record<string, unknown> | null>(null);
+  const [forcedCommentSessionId, setForcedCommentSessionId] = useState<string | null>(null);
+  const [expandedCommentsSessionId, setExpandedCommentsSessionId] = useState<string | null>(null);
 
-  const { feedItems, loading: friendsLoading, hasMore, loadMore, refresh: refreshFriends } = useFeed();
+  const { feedItems, loading: friendsLoading, hasMore, loadMore, refresh: refreshFriends, addComment } = useFeed();
 
   const {
     sessions: discoverSessions,
@@ -214,6 +234,15 @@ export function FeedActivitiesMaquette() {
   }, [user?.id]);
 
   useEffect(() => {
+    const st = location.state as { openFeedCommentSessionId?: string } | null;
+    if (!st?.openFeedCommentSessionId) return;
+    setMode("friends");
+    setForcedCommentSessionId(st.openFeedCommentSessionId);
+    setExpandedCommentsSessionId(st.openFeedCommentSessionId);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
+  }, [location.state, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
     if (mode !== "friends") return;
     const el = loadMoreRef.current;
     if (!el) return;
@@ -226,6 +255,14 @@ export function FeedActivitiesMaquette() {
     obs.observe(el);
     return () => obs.disconnect();
   }, [hasMore, friendsLoading, loadMore, mode]);
+
+  useEffect(() => {
+    if (!forcedCommentSessionId) return;
+    const found = feedItems.some((item) => item.id === forcedCommentSessionId);
+    if (!found) return;
+    const timer = window.setTimeout(() => setForcedCommentSessionId(null), 600);
+    return () => window.clearTimeout(timer);
+  }, [feedItems, forcedCommentSessionId]);
 
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
@@ -353,35 +390,48 @@ export function FeedActivitiesMaquette() {
                 const emoji = getActivityEmoji(s.activity_type);
                 const tone = toneHexForActivity(s.activity_type);
                 return (
-                  <FeedMaquetteTile
-                    key={s.id}
-                    who={who}
-                    when={renderFriendsWhen(s)}
-                    title={title}
-                    sportEmoji={emoji}
-                    kmDisplay={formatKmLabel(km)}
-                    tone={tone}
-                    live={live}
-                    actionLabel={live ? "Suivre" : "Rejoindre"}
-                    locationLat={s.location_lat}
-                    locationLng={s.location_lng}
-                    avatarUrl={s.organizer.avatar_url || undefined}
-                    activityType={s.activity_type}
-                    onCardPress={() =>
-                      setSelectedFriendsSession({
-                        ...s,
-                        session_type: s.activity_type,
-                        intensity: "moderate",
-                        organizer_id: s.organizer.user_id,
-                        profiles: {
-                          username: s.organizer.username,
-                          display_name: s.organizer.display_name,
-                          avatar_url: s.organizer.avatar_url || undefined,
-                        },
-                      })
-                    }
-                    onActionPress={() => handleJoinFromFeed(s.id)}
-                  />
+                  <div key={s.id} className="space-y-0">
+                    <FeedMaquetteTile
+                      who={who}
+                      when={renderFriendsWhen(s)}
+                      title={title}
+                      sportEmoji={emoji}
+                      kmDisplay={formatKmLabel(km)}
+                      tone={tone}
+                      live={live}
+                      actionLabel={live ? "Suivre" : "Rejoindre"}
+                      commentLabel="Commenter"
+                      locationLat={s.location_lat}
+                      locationLng={s.location_lng}
+                      avatarUrl={s.organizer.avatar_url || undefined}
+                      activityType={s.activity_type}
+                      onCardPress={() =>
+                        setSelectedFriendsSession({
+                          ...s,
+                          session_type: s.activity_type,
+                          intensity: "moderate",
+                          organizer_id: s.organizer.user_id,
+                          profiles: {
+                            username: s.organizer.username,
+                            display_name: s.organizer.display_name,
+                            avatar_url: s.organizer.avatar_url || undefined,
+                          },
+                        })
+                      }
+                      onActionPress={() => handleJoinFromFeed(s.id)}
+                      onCommentPress={() => setExpandedCommentsSessionId((curr) => (curr === s.id ? null : s.id))}
+                    />
+                    {(expandedCommentsSessionId === s.id || forcedCommentSessionId === s.id) && (
+                      <div className="rounded-b-[18px] bg-card px-1 pb-2">
+                        <FeedComments
+                          comments={s.latest_comments}
+                          totalComments={s.comments_count}
+                          onAddComment={(content) => addComment(s.id, content)}
+                          onViewAll={() => setExpandedCommentsSessionId(s.id)}
+                        />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
               {hasMore ? (
