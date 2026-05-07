@@ -416,32 +416,114 @@ export const CreateCoachingSessionDialog = ({
                 </div>
               </div>
 
-              <div className="space-y-2 px-1">
-                <p className="text-[30px] font-semibold tracking-[-0.6px] text-[#1d1d1f]">Ajouter un bloc</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { id: "continu", label: "Continu", insert: "20'>5'30", svg: <rect x="2" y="9" width="40" height="6" rx="2" fill="#0066cc" /> },
-                    { id: "intervalle", label: "Intervalle", insert: "6x3'>3'30", svg: <><rect x="2" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/><rect x="11" y="14" width="3" height="6" rx="1" fill="#B5B5BA"/><rect x="17" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/><rect x="26" y="14" width="3" height="6" rx="1" fill="#B5B5BA"/><rect x="32" y="4" width="6" height="16" rx="1.5" fill="#FF9500"/></> },
-                    { id: "pyramide", label: "Pyramide", insert: "200>4'00, 400>4'10, 600>4'20, 400>4'10, 200>4'00", svg: <><rect x="2" y="14" width="5" height="6" rx="1" fill="#34C759"/><rect x="9" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/><rect x="16" y="4" width="5" height="16" rx="1.5" fill="#FF9500"/><rect x="23" y="4" width="5" height="16" rx="1.5" fill="#FF9500"/><rect x="30" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/><rect x="37" y="14" width="5" height="6" rx="1" fill="#34C759"/></> },
-                    { id: "variation", label: "Variation", insert: "10'>5'30, 10'>4'45, 10'>5'15", svg: <><rect x="2" y="16" width="5" height="4" rx="1" fill="#B5B5BA"/><rect x="9" y="12" width="5" height="8" rx="1" fill="#34C759"/><rect x="16" y="6" width="5" height="14" rx="1.3" fill="#FF9500"/><rect x="23" y="14" width="5" height="6" rx="1" fill="#0066cc"/><rect x="30" y="4" width="5" height="16" rx="1.5" fill="#FF3B30"/><rect x="37" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/></> },
-                  ].map((tile) => {
-                    const isActive = activeTile === tile.id;
-                    return (
+              <div className="space-y-3 px-1">
+                <p className="text-[14px] font-semibold text-[#333]">Blocs</p>
+
+                {[
+                  {
+                    id: "continu",
+                    label: "Continu",
+                    badge: "1",
+                    subtitle: "Z1 · 5 km · 27 min",
+                    accent: "#34C759",
+                    icon: <Waves className="h-4 w-4" />,
+                    insert: "5km>5'30",
+                    fields: [
+                      ["Allure", "5'30", "/km"],
+                      ["Distance", "5", "km"],
+                      ["Temps", "27", "min"],
+                    ],
+                  },
+                  {
+                    id: "intervalle",
+                    label: "Intervalle",
+                    badge: "2 × 2",
+                    subtitle: "Z5 · 2 km @ 3'30 · récup 1 min",
+                    accent: "#0066cc",
+                    icon: <BarChart3 className="h-4 w-4" />,
+                    insert: "2x(2km>3'30 r1')",
+                    fields: [
+                      ["Blocs", "1", ""],
+                      ["Répétitions", "2", ""],
+                      ["RPE", "8", ""],
+                      ["Distance", "2", "km"],
+                      ["Temps", "7", "min"],
+                      ["Allure", "3'30", "/km"],
+                    ],
+                  },
+                  {
+                    id: "pyramide",
+                    label: "Pyramide",
+                    badge: "3 + 2 miroirs",
+                    subtitle: "Symétrique · 5 paliers",
+                    accent: "#FF9500",
+                    icon: <Triangle className="h-4 w-4" />,
+                    insert: "200>5'30, 400>5'00, 600>4'40, 400>5'00, 200>5'30",
+                    fields: [
+                      ["Palier 1", "200m", "5'30"],
+                      ["Palier 2", "400m", "5'00"],
+                      ["Palier 3", "600m", "4'40"],
+                    ],
+                  },
+                  {
+                    id: "variation",
+                    label: "Variation",
+                    badge: "7'00 → 4'30",
+                    subtitle: "Z2 · 5 km · 30 min",
+                    accent: "#AF52DE",
+                    icon: <Activity className="h-4 w-4" />,
+                    insert: "5km de 7'00 à 4'30",
+                    fields: [
+                      ["Allure début", "7'00", "/km"],
+                      ["Allure finale", "4'30", "/km"],
+                      ["RPE", "7", ""],
+                      ["Distance", "5", "km"],
+                      ["Temps", "30", "min"],
+                    ],
+                  },
+                ].map((block) => (
+                  <div key={block.id} className="overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
+                    <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderLeft: `3px solid ${block.accent}` }}>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: block.accent }}>
+                          {block.icon}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[16px] font-semibold">{block.label}</span>
+                            <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: block.accent, backgroundColor: `${block.accent}22` }}>
+                              {block.badge}
+                            </span>
+                          </div>
+                          <p className="truncate text-[13px] text-[#7a7a7a]">{block.subtitle}</p>
+                        </div>
+                      </div>
                       <button
                         type="button"
-                        key={tile.id}
-                        onClick={() => setRccCode((prev) => (prev.trim() ? `${prev}, ${tile.insert}` : tile.insert))}
-                        className="rounded-[14px] border bg-white px-2 py-2"
-                        style={{ borderColor: isActive ? "#0066cc" : "#e0e0e0" }}
+                        onClick={() => setRccCode((prev) => (prev.trim() ? `${prev}, ${block.insert}` : block.insert))}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-white"
+                        style={{ backgroundColor: block.accent }}
                       >
-                        <svg viewBox="0 0 44 22" className="mx-auto h-5 w-11" fill="none">
-                          {tile.svg}
-                        </svg>
-                        <span className="mt-1 block text-center text-[12px]">{tile.label}</span>
+                        Ajouter
                       </button>
-                    );
-                  })}
-                </div>
+                    </div>
+                    <div className="border-t border-[#f0f0f0] px-4 py-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        {block.fields.map(([label, value, unit], idx) => (
+                          <div key={`${block.id}-${idx}`}>
+                            <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.35px] text-[#7a7a7a]">{label}</p>
+                            <input
+                              readOnly
+                              value={value}
+                              className="h-9 w-full rounded-[11px] border border-[#e0e0e0] bg-white px-2 text-center text-[14px] font-medium text-[#1d1d1f]"
+                            />
+                            <p className="mt-1 text-center text-[10px] text-[#7a7a7a]">{unit || "\u00A0"}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div
