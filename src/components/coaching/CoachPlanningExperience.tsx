@@ -3463,7 +3463,7 @@ export function CoachPlanningExperience() {
                 }}
                 className="max-h-[68vh] overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]"
               >
-                <div className="px-5 pb-1.5 pt-4">
+                <div className="px-5 pb-1.5 pt-2">
                   <div className="flex items-baseline gap-2">
                     <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
                     <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
