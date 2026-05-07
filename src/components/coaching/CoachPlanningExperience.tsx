@@ -2843,7 +2843,6 @@ export function CoachPlanningExperience() {
       if (weekScrollSwitchingRef.current) return;
       weekScrollSwitchingRef.current = true;
       setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
-      setSelectedDate((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
       requestAnimationFrame(() => {
         const node = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
         if (node) {
@@ -2875,12 +2874,15 @@ export function CoachPlanningExperience() {
     const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
     if (visibleWeekStart !== currentWeekStart) return;
 
-    requestAnimationFrame(() => {
+    const recenter = () => {
       const todayKey = format(new Date(), "yyyy-MM-dd");
       const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
       if (!todayRow) return;
       todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    });
+    };
+    requestAnimationFrame(recenter);
+    const t = window.setTimeout(recenter, 140);
+    return () => window.clearTimeout(t);
   }, [weekPlannerMode, weekAnchor]);
 
   useEffect(() => {
@@ -2891,12 +2893,15 @@ export function CoachPlanningExperience() {
     const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
     if (visibleWeekStart !== currentWeekStart) return;
 
-    requestAnimationFrame(() => {
+    const recenter = () => {
       const todayKey = format(new Date(), "yyyy-MM-dd");
       const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
       if (!todayRow) return;
       todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    });
+    };
+    requestAnimationFrame(recenter);
+    const t = window.setTimeout(recenter, 140);
+    return () => window.clearTimeout(t);
   }, [activeMenuKey, weekAnchor, athletePlanSessions.length]);
   const coachingHeaderTitle = useMemo(() => {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
@@ -3517,7 +3522,7 @@ export function CoachPlanningExperience() {
                           isLast={dayIdx === weekDays.length - 1}
                           athleteSessionCompleted={session?.participationStatus === "completed"}
                           onAdd={() => undefined}
-                          onOpen={session ? () => previewAction() : undefined}
+                          onOpen={session ? () => openSessionPreview(session.id) : undefined}
                           onEdit={undefined}
                           onSend={undefined}
                           onDuplicate={undefined}
