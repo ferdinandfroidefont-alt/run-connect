@@ -626,10 +626,24 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
                   )
                 }
                 title={
-                  isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
+                  isEditMode ? 'Modifier la séance' : 'Créer une séance'
                 }
                 right={
-                  wizard.wizardSteps.length > 1 ? (
+                  coachingSession ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (wizard.currentStep === "confirm") {
+                          void handleSubmit();
+                        } else {
+                          wizard.goToNextStep();
+                        }
+                      }}
+                      className="truncate text-[17px] font-semibold text-primary"
+                    >
+                      OK
+                    </button>
+                  ) : wizard.wizardSteps.length > 1 ? (
                     <span className="truncate text-[15px] text-muted-foreground">
                       Étape {Math.max(1, wizard.wizardSteps.indexOf(wizard.currentStep) + 1)}/{wizard.wizardSteps.length}
                     </span>
