@@ -1049,7 +1049,7 @@ export default function MySessions() {
                     onSessionClick={(s) => openSessionFromList(s as UserSession)}
                     onConfirmSession={openConfirmDialog}
                     onCommentSession={(s) =>
-                      navigate("/", { state: { openFeedCommentSessionId: s.id } })
+                      navigate("/feed", { state: { openFeedCommentSessionId: s.id } })
                     }
                     organizerProfiles={organizerProfiles}
                     currentUserId={user?.id}
