@@ -2314,10 +2314,11 @@ const Messages = () => {
     
     return (
       <>
-        <div className="flex h-full min-h-0 flex-col bg-[#f5f5f7] dark:bg-secondary">
+        <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#f5f5f7] dark:bg-secondary">
           <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col">
             <IosFixedPageHeaderShell
               className="min-h-0 flex-1"
+              pinHeader={false}
               scrollRef={threadScrollRef}
               headerWrapperClassName="z-50 shrink-0 border-b border-[#e0e0e0] bg-white dark:border-border dark:bg-card"
               header={
@@ -2611,12 +2612,10 @@ const Messages = () => {
               <div
                 ref={composerRef}
                 className={cn(
-                  "keyboard-input-container fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-0 bg-transparent px-3 pt-1",
+                  "keyboard-input-container z-40 mx-auto w-full max-w-md shrink-0 border-0 bg-transparent px-3 pt-1",
                   "dark:backdrop-blur-none"
                 )}
                 style={{
-                  transform: `translateY(-${keyboardInsetBottom}px)`,
-                  transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
                   paddingBottom: "max(26px, env(safe-area-inset-bottom, 0px))",
                 }}
               >
@@ -2852,7 +2851,7 @@ const Messages = () => {
             )}
             <div
               className="flex flex-1 flex-col gap-2 bg-[#f5f5f7] px-4 pb-2 pt-2 dark:bg-secondary"
-              style={{ paddingBottom: composerHeight + keyboardInsetBottom + 8 }}
+              style={{ paddingBottom: composerHeight + 8 }}
             >
               {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;

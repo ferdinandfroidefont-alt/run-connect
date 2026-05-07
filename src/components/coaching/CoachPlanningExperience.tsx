@@ -1012,9 +1012,6 @@ export function CoachPlanningExperience() {
   const { setBottomNavSuppressed } = useAppContext();
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const infiniteWeekScrollRef = useRef<HTMLDivElement | null>(null);
-  const myPlanScrollAnchorRef = useRef<HTMLDivElement | null>(null);
-  const weekScrollSwitchingRef = useRef(false);
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
   const [memberClubIds, setMemberClubIds] = useState<string[]>([]);
@@ -1619,6 +1616,10 @@ export function CoachPlanningExperience() {
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekAnchor, i)),
+    [weekAnchor]
+  );
+  const weekStartsContinuous = useMemo(
+    () => Array.from({ length: 13 }, (_, idx) => addWeeks(weekAnchor, idx - 6)),
     [weekAnchor]
   );
 
@@ -2838,79 +2839,6 @@ export function CoachPlanningExperience() {
   const weekPlannerMode =
     activeMenuKey === "planning" && !effectiveAthleteMode && (!!activeAthleteId || !!activeGroupId || coachWeekProgrammerOpen);
 
-  const shiftWeekByScroll = useCallback(
-    (direction: "prev" | "next", source: "planning" | "myPlan") => {
-      if (weekScrollSwitchingRef.current) return;
-      weekScrollSwitchingRef.current = true;
-      const node = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
-      // Smooth fade-out before swapping the week to mimic a continuous flow.
-      if (node) {
-        node.style.transition = "opacity 160ms ease";
-        node.style.opacity = "0";
-      }
-      window.setTimeout(() => {
-        setWeekAnchor((current) => (direction === "next" ? addWeeks(current, 1) : subWeeks(current, 1)));
-        requestAnimationFrame(() => {
-          const n = source === "planning" ? infiniteWeekScrollRef.current : myPlanScrollAnchorRef.current;
-          if (n) {
-            // Land at the relevant edge of the newly rendered week so the header + stats
-            // appear naturally instead of teleporting mid-week.
-            if (direction === "next") {
-              n.scrollTop = 0;
-            } else {
-              n.scrollTop = Math.max(0, n.scrollHeight - n.clientHeight);
-            }
-            // Fade back in.
-            requestAnimationFrame(() => {
-              n.style.opacity = "1";
-            });
-          }
-          window.setTimeout(() => {
-            weekScrollSwitchingRef.current = false;
-          }, 220);
-        });
-      }, 170);
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!weekPlannerMode) return;
-    const node = infiniteWeekScrollRef.current;
-    if (!node) return;
-    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).getTime();
-    const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
-    if (visibleWeekStart !== currentWeekStart) return;
-
-    const recenter = () => {
-      const todayKey = format(new Date(), "yyyy-MM-dd");
-      const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
-      if (!todayRow) return;
-      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    };
-    requestAnimationFrame(recenter);
-    const t = window.setTimeout(recenter, 140);
-    return () => window.clearTimeout(t);
-  }, [weekPlannerMode, weekAnchor]);
-
-  useEffect(() => {
-    if (activeMenuKey !== "my-plan") return;
-    const node = myPlanScrollAnchorRef.current;
-    if (!node) return;
-    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).getTime();
-    const visibleWeekStart = startOfWeek(weekAnchor, { weekStartsOn: 1 }).getTime();
-    if (visibleWeekStart !== currentWeekStart) return;
-
-    const recenter = () => {
-      const todayKey = format(new Date(), "yyyy-MM-dd");
-      const todayRow = node.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
-      if (!todayRow) return;
-      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-    };
-    requestAnimationFrame(recenter);
-    const t = window.setTimeout(recenter, 140);
-    return () => window.clearTimeout(t);
-  }, [activeMenuKey, weekAnchor, athletePlanSessions.length]);
   const coachingHeaderTitle = useMemo(() => {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
     switch (activeMenuKey) {
@@ -3449,40 +3377,35 @@ export function CoachPlanningExperience() {
             ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <div
-                ref={myPlanScrollAnchorRef}
-                onScroll={(event) => {
-                  const el = event.currentTarget;
-                  if (el.scrollTop <= 0) {
-                    shiftWeekByScroll("prev", "myPlan");
-                    return;
-                  }
-                  if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 0) {
-                    shiftWeekByScroll("next", "myPlan");
-                  }
-                }}
-                className="max-h-[68vh] overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
-              >
-                <div className="px-5 pb-1.5 pt-2">
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
-                    <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
-                      · {format(weekAnchor, "d", { locale: fr })} - {format(addDays(weekAnchor, 6), "d MMM", { locale: fr })}
-                    </p>
-                  </div>
-                  <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
-                    <span>
-                      <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
-                        {formatCalendarDistance(
-                          athletePlanSessions.reduce((acc, item) => acc + (item.distanceKm || 0), 0)
-                        )}
-                      </b>{" "}
-                      · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{athletePlanSessions.length}</b> séance(s)
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  {weekDays.map((day, dayIdx) => {
+              <div className="pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+                {weekStartsContinuous.map((weekStart) => {
+                  const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+                  const weekSessions = athletePlanSessions.filter((session) => {
+                    const d = new Date(session.assignedDate);
+                    return d >= weekStart && d < addDays(weekStart, 7);
+                  });
+                  return (
+                    <div key={weekStart.toISOString()}>
+                      <div className="px-5 pb-1.5 pt-2">
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekStart)}</p>
+                          <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
+                            · {format(weekStart, "d", { locale: fr })} - {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
+                          </p>
+                        </div>
+                        <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
+                          <span>
+                            <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
+                              {formatCalendarDistance(
+                                weekSessions.reduce((acc, item) => acc + (item.distanceKm || 0), 0)
+                              )}
+                            </b>{" "}
+                            · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{weekSessions.length}</b> séance(s)
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        {weekDaysLocal.map((day, dayIdx) => {
                     const daySessions = athletePlanSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                     const session = daySessions[0];
                     const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
@@ -3527,7 +3450,7 @@ export function CoachPlanningExperience() {
                           accentColor={accentColor}
                           emptyLabel="Repos"
                           layoutVariant="coachWeek"
-                          isLast={dayIdx === weekDays.length - 1}
+                          isLast={dayIdx === weekDaysLocal.length - 1}
                           athleteSessionCompleted={session?.participationStatus === "completed"}
                           onAdd={() => undefined}
                           onOpen={session ? () => openSessionPreview(session.id) : undefined}
@@ -3541,7 +3464,11 @@ export function CoachPlanningExperience() {
                         />
                       </div>
                     );
-                  })}
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
                 </div>
               </div>
             ) : activeMenuKey === "planning" && showCoachLanding ? (
@@ -3579,49 +3506,44 @@ export function CoachPlanningExperience() {
             ) : activeMenuKey === "planning" ? (
               <>
                 {weekPlannerMode ? (
-                  <div
-                    ref={infiniteWeekScrollRef}
-                    onScroll={(event) => {
-                      const el = event.currentTarget;
-                      if (el.scrollTop <= 0) {
-                        shiftWeekByScroll("prev", "planning");
-                        return;
-                      }
-                      if (el.scrollHeight - (el.scrollTop + el.clientHeight) <= 0) {
-                        shiftWeekByScroll("next", "planning");
-                      }
-                    }}
-                    className="max-h-[68vh] overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
-                  >
-                    <div className="px-5 pb-1.5 pt-2">
-                      <div className="flex items-baseline gap-2">
-                        <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekAnchor)}</p>
-                        <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
-                          · {format(weekAnchor, "d", { locale: fr })} - {format(addDays(weekAnchor, 6), "d MMM", { locale: fr })}
-                        </p>
-                      </div>
-                      <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
-                        <span>
-                          <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
-                            {formatCalendarDistance(
-                              enrichedFilteredSessions.reduce((acc, session) => {
-                                const metrics = resolveWorkoutMetrics({
-                                  segments: buildWorkoutSegments(session.blocks, {
-                                    sport: session.sport,
-                                    athleteIntensity: session.athleteIntensity ?? undefined,
-                                  }),
-                                });
-                                return acc + (metrics.distanceKm || 0);
-                              }, 0)
-                            )}
-                          </b>{" "}
-                          · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{enrichedFilteredSessions.length}</b> séance(s)
-                        </span>
-                      </div>
-                    </div>
+                  <div className="pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+                    {weekStartsContinuous.map((weekStart) => {
+                      const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+                      const weekSessions = enrichedFilteredSessions.filter((session) => {
+                        const d = new Date(session.assignedDate);
+                        return d >= weekStart && d < addDays(weekStart, 7);
+                      });
+                      return (
+                        <div key={weekStart.toISOString()}>
+                          <div className="px-5 pb-1.5 pt-2">
+                            <div className="flex items-baseline gap-2">
+                              <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekStart)}</p>
+                              <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
+                                · {format(weekStart, "d", { locale: fr })} - {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
+                              </p>
+                            </div>
+                            <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
+                              <span>
+                                <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
+                                  {formatCalendarDistance(
+                                    weekSessions.reduce((acc, session) => {
+                                      const metrics = resolveWorkoutMetrics({
+                                        segments: buildWorkoutSegments(session.blocks, {
+                                          sport: session.sport,
+                                          athleteIntensity: session.athleteIntensity ?? undefined,
+                                        }),
+                                      });
+                                      return acc + (metrics.distanceKm || 0);
+                                    }, 0)
+                                  )}
+                                </b>{" "}
+                                · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{weekSessions.length}</b> séance(s)
+                              </span>
+                            </div>
+                          </div>
 
-                    <div>
-                      {weekDays.map((day, dayIdx) => {
+                          <div>
+                            {weekDaysLocal.map((day, dayIdx) => {
                         const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                         const session = daySessions[0];
                         const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
@@ -3671,7 +3593,7 @@ export function CoachPlanningExperience() {
                               accentColor={accentColor}
                               emptyLabel="Repos"
                               layoutVariant="coachWeek"
-                              isLast={dayIdx === weekDays.length - 1}
+                              isLast={dayIdx === weekDaysLocal.length - 1}
                               athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
                               onAdd={() => openCreateForDate(day)}
                               onOpen={session ? () => openSessionPreview(session.id) : undefined}
@@ -3687,8 +3609,11 @@ export function CoachPlanningExperience() {
                             />
                           </div>
                         );
-                      })}
-                    </div>
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <>
