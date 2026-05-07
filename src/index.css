@@ -1441,6 +1441,13 @@ html, body {
   margin: 0;
   cursor: pointer;
   background: transparent;
+  transition: transform 200ms ease-out;
+  transform-origin: 50% 100%;
+}
+
+.rc-session-pin__shape:active {
+  transform: translate(-50%, -100%) scale(0.95);
+  transition-duration: 90ms;
 }
 
 .rc-session-pin-pop .rc-session-pin__shape {
@@ -1455,18 +1462,23 @@ html, body {
   filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.45));
 }
 
-/* Boîtier visuel carte (pastille + photo + pointe), aligné maquette pin activité. */
+/* Pin Apple-style v3: dimensions/proportions exactes de la maquette (64x78). */
 .rc-session-pin__marker-visual {
   position: relative;
   flex-shrink: 0;
-  width: 82px;
-  height: 96px;
-  filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24));
+  width: 64px;
+  height: 78px;
+  filter: drop-shadow(3px 5px 30px rgba(0, 0, 0, 0.22));
 }
 
-/* Legacy shell node preserved for compatibility. */
 .rc-session-pin__shell {
-  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
 }
 
 .rc-session-pin__meta {
@@ -1533,18 +1545,9 @@ html, body {
   display: none;
 }
 
-/* Disc coloré du pin (anneau externe). */
+/* Legacy circle no longer used (shape comes from SVG path). */
 .rc-session-pin__circle {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  z-index: 1;
-  width: 74px;
-  height: 74px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  box-sizing: border-box;
-  pointer-events: none;
+  display: none;
 }
 
 /* Refonte handoff App RunConnect IOS — toutes les variantes adoptent le pin Apple
@@ -1553,45 +1556,36 @@ html, body {
 .rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__circle,
 .rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__circle,
 .rc-session-pin__shape[data-rc-pin-variant="premium"] .rc-session-pin__circle {
-  background: var(--rc-session-pin-color, hsl(var(--primary)));
-  box-shadow: none;
+  display: none;
 }
 
-/* Pointe lisse : carré arrondi rotaté pour reproduire la forme goutte de la maquette. */
+/* Legacy tip no longer used (shape comes from SVG path). */
 .rc-session-pin__tip {
-  position: absolute;
-  left: 50%;
-  top: 55px;
-  z-index: 1;
-  width: 30px;
-  height: 30px;
-  transform: translateX(-50%) rotate(45deg);
-  border-radius: 0 0 9px 0;
-  background: var(--rc-session-pin-color, hsl(var(--primary)));
-  pointer-events: none;
-  display: block;
+  display: none;
 }
 
-/* Avatar centré dans le pin (photo profil). */
+/* Photo inset: 56x56, top 4, white rim 2px (maquette). */
 .rc-session-pin__avatar-ring {
   position: absolute;
   left: 50%;
-  top: 6px;
+  top: 4px;
   z-index: 2;
   box-sizing: border-box;
-  width: 62px;
-  height: 62px;
+  width: 56px;
+  height: 56px;
   transform: translateX(-50%);
   border-radius: 999px;
-  border: 3px solid #ffffff;
+  border: 0;
+  padding: 2px;
   overflow: hidden;
-  background: hsl(var(--muted));
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.18);
+  background: #ffffff;
+  box-shadow: none;
 }
 
 .rc-session-pin__avatar {
   width: 100%;
   height: 100%;
+  border-radius: 999px;
   object-fit: cover;
 }
 

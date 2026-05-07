@@ -15,11 +15,13 @@ interface Session {
   location_lng: number;
   organizer_id: string;
   activity_type: string;
+  distance_km?: number | null;
 }
 
 interface ParticipantValidationViewProps {
   session: Session;
   userId: string;
+  onBack?: () => void;
   onComplete: () => void;
 }
 
@@ -57,7 +59,7 @@ function activityAccent(sportType: string) {
   return 'bg-[#0A84FF]';
 }
 
-export const ParticipantValidationView = ({ session, userId, onComplete }: ParticipantValidationViewProps) => {
+export const ParticipantValidationView = ({ session, userId, onBack, onComplete }: ParticipantValidationViewProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [selectingId, setSelectingId] = useState<string | null>(null);
@@ -151,18 +153,18 @@ export const ParticipantValidationView = ({ session, userId, onComplete }: Parti
 
   return (
     <div className="flex h-full min-h-0 flex-col pb-[max(10px,env(safe-area-inset-bottom))]">
-      <div className="shrink-0 space-y-3">
-        <header className="ios-card flex items-center justify-between px-3 py-3">
+      <div className="shrink-0">
+        <header className="flex h-11 items-center justify-between px-4">
           <button
             type="button"
-            onClick={onComplete}
+            onClick={onBack ?? onComplete}
             className="inline-flex items-center text-[17px] font-medium text-[#007AFF]"
           >
             <ChevronLeft className="h-5 w-5" />
-            Seances
+            Séances
           </button>
-          <h1 className="truncate px-2 text-[33px] font-semibold tracking-[-0.4px] text-foreground">
-            Confirmer ma seance
+          <h1 className="truncate px-2 text-[17px] font-semibold tracking-[-0.4px] text-foreground">
+            Confirmer ma séance
           </h1>
           <button
             type="button"
@@ -173,58 +175,59 @@ export const ParticipantValidationView = ({ session, userId, onComplete }: Parti
           </button>
         </header>
 
-        <section className="ios-card space-y-3 p-3">
+        <section className="mx-4 mt-2 rounded-[12px] bg-white p-[12px_14px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.11em] text-[#8E8E93]">
-              Seance a confirmer
+              Séance à confirmer
             </p>
-            <p className="mt-1 truncate text-[31px] font-semibold tracking-[-0.3px] text-foreground">
+            <p className="mt-1 truncate text-[15px] font-semibold tracking-[-0.2px] text-foreground">
               {session.title}
             </p>
-            <p className="text-[26px] tracking-[-0.2px] text-[#6E6E73]">
+            <p className="text-[13px] tracking-[-0.1px] text-[rgba(60,60,67,0.6)]">
               {format(new Date(session.scheduled_at), "EEE d MMM · HH'h'mm", { locale: fr })}
-              {' · '}
-              {session.location_name}
+              {session.distance_km ? ` · ${session.distance_km.toString().replace('.', ',')} km` : ''}
             </p>
           </div>
+        </section>
 
+        <div className="px-4 pb-2 pt-3">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8E8E93]" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(60,60,67,0.6)]" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher une activite"
-              className="h-12 w-full rounded-[11px] border border-transparent bg-[#E7E7ED] pl-10 pr-3 text-[17px] text-foreground placeholder:text-[#8E8E93] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              placeholder="Rechercher une activité"
+              className="h-9 w-full rounded-[10px] border border-transparent bg-[rgba(120,120,128,0.12)] pl-8 pr-3 text-[17px] tracking-[-0.4px] text-foreground placeholder:text-[rgba(60,60,67,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
             />
           </div>
+        </div>
 
-          <div className="flex items-center justify-between px-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.11em] text-[#8E8E93]">
-              Activites recentes
-            </p>
-            <div className="rounded-full bg-[#FC4C02] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
-              Strava
-            </div>
+        <div className="flex items-center justify-between px-[22px] pb-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.4px] text-[rgba(60,60,67,0.6)]">
+            Activités récentes
+          </p>
+          <div className="rounded-full bg-[#FC4C02] px-2 py-[2px] text-[10px] font-bold uppercase tracking-[0.2px] text-white">
+            Strava
           </div>
-        </section>
+        </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pt-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="min-h-0 flex-1 overflow-y-auto pb-[90px]" style={{ WebkitOverflowScrolling: 'touch' }}>
         {loading ? (
-          <div className="ios-card flex items-center justify-center p-8">
+          <div className="mx-4 rounded-[12px] bg-white p-8 text-center shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             <Loader2 className="h-7 w-7 animate-spin text-primary" />
           </div>
         ) : !participantRow ? (
-          <div className="ios-card p-6 text-center text-[15px] text-muted-foreground">
+          <div className="mx-4 rounded-[12px] bg-white p-6 text-center text-[15px] text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             Vous n etes pas inscrit a cette seance.
           </div>
         ) : filteredActivities.length === 0 ? (
-          <div className="ios-card p-6 text-center text-[15px] text-muted-foreground">
+          <div className="mx-4 rounded-[12px] bg-white p-6 text-center text-[15px] text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             Aucune activite trouvee.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[14px] border border-border/70 bg-card">
+          <div className="mx-4 overflow-hidden rounded-[12px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             {filteredActivities.map((activity, index) => {
               const selected = selectedActivityId === activity.id;
               const dimmed = selectedActivityId !== null && selectedActivityId !== activity.id;
@@ -236,26 +239,26 @@ export const ParticipantValidationView = ({ session, userId, onComplete }: Parti
                   onClick={() => void handleSelectActivity(activity)}
                   disabled={!!selectingId || !!participantRow.confirmed_by_gps}
                   className={cn(
-                    'flex w-full items-center gap-3 px-3 py-3 text-left transition-colors',
-                    selected && 'bg-[#EDF8EF]',
+                    'grid w-full grid-cols-[44px_1fr_32px] items-center gap-3 px-[14px] py-3 text-left transition-colors',
+                    selected && 'bg-[rgba(52,199,89,0.06)]',
                     dimmed && 'opacity-85',
-                    index !== filteredActivities.length - 1 && 'border-b border-border/60',
+                    index !== filteredActivities.length - 1 && 'border-b border-[rgba(60,60,67,0.12)]',
                   )}
                 >
-                  <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] text-[20px]', activityAccent(activity.sportType))}>
+                  <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[24px]', activityAccent(activity.sportType))}>
                     <span>{activityEmoji(activity.sportType)}</span>
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-[17px] font-semibold text-foreground">{activity.title}</p>
+                      <p className="truncate text-[15px] font-semibold tracking-[-0.2px] text-foreground">{activity.title}</p>
                       {activity.isTopMatch ? (
-                        <span className="rounded-full bg-[#A7F3B9] px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-[0.06em] text-[#13A538]">
-                          Sugeree
+                        <span className="rounded-full bg-[rgba(52,199,89,0.14)] px-1.5 py-[2px] text-[9.5px] font-bold uppercase tracking-[0.2px] text-[#34C759]">
+                          Suggérée
                         </span>
                       ) : null}
                     </div>
-                    <p className="line-clamp-2 text-[14px] leading-[1.2] text-[#6E6E73]">
+                    <p className="line-clamp-2 text-[12px] leading-[1.2] text-[rgba(60,60,67,0.6)]">
                       {format(new Date(activity.startDate), "d MMM HH'h'mm", { locale: fr })}
                       {activity.distanceKm ? ` · ${activity.distanceKm.toFixed(1)} km` : ''}
                       {activity.durationMin ? ` · ${activity.durationMin} min` : ''}
@@ -265,14 +268,14 @@ export const ParticipantValidationView = ({ session, userId, onComplete }: Parti
 
                   <div
                     className={cn(
-                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2',
-                      selected ? 'border-[#34C759] bg-[#34C759] text-white' : 'border-[#C7C7CC] bg-transparent text-transparent',
+                      'mx-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px]',
+                      selected ? 'border-[#34C759] bg-[#34C759] text-white' : 'border-[rgba(60,60,67,0.25)] bg-transparent text-transparent',
                     )}
                   >
                     {selectingId === activity.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
                     ) : (
-                      <Check className="h-4 w-4 stroke-[3]" />
+                      <Check className="h-3.5 w-3.5 stroke-[2.4]" />
                     )}
                   </div>
                 </button>

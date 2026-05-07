@@ -73,13 +73,13 @@ export function createSessionPinButton(opts: {
   const visual = document.createElement("span");
   visual.className = "rc-session-pin__marker-visual";
 
-  // Legacy shell element kept for backward compatibility; shape is now fully handled by CSS.
+  // Pin shape from Apple-style mockup: exact SVG path (viewBox 80x96).
   const shell = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  shell.setAttribute("viewBox", "0 0 1 1");
+  shell.setAttribute("viewBox", "0 0 80 96");
   shell.setAttribute("aria-hidden", "true");
   shell.classList.add("rc-session-pin__shell");
   const shellPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  shellPath.setAttribute("d", "M0 0Z");
+  shellPath.setAttribute("d", "M 40 0 A 40 40 0 0 1 68 68.57 L 40 96 L 12 68.57 A 40 40 0 0 1 40 0 Z");
   shellPath.setAttribute("fill", "var(--rc-session-pin-color, #007aff)");
   shell.appendChild(shellPath);
 

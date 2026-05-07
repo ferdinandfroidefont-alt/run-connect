@@ -229,7 +229,7 @@ export default function ConfirmPresence({
           : "fixed-fill-with-bottom-nav z-0 flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-secondary"
       }
     >
-      {!embedded && (
+      {!embedded && !selectedSession && (
         <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
           <IosPageHeaderBar
             left={
@@ -246,7 +246,7 @@ export default function ConfirmPresence({
       <div
         className={cn(
           'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-ios-4',
-          selectedSession && userRole === 'participant' ? 'overflow-y-hidden' : 'overflow-y-auto',
+          selectedSession ? 'overflow-y-hidden' : 'overflow-y-auto',
           embedded && 'pt-ios-2',
         )}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'none' }}
@@ -352,16 +352,6 @@ export default function ConfirmPresence({
           </div>
         ) : (
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
-            {embedded && (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="-ml-1 flex w-fit items-center gap-0.5 text-[15px] font-medium text-primary active:opacity-70"
-              >
-                <ChevronLeft className="h-5 w-5 shrink-0" />
-                Retour
-              </button>
-            )}
             {userRole !== 'creator' && userRole !== 'participant' && (
               <button
                 onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
@@ -385,12 +375,14 @@ export default function ConfirmPresence({
             {userRole === 'creator' ? (
               <CreatorValidationView
                 session={selectedSession}
+                onBack={handleBack}
                 onComplete={() => navigate('/')}
               />
             ) : (
               <ParticipantValidationView
                 session={selectedSession}
                 userId={user?.id || ''}
+                onBack={handleBack}
                 onComplete={() => navigate('/')}
               />
             )}
