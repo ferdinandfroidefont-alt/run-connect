@@ -3516,7 +3516,7 @@ export function CoachPlanningExperience() {
                           isLast={dayIdx === weekDays.length - 1}
                           athleteSessionCompleted={session?.participationStatus === "completed"}
                           onAdd={() => undefined}
-                          onOpen={session ? () => previewAction() : undefined}
+                          onOpen={session ? () => openSessionPreview(session.id) : undefined}
                           onEdit={undefined}
                           onSend={undefined}
                           onDuplicate={undefined}
