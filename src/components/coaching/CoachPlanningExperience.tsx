@@ -3307,11 +3307,11 @@ export function CoachPlanningExperience() {
                   title="Suivi athlète"
                 />
               </div>
-            ) : (
+            ) : showCoachLanding ? null : (
               <PlanningHeader
                 onOpenMenu={() => setDrawerOpen(true)}
                 title={coachingHeaderTitle}
-                coachLandingBrand={showCoachLanding}
+                coachLandingBrand={false}
                 hideDrawerActions={coachingHeaderTitle === "Mon plan"}
                 clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
                 clubName={activeClubId ? activeClubName : undefined}
@@ -3320,7 +3320,7 @@ export function CoachPlanningExperience() {
             )
           }
           scrollClassName={
-            showCoachLanding || weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking" || activeMenuKey === "my-plan"
+            weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking" || activeMenuKey === "my-plan"
               ? "apple-grouped-bg"
               : "bg-white"
           }
@@ -3589,6 +3589,9 @@ export function CoachPlanningExperience() {
                     ? userProfile.display_name[0].toUpperCase()
                     : "C"
                 }
+                clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
+                clubName={activeClubId ? activeClubName : undefined}
+                onPressClubAvatar={activeClubId ? openClubProfileSheet : undefined}
                 onCreateSession={() => {
                   setActiveAthleteId(undefined);
                   setActiveGroupId(undefined);

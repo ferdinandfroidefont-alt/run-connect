@@ -7,6 +7,7 @@ export function getActivityEmoji(activityType: string): string {
     return "🚴";
   if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf"))
     return "🏊";
+  if (t.includes("triath")) return "🏅";
   if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike"))
     return "🥾";
   if (t.includes("ski") || t.includes("snow"))
@@ -23,6 +24,7 @@ export function getDiscoverSportTileClass(activityType: string): string {
   if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf"))
     return "bg-[#5ac8fa]";
   if (t.includes("trail")) return "bg-[#AF52DE]";
+  if (t.includes("triath")) return "bg-[#5856D6]";
   if (t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike"))
     return "bg-[#34C759]";
   return "bg-[#007AFF]";

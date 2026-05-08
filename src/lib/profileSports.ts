@@ -38,3 +38,23 @@ export function serializeProfileSports(keys: ProfileSportKey[]): string | null {
   const sorted = [...keys].sort();
   return sorted.length ? sorted.join(',') : null;
 }
+
+/** Chaîne pour `getDiscoverSportTileClass` / `getActivityEmoji` (même rendu que les filtres carte). */
+export function profileSportDiscoverHint(key: ProfileSportKey): string {
+  switch (key) {
+    case 'running':
+      return 'course';
+    case 'cycling':
+      return 'velo';
+    case 'swimming':
+      return 'natation';
+    case 'triathlon':
+      return 'triathlon';
+    case 'walking':
+      return 'marche';
+    case 'trail':
+      return 'trail';
+    default:
+      return 'course';
+  }
+}

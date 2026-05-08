@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  addMonths,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -9,10 +8,10 @@ import {
   isSameMonth,
   startOfMonth,
   startOfWeek,
-  subMonths,
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ChevronDown, Plus, Search } from "lucide-react";
+import { CoachingRolePill } from "@/components/coaching/handoff/CoachingRolePill";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,7 +44,12 @@ interface Props {
   onSelectAthlete?: (athleteId: string) => void;
   currentView?: "athlete" | "coach";
   onViewChange?: (view: "athlete" | "coach") => void;
+  /** Avatar / initial de l'utilisateur (fallback si pas de club) */
   userInitial?: string;
+  /** Photo du club — remplace l'avatar lettre */
+  clubAvatarUrl?: string | null;
+  clubName?: string | null;
+  onPressClubAvatar?: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -95,6 +99,9 @@ export function CoachPlanificationMonthCalendar({
   currentView = "coach",
   onViewChange,
   userInitial = "C",
+  clubAvatarUrl,
+  clubName,
+  onPressClubAvatar,
 }: Props) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(today));
@@ -138,46 +145,56 @@ export function CoachPlanificationMonthCalendar({
       <div className="flex items-end justify-between px-5 pb-[14px] pt-3">
         <h1
           className="text-[32px] font-extrabold leading-none tracking-[-0.025em]"
-          style={{ color: "#0A1628" }}
+          style={{ color: "#1d1d1f" }}
         >
           Planification
         </h1>
-        <div
-          className="mb-1 flex h-8 w-8 items-center justify-center rounded-full text-[15px] font-semibold"
-          style={{ background: "rgba(0,122,255,0.1)", color: "#007AFF" }}
-        >
-          {userInitial}
-        </div>
+        {onPressClubAvatar ? (
+          <button
+            type="button"
+            onClick={onPressClubAvatar}
+            className="mb-1 overflow-hidden rounded-[10px] transition-opacity active:opacity-70"
+            aria-label="Fiche du club"
+            style={{ width: 36, height: 36 }}
+          >
+            {clubAvatarUrl ? (
+              <img
+                src={clubAvatarUrl}
+                alt={clubName ?? "Club"}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center text-[14px] font-semibold text-white"
+                style={{ background: "#0066cc" }}
+              >
+                {(clubName ?? "C")[0].toUpperCase()}
+              </div>
+            )}
+          </button>
+        ) : (
+          <div
+            className="mb-1 flex h-8 w-8 items-center justify-center rounded-full text-[15px] font-semibold"
+            style={{ background: "rgba(0,102,204,0.1)", color: "#0066cc" }}
+          >
+            {userInitial}
+          </div>
+        )}
       </div>
 
-      {/* ── Segmented control ────────────────────────────────────────────── */}
-      <div
-        className="mx-5 mb-[18px] flex rounded-[9px] p-0.5"
-        style={{ background: "#E5E5EA" }}
-      >
-        {(["athlete", "coach"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={cn(
-              "flex-1 rounded-[7px] py-2 text-[13px] font-semibold transition-all",
-              currentView === tab
-                ? "bg-white text-[#0A1628] shadow-[0_2px_6px_rgba(0,0,0,0.06),0_0_0_0.5px_rgba(0,0,0,0.04)]"
-                : "text-[#0A1628]"
-            )}
-            onClick={() => onViewChange?.(tab)}
-          >
-            {tab === "athlete" ? "Athlète" : "Coach"}
-          </button>
-        ))}
-      </div>
+      {/* ── Même segmented que l’ancien header (CoachingRolePill) ─────────── */}
+      <CoachingRolePill
+        active={currentView === "athlete" ? "athlete" : "coach"}
+        onSelect={(role) => onViewChange?.(role)}
+        className="px-5 pb-[18px] pt-0"
+      />
 
       {/* ── Sub-header: mois + actions ───────────────────────────────────── */}
       <div className="flex items-center justify-between px-5 pb-3">
         <button
           type="button"
           className="flex items-center gap-1"
-          style={{ color: "#007AFF" }}
+          style={{ color: "#0066cc" }}
           onClick={() => {
             /* month picker — could open a popover */
           }}
@@ -194,7 +211,7 @@ export function CoachPlanificationMonthCalendar({
             type="button"
             aria-label="Rechercher"
             className="h-6 w-6 transition-opacity active:opacity-60"
-            style={{ color: "#007AFF" }}
+            style={{ color: "#0066cc" }}
           >
             <Search className="h-full w-full" strokeWidth={2.2} />
           </button>
@@ -202,7 +219,7 @@ export function CoachPlanificationMonthCalendar({
             type="button"
             aria-label="Nouvelle séance"
             className="h-6 w-6 transition-opacity active:opacity-60"
-            style={{ color: "#007AFF" }}
+            style={{ color: "#0066cc" }}
             onClick={() => onCreateSession(selectedDay)}
           >
             <Plus className="h-full w-full" strokeWidth={2.2} />
@@ -254,7 +271,7 @@ export function CoachPlanificationMonthCalendar({
                   )}
                   style={{
                     backgroundColor: isToday
-                      ? "#007AFF"
+                      ? "#0066cc"
                       : isSelected
                         ? "#0A1628"
                         : "transparent",
@@ -368,7 +385,7 @@ export function CoachPlanificationMonthCalendar({
               <button
                 type="button"
                 className="shrink-0 rounded-full px-[14px] py-[7px] text-[13px] font-semibold transition-opacity active:opacity-70"
-                style={{ background: "#F2F2F7", color: "#007AFF" }}
+                style={{ background: "#F2F2F7", color: "#0066cc" }}
                 onClick={() => onOpenSession(session.id)}
               >
                 ›
@@ -382,7 +399,7 @@ export function CoachPlanificationMonthCalendar({
           type="button"
           className="mt-[10px] flex w-full items-center justify-center gap-1.5 rounded-[14px] py-[13px] text-[14px] font-semibold text-white transition-all active:scale-[0.98]"
           style={{
-            background: "#007AFF",
+            background: "#0066cc",
             boxShadow: "0 4px 14px -4px rgba(0,122,255,0.45), 0 1px 2px rgba(0,0,0,0.04)",
           }}
           onClick={() => onCreateSession(selectedDay)}

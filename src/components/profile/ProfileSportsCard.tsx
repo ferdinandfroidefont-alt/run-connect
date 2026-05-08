@@ -19,28 +19,69 @@ import {
   PROFILE_SPORT_LABELS,
   type ProfileSportKey,
   parseProfileSports,
+  profileSportDiscoverHint,
   serializeProfileSports,
 } from '@/lib/profileSports';
+import { getActivityEmoji, getDiscoverSportTileClass } from '@/lib/discoverSessionVisual';
 
 export function ProfileSportChips({
   sportKeys,
   className,
+  /** Aperçu dense (ex. bouton « Mes sports ») : puces compactes. */
+  compact = false,
 }: {
   sportKeys: ProfileSportKey[];
   className?: string;
+  compact?: boolean;
 }) {
   if (sportKeys.length === 0) return null;
+  if (compact) {
+    return (
+      <div className={cn('flex flex-wrap justify-center gap-1.5', className)}>
+        {sportKeys.map((key) => {
+          const meta = PROFILE_SPORT_LABELS[key];
+          return (
+            <span
+              key={key}
+              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-muted-foreground"
+            >
+              {meta.emoji} {meta.label}
+            </span>
+          );
+        })}
+      </div>
+    );
+  }
   return (
-    <div className={cn('flex flex-wrap justify-center gap-1.5', className)}>
+    <div
+      className={cn(
+        'divide-y divide-border/50 dark:divide-[#1f1f1f]',
+        className
+      )}
+      role="list"
+    >
       {sportKeys.map((key) => {
         const meta = PROFILE_SPORT_LABELS[key];
+        const hint = profileSportDiscoverHint(key);
+        const emoji = getActivityEmoji(hint);
+        const tile = getDiscoverSportTileClass(hint);
         return (
-          <span
+          <div
             key={key}
-            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-muted-foreground"
+            role="listitem"
+            className="flex min-h-[52px] w-full min-w-0 items-center gap-3 px-4 py-2.5 ios-shell:px-2.5"
           >
-            {meta.emoji} {meta.label}
-          </span>
+            <span
+              className={cn(
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[22px] leading-none text-white shadow-sm',
+                tile
+              )}
+              aria-hidden
+            >
+              {emoji}
+            </span>
+            <span className="min-w-0 flex-1 text-[17px] leading-snug text-foreground">{meta.label}</span>
+          </div>
         );
       })}
     </div>
@@ -98,9 +139,11 @@ export function ProfileSportsCard({ favoriteSport, isOwnProfile, onUpdated }: Pr
   if (!isOwnProfile) {
     if (selected.length === 0) return null;
     return (
-      <div className="ios-card overflow-hidden px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
-        <p className="mb-ios-2 text-ios-footnote uppercase tracking-wide text-muted-foreground">Sports</p>
-        <ProfileSportChips sportKeys={selected} className="justify-start" />
+      <div className="ios-card min-w-0 overflow-hidden rounded-ios-md border border-border/60 ios-shell:rounded-ios-md">
+        <p className="border-b border-border/50 px-4 py-2.5 text-ios-footnote uppercase tracking-wide text-muted-foreground ios-shell:px-2.5">
+          Sports
+        </p>
+        <ProfileSportChips sportKeys={selected} />
       </div>
     );
   }
@@ -123,8 +166,8 @@ export function ProfileSportsCard({ favoriteSport, isOwnProfile, onUpdated }: Pr
                 Indique les sports que tu pratiques
               </p>
             ) : (
-              <div className="mt-ios-1">
-                <ProfileSportChips sportKeys={selected} className="justify-start" />
+              <div className="mt-ios-1 max-h-[200px] overflow-y-auto">
+                <ProfileSportChips sportKeys={selected} compact />
               </div>
             )}
           </div>
