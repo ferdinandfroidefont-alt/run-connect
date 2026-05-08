@@ -33,6 +33,8 @@ interface PlanningHeaderProps {
   clubAvatarUrl?: string | null;
   clubName?: string | null;
   onPressClubAvatar?: () => void;
+  /** Fond du bloc header (défaut : liste groupée iOS). */
+  surfaceClassName?: string;
 }
 
 export function PlanningHeader({
@@ -45,17 +47,23 @@ export function PlanningHeader({
   clubAvatarUrl,
   clubName,
   onPressClubAvatar,
+  surfaceClassName,
 }: PlanningHeaderProps) {
   const showBellAndSettings = !coachLandingBrand && !hideDrawerActions;
   /** Dès qu’une action fiche club est fournie, afficher le bouton (initiale de secours si pas encore nom/photo). */
   const showClubMark = Boolean(onPressClubAvatar);
   const showOnlyClubAction = showClubMark && !showBellAndSettings;
   const clubInitial = (clubName || "Club").trim().slice(0, 1).toUpperCase() || "C";
+  const clubCompactBarClass =
+    "inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary active:opacity-80";
+  /** À côté du grand titre : hauteur proche du libellé 34px, alignée en bas avec la ligne titre. */
+  const clubLargeTitleClass =
+    "inline-flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-[10px] bg-primary/12 text-[13px] font-semibold text-primary active:opacity-80";
   const clubMarkButton = (
     <button
       type="button"
       onClick={onPressClubAvatar}
-      className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary active:opacity-80"
+      className={showOnlyClubAction ? clubLargeTitleClass : clubCompactBarClass}
       aria-label="Fiche du club"
     >
       {clubAvatarUrl ? (
@@ -69,11 +77,13 @@ export function PlanningHeader({
     <MainTopHeader
       title={title}
       subtitle={subtitle}
-      className="apple-grouped-bg"
+      className={surfaceClassName ?? "apple-grouped-bg"}
       disableScrollCollapse
       tabs={tabs}
       tabsAriaLabel={`Navigation ${title}`}
       largeTitleRight={showOnlyClubAction ? clubMarkButton : undefined}
+      largeTitleFlexClassName={showOnlyClubAction ? "items-end" : undefined}
+      largeTitleAccessoryWrapperClassName={showOnlyClubAction ? "pb-px" : undefined}
       right={
         <>
           {showClubMark && !showOnlyClubAction ? clubMarkButton : null}

@@ -239,10 +239,7 @@ export function CoachPlanificationMonthCalendar({
       </div>
 
       {/* ── Day detail panel ─────────────────────────────────────────────── */}
-      <div
-        className="mt-2 flex-1 border-t px-4 pb-[18px] pt-4"
-        style={{ background: "#F2F2F7", borderColor: "#E5E5EA" }}
-      >
+      <div className="mt-2 flex-1 border-t border-[#E5E5EA] bg-white px-4 pb-[18px] pt-4">
         {/* Panel header */}
         <div className="mb-3 flex items-baseline gap-2">
           <span
@@ -320,7 +317,7 @@ export function CoachPlanificationMonthCalendar({
               <button
                 type="button"
                 className="shrink-0 rounded-full px-[14px] py-[7px] text-[13px] font-semibold transition-opacity active:opacity-70"
-                style={{ background: "#F2F2F7", color: "#0066cc" }}
+                style={{ background: "#F7F7F8", color: "#0066cc" }}
                 onClick={() => onOpenSession(session.id)}
               >
                 ›
@@ -346,7 +343,7 @@ export function CoachPlanificationMonthCalendar({
 
       {/* ── Mes athlètes ─────────────────────────────────────────────────── */}
       {athletes.length > 0 && (
-        <div className="px-4 pb-5 pt-4" style={{ background: "#F2F2F7" }}>
+        <div className="border-t border-[#E5E5EA] bg-white px-4 pb-5 pt-4">
           <p
             className="mb-[10px] text-[11px] font-semibold uppercase tracking-[0.08em]"
             style={{ color: "#8E8E93" }}
@@ -358,7 +355,7 @@ export function CoachPlanificationMonthCalendar({
               <button
                 key={athlete.id}
                 type="button"
-                className="flex flex-col items-center gap-1.5 rounded-[14px] bg-white px-2 pb-[10px] pt-3 transition-opacity active:opacity-70"
+                className="flex flex-col items-center gap-1.5 rounded-[14px] border border-[#E5E5EA] bg-white px-2 pb-[10px] pt-3 transition-opacity active:opacity-70"
                 onClick={() => onSelectAthlete?.(athlete.id)}
               >
                 {/* Avatar */}

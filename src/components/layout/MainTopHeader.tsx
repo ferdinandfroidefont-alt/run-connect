@@ -18,6 +18,9 @@ type MainTopHeaderProps = {
   right?: ReactNode;
   /** Action alignée au grand titre (ex. avatar club). */
   largeTitleRight?: ReactNode;
+  /** Optionnel · alignement ligne titre + accessory (ex. items-end avec avatar club). */
+  largeTitleFlexClassName?: string;
+  largeTitleAccessoryWrapperClassName?: string;
   className?: string;
   /** Désactive la compaction au scroll et garde le header fixe/étendu. */
   disableScrollCollapse?: boolean;
@@ -31,6 +34,8 @@ export function MainTopHeader({
   left,
   right,
   largeTitleRight,
+  largeTitleFlexClassName,
+  largeTitleAccessoryWrapperClassName,
   className,
   disableScrollCollapse = false,
 }: MainTopHeaderProps) {
@@ -123,11 +128,18 @@ export function MainTopHeader({
           transform: `translateY(${-10 * progress}px) scale(${1 - progress * 0.18})`,
         }}
       >
-        <div className="flex min-w-0 items-center justify-between gap-3">
+        <div
+          className={cn(
+            "flex min-w-0 items-center justify-between gap-3",
+            largeTitleFlexClassName
+          )}
+        >
           <h1 className="font-display min-w-0 select-none truncate text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
             {title}
           </h1>
-          {largeTitleRight ? <div className="shrink-0">{largeTitleRight}</div> : null}
+          {largeTitleRight ? (
+            <div className={cn("shrink-0", largeTitleAccessoryWrapperClassName)}>{largeTitleRight}</div>
+          ) : null}
         </div>
         {subtitle ? (
           <p className="mt-1 line-clamp-1 text-[13px] font-normal leading-snug text-muted-foreground">

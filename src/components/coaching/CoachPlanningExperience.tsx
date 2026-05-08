@@ -3260,7 +3260,9 @@ export function CoachPlanningExperience() {
                 ? "shrink-0 border-b border-border apple-grouped-bg"
                 : activeMenuKey === "my-plan"
                   ? "shrink-0 border-0 z-50 apple-grouped-bg"
-                  : "shrink-0 border-0 z-50 apple-grouped-bg"
+                  : showCoachLanding
+                    ? "shrink-0 border-0 z-50 bg-white dark:bg-background"
+                    : "shrink-0 border-0 z-50 apple-grouped-bg"
           }
           header={
             weekPlannerMode ? (
@@ -3312,10 +3314,13 @@ export function CoachPlanningExperience() {
                 onOpenMenu={() => setDrawerOpen(true)}
                 title={coachingHeaderTitle}
                 coachLandingBrand={false}
-                hideDrawerActions={coachingHeaderTitle === "Mon plan"}
+                hideDrawerActions={
+                  coachingHeaderTitle === "Mon plan" || coachingHeaderTitle === "Planification"
+                }
                 clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
                 clubName={activeClubId ? activeClubName : undefined}
                 onPressClubAvatar={activeClubId ? openClubProfileSheet : undefined}
+                surfaceClassName={showCoachLanding ? "bg-white dark:bg-background" : undefined}
               />
             )
           }
@@ -3323,17 +3328,21 @@ export function CoachPlanningExperience() {
             weekPlannerMode ||
             activeMenuKey === "club" ||
             activeMenuKey === "tracking" ||
-            activeMenuKey === "my-plan" ||
-            showCoachLanding
+            activeMenuKey === "my-plan"
               ? "apple-grouped-bg"
-              : "bg-white"
+              : "bg-white dark:bg-background"
           }
           footer={null}
         >
           <div className={cn("space-y-0", activeMenuKey === "planning" || activeMenuKey === "tracking" ? "pb-0" : "pb-6")}>
             {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") && !weekPlannerMode ? (
               <CoachingRolePill
-                className="sticky top-0 z-20 bg-secondary/95 pt-2 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur"
+                className={cn(
+                  "sticky top-0 z-20 pt-2 supports-[backdrop-filter]:backdrop-blur",
+                  showCoachLanding
+                    ? "border-b border-[#E5E5EA]/80 bg-white/95 supports-[backdrop-filter]:bg-white/92"
+                    : "bg-secondary/95 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur"
+                )}
                 active={effectiveAthleteMode ? "athlete" : "coach"}
                 onSelect={(role) => {
                   if (role === "athlete") {

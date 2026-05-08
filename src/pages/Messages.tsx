@@ -3733,7 +3733,7 @@ const Messages = () => {
           {activeRootTab === "conversations" ? (
             <>
               {isInboxSearchMode ? (
-                <div className="mx-4 mt-3.5 min-h-[280px] rounded-[18px] bg-card">
+                <div className="mx-4 mt-3.5 min-h-[280px] overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card dark:border-border">
                   <SearchTabs activeTab={messageDiscoveryTab} onTabChange={setMessageDiscoveryTab} />
                   <div className="min-w-0">
                     {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
@@ -3743,10 +3743,10 @@ const Messages = () => {
                   </div>
                 </div>
               ) : (
-                /* Liste — carte blanche arrondie (maquette 17) */
+                /* Liste — carte blanche arrondie (maquette 17) : overflow-hidden pour que les coins 18px restent visibles */
                 <div
                   className={cn(
-                    "mx-4 mt-3.5 min-h-[280px] rounded-[18px] bg-card pb-ios-4",
+                    "mx-4 mt-3.5 min-h-[280px] overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card pb-ios-4 dark:border-border",
                     filteredAndSortedConversations.length > 0 && "divide-y divide-border"
                   )}
                 >
