@@ -18,8 +18,60 @@ import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import { MiniMapPreview } from "@/components/feed/MiniMapPreview";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
 
 type FeedMode = "friends" | "discover";
+
+/** Amis uniquement dans le feed : charge une séance par id (ex. séance créée par l'utilisateur depuis Mes séances). */
+async function fetchFeedSessionForDiscussion(sessionId: string): Promise<FeedSession | null> {
+  const { data: sessionRow, error } = await supabase
+    .from("sessions")
+    .select(`
+      id,
+      title,
+      activity_type,
+      location_name,
+      location_lat,
+      location_lng,
+      scheduled_at,
+      max_participants,
+      current_participants,
+      description,
+      created_at,
+      organizer_id
+    `)
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (error || !sessionRow) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_id, username, display_name, avatar_url")
+    .eq("user_id", sessionRow.organizer_id)
+    .maybeSingle();
+
+  const organizer = profile ?? {
+    user_id: sessionRow.organizer_id,
+    username: "user",
+    display_name: "Utilisateur",
+    avatar_url: "",
+  };
+
+  return {
+    ...sessionRow,
+    organizer: {
+      user_id: organizer.user_id,
+      username: organizer.username,
+      display_name: organizer.display_name,
+      avatar_url: organizer.avatar_url ?? "",
+    },
+    likes_count: 0,
+    comments_count: 0,
+    is_liked: false,
+    latest_comments: [],
+  };
+}
 
 type DiscussionComment = {
   id: string;
@@ -353,6 +405,8 @@ export function FeedActivitiesMaquette() {
   const [selectedFriendsSession, setSelectedFriendsSession] = useState<Record<string, unknown> | null>(null);
   const [selectedDiscoverSession, setSelectedDiscoverSession] = useState<Record<string, unknown> | null>(null);
   const [discussionSessionId, setDiscussionSessionId] = useState<string | null>(null);
+  const [discussionSessionOverride, setDiscussionSessionOverride] = useState<FeedSession | null>(null);
+  const [discussionSessionFetching, setDiscussionSessionFetching] = useState(false);
 
   const { feedItems, loading: friendsLoading, hasMore, loadMore, refresh: refreshFriends, addComment } = useFeed();
 
@@ -388,6 +442,7 @@ export function FeedActivitiesMaquette() {
     const st = location.state as { openFeedCommentSessionId?: string } | null;
     if (!st?.openFeedCommentSessionId) return;
     setMode("friends");
+    setDiscussionSessionFetching(true);
     setDiscussionSessionId(st.openFeedCommentSessionId);
     navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
   }, [location.state, location.pathname, location.search, navigate]);
@@ -406,10 +461,46 @@ export function FeedActivitiesMaquette() {
     return () => obs.disconnect();
   }, [hasMore, friendsLoading, loadMore, mode]);
 
-  const discussionSession = useMemo(
-    () => (discussionSessionId ? feedItems.find((s) => s.id === discussionSessionId) || null : null),
-    [feedItems, discussionSessionId],
-  );
+  useEffect(() => {
+    if (!discussionSessionId) {
+      setDiscussionSessionOverride(null);
+      setDiscussionSessionFetching(false);
+      return;
+    }
+    if (!user) return;
+    if (feedItems.some((s) => s.id === discussionSessionId)) {
+      setDiscussionSessionOverride(null);
+      setDiscussionSessionFetching(false);
+      return;
+    }
+    if (friendsLoading) return;
+
+    let cancelled = false;
+    setDiscussionSessionFetching(true);
+    void (async () => {
+      const loaded = await fetchFeedSessionForDiscussion(discussionSessionId);
+      if (cancelled) return;
+      setDiscussionSessionFetching(false);
+      if (!loaded) {
+        toast.error("Impossible d'ouvrir la discussion de cette séance.");
+        setDiscussionSessionId(null);
+        setDiscussionSessionOverride(null);
+        return;
+      }
+      setDiscussionSessionOverride(loaded);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [discussionSessionId, user, feedItems, friendsLoading]);
+
+  const discussionSession = useMemo(() => {
+    if (!discussionSessionId) return null;
+    const fromFeed = feedItems.find((s) => s.id === discussionSessionId);
+    if (fromFeed) return fromFeed;
+    if (discussionSessionOverride?.id === discussionSessionId) return discussionSessionOverride;
+    return null;
+  }, [discussionSessionId, feedItems, discussionSessionOverride]);
 
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
@@ -439,11 +530,28 @@ export function FeedActivitiesMaquette() {
     return `Amis · ${n}`;
   }, [friendCount]);
 
+  const waitingForDiscussionResolve =
+    Boolean(discussionSessionId) &&
+    !discussionSession &&
+    (friendsLoading || discussionSessionFetching);
+
+  if (discussionSessionId && waitingForDiscussionResolve) {
+    return (
+      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 bg-secondary px-6 pb-[calc(env(safe-area-inset-bottom,0)+24px)] pt-[calc(var(--safe-area-top)+24px)]">
+        <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
+        <p className="text-center text-ios-subheadline text-muted-foreground">Ouverture de la discussion…</p>
+      </div>
+    );
+  }
+
   if (discussionSession) {
     return (
       <DiscussionView
         session={discussionSession}
-        onBack={() => setDiscussionSessionId(null)}
+        onBack={() => {
+          setDiscussionSessionId(null);
+          setDiscussionSessionOverride(null);
+        }}
         onAddComment={addComment}
       />
     );
