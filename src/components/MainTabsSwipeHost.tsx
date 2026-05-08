@@ -64,7 +64,11 @@ export function MainTabsSwipeHost() {
   const canSwipe = useCallback((target: EventTarget | null) => {
     const node = target instanceof Element ? target : null;
     if (!node) return true;
-    if (node.closest("input, textarea, select, button, [contenteditable='true'], [data-no-tab-swipe='true']")) {
+    if (
+      node.closest(
+        "input, textarea, select, button, [contenteditable='true'], [data-no-tab-swipe='true'], [role='menu'], [role='menuitem'], [data-radix-dropdown-menu-content], [data-radix-dialog-content]"
+      )
+    ) {
       return false;
     }
     let current: Element | null = node;

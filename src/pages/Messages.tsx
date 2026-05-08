@@ -24,6 +24,7 @@ import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SwipeableConversationItem } from "@/components/SwipeableConversationItem";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useCamera } from "@/hooks/useCamera";
@@ -221,6 +222,8 @@ const Messages = () => {
   const [searchUsers, setSearchUsers] = useState("");
   const [availableUsers, setAvailableUsers] = useState<Profile[]>([]);
   const [showNewConversation, setShowNewConversation] = useState(false);
+  /** Remplace le Dropdown sur l’écran Messages : évite conflits swipe horizontal + tab bar z-[120]. */
+  const [messagesComposeSheetOpen, setMessagesComposeSheetOpen] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showClubProfile, setShowClubProfile] = useState(false);
@@ -329,6 +332,7 @@ const Messages = () => {
 
   /** Même flux que l’entrée « Créer un club » : formulaire club / groupe conversation. */
   const openCreateClubTab = useCallback(() => {
+    setMessagesComposeSheetOpen(false);
     setActiveRootTab("create-club");
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -338,10 +342,16 @@ const Messages = () => {
   }, [setSearchParams]);
 
   const openNewConversationView = useCallback(() => {
+    setMessagesComposeSheetOpen(false);
     setActiveRootTab("conversations");
     setSelectedConversation(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("tab");
+      return next;
+    }, { replace: true });
     setShowNewConversation(true);
-  }, []);
+  }, [setSearchParams]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -2378,7 +2388,11 @@ const Messages = () => {
   if (showNewConversation) {
     return (
       <>
-        <Suspense fallback={<div className="h-full min-h-0 bg-secondary" />}>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-[125] flex items-center justify-center bg-[#f5f5f7] dark:bg-secondary" />
+          }
+        >
           <NewConversationView
             onBack={() => setShowNewConversation(false)}
             onStartConversation={startConversation}
@@ -3561,46 +3575,78 @@ const Messages = () => {
                     className="apple-grouped-bg"
                     largeTitleRight={
                       <div className="flex items-center text-primary">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className="tap-highlight-none flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full active:bg-black/[0.04] dark:active:bg-white/[0.06]"
-                              aria-label="Nouvelle conversation, club ou groupe"
-                            >
-                              <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="z-[200] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
+                        <button
+                          type="button"
+                          onClick={() => setMessagesComposeSheetOpen(true)}
+                          className="tap-highlight-none flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                          aria-label="Nouvelle conversation, club ou groupe"
+                          aria-expanded={messagesComposeSheetOpen}
+                          aria-haspopup="dialog"
+                        >
+                          <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
+                        </button>
+                        <Sheet open={messagesComposeSheetOpen} onOpenChange={setMessagesComposeSheetOpen}>
+                          <SheetContent
+                            side="bottom"
+                            overlayClassName="z-[130]"
+                            className={cn(
+                              "z-[130] max-h-[85dvh] gap-0 rounded-t-[14px] border-t border-[#e0e0e0] bg-card p-0",
+                              "pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                            )}
+                            showCloseButton={false}
                           >
-                            <DropdownMenuItem
-                              className="cursor-pointer gap-2 py-ios-3"
-                              onSelect={() => openNewConversationView()}
-                              onClick={() => openNewConversationView()}
-                            >
-                              <MessageCircle className="h-4 w-4" />
-                              Nouvelle conversation
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="cursor-pointer gap-2 py-ios-3"
-                              onSelect={() => openCreateClubTab()}
-                              onClick={() => openCreateClubTab()}
-                            >
-                              <Users className="h-4 w-4" />
-                              Créer un club
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="cursor-pointer gap-2 py-ios-3"
-                              onSelect={() => openCreateClubTab()}
-                              onClick={() => openCreateClubTab()}
-                            >
-                              <UserPlus className="h-4 w-4" />
-                              Créer un groupe
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            <SheetHeader className="border-b border-[#e0e0e0] px-5 py-4 text-left">
+                              <SheetTitle className="text-[17px] font-semibold tracking-[-0.37px] text-foreground">
+                                Nouveau
+                              </SheetTitle>
+                            </SheetHeader>
+                            <div className="flex flex-col px-2 py-2">
+                              <button
+                                type="button"
+                                className="flex min-h-[48px] w-full items-center gap-3 rounded-ios-md px-4 py-3 text-left active:bg-muted"
+                                data-no-tab-swipe="true"
+                                onClick={() => openNewConversationView()}
+                              >
+                                <MessageCircle className="h-5 w-5 shrink-0 text-primary" />
+                                <span className="text-[17px] font-normal leading-snug tracking-[-0.37px] text-foreground">
+                                  Nouvelle conversation
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                className="flex min-h-[48px] w-full items-center gap-3 rounded-ios-md px-4 py-3 text-left active:bg-muted"
+                                data-no-tab-swipe="true"
+                                onClick={() => openCreateClubTab()}
+                              >
+                                <Users className="h-5 w-5 shrink-0 text-primary" />
+                                <span className="text-[17px] font-normal leading-snug tracking-[-0.37px] text-foreground">
+                                  Créer un club
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                className="flex min-h-[48px] w-full items-center gap-3 rounded-ios-md px-4 py-3 text-left active:bg-muted"
+                                data-no-tab-swipe="true"
+                                onClick={() => openCreateClubTab()}
+                              >
+                                <UserPlus className="h-5 w-5 shrink-0 text-primary" />
+                                <span className="text-[17px] font-normal leading-snug tracking-[-0.37px] text-foreground">
+                                  Créer un groupe
+                                </span>
+                              </button>
+                            </div>
+                            <div className="px-4 pb-2">
+                              <button
+                                type="button"
+                                className="tap-highlight-none flex min-h-[48px] w-full items-center justify-center rounded-full border border-[#e0e0e0] bg-transparent px-4 text-[17px] font-medium text-foreground active:bg-muted"
+                                data-no-tab-swipe="true"
+                                onClick={() => setMessagesComposeSheetOpen(false)}
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </SheetContent>
+                        </Sheet>
                       </div>
                     }
                   />
