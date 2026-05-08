@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2160" role="img" aria-label="RunConnect loading">
+  <defs>
+    <linearGradient id="pinFill" x1="0" y1="760" x2="0" y2="1264" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e8eef5"/>
+    </linearGradient>
+    <linearGradient id="edgeLight" x1="340" y1="824" x2="740" y2="1264" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#9ecdf7" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1080" height="2160" fill="#0066CC"/>
+
+  <g transform="translate(0 70)">
+    <ellipse cx="540" cy="1230" rx="112" ry="24" fill="#004F9E" opacity="0.72"/>
+
+    <path
+      d="M540 640c-124 0-225 96-225 216 0 148 153 344 225 433 72-89 225-285 225-433 0-120-101-216-225-216Z"
+      fill="url(#pinFill)"
+    />
+    <path
+      d="M540 640c-124 0-225 96-225 216 0 148 153 344 225 433 72-89 225-285 225-433 0-120-101-216-225-216Z"
+      fill="none"
+      stroke="url(#edgeLight)"
+      stroke-width="8"
+    />
+    <circle cx="540" cy="856" r="70" fill="#0066CC"/>
+    <circle cx="540" cy="856" r="70" fill="none" stroke="#003F7F" stroke-opacity="0.24" stroke-width="4"/>
+
+    <path d="M292 768c-34 113-34 233 0 346" fill="none" stroke="#87C5F6" stroke-opacity="0.82" stroke-width="31" stroke-linecap="round"/>
+    <path d="M200 700c-58 158-58 326 0 484" fill="none" stroke="#75B8EF" stroke-opacity="0.78" stroke-width="32" stroke-linecap="round"/>
+    <path d="M788 768c34 113 34 233 0 346" fill="none" stroke="#87C5F6" stroke-opacity="0.82" stroke-width="31" stroke-linecap="round"/>
+    <path d="M880 700c58 158 58 326 0 484" fill="none" stroke="#75B8EF" stroke-opacity="0.78" stroke-width="32" stroke-linecap="round"/>
+  </g>
+</svg>

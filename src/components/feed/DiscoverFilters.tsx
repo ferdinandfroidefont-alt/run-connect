@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import { cn } from '@/lib/utils';
 import {
-  DISCOVER_FILTER_EMOJI_BADGE_CLASS,
+  DISCOVER_FILTER_EMOJI_BADGE_COMPACT_CLASS,
   getActivityEmoji,
   getDiscoverSportTileClass,
 } from '@/lib/discoverSessionVisual';
@@ -62,7 +62,7 @@ export const DiscoverFilters = ({
               >
                 <span
                   className={cn(
-                    DISCOVER_FILTER_EMOJI_BADGE_CLASS,
+                    DISCOVER_FILTER_EMOJI_BADGE_COMPACT_CLASS,
                     getDiscoverSportTileClass(activity.value)
                   )}
                   aria-hidden

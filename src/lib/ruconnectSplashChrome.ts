@@ -7,8 +7,8 @@ import {
 import { RunConnectSplashChrome } from '@/plugins/runConnectSplashChrome';
 
 /**
- * Splash RunConnect : même bleu Action (#0066CC) que le Launch Screen iOS natif.
- * À garder aligné avec `capacitor.config.ts` (ios.backgroundColor) et `index.html` (body initial).
+ * Couleur de secours du splash. Le visuel de chargement est posé au-dessus dès que possible
+ * pour éviter un écran bleu nu pendant le boot.
  */
 export const RUCONNECT_SPLASH_BACKGROUND = '#0066CC';
 export const RUCONNECT_SPLASH_PRIMARY = '#0066CC';
@@ -18,22 +18,24 @@ export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
 
 /** Boucle vidéo plein écran (`LoadingScreen` : `<video>` autoplay + `playsInline` iOS). */
 export const RUCONNECT_LOADING_SCREEN_MP4_URL = '/brand/runconnect-loading.mp4';
-/** Image fixe si la vidéo est absente ou en erreur — JPEG attendu. */
-export const RUCONNECT_LOADING_SCREEN_FALLBACK_URL = '/brand/runconnect-loading-splash.jpg';
+/** Image fixe si la vidéo est absente ou en erreur — SVG vectoriel pour rester net sur grands écrans. */
+export const RUCONNECT_LOADING_SCREEN_FALLBACK_URL = '/brand/runconnect-loading-splash.svg';
 /** GIF optionnel (non utilisé par défaut ; conserver pour tests / assets alternatifs). */
 export const RUCONNECT_LOADING_SCREEN_GIF_URL = '/brand/runconnect-loading-splash.gif';
 
 /** URL « principale » du splash (vidéo). */
 export const RUCONNECT_LOADING_SCREEN_URL = RUCONNECT_LOADING_SCREEN_MP4_URL;
 
+export const RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE = `${RUCONNECT_SPLASH_BACKGROUND} url("${RUCONNECT_LOADING_SCREEN_FALLBACK_URL}") center / cover no-repeat`;
+
 /** Chrome web (Safari / in-app) pendant le splash */
 export function applyRuconnectSplashWebChrome(): void {
   const root = document.documentElement;
   const body = document.body;
   const appRoot = document.getElementById('root');
-  root.style.backgroundColor = RUCONNECT_SPLASH_BACKGROUND;
-  body.style.backgroundColor = RUCONNECT_SPLASH_BACKGROUND;
-  if (appRoot) appRoot.style.backgroundColor = RUCONNECT_SPLASH_BACKGROUND;
+  root.style.background = RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE;
+  body.style.background = RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE;
+  if (appRoot) appRoot.style.background = RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE;
 
   const metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
   if (metaTheme) metaTheme.setAttribute('content', RUCONNECT_SPLASH_BACKGROUND);
@@ -63,10 +65,12 @@ export async function applyRuconnectSplashNativeChrome(): Promise<void> {
   }
 }
 
-/** Restaure le chrome après splash / écran d’attente bleu */
+/** Restaure le chrome après splash / écran d’attente */
 export async function restoreChromeAfterRuconnectSplash(): Promise<void> {
+  document.documentElement.style.removeProperty('background');
+  document.body.style.removeProperty('background');
   const appRoot = document.getElementById('root');
-  if (appRoot) appRoot.style.removeProperty('background-color');
+  if (appRoot) appRoot.style.removeProperty('background');
   const isDark = getPreferredDarkFromStorage();
   applyWebChromeForTheme(isDark);
   if (Capacitor.isNativePlatform()) {

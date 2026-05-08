@@ -12,7 +12,7 @@ import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import {
-  RUCONNECT_SPLASH_BACKGROUND,
+  RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
   RUCONNECT_SPLASH_ICON_URL,
 } from '@/lib/ruconnectSplashChrome';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
@@ -117,7 +117,7 @@ export const Layout = ({ children }: LayoutProps) => {
       <div
         className="fixed inset-0 z-[99] flex items-center justify-center px-5"
         style={{
-          backgroundColor: RUCONNECT_SPLASH_BACKGROUND,
+          background: RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: '0px',
         }}

@@ -3,6 +3,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -1018,6 +1019,8 @@ export function CoachPlanningExperience() {
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const planningContinuousRef = useRef<HTMLDivElement | null>(null);
   const myPlanContinuousRef = useRef<HTMLDivElement | null>(null);
+  /** Scroll principal coaching (IosFixedPageHeaderShell) pour remonter en haut au changement d’écran Mon plan ⇄ Planification. */
+  const coachingMainScrollRef = useRef<HTMLDivElement | null>(null);
   const weekPlannerTopRef = useRef<HTMLDivElement | null>(null);
   const didInitialTodayCenterRef = useRef<{ planning: boolean; myPlan: boolean }>({ planning: false, myPlan: false });
   const [search, setSearch] = useState("");
@@ -2892,6 +2895,15 @@ export function CoachPlanningExperience() {
   const weekPlannerMode =
     activeMenuKey === "planning" && !effectiveAthleteMode && (!!activeAthleteId || !!activeGroupId || coachWeekProgrammerOpen);
 
+  useLayoutEffect(() => {
+    const bump = () => {
+      coachingMainScrollRef.current && (coachingMainScrollRef.current.scrollTop = 0);
+    };
+    bump();
+    const raf = window.requestAnimationFrame(() => bump());
+    return () => window.cancelAnimationFrame(raf);
+  }, [activeMenuKey, effectiveAthleteMode]);
+
   const scrollWeekPlannerTopIntoView = useCallback(() => {
     window.requestAnimationFrame(() => {
       weekPlannerTopRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
@@ -3253,6 +3265,7 @@ export function CoachPlanningExperience() {
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           contentTopOffsetPx={0}
+          scrollRef={coachingMainScrollRef}
           headerWrapperClassName={
             weekPlannerMode
               ? "shrink-0 border-0 apple-grouped-bg"
@@ -3328,7 +3341,8 @@ export function CoachPlanningExperience() {
             weekPlannerMode ||
             activeMenuKey === "club" ||
             activeMenuKey === "tracking" ||
-            activeMenuKey === "my-plan"
+            activeMenuKey === "my-plan" ||
+            showCoachLanding
               ? "apple-grouped-bg"
               : "bg-white dark:bg-background"
           }

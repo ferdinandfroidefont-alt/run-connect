@@ -1,8 +1,9 @@
 # Brand — splash RunConnect
 
 - **`runconnect-loading.mp4`** : boucle vidéo du splash (essayée en premier).
-- **`runconnect-loading-splash.jpg`** : image fixe de secours.
+- **`runconnect-loading-splash.svg`** : image fixe vectorielle de secours, nette sur grands écrans.
+- **`runconnect-loading-splash.jpg`** : ancien fallback raster conservé pour compatibilité.
 - **`runconnect-loading-splash.gif`** (optionnel) : alternative GIF si besoin.
 - **`runconnect-splash-icon.png`** : icône seule (fond bleu + logo). Utilisée par `AppBootFallback`, fallbacks, etc. via `RUCONNECT_SPLASH_ICON_URL`.
-- Le **splash** (Web + assets) utilise **`#2E68FF`** (`RUCONNECT_SPLASH_BLUE` dans `src/lib/ruconnectSplashChrome.ts`), aligné sur le fond de l’icône.
-- Sous **Capacitor iOS**, le **`ios.backgroundColor`** du fichier `capacitor.config.ts` est volontairement **blanc** (`#FFFFFF`) : ce n’est pas le bleu splash — sinon une bande bleue native peut apparaître sous la tab bar dans la safe area. Après modification, lancer `npx cap sync ios`.
+- Le **splash** (Web + assets) utilise **`#0066CC`**, aligné sur le fond du chargement.
+- Après modification des assets natifs, lancer `npx cap sync`.

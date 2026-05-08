@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  RUCONNECT_SPLASH_BACKGROUND,
+  RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
   RUCONNECT_LOADING_SCREEN_FALLBACK_URL,
   RUCONNECT_LOADING_SCREEN_MP4_URL,
   applyRuconnectSplashNativeChrome,
@@ -93,7 +93,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot unique ; voir commentaire ci-dessus
   }, []);
 
-  const splashLayerStyle: CSSProperties = { backgroundColor: RUCONNECT_SPLASH_BACKGROUND };
+  const splashLayerStyle: CSSProperties = { background: RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE };
   const mediaClassName =
     "pointer-events-none absolute inset-0 block h-full w-full select-none object-cover object-center";
 
@@ -115,6 +115,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
             <video
               ref={videoRef}
               src={RUCONNECT_LOADING_SCREEN_MP4_URL}
+              poster={RUCONNECT_LOADING_SCREEN_FALLBACK_URL}
               autoPlay
               loop
               muted
@@ -141,7 +142,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
         <motion.div
           key="splash-exit"
           className="pointer-events-none fixed inset-0 z-[100]"
-          style={{ backgroundColor: RUCONNECT_SPLASH_BACKGROUND }}
+          style={splashLayerStyle}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
           transition={{ duration: 0.14, ease: [0.32, 0.72, 0, 1] }}

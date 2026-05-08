@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,7 +7,8 @@ import {
   EyeOff,
   Repeat,
   Radio,
-  MapPinned,
+  ImagePlus,
+  X,
 } from 'lucide-react';
 import {
   SessionFormData,
@@ -23,9 +24,12 @@ import { cn } from '@/lib/utils';
 
 import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
 import { Group, Cell } from '@/components/apple';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { MiniMapPreview } from '@/components/feed/MiniMapPreview';
 import { useUserProfile } from '@/contexts/UserProfileContext';
+import { RouteSelector } from '../RouteSelector';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -34,6 +38,8 @@ interface ConfirmStepProps {
   loading: boolean;
   isPremium: boolean;
   onFormDataChange: (updates: Partial<SessionFormData>) => void;
+  onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onImageRemove: () => void;
   onSubmit: () => void;
   onBack: () => void;
   isCoachingMode?: boolean;
@@ -49,6 +55,8 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   loading,
   isPremium,
   onFormDataChange,
+  onImageSelect,
+  onImageRemove,
   onSubmit,
   onBack,
   isCoachingMode = false,
@@ -83,6 +91,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   const { toast } = useToast();
   const { userProfile } = useUserProfile();
   const pinAvatarUrl = userProfile?.avatar_url || imagePreview || null;
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const activityShort =
     activity?.label?.replace(/^[^\s]+\s/, '').toUpperCase() ?? 'SÉANCE';
@@ -179,6 +188,148 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
           </div>
         )}
 
+        {/* Photo, itinéraire, visibilité, live tracking, note — avant le booster */}
+        {!embedInFinalize && (
+          <>
+            <AppleGroup title="Illustration">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => {
+                  onImageSelect(e);
+                  e.target.value = '';
+                }}
+              />
+              {!imagePreview ? (
+                <Cell
+                  icon={<span className="text-[15px]">📷</span>}
+                  iconBg="#ff9500"
+                  title="Ajouter une photo"
+                  subtitle="Optionnel · JPG, PNG ou WebP, max 5 Mo"
+                  accessory="chevron"
+                  last
+                  onClick={() => photoInputRef.current?.click()}
+                />
+              ) : (
+                <div className="divide-y divide-border/60">
+                  <div className="relative mx-4 my-4 overflow-hidden rounded-[12px]">
+                    <img
+                      src={imagePreview}
+                      alt=""
+                      className="h-36 w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Retirer la photo"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onImageRemove();
+                      }}
+                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md active:opacity-90"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <Cell
+                    icon={<ImagePlus className="h-[15px] w-[15px]" />}
+                    iconBg="#ff9500"
+                    title="Remplacer la photo"
+                    subtitle="Choisir une autre image"
+                    accessory="chevron"
+                    last
+                    onClick={() => photoInputRef.current?.click()}
+                  />
+                </div>
+              )}
+            </AppleGroup>
+
+            <section className="space-y-2">
+              <div className="px-4 text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+                Itinéraire
+              </div>
+              <RouteSelector
+                selectedRouteId={formData.route_id}
+                onRouteSelect={(route) =>
+                  route
+                    ? onFormDataChange({ route_id: route.id })
+                    : onFormDataChange({ route_id: null })
+                }
+                onAutoFill={({ distance_km, elevation_gain }) =>
+                  onFormDataChange({ distance_km, elevation_gain })
+                }
+              />
+            </section>
+
+            <AppleGroup title="Visibilité">
+              <div className="px-4 py-3">
+                <VisibilitySelector
+                  visibilityType={formData.visibility_type}
+                  hiddenFromUsers={formData.hidden_from_users}
+                  isPremium={isPremium}
+                  onVisibilityChange={handleVisibilityChange}
+                  onHiddenUsersChange={handleHiddenUsersChange}
+                  clubId={formData.club_id}
+                />
+              </div>
+            </AppleGroup>
+
+            {formData.visibility_type === 'friends' &&
+              formData.hidden_from_users?.length > 0 && (
+                <div className="flex items-center gap-2 px-4 text-[12px] text-amber-500">
+                  <EyeOff className="h-3.5 w-3.5" />
+                  <span>
+                    {formData.hidden_from_users.length} ami
+                    {formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance
+                  </span>
+                </div>
+              )}
+
+            <AppleGroup>
+              <div className="flex items-start gap-3 px-4 py-3">
+                <div
+                  className={cn(
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]',
+                    formData.live_tracking_enabled
+                      ? 'bg-emerald-500/15 text-emerald-600'
+                      : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  <Radio className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="text-[15px] font-medium tracking-tight text-foreground">
+                    Live tracking
+                  </p>
+                  <p className="text-[12px] leading-relaxed text-muted-foreground">
+                    {formData.live_tracking_enabled
+                      ? 'Les participants pourront partager leur position pendant la séance.'
+                      : 'Aucune position partagée sur la carte.'}
+                  </p>
+                </div>
+                <Switch
+                  className="mt-1 shrink-0"
+                  checked={formData.live_tracking_enabled}
+                  onCheckedChange={(v) => onFormDataChange({ live_tracking_enabled: v })}
+                />
+              </div>
+            </AppleGroup>
+
+            <AppleGroup title="Note">
+              <div className="min-w-0 px-4 py-3">
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => onFormDataChange({ description: e.target.value })}
+                  placeholder="Détails pour les participants · niveau, matériel, consignes…"
+                  rows={3}
+                  className="min-h-[88px] resize-none rounded-[12px] border-border/70 bg-secondary/40 text-[15px] leading-snug"
+                />
+              </div>
+            </AppleGroup>
+          </>
+        )}
+
         {/* Maquette 12 — section Booster */}
         {!embedInFinalize && !isCoachingMode ? (
           <Group inset={false} className="mb-0" title="Booster">
@@ -222,61 +373,6 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             />
           </Group>
         ) : null}
-
-        {/* Live tracking — recap row */}
-        <AppleGroup>
-          <div className="flex items-start gap-3 px-4 py-3">
-            <div
-              className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]',
-                formData.live_tracking_enabled
-                  ? 'bg-emerald-500/15 text-emerald-600'
-                  : 'bg-muted text-muted-foreground'
-              )}
-            >
-              {formData.live_tracking_enabled ? (
-                <Radio className="h-4 w-4" />
-              ) : (
-                <MapPinned className="h-4 w-4" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium tracking-tight text-foreground">
-                Live tracking
-              </p>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-                {formData.live_tracking_enabled
-                  ? 'Activé : les participants pourront partager leur position pendant la séance.'
-                  : 'Désactivé : aucune position partagée sur la carte.'}
-              </p>
-            </div>
-          </div>
-        </AppleGroup>
-
-        {/* Visibility */}
-        <AppleGroup title="Visibilité">
-          <div className="px-4 py-3">
-            <VisibilitySelector
-              visibilityType={formData.visibility_type}
-              hiddenFromUsers={formData.hidden_from_users}
-              isPremium={isPremium}
-              onVisibilityChange={handleVisibilityChange}
-              onHiddenUsersChange={handleHiddenUsersChange}
-              clubId={formData.club_id}
-            />
-          </div>
-        </AppleGroup>
-
-        {formData.visibility_type === 'friends' &&
-          formData.hidden_from_users?.length > 0 && (
-            <div className="flex items-center gap-2 px-4 text-[12px] text-amber-500">
-              <EyeOff className="h-3.5 w-3.5" />
-              <span>
-                {formData.hidden_from_users.length} ami
-                {formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance
-              </span>
-            </div>
-          )}
 
         {/* Recurrence */}
         <AppleGroup title="Récurrence">

@@ -1,8 +1,12 @@
 /**
  * Icônes « mockup 04 Découvrir » : emoji dans pastille colorée (pas Lucide).
- * Pastille partagée : bottom sheet Découvrir + feuille filtres carte.
+ * Liste (feuille filtres carte accueil / lignes type Réglages) : même échelle que les lignes ~52px.
  */
 export const DISCOVER_FILTER_EMOJI_BADGE_CLASS =
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[22px] leading-none text-white shadow-sm";
+
+/** Chips filtres horizontaux écran Découvrir (compact). */
+export const DISCOVER_FILTER_EMOJI_BADGE_COMPACT_CLASS =
   "flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-[14px] leading-none text-white";
 
 export function getActivityEmoji(activityType: string): string {

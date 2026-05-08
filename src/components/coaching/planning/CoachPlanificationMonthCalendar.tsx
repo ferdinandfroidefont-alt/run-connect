@@ -124,6 +124,8 @@ export function CoachPlanificationMonthCalendar({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {/* Bloc calendrier sur fond blanc — le reste de la page (scroll) est gris groupé iOS */}
+      <div className="shrink-0 bg-white pb-2 dark:bg-background">
       {/* ── Sub-header: mois + actions (titre + Athlète/Coach = shell PlanningHeader + CoachingRolePill) ── */}
       <div className="flex items-center justify-between px-4 pb-3 pt-1">
         <button
@@ -237,9 +239,10 @@ export function CoachPlanificationMonthCalendar({
           })}
         </div>
       </div>
+      </div>
 
-      {/* ── Day detail panel ─────────────────────────────────────────────── */}
-      <div className="mt-2 flex-1 border-t border-[#E5E5EA] bg-white px-4 pb-[18px] pt-4">
+      {/* ── Day detail panel (fond gris = scroll parent apple-grouped-bg) ── */}
+      <div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-[#E5E5EA] px-4 pb-[18px] pt-4 dark:border-white/10">
         {/* Panel header */}
         <div className="mb-3 flex items-baseline gap-2">
           <span
@@ -343,7 +346,7 @@ export function CoachPlanificationMonthCalendar({
 
       {/* ── Mes athlètes ─────────────────────────────────────────────────── */}
       {athletes.length > 0 && (
-        <div className="border-t border-[#E5E5EA] bg-white px-4 pb-5 pt-4">
+        <div className="border-t border-[#E5E5EA] px-4 pb-5 pt-4 dark:border-white/10">
           <p
             className="mb-[10px] text-[11px] font-semibold uppercase tracking-[0.08em]"
             style={{ color: "#8E8E93" }}
