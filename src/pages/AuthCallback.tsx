@@ -1,25 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
-/**
- * Page d'atterrissage OAuth web (Supabase `redirectTo: <origin>/auth/callback`).
- *
- * Stratégie :
- * 1. Si un `code` PKCE est présent dans l'URL, on l'échange explicitement.
- * 2. On poll la session jusqu'à 8 s, en parallèle d'un listener `SIGNED_IN`.
- * 3. Quand la session apparaît, on bascule sur `/` (Layout prend la main).
- * 4. En cas d'échec total : on redirige vers `/` (et NON `/auth`) pour laisser le
- *    Layout afficher la connexion si réellement absent — évite les boucles
- *    "session présente mais redirigé vers login" observées sur iOS Apple Sign-In.
- */
 const AUTH_CALLBACK_TIMEOUT_MS = 8000;
 const AUTH_CALLBACK_POLL_MS = 250;
+
+function readOAuthErrorFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return params.get("error") || hashParams.get("error") || null;
+}
+
+function readOAuthErrorDescriptionFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return (
+    params.get("error_description") ||
+    hashParams.get("error_description") ||
+    null
+  );
+}
 
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState("Connexion en cours...");
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const navigatedRef = useRef(false);
 
   useEffect(() => {
@@ -44,6 +50,17 @@ const AuthCallback = () => {
 
     const handleCallback = async () => {
       try {
+        // ── Détection d'erreur OAuth immédiate ──────────────────────────────
+        const oauthErr = readOAuthErrorFromUrl();
+        if (oauthErr) {
+          const desc = readOAuthErrorDescriptionFromUrl();
+          console.warn("[AuthCallback] OAuth error dans l'URL", { oauthErr, desc });
+          setOauthError(desc || oauthErr);
+          // Retour vers /auth après 2.5 s pour laisser l'utilisateur voir le message
+          timeoutId = window.setTimeout(() => safeNavigate("/auth", `oauth-error:${oauthErr}`), 2500);
+          return;
+        }
+
         const params = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
         const code = params.get("code") || hashParams.get("code");
@@ -53,6 +70,10 @@ const AuthCallback = () => {
           const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
           if (exErr) {
             console.warn("[AuthCallback] exchangeCodeForSession:", exErr.message);
+            // Échec d'échange : afficher message + retour /auth rapide
+            setOauthError(exErr.message);
+            timeoutId = window.setTimeout(() => safeNavigate("/auth", "exchange-failed"), 2500);
+            return;
           }
         }
 
@@ -62,8 +83,6 @@ const AuthCallback = () => {
           return;
         }
 
-        // Session pas encore visible : on combine listener + polling pour limiter la
-        // race entre l'init du client supabase, l'écriture storage, et notre lecture.
         const sub = supabase.auth.onAuthStateChange((event, nextSession) => {
           if (nextSession?.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED")) {
             safeNavigate("/", `event-${event}`);
@@ -80,30 +99,37 @@ const AuthCallback = () => {
               cleanup();
             }
           } catch {
-            /* transient — on retentera au prochain tick */
+            /* transient */
           }
         }, AUTH_CALLBACK_POLL_MS);
 
         timeoutId = window.setTimeout(() => {
           if (navigatedRef.current) return;
-          console.warn("[AuthCallback] timeout — fallback vers `/` (Layout gérera /auth si pas de session)");
-          setStatus("Délai dépassé. Retour à l'accueil…");
-          // On NE redirige PAS vers /auth : si la session est arrivée tardivement,
-          // on s'éviterait une boucle. Le Layout sur `/` redirigera vers /auth uniquement
-          // si réellement non connecté.
-          safeNavigate("/", "timeout");
+          console.warn("[AuthCallback] timeout — fallback /auth");
+          safeNavigate("/auth", "timeout");
           cleanup();
         }, AUTH_CALLBACK_TIMEOUT_MS);
       } catch (err) {
         console.error("[AuthCallback] erreur handler:", err);
-        setStatus("Erreur. Retour à l'accueil…");
-        window.setTimeout(() => safeNavigate("/", "exception"), 1200);
+        setStatus("Erreur. Retour à la connexion…");
+        window.setTimeout(() => safeNavigate("/auth", "exception"), 1500);
       }
     };
 
     void handleCallback();
     return cleanup;
   }, [navigate]);
+
+  if (oauthError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 gap-4">
+        <AlertCircle className="h-10 w-10 text-destructive" />
+        <p className="text-center font-semibold text-foreground">Connexion échouée</p>
+        <p className="text-center text-sm text-muted-foreground max-w-xs">{oauthError}</p>
+        <p className="text-center text-xs text-muted-foreground">Retour à la connexion…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">

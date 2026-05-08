@@ -767,21 +767,24 @@ function blockAccent(type: BlockType) {
 function zoneToPreviewColorClass(zone?: string) {
   const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
   switch (normalized) {
-    case "Z1":
-      return "bg-slate-400";
-    case "Z2":
-      return "bg-[#2563EB]";
-    case "Z3":
-      return "bg-green-500";
-    case "Z4":
-      return "bg-yellow-400";
-    case "Z5":
-      return "bg-orange-500";
-    case "Z6":
-      return "bg-red-500";
-    default:
-      return "bg-green-500";
+    case "Z1": return "bg-[#B5B5BA]";
+    case "Z2": return "bg-[#0066cc]";
+    case "Z3": return "bg-[#34C759]";
+    case "Z4": return "bg-[#FFCC00]";
+    case "Z5": return "bg-[#FF9500]";
+    case "Z6": return "bg-[#FF3B30]";
+    default:   return "bg-[#34C759]";
   }
+}
+function zoneHexColor(zone?: string): string {
+  const z = typeof zone === "string" ? zone.toUpperCase() : "Z3";
+  return ({ Z1: "#B5B5BA", Z2: "#0066cc", Z3: "#34C759", Z4: "#FFCC00", Z5: "#FF9500", Z6: "#FF3B30" } as Record<string, string>)[z] ?? "#34C759";
+}
+function zoneTextColor(zone?: string): string {
+  const z = typeof zone === "string" ? zone.toUpperCase() : "Z3";
+  if (z === "Z4") return "#6B5500";
+  if (z === "Z1") return "#1d1d1f";
+  return "#fff";
 }
 
 function blockGraphColor(type: BlockType, recovery = false) {
@@ -4346,349 +4349,145 @@ export function CoachPlanningExperience() {
                 </div>
 
                   {draft.blocks.length > 0 ? (
-                    <div className="mt-3 -mx-4 space-y-2 sm:mx-0">
+                    <div className="mt-4 space-y-3">
                       {draft.blocks.map((block, index) => {
-                        const label = blockDisplayLabel(block);
-                        const isDragged = draggedBlockId === block.id;
-                        const isDropTarget = dragOverBlockId === block.id;
-                        const isSelected = selectedBlockId === block.id;
-                        const typeMeta = blockTypeMeta(block.type);
-                        const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
                         const isPyramidBlock = Boolean(block.notes?.includes(PYRAMID_NOTES_PREFIX));
-                        const accents = isPyramidBlock
-                          ? {
-                              iconWrap: "bg-[#F97316]",
-                              iconColor: "text-white",
-                              tint: "from-[#F97316]/18 via-[#F97316]/8 to-transparent",
-                            }
-                          : blockAccent(block.type);
+                        const isProgressive = isProgressiveBlock(block);
                         const pyramidConfig = isPyramidBlock ? parsePyramidConfig(block) : null;
                         const pyramidSteps = pyramidConfig ? buildPyramidDisplaySteps(pyramidConfig) : [];
+                        const isSelected = selectedBlockId === block.id;
+                        const accentHex = isPyramidBlock ? "#FF9500" : isProgressive ? "#AF52DE" : block.type === "interval" ? "#0066cc" : "#34C759";
+                        const blockName = isPyramidBlock ? "Pyramide" : isProgressive ? "Variation" : blockTitle(block.type);
+                        const badge = isPyramidBlock && pyramidConfig
+                          ? (() => { const mc = pyramidSteps.filter(s => s.isMirror).length; return mc > 0 ? `${pyramidConfig.steps.length} + ${mc} miroirs` : `${pyramidConfig.steps.length} paliers`; })()
+                          : isProgressive
+                          ? `${block.paceStartSecPerKm ? compactPaceLabel(block.paceStartSecPerKm) : "?'??"} → ${block.paceEndSecPerKm ? compactPaceLabel(block.paceEndSecPerKm) : "?'??"}`
+                          : block.type === "interval" ? `${block.blockRepetitions ?? 1} × ${block.repetitions ?? 1}` : `${index + 1}`;
+                        const subtitle = isPyramidBlock && pyramidConfig ? pyramidSubtitle(pyramidConfig) : blockSummary(block);
 
                         return (
-                          <div key={block.id} className="relative">
-                            <div
-                              data-block-id={block.id}
-                              className={cn(
-                                "relative rounded-none border-x-0 border-border/80 bg-white pl-12 pr-3 py-3 transition-all",
-                                isDropTarget || isSelected ? "border-[#2563EB]/60 bg-[#2563EB]/[0.04]" : "",
-                                isDragged && "opacity-70"
-                              )}
-                              onClick={() => setSelectedBlockId(block.id)}
-                              onPointerMove={handleBlockReorderPointerMove}
-                              onPointerUp={finishBlockReorder}
-                              onPointerCancel={finishBlockReorder}
+                          <div key={block.id} className="relative overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
+                            {/* Left accent bar */}
+                            <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 top-0 w-[3px]" style={{ background: accentHex }} />
+                            {/* Header */}
+                            <button
+                              type="button"
+                              className="grid w-full items-center gap-[10px] py-3 pl-4 pr-3 text-left"
+                              style={{ gridTemplateColumns: "32px 1fr auto" }}
+                              onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
                             >
-                              <button
-                                type="button"
-                                aria-label={`Déplacer ${label}`}
-                                className={cn(
-                                  "absolute inset-y-2 left-2 inline-flex w-8 items-center justify-center rounded-xl border border-white/60 text-white touch-none shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
-                                  accents.iconWrap
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ background: accentHex }}>
+                                {isPyramidBlock ? (
+                                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><polygon points="12,5 21,20 3,20"/></svg>
+                                ) : isProgressive ? (
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="4,18 9,12 13,15 20,5"/><polyline points="14,5 20,5 20,11"/></svg>
+                                ) : block.type === "interval" ? (
+                                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M13 2 L4 13 L11 13 L11 22 L20 11 L13 11 Z"/></svg>
+                                ) : (
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="h-4 w-4"><line x1="6" y1="9" x2="18" y2="9"/><line x1="6" y1="15" x2="18" y2="15"/></svg>
                                 )}
-                                onPointerDown={() => startBlockReorderPress(block.id)}
-                                onPointerUp={finishBlockReorder}
-                                onPointerCancel={finishBlockReorder}
-                              >
-                                <GripVertical className={cn("h-5 w-5", accents.iconColor)} />
-                              </button>
-                              <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-100", accents.tint)} />
-                              {index < draft.blocks.length - 1 ? (
-                                <div
-                                  aria-hidden
-                                  className="pointer-events-none absolute bottom-0 left-[52px] right-0 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
-                                />
-                              ) : null}
-
-                              <div className="relative mb-3 flex items-center gap-2">
-                                <span
-                                  className={cn(
-                                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/60 text-white shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
-                                    accents.iconWrap
-                                  )}
-                                  aria-hidden
-                                >
-                                  {isPyramidBlock ? (
-                                    <span className={cn("text-[13px] font-bold leading-none", accents.iconColor)}>▲</span>
-                                  ) : (
-                                    <typeMeta.icon className={cn("h-4 w-4", accents.iconColor)} />
-                                  )}
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-[14px] font-bold uppercase tracking-[0.06em] text-foreground">
-                                      {isPyramidBlock ? "PYRAMIDE" : label}
-                                    </p>
-                                    {block.type === "interval" ? (
-                                      <span className="rounded-full bg-[#2563EB]/12 px-2 py-0.5 text-[11px] font-semibold text-[#2563EB]">
-                                        x{intervalRepetitions}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  <p className="text-[12px] text-muted-foreground">
-                                    {index + 1}. {isPyramidBlock && pyramidConfig ? pyramidSubtitle(pyramidConfig) : blockSummary(block)}
-                                  </p>
+                              </span>
+                              <div className="min-w-0">
+                                <div className="mb-0.5 flex items-baseline gap-[7px]">
+                                  <span className="text-[16px] font-semibold tracking-[-0.3px]" style={{ color: "#1d1d1f" }}>{blockName}</span>
+                                  <span className="rounded-full px-[7px] py-[2px] text-[11px] font-semibold leading-none" style={{ color: accentHex, background: accentHex + "22" }}>{badge}</span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    aria-label={`Ajouter un bloc après ${label}`}
-                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-primary"
-                                    onClick={() => openInsertBlockPicker(index + 1)}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    aria-label={`Supprimer ${label}`}
-                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-red-500"
-                                    onClick={() => removeDraftBlock(block.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
+                                <div className="truncate text-[13px]" style={{ color: "#7a7a7a" }}>{subtitle}</div>
                               </div>
-
+                              <div className="flex items-center gap-1">
+                                <span className={cn("flex h-[30px] w-[30px] items-center justify-center rounded-full transition-transform", isSelected ? "rotate-180" : "")}>
+                                  <ChevronDown className="h-4 w-4" style={{ color: "#7a7a7a" }} />
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Supprimer ${blockName}`}
+                                  onClick={(e) => { e.stopPropagation(); removeDraftBlock(block.id); }}
+                                  className="flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-red-50 hover:text-[#FF3B30]"
+                                  style={{ color: "#7a7a7a" }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </button>
+                            {/* Body */}
+                            {isSelected && (
+                              <div className="border-t border-[#f0f0f0] px-4 pb-4 pt-[14px]">
                               {block.type === "interval" ? (
-                                <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Blocs"
-                                      value={`${block.blockRepetitions ?? 1}`}
-                                      placeholder="1"
-                                      onClick={() =>
-                                        openWheel(
-                                          "Blocs",
-                                          Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.blockRepetitions ?? 1),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, blockRepetitions: Number(next) }))
-                                        )
-                                      }
-                                    />
-                                    <CoachingMetricPill
-                                      label="Répétitions"
-                                      value={`${block.repetitions ?? 1}`}
-                                      placeholder="1"
-                                      onClick={() =>
-                                        openWheel(
-                                          "Répétitions",
-                                          Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.repetitions ?? 1),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, repetitions: Number(next) }))
-                                        )
-                                      }
-                                    />
-                                    <CoachingMetricPill
-                                      label="RPE"
-                                      value={block.rpe ? `${block.rpe}/10` : ""}
-                                      placeholder="8"
-                                      onClick={() =>
-                                        openWheel(
-                                          "RPE",
-                                          Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.rpe ?? 8),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, rpe: Number(next) }))
-                                        )
-                                      }
-                                    />
+                                <div className="space-y-[10px]">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Blocs</p>
+                                      <button type="button" onClick={() => openWheel("Blocs", Array.from({length:20},(_,i)=>({value:String(i+1),label:String(i+1)})), String(block.blockRepetitions??1), (n)=>updateDraftBlock(block.id,(c)=>({...c,blockRepetitions:Number(n)})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:"#1d1d1f"}}>{block.blockRepetitions??1}</button>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Répétitions</p>
+                                      <button type="button" onClick={() => openWheel("Répétitions", Array.from({length:20},(_,i)=>({value:String(i+1),label:String(i+1)})), String(block.repetitions??1), (n)=>updateDraftBlock(block.id,(c)=>({...c,repetitions:Number(n)})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:"#1d1d1f"}}>{block.repetitions??1}</button>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>RPE</p>
+                                      <button type="button" onClick={() => openWheel("RPE", Array.from({length:10},(_,i)=>({value:String(i+1),label:String(i+1)})), String(block.rpe??8), (n)=>updateDraftBlock(block.id,(c)=>({...c,rpe:Number(n)})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.rpe?"#1d1d1f":"#7a7a7a"}}>{block.rpe??"—"}</button>
+                                    </div>
                                   </div>
-
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Distance"
-                                      value={simpleBlockDistanceValue(block.distanceM)}
-                                      placeholder="250"
-                                      onClick={() => {
-                                        const meters = block.distanceM || 0;
-                                        const wholeKm = Math.floor(meters / 1000);
-                                        const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                        setWheelAValue(String(wholeKm));
-                                        setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                        setWheelUnit("km");
-                                        openWheelColumns(
-                                          "Distance du bloc",
-                                          [
-                                            { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                            { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                          ],
-                                          () => {
-                                            const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
-                                                : { ...current, distanceM: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Temps"
-                                      value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                      placeholder="45"
-                                      onClick={() => {
-                                        const total = block.durationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Durée du bloc",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
-                                                : { ...current, durationSec: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Allure"
-                                      value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
-                                      placeholder="4'30"
-                                      onClick={() => {
-                                        const pace = block.paceSecPerKm || 270;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure du bloc",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
-                                                : { ...current, paceSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Distance</p>
+                                      <button type="button" onClick={() => { const m=block.distanceM||0,wk=Math.floor(m/1000),rm=Math.max(0,m-wk*1000); setWheelAValue(String(wk)); setWheelBValue(String(Math.round(rm/25)*25)); setWheelUnit("km"); openWheelColumns("Distance du bloc",[{items:DISTANCE_KM_WHOLE_OPTIONS,value:String(wk),onChange:setWheelAValue,suffix:"km"},{items:DISTANCE_METERS_25_OPTIONS,value:String(Math.round(rm/25)*25),onChange:setWheelBValue,suffix:"m"}],()=>{const n=(Number.parseInt(wheelARef.current,10)||0)*1000+(Number.parseInt(wheelBRef.current,10)||0); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,distanceM:n},"distance"):{...c,distanceM:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.distanceM?"#1d1d1f":"#7a7a7a"}}>{simpleBlockDistanceValue(block.distanceM)||"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Temps</p>
+                                      <button type="button" onClick={() => { const t=block.durationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Durée du bloc",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,durationSec:n},"duration"):{...c,durationSec:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.durationSec?"#1d1d1f":"#7a7a7a"}}>{block.durationSec?secondsToLabel(block.durationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure</p>
+                                      <button type="button" onClick={() => { const p=block.paceSecPerKm||270; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure du bloc",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,paceSecPerKm:n},"pace"):{...c,paceSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceSecPerKm?compactPaceLabel(block.paceSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
                                   </div>
-
                                   <div className="grid grid-cols-2 gap-2">
-                                    <CoachingMetricPill
-                                      label="Récup effort"
-                                      value={block.blockRecoveryDurationSec ? secondsToLabel(block.blockRecoveryDurationSec) : ""}
-                                      placeholder="60"
-                                      onClick={() => {
-                                        const total = block.blockRecoveryDurationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Récupération entre blocs",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) => ({ ...current, blockRecoveryDurationSec: next }));
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Récup série"
-                                      value={block.recoveryDurationSec ? secondsToLabel(block.recoveryDurationSec) : ""}
-                                      placeholder="30"
-                                      onClick={() => {
-                                        const total = block.recoveryDurationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Récupération entre répétitions",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) => ({ ...current, recoveryDurationSec: next }));
-                                          }
-                                        );
-                                      }}
-                                    />
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Récup effort</p>
+                                      <button type="button" onClick={() => { const t=block.blockRecoveryDurationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Récupération entre blocs",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>({...c,blockRecoveryDurationSec:n}));});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.blockRecoveryDurationSec?"#1d1d1f":"#7a7a7a"}}>{block.blockRecoveryDurationSec?secondsToLabel(block.blockRecoveryDurationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Récup série</p>
+                                      <button type="button" onClick={() => { const t=block.recoveryDurationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Récupération entre répétitions",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>({...c,recoveryDurationSec:n}));});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.recoveryDurationSec?"#1d1d1f":"#7a7a7a"}}>{block.recoveryDurationSec?secondsToLabel(block.recoveryDurationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>&nbsp;</span>
+                                    </div>
                                   </div>
-
                                 </div>
                               ) : isPyramidBlock && pyramidConfig ? (
                                 <div className="space-y-3">
-                                  <div className="grid grid-cols-4 gap-1.5">
-                                    {(
-                                      [
-                                        { mode: "symetrique", label: "Symétrique", bars: [8, 13, 19, 13, 8] },
-                                        { mode: "croissante", label: "Croiss.", bars: [8, 13, 19] },
-                                        { mode: "decroissante", label: "Décroiss.", bars: [19, 13, 8] },
-                                        { mode: "manuelle", label: "Manuelle", bars: [13, 19, 8, 17] },
-                                      ] as const
-                                    ).map((modeCard) => (
-                                      <button
-                                        key={`${block.id}-${modeCard.mode}`}
-                                        type="button"
-                                        className={cn(
-                                          "rounded-[10px] border px-1 py-2 text-center transition-all",
-                                          pyramidConfig.mode === modeCard.mode
-                                            ? "border-[#F97316] bg-white shadow-[0_2px_8px_rgba(249,115,22,0.25)]"
-                                            : "border-transparent bg-[#F2F2F7] text-muted-foreground"
-                                        )}
-                                        onClick={() => updatePyramidBlock(block.id, (cfg) => ({ ...cfg, mode: modeCard.mode }))}
-                                      >
-                                        <span className="mb-1 inline-flex h-5 items-end justify-center gap-[2px]">
-                                          {modeCard.bars.map((height, glyphIndex) => (
-                                            <span
-                                              key={`${modeCard.mode}-glyph-${glyphIndex}`}
-                                              className={cn(
-                                                "w-1 rounded-[1px]",
-                                                pyramidConfig.mode === modeCard.mode ? "bg-[#F97316]" : "bg-[#C7C7CC]"
-                                              )}
-                                              style={{ height }}
-                                            />
-                                          ))}
-                                        </span>
-                                        <span className="block text-[10px] font-semibold leading-tight">{modeCard.label}</span>
-                                      </button>
-                                    ))}
+                                  <div className="grid grid-cols-4 gap-[6px]">
+                                    {([
+                                      { mode: "symetrique" as const, label: "Symétrique", svgBars: [[0,6,3],[1,3,6],[2,0,12],[3,3,6],[4,6,3]] },
+                                      { mode: "croissante" as const, label: "Croiss.", svgBars: [[0,6,3],[1,3,6],[2,0,12]] },
+                                      { mode: "decroissante" as const, label: "Décroiss.", svgBars: [[0,0,12],[1,3,6],[2,6,3]] },
+                                      { mode: "manuelle" as const, label: "Manuelle", svgBars: [[0,3,6],[1,0,12],[2,6,3],[3,2,9]] },
+                                    ]).map((modeCard) => {
+                                      const isActive = pyramidConfig.mode === modeCard.mode;
+                                      return (
+                                        <button key={`${block.id}-${modeCard.mode}`} type="button"
+                                          className={cn("flex flex-col items-center gap-1 rounded-[11px] border pb-[6px] pt-2 transition-all", isActive ? "border-2 border-[#FF9500] bg-[rgba(255,149,0,0.08)]" : "border-[#e0e0e0] bg-[#f5f5f7]")}
+                                          onClick={() => updatePyramidBlock(block.id, (cfg) => ({ ...cfg, mode: modeCard.mode }))}>
+                                          <svg viewBox="0 0 22 14" className="h-[14px] w-[22px]" aria-hidden>
+                                            {modeCard.svgBars.map(([xi, yi, hi]) => (
+                                              <rect key={xi} x={xi * 5 + 1} y={yi} width="3" height={hi} rx="0.5" fill={isActive ? "#FF9500" : "#7a7a7a"} />
+                                            ))}
+                                          </svg>
+                                          <span className="text-[11px] leading-none tracking-[-0.1px]" style={{ color: isActive ? "#FF9500" : "#1d1d1f", fontWeight: isActive ? 600 : 500 }}>{modeCard.label}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="flex items-start gap-2 rounded-[11px] border px-3 py-[10px]" style={{ background: "rgba(255,149,0,0.06)", borderColor: "rgba(255,149,0,0.25)" }}>
+                                    <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF9500]" />
+                                    <p className="text-[12.5px] leading-[1.4] tracking-[-0.1px]" style={{ color: "#333" }}>{PYRAMID_MODE_HINTS[pyramidConfig.mode]}</p>
                                   </div>
 
-                                  <div className="rounded-[9px] border-l-[3px] border-[#F97316] bg-[#FFF7ED] px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                                    {PYRAMID_MODE_HINTS[pyramidConfig.mode]}
-                                  </div>
-
-                                  <div className="space-y-2">
+                                  <div className="flex flex-col gap-[6px]">
                                     {pyramidSteps.map((step, stepIndex) => {
                                       const stepNumber = stepIndex + 1;
                                       const stepKey = `${block.id}:${step.id}`;
@@ -4700,15 +4499,14 @@ export function CoachPlanningExperience() {
                                         <div
                                           key={stepKey}
                                           className={cn(
-                                            "overflow-hidden rounded-[12px] border bg-white",
-                                            isMirror
-                                              ? "border-[rgba(249,115,22,0.35)] bg-[linear-gradient(180deg,#ffffff_0%,#fffaf3_100%)]"
-                                              : "border-border/80"
+                                            "overflow-hidden rounded-[11px] border",
+                                            isMirror ? "border-[rgba(255,149,0,0.35)] bg-[rgba(255,149,0,0.04)]" : "border-[#e0e0e0] bg-[#f5f5f7]"
                                           )}
                                         >
                                           <button
                                             type="button"
-                                            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                                            className="grid w-full items-center gap-[9px] px-3 py-[10px] text-left"
+                                            style={{ gridTemplateColumns: "22px auto 1fr 18px" }}
                                             onClick={() =>
                                               setExpandedPyramidSteps((prev) => ({
                                                 ...prev,
@@ -4716,37 +4514,28 @@ export function CoachPlanningExperience() {
                                               }))
                                             }
                                           >
-                                            <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-border/70 bg-[#F2F2F7] text-[10px] font-bold">
+                                            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-[#e0e0e0] bg-white text-[11px] font-semibold" style={{ color: "#333" }}>
                                               {stepNumber}
                                             </span>
-                                            <span
-                                              className={cn(
-                                                "inline-flex h-[18px] w-8 shrink-0 items-center justify-center rounded-[4px] text-[10px] font-bold",
-                                                zoneToPreviewColorClass(zone),
-                                                zone === "Z3" ? "text-black" : "text-white"
-                                              )}
-                                            >
+                                            <span className="inline-flex h-5 items-center rounded-[6px] px-[7px] text-[11px] font-bold" style={{ background: zoneHexColor(zone), color: zoneTextColor(zone) }}>
                                               {zone}
                                             </span>
-                                            <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground">
-                                              {(step.distanceM ? metersToLabel(step.distanceM) : "Distance ?")} ·{" "}
-                                              {(step.paceSecPerKm ? compactPaceLabel(step.paceSecPerKm) : "Allure ?")} · récup{" "}
-                                              {step.recoveryDurationSec ? secondsToLabel(step.recoveryDurationSec) : "0 s"}
-                                            </span>
-                                            {isMirror ? (
-                                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F97316]/12 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.04em] text-[#F97316]">
-                                                <Lock className="h-2.5 w-2.5" />
-                                                MIROIR P{sourcePalier}
-                                              </span>
-                                            ) : null}
-                                            <span className={cn("inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F2F2F7] transition-transform", isOpen ? "rotate-180" : "")}>
-                                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                            <div className="min-w-0 truncate text-[13px]" style={{ color: "#333" }}>
+                                              <strong style={{ color: "#1d1d1f" }}>{step.distanceM ? metersToLabel(step.distanceM) : "—"}</strong>
+                                              {" · "}{step.paceSecPerKm ? compactPaceLabel(step.paceSecPerKm) : "—"}
+                                              {" · récup "}{step.recoveryDurationSec ? secondsToLabel(step.recoveryDurationSec) : "—"}
+                                              {isMirror && (
+                                                <span className="ml-[7px] text-[10px] font-bold uppercase tracking-[0.3px]" style={{ color: "#FF9500" }}>🔒 Miroir P{sourcePalier}</span>
+                                              )}
+                                            </div>
+                                            <span className={cn("flex h-[18px] w-[18px] items-center justify-center transition-transform", isOpen ? "rotate-180" : "")}>
+                                              <ChevronDown className="h-3 w-3" style={{ color: "#7a7a7a" }} />
                                             </span>
                                           </button>
                                           {isOpen ? (
-                                            <div className="border-t border-border/70 px-3 pb-3 pt-2">
+                                            <div className="border-t border-[#f0f0f0] px-3 pb-3 pt-2">
                                               {isMirror ? (
-                                                <div className="mb-2 rounded-[8px] bg-[#F97316]/10 px-2.5 py-2 text-[11px] text-[#C2410C]">
+                                                <div className="mb-2 rounded-[8px] px-2.5 py-2 text-[11px]" style={{ background: "rgba(255,149,0,0.1)", color: "#C2410C" }}>
                                                   🔒 Ce palier est le miroir verrouillé du Palier {sourcePalier}. Modifie le palier source pour changer ses valeurs.
                                                 </div>
                                               ) : null}
@@ -4756,11 +4545,12 @@ export function CoachPlanningExperience() {
                                                   { key: "distanceM", label: "Distance", value: step.distanceM ? String(step.distanceM) : "" },
                                                   { key: "durationSec", label: "Temps", value: step.durationSec ? String(step.durationSec) : "" },
                                                 ].map((field) => (
-                                                  <label key={`${stepKey}-${field.key}`} className="space-y-1">
-                                                    <span className="block text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{field.label}</span>
+                                                  <label key={`${stepKey}-${field.key}`}>
+                                                    <span className="mb-1.5 block pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "#7a7a7a" }}>{field.label}</span>
                                                     <input
                                                       value={field.value}
                                                       disabled={isMirror}
+                                                      placeholder="—"
                                                       onChange={(event) => {
                                                         if (isMirror) return;
                                                         updatePyramidBlock(block.id, (cfg) => {
@@ -4781,10 +4571,8 @@ export function CoachPlanningExperience() {
                                                           return { ...cfg, steps };
                                                         });
                                                       }}
-                                                      className={cn(
-                                                        "h-8 w-full rounded-full border border-border/80 px-2 text-center text-[12px] font-semibold",
-                                                        isMirror ? "cursor-not-allowed bg-[#F9F4EE] text-muted-foreground" : "bg-white text-foreground"
-                                                      )}
+                                                      className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium outline-none focus:border-2 focus:border-[#0066cc]"
+                                                      style={{ color: isMirror ? "#7a7a7a" : "#1d1d1f", cursor: isMirror ? "not-allowed" : undefined }}
                                                     />
                                                   </label>
                                                 ))}
@@ -4794,8 +4582,8 @@ export function CoachPlanningExperience() {
                                                   { key: "recoveryDurationSec", label: "Récup", value: step.recoveryDurationSec ? String(step.recoveryDurationSec) : "" },
                                                   { key: "repetitions", label: "Répétitions", value: String(step.repetitions ?? 1) },
                                                 ].map((field) => (
-                                                  <label key={`${stepKey}-${field.key}`} className="space-y-1">
-                                                    <span className="block text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{field.label}</span>
+                                                  <label key={`${stepKey}-${field.key}`}>
+                                                    <span className="mb-1.5 block pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "#7a7a7a" }}>{field.label}</span>
                                                     <input
                                                       value={field.value}
                                                       disabled={isMirror}
@@ -4812,28 +4600,22 @@ export function CoachPlanningExperience() {
                                                           return { ...cfg, steps };
                                                         });
                                                       }}
-                                                      className={cn(
-                                                        "h-8 w-full rounded-full border border-border/80 px-2 text-center text-[12px] font-semibold",
-                                                        isMirror ? "cursor-not-allowed bg-[#F9F4EE] text-muted-foreground" : "bg-white text-foreground"
-                                                      )}
+                                                      className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium outline-none focus:border-2 focus:border-[#0066cc]"
+                                                      style={{ color: isMirror ? "#7a7a7a" : "#1d1d1f", cursor: isMirror ? "not-allowed" : undefined }}
                                                     />
                                                   </label>
                                                 ))}
                                               </div>
                                               <div className="mt-2">
-                                                <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">Zone</p>
+                                                <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "#7a7a7a" }}>Zone</p>
                                                 <div className="flex gap-1">
                                                   {(PREVIEW_ZONE_ORDER as readonly ZoneKey[]).map((zoneKey) => (
                                                     <button
                                                       key={`${stepKey}-${zoneKey}`}
                                                       type="button"
                                                       disabled={isMirror}
-                                                      className={cn(
-                                                        "flex-1 rounded-md py-1 text-[10px] font-bold text-white transition-transform",
-                                                        zoneToPreviewColorClass(zoneKey),
-                                                        step.zone === zoneKey ? "scale-[1.04] ring-1 ring-black" : "",
-                                                        isMirror ? "cursor-not-allowed opacity-70" : ""
-                                                      )}
+                                                      className={cn("flex-1 rounded-md py-1 text-[10px] font-bold transition-transform", step.zone === zoneKey ? "scale-[1.04] ring-1 ring-black/20" : "", isMirror ? "cursor-not-allowed opacity-70" : "")}
+                                                      style={{ background: zoneHexColor(zoneKey), color: zoneTextColor(zoneKey) }}
                                                       onClick={() =>
                                                         updatePyramidBlock(block.id, (cfg) => {
                                                           const steps = [...cfg.steps];
@@ -4874,19 +4656,12 @@ export function CoachPlanningExperience() {
 
                                   <button
                                     type="button"
-                                    className="w-full rounded-[10px] border border-dashed border-border/90 bg-[#F2F2F7] py-2.5 text-[12px] font-bold text-[#2563EB]"
+                                    className="mt-2 h-[40px] w-full rounded-[11px] border-[1.5px] border-dashed border-[#e0e0e0] bg-transparent text-[14px] font-semibold tracking-[-0.2px] text-[#0066cc]"
                                     onClick={() => {
                                       const newStepId = uid();
                                       updatePyramidBlock(block.id, (cfg) => ({
                                         ...cfg,
-                                        steps: [
-                                          ...cfg.steps,
-                                          {
-                                            id: newStepId,
-                                            zone: "Z4",
-                                            repetitions: 1,
-                                          },
-                                        ],
+                                        steps: [...cfg.steps, { id: newStepId, zone: "Z4", repetitions: 1 }],
                                       }));
                                       setExpandedPyramidSteps((prev) => ({
                                         ...prev,
@@ -4898,231 +4673,60 @@ export function CoachPlanningExperience() {
                                   </button>
                                 </div>
                               ) : isProgressiveBlock(block) ? (
-                                <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Allure début"
-                                      value={block.paceStartSecPerKm ? compactPaceLabel(block.paceStartSecPerKm) : ""}
-                                      placeholder="5'30"
-                                      onClick={() => {
-                                        const pace = block.paceStartSecPerKm || block.paceSecPerKm || 330;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure de début",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, paceStartSecPerKm: next }, "paceStart")
-                                                : { ...current, paceStartSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Allure finale"
-                                      value={block.paceEndSecPerKm ? compactPaceLabel(block.paceEndSecPerKm) : ""}
-                                      placeholder="4'45"
-                                      onClick={() => {
-                                        const pace = block.paceEndSecPerKm || block.paceSecPerKm || 285;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure finale",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, paceEndSecPerKm: next }, "paceEnd")
-                                                : { ...current, paceEndSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="RPE"
-                                      value={block.rpe ? `${block.rpe}/10` : ""}
-                                      placeholder="7"
-                                      onClick={() =>
-                                        openWheel(
-                                          "RPE",
-                                          Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.rpe ?? 7),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, rpe: Number(next), intensityMode: "rpe" }))
-                                        )
-                                      }
-                                    />
+                                <div className="space-y-[10px]">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure début</p>
+                                      <button type="button" onClick={() => { const p=block.paceStartSecPerKm||block.paceSecPerKm||330; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure de début",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,paceStartSecPerKm:n},"paceStart"):{...c,paceStartSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceStartSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceStartSecPerKm?compactPaceLabel(block.paceStartSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure finale</p>
+                                      <button type="button" onClick={() => { const p=block.paceEndSecPerKm||block.paceSecPerKm||285; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure finale",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,paceEndSecPerKm:n},"paceEnd"):{...c,paceEndSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceEndSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceEndSecPerKm?compactPaceLabel(block.paceEndSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>RPE</p>
+                                      <button type="button" onClick={() => openWheel("RPE",Array.from({length:10},(_,i)=>({value:String(i+1),label:String(i+1)})),String(block.rpe??7),(n)=>updateDraftBlock(block.id,(c)=>({...c,rpe:Number(n),intensityMode:"rpe"})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.rpe?"#1d1d1f":"#7a7a7a"}}>{block.rpe??"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>&nbsp;</span>
+                                    </div>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Distance"
-                                      value={simpleBlockDistanceValue(block.distanceM)}
-                                      placeholder="5"
-                                      onClick={() => {
-                                        const meters = block.distanceM || 0;
-                                        const wholeKm = Math.floor(meters / 1000);
-                                        const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                        setWheelAValue(String(wholeKm));
-                                        setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                        setWheelUnit("km");
-                                        openWheelColumns(
-                                          "Distance du bloc",
-                                          [
-                                            { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                            { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                          ],
-                                          () => {
-                                            const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, distanceM: next }, "distance")
-                                                : { ...current, distanceM: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Temps"
-                                      value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                      placeholder="30"
-                                      onClick={() => {
-                                        const total = block.durationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Durée du bloc",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, durationSec: next }, "duration")
-                                                : { ...current, durationSec: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Distance</p>
+                                      <button type="button" onClick={() => { const m=block.distanceM||0,wk=Math.floor(m/1000),rm=Math.max(0,m-wk*1000); setWheelAValue(String(wk)); setWheelBValue(String(Math.round(rm/25)*25)); setWheelUnit("km"); openWheelColumns("Distance du bloc",[{items:DISTANCE_KM_WHOLE_OPTIONS,value:String(wk),onChange:setWheelAValue,suffix:"km"},{items:DISTANCE_METERS_25_OPTIONS,value:String(Math.round(rm/25)*25),onChange:setWheelBValue,suffix:"m"}],()=>{const n=(Number.parseInt(wheelARef.current,10)||0)*1000+(Number.parseInt(wheelBRef.current,10)||0); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,distanceM:n},"distance"):{...c,distanceM:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.distanceM?"#1d1d1f":"#7a7a7a"}}>{simpleBlockDistanceValue(block.distanceM)||"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Temps</p>
+                                      <button type="button" onClick={() => { const t=block.durationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Durée du bloc",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,durationSec:n},"duration"):{...c,durationSec:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.durationSec?"#1d1d1f":"#7a7a7a"}}>{block.durationSec?secondsToLabel(block.durationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="grid grid-cols-3 gap-1.5">
-                                  <CoachingMetricPill
-                                    label="Allure"
-                                    value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
-                                    placeholder="5'30"
-                                    onClick={() => {
-                                      const pace = block.paceSecPerKm || 330;
-                                      setWheelAValue(String(Math.floor(pace / 60)));
-                                      setWheelBValue(String(pace % 60));
-                                      setWheelUnit("min/km");
-                                      openWheelColumns(
-                                        "Allure du bloc",
-                                        [
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                        ],
-                                        () => {
-                                          const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                          updateDraftBlock(block.id, (current) =>
-                                            draft.sport === "running"
-                                              ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
-                                              : { ...current, paceSecPerKm: next }
-                                          );
-                                        }
-                                      );
-                                    }}
-                                  />
-                                  <CoachingMetricPill
-                                    label="Distance"
-                                    value={simpleBlockDistanceValue(block.distanceM)}
-                                    placeholder="5"
-                                    onClick={() => {
-                                      const meters = block.distanceM || 0;
-                                      const wholeKm = Math.floor(meters / 1000);
-                                      const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                      setWheelAValue(String(wholeKm));
-                                      setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                      setWheelUnit("km");
-                                      openWheelColumns(
-                                        "Distance du bloc",
-                                        [
-                                          { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                          { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                        ],
-                                        () => {
-                                          const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                          updateDraftBlock(block.id, (current) =>
-                                            draft.sport === "running"
-                                              ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
-                                              : { ...current, distanceM: next }
-                                          );
-                                        }
-                                      );
-                                    }}
-                                  />
-                                  <CoachingMetricPill
-                                    label="Temps"
-                                    value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                    placeholder="30"
-                                    onClick={() => {
-                                      const total = block.durationSec || 0;
-                                      const nextA = String(Math.floor(total / 3600));
-                                      const nextB = String(Math.floor((total % 3600) / 60));
-                                      const nextC = String(total % 60);
-                                      setWheelAValue(nextA);
-                                      setWheelBValue(nextB);
-                                      setWheelCValue(nextC);
-                                      openWheelColumns(
-                                        "Durée du bloc",
-                                        [
-                                          { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                        ],
-                                        () => {
-                                          const next =
-                                            Number.parseInt(wheelARef.current, 10) * 3600 +
-                                            Number.parseInt(wheelBRef.current, 10) * 60 +
-                                            Number.parseInt(wheelCRef.current, 10);
-                                          updateDraftBlock(block.id, (current) =>
-                                            draft.sport === "running"
-                                              ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
-                                              : { ...current, durationSec: next }
-                                          );
-                                        }
-                                      );
-                                    }}
-                                  />
+                                <div className="space-y-[10px]">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure</p>
+                                      <button type="button" onClick={() => { const p=block.paceSecPerKm||330; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure du bloc",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,paceSecPerKm:n},"pace"):{...c,paceSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceSecPerKm?compactPaceLabel(block.paceSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Distance</p>
+                                      <button type="button" onClick={() => { const m=block.distanceM||0,wk=Math.floor(m/1000),rm=Math.max(0,m-wk*1000); setWheelAValue(String(wk)); setWheelBValue(String(Math.round(rm/25)*25)); setWheelUnit("km"); openWheelColumns("Distance du bloc",[{items:DISTANCE_KM_WHOLE_OPTIONS,value:String(wk),onChange:setWheelAValue,suffix:"km"},{items:DISTANCE_METERS_25_OPTIONS,value:String(Math.round(rm/25)*25),onChange:setWheelBValue,suffix:"m"}],()=>{const n=(Number.parseInt(wheelARef.current,10)||0)*1000+(Number.parseInt(wheelBRef.current,10)||0); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,distanceM:n},"distance"):{...c,distanceM:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.distanceM?"#1d1d1f":"#7a7a7a"}}>{simpleBlockDistanceValue(block.distanceM)||"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Temps</p>
+                                      <button type="button" onClick={() => { const t=block.durationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Durée du bloc",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,durationSec:n},"duration"):{...c,durationSec:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.durationSec?"#1d1d1f":"#7a7a7a"}}>{block.durationSec?secondsToLabel(block.durationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
-
-                            </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

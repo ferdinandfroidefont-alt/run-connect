@@ -3514,8 +3514,9 @@ const Messages = () => {
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          contentScroll={activeRootTab === "conversations"}
-          pinHeader={false}
+          contentScroll={activeRootTab !== "conversations"}
+          pinHeader={activeRootTab === "conversations"}
+          forcePin={activeRootTab === "conversations"}
           contentTopOffsetPx={0}
           headerWrapperClassName="z-50 apple-grouped-bg"
           header={
@@ -3673,9 +3674,9 @@ const Messages = () => {
           {activeRootTab === "conversations" ? (
             <>
               {isInboxSearchMode ? (
-                <div className="mx-4 mt-3.5 min-h-[280px] flex-1 overflow-hidden rounded-[18px] bg-card">
+                <div className="mx-4 mt-3.5 min-h-[280px] rounded-[18px] bg-card">
                   <SearchTabs activeTab={messageDiscoveryTab} onTabChange={setMessageDiscoveryTab} />
-                  <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto">
+                  <div className="ios-scroll-region">
                     {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "clubs" && <ClubsTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "strava" && <StravaTab searchQuery={conversationSearch} />}
@@ -3686,7 +3687,7 @@ const Messages = () => {
                 /* Liste — carte blanche arrondie (maquette 17) */
                 <div
                   className={cn(
-                    "ios-scroll-region mx-4 mt-3.5 min-h-[280px] flex-1 overflow-y-auto rounded-[18px] bg-card pb-ios-4",
+                    "ios-scroll-region mx-4 mt-3.5 min-h-[280px] rounded-[18px] bg-card pb-ios-4",
                     filteredAndSortedConversations.length > 0 && "divide-y divide-border"
                   )}
                 >

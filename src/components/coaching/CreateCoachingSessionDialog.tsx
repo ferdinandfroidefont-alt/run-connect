@@ -283,12 +283,12 @@ export const CreateCoachingSessionDialog = ({
   const selectedActivity = ACTIVITY_TYPES.find((type) => type.value === activityType) ?? ACTIVITY_TYPES[0];
   const mockupPalette = {
     actionBlue: "#007AFF",
-    z1: "#5AC8FA",
-    z2: "#34C759",
-    z3: "#FFCC00",
-    z4: "#FF9500",
-    z5: "#FF3B30",
-    z6: "#AF52DE",
+    z1: "#B5B5BA",
+    z2: "#0066cc",
+    z3: "#34C759",
+    z4: "#FFCC00",
+    z5: "#FF9500",
+    z6: "#FF3B30",
     separator: "rgba(60,60,67,0.18)",
   } as const;
   const schemaBars = parsedBlocks.slice(0, 6);
@@ -470,7 +470,7 @@ export const CreateCoachingSessionDialog = ({
                     label: "Variation",
                     badge: "7'00 → 4'30",
                     subtitle: "Z2 · 5 km · 30 min",
-                    accent: "#AF52DE",
+                    accent: "#0066cc",
                     icon: <Activity className="h-4 w-4" />,
                     insert: "5km de 7'00 à 4'30",
                     fields: [

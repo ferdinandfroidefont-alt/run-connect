@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "@/components/OnlineStatus";
-import { ChevronLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw, Sparkles } from "lucide-react";
+import { ChevronLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
@@ -51,20 +50,26 @@ interface NewConversationViewProps {
   onAvatarClick: (avatarUrl: string | null, username: string) => void;
 }
 
+const scrollHideStyle = {
+  scrollbarWidth: 'none' as const,
+  msOverflowStyle: 'none' as const,
+  WebkitOverflowScrolling: 'touch' as const,
+};
+
 export const NewConversationView = ({
   onBack,
   onStartConversation,
   onCreateClub,
-  onAvatarClick
+  onAvatarClick,
 }: NewConversationViewProps) => {
   const { user } = useAuth();
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [recentFriends, setRecentFriends] = useState<Profile[]>([]);
   const [allFriends, setAllFriends] = useState<Profile[]>([]);
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [suggestions, setSuggestions] = useState<ProfileSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const [selectedPreviewUserId, setSelectedPreviewUserId] = useState<string | null>(null);
@@ -84,11 +89,11 @@ export const NewConversationView = ({
           .limit(8);
 
         if (recentConvs && recentConvs.length > 0) {
-          const recentUserIds = recentConvs.map(conv => 
+          const recentUserIds = recentConvs.map(conv =>
             conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1
           );
           const { data: profiles } = await supabase.rpc('get_safe_public_profiles', {
-            profile_user_ids: recentUserIds
+            profile_user_ids: recentUserIds,
           });
           if (profiles) setRecentFriends(profiles);
         }
@@ -123,7 +128,7 @@ export const NewConversationView = ({
 
           if (mutualFriendIds.length > 0) {
             const { data: profiles } = await supabase.rpc('get_safe_public_profiles', {
-              profile_user_ids: mutualFriendIds
+              profile_user_ids: mutualFriendIds,
             });
             if (profiles) setAllFriends(profiles);
           }
@@ -142,7 +147,7 @@ export const NewConversationView = ({
       setSearchResults([]);
       return;
     }
-    const filtered = allFriends.filter(friend => 
+    const filtered = allFriends.filter(friend =>
       friend.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       friend.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -172,7 +177,7 @@ export const NewConversationView = ({
 
       const { data, error } = await supabase.rpc('get_friend_suggestions_prioritized', {
         current_user_id: user.id,
-        suggestion_limit: 20
+        suggestion_limit: 20,
       });
 
       if (error) console.error('Error fetching suggestions:', error);
@@ -185,7 +190,7 @@ export const NewConversationView = ({
           display_name: s.display_name,
           avatar_url: s.avatar_url,
           mutual_friends_count: s.mutual_friends_count || 0,
-          source: s.source
+          source: s.source,
         }));
 
       if (filteredSuggestions.length === 0) {
@@ -206,7 +211,7 @@ export const NewConversationView = ({
               display_name: p.display_name || p.username || 'Utilisateur',
               avatar_url: p.avatar_url || '',
               mutual_friends_count: 0,
-              source: 'popular'
+              source: 'popular',
             })) as ProfileSuggestion[];
         }
       }
@@ -264,8 +269,8 @@ export const NewConversationView = ({
       if (popularUsers && popularUsers.length > 0) {
         const existingIds = new Set(suggestions.map(s => s.user_id));
         const newSuggestions = popularUsers
-          .filter(p => 
-            !friendsSet.has(p.user_id!) && 
+          .filter(p =>
+            !friendsSet.has(p.user_id!) &&
             !currentDismissed.has(p.user_id!) &&
             !existingIds.has(p.user_id!)
           )
@@ -275,7 +280,7 @@ export const NewConversationView = ({
             display_name: p.display_name || p.username || 'Utilisateur',
             avatar_url: p.avatar_url || '',
             mutual_friends_count: 0,
-            source: 'popular'
+            source: 'popular',
           })) as ProfileSuggestion[];
 
         if (newSuggestions.length > 0) {
@@ -293,46 +298,85 @@ export const NewConversationView = ({
 
   const displayedFriends = searchQuery.trim() ? searchResults : allFriends;
 
-  const scrollHideStyle = { scrollbarWidth: 'none' as const, msOverflowStyle: 'none' as const, WebkitOverflowScrolling: 'touch' as const };
-
   return (
-    <div className="fixed inset-0 z-50 bg-white">
+    <div className="fixed inset-0 z-50" style={{ backgroundColor: '#ffffff' }}>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="shrink-0 bg-background/80 backdrop-blur-xl border-b border-border/40"
+          headerWrapperClassName="shrink-0"
           header={
-            <div className="relative flex min-h-[56px] items-center justify-center px-4">
+            <div
+              className="relative flex items-center justify-center"
+              style={{
+                minHeight: 44,
+                paddingLeft: 16,
+                paddingRight: 16,
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                backdropFilter: 'saturate(180%) blur(20px)',
+                borderBottom: '1px solid #e0e0e0',
+              }}
+            >
               <button
                 onClick={onBack}
-                className="absolute left-3 flex items-center gap-0.5 text-primary active:opacity-70"
+                className="absolute left-3 flex items-center gap-0.5 active:opacity-70 transition-opacity"
+                style={{ color: '#0066cc' }}
               >
-                <ChevronLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+                <ChevronLeft className="h-5 w-5" style={{ strokeWidth: 2 }} />
+                <span style={{ fontSize: 17, letterSpacing: '-0.374px', fontWeight: 400 }}>Retour</span>
               </button>
-              <h1 className="text-[17px] font-semibold text-foreground">Nouveau message</h1>
+              <h1 style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.374px', color: '#1d1d1f' }}>
+                Nouveau message
+              </h1>
             </div>
           }
           scrollClassName="scroll-momentum overscroll-y-contain"
         >
           <div className="flex flex-col">
-            {/* Search Bar - flush */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.05 }}
-              className="px-4 py-3 bg-background"
-            >
+
+            {/* ── Search Bar ── */}
+            <div style={{ padding: '12px 16px', backgroundColor: '#f5f5f7' }}>
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="Rechercher un ami..."
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ width: 15, height: 15, color: '#7a7a7a' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Rechercher un ami…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-[38px] text-[15px] bg-secondary/80 border-0 rounded-[10px] focus:bg-secondary"
+                  style={{
+                    width: '100%',
+                    height: 44,
+                    paddingLeft: 40,
+                    paddingRight: searchQuery ? 40 : 20,
+                    fontSize: 17,
+                    fontWeight: 400,
+                    letterSpacing: '-0.374px',
+                    color: '#1d1d1f',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: 9999,
+                    outline: 'none',
+                  }}
+                  className="placeholder:text-[#7a7a7a]"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center active:opacity-70"
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 9999,
+                      backgroundColor: '#d2d2d7',
+                    }}
+                  >
+                    <X style={{ width: 11, height: 11, color: '#ffffff' }} />
+                  </button>
+                )}
               </div>
-            </motion.div>
+            </div>
 
             <AnimatePresence mode="wait">
               {searchQuery.trim() ? (
@@ -342,59 +386,64 @@ export const NewConversationView = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
                   className="flex flex-col"
                 >
-                  <div className="px-4 py-2">
-                    <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                  {/* Section header */}
+                  <div style={{ padding: '20px 16px 8px', backgroundColor: '#f5f5f7' }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.224px', color: '#7a7a7a' }}>
                       {displayedFriends.length} résultat{displayedFriends.length !== 1 ? 's' : ''}
                     </p>
                   </div>
 
                   {displayedFriends.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                      <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
-                        <MessageCircle className="h-6 w-6 text-muted-foreground" />
+                    <div className="flex flex-col items-center justify-center" style={{ paddingTop: 64, paddingBottom: 64, gap: 12 }}>
+                      <div
+                        className="flex items-center justify-center"
+                        style={{ width: 56, height: 56, borderRadius: 9999, backgroundColor: '#f5f5f7' }}
+                      >
+                        <MessageCircle style={{ width: 24, height: 24, color: '#7a7a7a' }} />
                       </div>
-                      <p className="text-[15px] text-muted-foreground">Aucun ami trouvé</p>
+                      <p style={{ fontSize: 17, letterSpacing: '-0.374px', color: '#7a7a7a' }}>
+                        Aucun ami trouvé
+                      </p>
                     </div>
                   ) : (
-                    <div className="bg-white">
+                    <div style={{ backgroundColor: '#ffffff' }}>
                       {displayedFriends.map((friend, index) => (
                         <motion.div
                           key={friend.user_id}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.02 }}
+                          transition={{ delay: index * 0.02, duration: 0.15 }}
                           onClick={() => startConversationFromRow(friend.user_id)}
-                          className="flex items-center gap-3 px-4 py-3 active:bg-secondary/80 cursor-pointer transition-colors border-b border-border/40 last:border-b-0"
+                          className="flex items-center cursor-pointer active:bg-[#f5f5f7] transition-colors"
+                          style={{ gap: 12, padding: '11px 16px', borderBottom: '1px solid #e0e0e0' }}
                         >
-                          <div className="relative">
-                            <Avatar 
+                          <div className="relative shrink-0">
+                            <Avatar
                               className="h-11 w-11"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onAvatarClick(friend.avatar_url, friend.username || friend.display_name || "Utilisateur");
+                                onAvatarClick(friend.avatar_url, friend.username || friend.display_name || 'Utilisateur');
                               }}
                             >
-                              <AvatarImage src={friend.avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary text-foreground text-[15px]">
-                                {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
+                              <AvatarImage src={friend.avatar_url || ''} />
+                              <AvatarFallback style={{ backgroundColor: '#f5f5f7', color: '#1d1d1f', fontSize: 17 }}>
+                                {(friend.username || friend.display_name || 'U').charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                             <OnlineStatus userId={friend.user_id} className="w-3 h-3" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[15px] font-semibold text-foreground">
+                            <p className="truncate" style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.374px', color: '#1d1d1f' }}>
                               {friend.display_name || friend.username}
                             </p>
-                            <p className="truncate text-[13px] text-muted-foreground">
+                            <p className="truncate" style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.224px', color: '#7a7a7a' }}>
                               @{friend.username}
                             </p>
-                            <p className="truncate text-[12px] text-muted-foreground/80">
-                              Ami
-                            </p>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                          <ChevronRight style={{ width: 16, height: 16, color: '#e0e0e0', flexShrink: 0 }} />
                         </motion.div>
                       ))}
                     </div>
@@ -407,39 +456,43 @@ export const NewConversationView = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
                   className="flex flex-col"
                 >
-                  {/* Recent Friends */}
+
+                  {/* ── Recent Friends ── */}
                   {recentFriends.length > 0 && (
-                    <div className="pt-2 pb-4">
-                      <div className="px-4 pb-3">
-                        <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                          Récents
-                        </p>
-                      </div>
+                    <div style={{ paddingTop: 24, paddingBottom: 24, backgroundColor: '#ffffff', borderBottom: '1px solid #e0e0e0' }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.224px', color: '#7a7a7a', padding: '0 16px 12px' }}>
+                        Récents
+                      </p>
                       <div
-                        className="flex gap-5 overflow-x-auto px-4"
-                        style={scrollHideStyle}
+                        className="flex overflow-x-auto"
+                        style={{ gap: 20, padding: '0 16px', ...scrollHideStyle }}
                       >
                         {recentFriends.map((friend, index) => (
                           <motion.button
                             key={friend.user_id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.04 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: index * 0.04, duration: 0.15 }}
                             onClick={() => onStartConversation(friend.user_id)}
-                            className="flex flex-col items-center gap-1.5 shrink-0 active:scale-95 transition-transform"
+                            className="flex flex-col items-center shrink-0 active:scale-95 transition-transform"
+                            style={{ gap: 6 }}
                           >
                             <div className="relative">
-                              <Avatar className="h-[58px] w-[58px] ring-2 ring-border/60">
-                                <AvatarImage src={friend.avatar_url || ""} />
-                                <AvatarFallback className="bg-secondary text-foreground text-lg">
-                                  {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
+                              <Avatar style={{ width: 58, height: 58 }}>
+                                <AvatarImage src={friend.avatar_url || ''} />
+                                <AvatarFallback style={{ backgroundColor: '#f5f5f7', color: '#1d1d1f', fontSize: 20 }}>
+                                  {(friend.username || friend.display_name || 'U').charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               <OnlineStatus userId={friend.user_id} className="w-3.5 h-3.5" />
                             </div>
-                            <span className="text-[12px] text-foreground font-medium text-center truncate w-[60px]">
+                            <span
+                              className="text-center truncate"
+                              style={{ fontSize: 12, fontWeight: 400, letterSpacing: '-0.12px', color: '#1d1d1f', maxWidth: 60 }}
+                            >
                               {(friend.display_name || friend.username || '').split(' ')[0]}
                             </span>
                           </motion.button>
@@ -448,71 +501,91 @@ export const NewConversationView = ({
                     </div>
                   )}
 
-                  {/* Suggestions */}
-                  <div className="border-t border-border/40">
-                    <div className="flex items-center justify-between px-4 pt-4 pb-3">
-                      <div className="flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                        <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                          Suggestions
-                        </p>
-                      </div>
+                  {/* ── Suggestions ── */}
+                  <div style={{ backgroundColor: '#f5f5f7', borderBottom: '1px solid #e0e0e0' }}>
+                    <div className="flex items-center justify-between" style={{ padding: '20px 16px 12px' }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.224px', color: '#7a7a7a' }}>
+                        Suggestions
+                      </p>
                       <button
                         onClick={loadSuggestions}
-                        className="text-[13px] text-primary flex items-center gap-1 active:opacity-70"
+                        className="flex items-center gap-1 active:opacity-70 transition-opacity"
+                        style={{ color: '#0066cc' }}
                       >
-                        <RefreshCw className="h-3 w-3" />
+                        <RefreshCw style={{ width: 13, height: 13 }} />
+                        <span style={{ fontSize: 14, letterSpacing: '-0.224px' }}>Actualiser</span>
                       </button>
                     </div>
 
                     {suggestionsLoading ? (
-                      <div className="flex gap-4 overflow-x-auto px-4 pb-4" style={scrollHideStyle}>
+                      <div className="flex overflow-x-auto" style={{ gap: 12, padding: '0 16px 20px', ...scrollHideStyle }}>
                         {[...Array(5)].map((_, i) => (
-                          <div key={i} className="flex flex-col items-center gap-2 shrink-0">
-                            <div className="h-[72px] w-[72px] rounded-2xl bg-secondary animate-pulse" />
-                            <div className="h-2.5 w-14 rounded-full bg-secondary animate-pulse" />
+                          <div key={i} className="flex flex-col items-center shrink-0" style={{ gap: 8 }}>
+                            <div className="animate-pulse" style={{ width: 72, height: 72, borderRadius: 18, backgroundColor: '#e0e0e0' }} />
+                            <div className="animate-pulse" style={{ width: 48, height: 10, borderRadius: 9999, backgroundColor: '#e0e0e0' }} />
                           </div>
                         ))}
                       </div>
                     ) : visibleSuggestions.length === 0 ? (
-                      <div className="flex items-center justify-center gap-2 py-6 mx-4 bg-secondary/50 rounded-xl">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-[14px] text-muted-foreground">Aucune suggestion</span>
+                      <div
+                        className="flex items-center justify-center"
+                        style={{ margin: '0 16px 20px', padding: '20px 16px', borderRadius: 18, backgroundColor: '#ffffff', border: '1px solid #e0e0e0', gap: 8 }}
+                      >
+                        <Users style={{ width: 16, height: 16, color: '#7a7a7a' }} />
+                        <span style={{ fontSize: 14, letterSpacing: '-0.224px', color: '#7a7a7a' }}>Aucune suggestion</span>
                       </div>
                     ) : (
-                      <div className="flex gap-3 overflow-x-auto px-4 pb-4" style={scrollHideStyle}>
+                      <div className="flex overflow-x-auto" style={{ gap: 12, padding: '0 16px 20px', ...scrollHideStyle }}>
                         {visibleSuggestions.map((profile) => (
                           <motion.button
                             key={profile.user_id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.15 }}
                             onClick={() => setSelectedPreviewUserId(profile.user_id)}
-                            className="relative flex flex-col items-center shrink-0 active:scale-95 transition-transform"
+                            className="relative shrink-0 active:scale-95 transition-transform"
                           >
-                            {/* Dismiss */}
                             <button
                               onClick={(e) => dismissSuggestion(profile.user_id, e)}
-                              className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-background/90 backdrop-blur-sm border border-border/60 flex items-center justify-center active:bg-secondary"
+                              className="absolute -top-1 -right-1 z-10 flex items-center justify-center active:opacity-70"
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: 9999,
+                                backgroundColor: '#7a7a7a',
+                                border: '2px solid #f5f5f7',
+                              }}
                             >
-                              <X className="h-2.5 w-2.5 text-muted-foreground" />
+                              <X style={{ width: 10, height: 10, color: '#ffffff' }} />
                             </button>
 
-                            {/* Card */}
-                            <div className="w-[76px] flex flex-col items-center gap-1.5 pt-1">
-                              <div className="relative">
-                                <div className="p-[2px] rounded-2xl bg-gradient-to-br from-primary/80 to-primary/30">
-                                  <Avatar className="h-[60px] w-[60px] rounded-2xl border-2 border-background">
-                                    <AvatarImage src={profile.avatar_url} className="rounded-xl" />
-                                    <AvatarFallback className="bg-secondary text-[17px] font-medium rounded-xl">
-                                      {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                </div>
-                              </div>
-                              <span className="text-[12px] text-foreground font-medium max-w-full truncate">
+                            <div
+                              className="flex flex-col items-center"
+                              style={{
+                                width: 88,
+                                padding: '16px 8px 12px',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: 18,
+                                gap: 6,
+                              }}
+                            >
+                              <Avatar style={{ width: 52, height: 52 }}>
+                                <AvatarImage src={profile.avatar_url} />
+                                <AvatarFallback style={{ backgroundColor: '#f5f5f7', color: '#1d1d1f', fontSize: 17, fontWeight: 600 }}>
+                                  {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span
+                                className="truncate w-full text-center"
+                                style={{ fontSize: 12, fontWeight: 600, letterSpacing: '-0.12px', color: '#1d1d1f' }}
+                              >
                                 {profile.display_name?.split(' ')[0] || profile.username}
                               </span>
-                              <span className="text-[10px] text-muted-foreground max-w-full truncate -mt-1">
+                              <span
+                                className="truncate w-full text-center"
+                                style={{ fontSize: 10, fontWeight: 400, letterSpacing: '-0.08px', color: '#7a7a7a', marginTop: -2 }}
+                              >
                                 {getSourceLabel(profile.source, profile.mutual_friends_count)}
                               </span>
                             </div>
@@ -522,87 +595,106 @@ export const NewConversationView = ({
                     )}
                   </div>
 
-                  {/* All Friends List */}
-                  <div className="border-t border-border/40">
-                    <div className="px-4 pt-4 pb-2">
-                      <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                  {/* ── All Friends ── */}
+                  <div>
+                    <div style={{ padding: '20px 16px 8px', backgroundColor: '#f5f5f7', borderBottom: '1px solid #e0e0e0' }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.224px', color: '#7a7a7a' }}>
                         Tous les amis
                       </p>
                     </div>
 
                     {loading ? (
-                      <div className="bg-card">
+                      <div style={{ backgroundColor: '#ffffff' }}>
                         {[...Array(5)].map((_, i) => (
-                          <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-border/40">
-                            <div className="h-11 w-11 rounded-full bg-secondary animate-pulse shrink-0" />
-                            <div className="flex-1 space-y-2">
-                              <div className="h-3.5 w-28 rounded-full bg-secondary animate-pulse" />
-                              <div className="h-3 w-20 rounded-full bg-secondary animate-pulse" />
+                          <div
+                            key={i}
+                            className="flex items-center"
+                            style={{ gap: 12, padding: '11px 16px', borderBottom: '1px solid #e0e0e0' }}
+                          >
+                            <div className="animate-pulse shrink-0" style={{ width: 44, height: 44, borderRadius: 9999, backgroundColor: '#f5f5f7' }} />
+                            <div className="flex-1" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <div className="animate-pulse" style={{ height: 14, width: 120, borderRadius: 9999, backgroundColor: '#f5f5f7' }} />
+                              <div className="animate-pulse" style={{ height: 12, width: 80, borderRadius: 9999, backgroundColor: '#f5f5f7' }} />
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : allFriends.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3">
-                        <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
-                          <Users className="h-6 w-6 text-muted-foreground" />
+                      <div className="flex flex-col items-center justify-center" style={{ paddingTop: 48, paddingBottom: 48, gap: 12 }}>
+                        <div
+                          className="flex items-center justify-center"
+                          style={{ width: 56, height: 56, borderRadius: 9999, backgroundColor: '#f5f5f7' }}
+                        >
+                          <Users style={{ width: 24, height: 24, color: '#7a7a7a' }} />
                         </div>
-                        <p className="text-[15px] text-muted-foreground">Aucun ami pour le moment</p>
+                        <p style={{ fontSize: 17, letterSpacing: '-0.374px', color: '#7a7a7a' }}>
+                          Aucun ami pour le moment
+                        </p>
                       </div>
                     ) : (
-                      <div className="bg-white">
+                      <div style={{ backgroundColor: '#ffffff' }}>
                         {allFriends.map((friend, index) => (
                           <motion.div
                             key={friend.user_id}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: index * 0.02 }}
+                            transition={{ delay: index * 0.02, duration: 0.15 }}
                             onClick={() => startConversationFromRow(friend.user_id)}
-                            className="flex items-center gap-3 px-4 py-3 active:bg-secondary/80 cursor-pointer transition-colors border-b border-border/40 last:border-b-0"
+                            className="flex items-center cursor-pointer active:bg-[#f5f5f7] transition-colors"
+                            style={{ gap: 12, padding: '11px 16px', borderBottom: '1px solid #e0e0e0' }}
                           >
-                            <div className="relative">
-                              <Avatar className="h-11 w-11">
-                                <AvatarImage src={friend.avatar_url || ""} />
-                                <AvatarFallback className="bg-secondary text-foreground text-[15px]">
-                                  {(friend.username || friend.display_name || "U").charAt(0).toUpperCase()}
+                            <div className="relative shrink-0">
+                              <Avatar style={{ width: 44, height: 44 }}>
+                                <AvatarImage src={friend.avatar_url || ''} />
+                                <AvatarFallback style={{ backgroundColor: '#f5f5f7', color: '#1d1d1f', fontSize: 17 }}>
+                                  {(friend.username || friend.display_name || 'U').charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               <OnlineStatus userId={friend.user_id} className="w-3 h-3" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[15px] font-semibold text-foreground">
+                              <p className="truncate" style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.374px', color: '#1d1d1f' }}>
                                 {friend.display_name || friend.username}
                               </p>
-                              <p className="truncate text-[13px] text-muted-foreground">
+                              <p className="truncate" style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.224px', color: '#7a7a7a' }}>
                                 @{friend.username}
                               </p>
                             </div>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                            <ChevronRight style={{ width: 16, height: 16, color: '#e0e0e0', flexShrink: 0 }} />
                           </motion.div>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  {/* Create Club */}
-                  <div className="border-t border-border/40 bg-card">
+                  {/* ── Create Club ── */}
+                  <div style={{ borderTop: '1px solid #e0e0e0', backgroundColor: '#ffffff' }}>
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: 0.15 }}
+                      transition={{ delay: 0.1, duration: 0.2 }}
                       onClick={onCreateClub}
-                      className="flex items-center gap-3.5 px-4 py-3.5 active:bg-secondary/80 cursor-pointer transition-colors"
+                      className="flex items-center cursor-pointer active:bg-[#f5f5f7] transition-colors"
+                      style={{ gap: 12, padding: '11px 16px' }}
                     >
-                      <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Users className="h-5 w-5 text-primary" />
+                      <div
+                        className="flex items-center justify-center shrink-0"
+                        style={{ width: 44, height: 44, borderRadius: 9999, backgroundColor: 'rgba(0,102,204,0.1)' }}
+                      >
+                        <Users style={{ width: 20, height: 20, color: '#0066cc' }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-medium text-foreground">Créer un club</p>
-                        <p className="text-[13px] text-muted-foreground">Discuter à plusieurs</p>
+                        <p style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.374px', color: '#1d1d1f' }}>
+                          Créer un club
+                        </p>
+                        <p style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.224px', color: '#7a7a7a' }}>
+                          Discuter à plusieurs
+                        </p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                      <ChevronRight style={{ width: 16, height: 16, color: '#e0e0e0', flexShrink: 0 }} />
                     </motion.div>
                   </div>
+
                 </motion.div>
               )}
             </AnimatePresence>

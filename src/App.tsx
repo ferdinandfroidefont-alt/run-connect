@@ -240,8 +240,12 @@ const App = () => {
             if (!result.ok) {
               console.warn('[OAuth/App] finalize failed', result.reason);
               if (result.reason === "duplicate") {
-                // iOS peut émettre le même deep link plusieurs fois.
-                // Le premier passage a déjà traité la session ; ne pas relancer de fallback/reload.
+                return;
+              }
+              if (result.reason === "oauth_error") {
+                // Erreur renvoyée par Apple/Supabase (ex: Unable to exchange external code).
+                // On redirige directement vers /auth pour éviter l'écran bleu du Layout.
+                replaceBrowserRoute("/auth");
                 return;
               }
               fallbackToAuthCallback(url, `finalize-failed:${result.reason ?? "unknown"}`);
@@ -341,6 +345,10 @@ const App = () => {
           } else {
             console.warn('[OAuth/App] cold start finalize failed', result.reason);
             if (result.reason === "duplicate") {
+              return;
+            }
+            if (result.reason === "oauth_error") {
+              replaceBrowserRoute("/auth");
               return;
             }
             fallbackToAuthCallback(incomingUrl, `finalize-failed:${result.reason ?? "unknown"}`);
