@@ -16,7 +16,6 @@ import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 
-import { StravaConnect } from "@/components/StravaConnect";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -814,12 +813,12 @@ const Profile = () => {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[20px] font-semibold text-foreground">Stories à la une</h2>
-              <button type="button" onClick={() => navigate("/feed")} className="text-[14px] font-medium text-primary">Voir tout</button>
+              <button type="button" onClick={() => navigate("/stories/create")} className="text-[14px] font-medium text-primary">Voir tout</button>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1">
               <div className="shrink-0">
                 <button
-                  onClick={() => navigate("/feed")}
+                  onClick={() => navigate("/stories/create")}
                   className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#d9dbe0] bg-[#f6f7f9] text-[#0A84FF]"
                 >
                   <span className="mb-3 inline-flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#0A84FF] text-[40px] font-light leading-none text-white">
@@ -1021,10 +1020,6 @@ const Profile = () => {
             </div>
           </div>
         )}
-
-          <div className="box-border min-w-0 w-full max-w-full">
-            <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
-          </div>
 
         {/* Follow Dialog */}
         <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />

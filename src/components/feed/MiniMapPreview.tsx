@@ -4,7 +4,11 @@ import type { Map, Marker } from 'mapbox-gl';
 import { createEmbeddedMapboxMap } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
-import { createSessionPinButton, resolveSessionPinVariant } from '@/lib/mapSessionPin';
+import {
+  createSessionPinButton,
+  resolveSessionPinVariant,
+  SESSION_PIN_CENTER_OFFSET_Y,
+} from '@/lib/mapSessionPin';
 
 interface MiniMapPreviewProps {
   lat: number;
@@ -95,7 +99,11 @@ export const MiniMapPreview = ({
         wrap.appendChild(pin);
 
         const mapboxgl = await loadMapboxGl();
-        markerRef.current = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+        markerRef.current = new mapboxgl.Marker({
+          element: wrap,
+          anchor: 'bottom',
+          offset: [0, SESSION_PIN_CENTER_OFFSET_Y],
+        })
           .setLngLat([lng, lat])
           .addTo(map);
 

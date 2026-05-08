@@ -540,14 +540,14 @@ export default function Participants() {
     <div className="relative flex h-[100dvh] min-h-0 min-w-0 flex-col overflow-hidden bg-secondary">
       <IosFixedPageHeaderShell
         className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden bg-secondary"
-        headerWrapperClassName="shrink-0"
+        headerWrapperClassName="shrink-0 bg-card"
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
             <IosPageHeaderBar
               leadingBack={{ onClick: () => navigate("/"), label: "Découvrir" }}
-              title="Itinéraire"
+              title="Suivi"
               sideClassName="w-[7.5rem]"
             />
           </div>

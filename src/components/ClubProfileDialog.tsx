@@ -351,7 +351,12 @@ export const ClubProfileDialog = ({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent fullScreen hideCloseButton className="flex flex-col gap-0 bg-background p-0">
-          <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-[hsl(var(--muted))] pt-[max(0.75rem,var(--safe-area-top))]">
+          <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-[hsl(var(--muted))]">
+            <div
+              className="bg-white dark:bg-card"
+              style={{ height: "max(env(safe-area-inset-top, 0px), 12px)" }}
+              aria-hidden="true"
+            />
             <IosPageHeaderBar
               leadingBack={{ onClick: onClose, label: dismissBackLabel }}
               title=""
@@ -514,23 +519,30 @@ export const ClubProfileDialog = ({
         }}
       >
         <DialogContent fullScreen hideCloseButton className="flex flex-col gap-0 bg-background p-0">
-          <div className="sticky top-0 z-10 flex shrink-0 items-center border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,var(--safe-area-top))]">
-            <button
-              type="button"
-              onClick={() => {
-                setShowInviteDialog(false);
-                setSearchQuery("");
-                setSearchResults([]);
-              }}
-              className="flex min-w-[70px] items-center gap-0.5 text-[16px] font-medium text-primary"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="text-[15px] font-normal">Retour</span>
-            </button>
-            <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
-              Inviter des membres
-            </span>
-            <div className="min-w-[70px]" />
+          <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-card">
+            <div
+              className="bg-white dark:bg-card"
+              style={{ height: "max(env(safe-area-inset-top, 0px), 12px)" }}
+              aria-hidden="true"
+            />
+            <div className="flex items-center px-4 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInviteDialog(false);
+                  setSearchQuery("");
+                  setSearchResults([]);
+                }}
+                className="flex min-w-[70px] items-center gap-0.5 text-[16px] font-medium text-primary"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span className="text-[15px] font-normal">Retour</span>
+              </button>
+              <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
+                Inviter des membres
+              </span>
+              <div className="min-w-[70px]" />
+            </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <div className="relative mb-4">

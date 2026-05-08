@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { useDiscoverFeed, type DiscoverSession } from "@/hooks/useDiscoverFeed";
-import { useGeolocation } from "@/hooks/useGeolocation";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +15,6 @@ import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
 import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import { MiniMapPreview } from "@/components/feed/MiniMapPreview";
-import { getActivityEmoji } from "@/lib/discoverSessionVisual";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -35,22 +33,6 @@ type DiscussionParticipant = {
   display_name: string;
   avatar_url: string | null;
 };
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function formatKmLabel(km: number | null) {
-  if (km == null || !Number.isFinite(km)) return "—";
-  if (km < 1) return `${Math.round(km * 1000)}`;
-  return `${km < 10 ? km.toFixed(1) : Math.round(km)}`;
-}
 
 function initials(name: string) {
   return name
@@ -88,8 +70,6 @@ function FeedMaquetteTile({
   who,
   when,
   title,
-  sportEmoji,
-  kmDisplay,
   tone,
   live,
   actionLabel,
@@ -105,8 +85,6 @@ function FeedMaquetteTile({
   who: string;
   when: string;
   title: string;
-  sportEmoji: string;
-  kmDisplay: string;
   tone: string;
   live: boolean;
   actionLabel: string;
@@ -164,11 +142,6 @@ function FeedMaquetteTile({
           showHint={false}
           className="h-full w-full"
         />
-        <div className="absolute bottom-3.5 left-3.5 text-[#1d1d1f] dark:text-foreground">
-          <span className="text-[22px] leading-none">{sportEmoji}</span>{" "}
-          <span className="font-display text-[26px] font-bold leading-none tracking-[-0.5px]">{kmDisplay}</span>{" "}
-          <span className="text-[13px] font-normal">km</span>
-        </div>
       </div>
 
       <div
@@ -363,7 +336,6 @@ export function FeedActivitiesMaquette() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { position } = useGeolocation();
   const [mode, setMode] = useState<FeedMode>("friends");
   const [friendCount, setFriendCount] = useState<number | null>(null);
   const [selectedFriendsSession, setSelectedFriendsSession] = useState<Record<string, unknown> | null>(null);
@@ -442,14 +414,6 @@ export function FeedActivitiesMaquette() {
     if (h >= 17) return `programme · ce soir ${format(d, "HH")}h`;
     return `programme · ${format(d, "HH:mm", { locale: fr })}`;
   }, []);
-
-  const kmForFriendSession = useCallback(
-    (s: FeedSession) => {
-      if (!position) return null;
-      return haversineKm(position.lat, position.lng, s.location_lat, s.location_lng);
-    },
-    [position],
-  );
 
   const handleJoinFromFeed = useCallback(
     (sessionId: string) => {
@@ -559,8 +523,6 @@ export function FeedActivitiesMaquette() {
                 const loc = shortLocation(s.location_name);
                 const title = loc ? `${s.title} · ${loc}` : s.title;
                 const live = sessionLikelyLive(s.scheduled_at);
-                const km = kmForFriendSession(s);
-                const emoji = getActivityEmoji(s.activity_type);
                 const tone = toneHexForActivity(s.activity_type);
                 return (
                   <div key={s.id} className="space-y-0">
@@ -568,8 +530,6 @@ export function FeedActivitiesMaquette() {
                       who={who}
                       when={renderFriendsWhen(s)}
                       title={title}
-                      sportEmoji={emoji}
-                      kmDisplay={formatKmLabel(km)}
                       tone={tone}
                       live={live}
                       actionLabel={live ? "Suivre" : "Rejoindre"}
@@ -627,7 +587,6 @@ export function FeedActivitiesMaquette() {
               const loc = shortLocation(s.location_name);
               const title = loc ? `${s.title} · ${loc}` : s.title;
               const live = sessionLikelyLive(s.scheduled_at);
-              const emoji = getActivityEmoji(s.activity_type);
               const tone = toneHexForActivity(s.activity_type);
               return (
                 <FeedMaquetteTile
@@ -635,8 +594,6 @@ export function FeedActivitiesMaquette() {
                   who={who}
                   when={renderDiscoverWhen(s)}
                   title={title}
-                  sportEmoji={emoji}
-                  kmDisplay={formatKmLabel(s.distance_km)}
                   tone={tone}
                   live={live}
                   actionLabel={live ? "Suivre" : "Rejoindre"}

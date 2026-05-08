@@ -14,6 +14,8 @@ export type SessionPinMeta = {
 
 /** Variante affichée sur la carte : `depth` = relief léger + dégradé discret (défaut). */
 export const DEFAULT_SESSION_PIN_VARIANT: SessionPinVariant = "depth";
+/** Décalage vertical (px) pour aligner le centre visuel du pin sur le point Mapbox. */
+export const SESSION_PIN_CENTER_OFFSET_Y: number = 39;
 
 function resolveSessionPinColor(activityType?: string): string {
   const t = (activityType ?? "").toLowerCase();

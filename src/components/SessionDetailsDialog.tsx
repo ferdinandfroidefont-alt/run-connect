@@ -3,7 +3,11 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import { createEmbeddedMapboxMap, setOrUpdateLineLayer } from "@/lib/mapboxEmbed";
 import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
-import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
+import {
+  createSessionPinButton,
+  resolveSessionPinVariant,
+  SESSION_PIN_CENTER_OFFSET_Y,
+} from "@/lib/mapSessionPin";
 import mapboxgl from "mapbox-gl";
 import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
@@ -232,7 +236,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               variant: resolveSessionPinVariant(),
             });
             wrap.appendChild(pin);
-            new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+            new mapboxgl.Marker({
+              element: wrap,
+              anchor: 'bottom',
+              offset: [0, SESSION_PIN_CENTER_OFFSET_Y],
+            })
               .setLngLat([session.location_lng, session.location_lat])
               .addTo(map);
           } catch (err) {

@@ -713,9 +713,6 @@ export const RouteCreation = () => {
     const newMode = !isManualMode;
     setIsManualMode(newMode);
     isManualModeRef.current = newMode;
-    toast.success(
-      newMode ? 'Mode manuel activé - prochains points en ligne droite' : 'Mode guidé activé - prochains points sur routes',
-    );
   };
 
   const handleUndo = async () => {

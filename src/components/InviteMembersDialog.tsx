@@ -173,7 +173,14 @@ export const InviteMembersDialog = ({
           contentTopOffsetPx={0}
           headerWrapperClassName="shrink-0"
           header={
-            <CoachingFullscreenHeader title="Inviter des membres" onBack={() => onOpenChange(false)} />
+            <>
+              <div
+                className="bg-white dark:bg-card"
+                style={{ height: "max(env(safe-area-inset-top, 0px), 12px)" }}
+                aria-hidden="true"
+              />
+              <CoachingFullscreenHeader title="Inviter des membres" onBack={() => onOpenChange(false)} />
+            </>
           }
           scrollClassName="bg-secondary px-ios-4 pb-8"
         >

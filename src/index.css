@@ -1051,7 +1051,7 @@ html, body {
   }
   .apple-field-row-last { border-bottom: none; }
   .apple-field-label {
-    @apply w-[110px] text-[17px] tracking-[-0.4px] text-foreground;
+    @apply w-[136px] shrink-0 whitespace-nowrap text-[17px] tracking-[-0.4px] text-foreground;
   }
   .apple-field-value {
     @apply flex-1 bg-transparent text-[17px] tracking-[-0.4px] text-foreground placeholder:text-muted-foreground;

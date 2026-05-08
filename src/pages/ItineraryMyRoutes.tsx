@@ -93,7 +93,7 @@ export default function ItineraryMyRoutes() {
     <>
       <IosFixedPageHeaderShell
         className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
-        headerWrapperClassName="shrink-0"
+        headerWrapperClassName="shrink-0 bg-card"
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={

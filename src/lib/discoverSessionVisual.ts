@@ -17,11 +17,13 @@ export function getActivityEmoji(activityType: string): string {
 /** Fond pastille liste Dćcouvrir — aligné apple-screens SessionRow */
 export function getDiscoverSportTileClass(activityType: string): string {
   const t = (activityType ?? "").toLowerCase();
-  if (t.includes("velo") || t.includes("vtt") || t.includes("bike") || t.includes("cycl") || t.includes("gravel"))
-    return "bg-[#ff375f]";
+  if (t.includes("vtt")) return "bg-[#8B5E3C]";
+  if (t.includes("gravel")) return "bg-[#FFCC00]";
+  if (t.includes("velo") || t.includes("bike") || t.includes("cycl")) return "bg-[#FF3B30]";
   if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf"))
     return "bg-[#5ac8fa]";
-  if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike"))
-    return "bg-[#34c759]";
+  if (t.includes("trail")) return "bg-[#AF52DE]";
+  if (t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike"))
+    return "bg-[#34C759]";
   return "bg-[#007AFF]";
 }

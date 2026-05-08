@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
+  addMonths,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -152,9 +153,9 @@ export const SessionCalendarView = ({
   onAddSession,
 }: SessionCalendarViewProps) => {
   const today = new Date();
-  const monthInputRef = useRef<HTMLInputElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [monthMenuOpen, setMonthMenuOpen] = useState(false);
 
   const sessionsFiltered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -200,38 +201,66 @@ export const SessionCalendarView = ({
         ? "1 séance"
         : `${sessionCount} séances`;
 
-  const monthPickerValue = format(visibleMonth, "yyyy-MM");
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 25 }, (_, i) =>
+        startOfMonth(addMonths(visibleMonth, i - 12))
+      ),
+    [visibleMonth]
+  );
 
   return (
     <div className="space-y-0">
-      <input
-        ref={monthInputRef}
-        type="month"
-        className="sr-only"
-        value={monthPickerValue}
-        aria-hidden
-        tabIndex={-1}
-        onChange={(e) => {
-          const raw = e.target.value;
-          if (!raw) return;
-          const [y, m] = raw.split("-").map(Number);
-          if (y && m) onVisibleMonthChange(startOfMonth(new Date(y, m - 1, 1)));
-        }}
-      />
-
       {/* Maquette 13 — rangée mois + ⌕ + (Apple Calendar) */}
-      <div className="flex items-baseline justify-between px-4">
-        <button
-          type="button"
-          className="flex min-w-0 items-baseline gap-0.5 text-left text-primary active:opacity-70"
-          onClick={() => monthInputRef.current?.showPicker?.() ?? monthInputRef.current?.click()}
-          aria-label="Choisir le mois"
-        >
-          <span className="font-display text-[22px] font-bold capitalize tracking-[-0.5px]">
-            {format(visibleMonth, "MMMM yyyy", { locale: fr })}
-          </span>
-          <ChevronDown className="relative top-px h-[13px] w-[13px] shrink-0" strokeWidth={2.4} aria-hidden />
-        </button>
+      <div className="relative flex items-baseline justify-between px-4">
+        <div className="relative">
+          <button
+            type="button"
+            className="flex min-w-0 items-baseline gap-0.5 text-left text-primary active:opacity-70"
+            onClick={() => setMonthMenuOpen((open) => !open)}
+            aria-label="Choisir le mois"
+            aria-expanded={monthMenuOpen}
+          >
+            <span className="font-display text-[22px] font-bold capitalize tracking-[-0.5px]">
+              {format(visibleMonth, "MMMM yyyy", { locale: fr })}
+            </span>
+            <ChevronDown
+              className={cn(
+                "relative top-px h-[13px] w-[13px] shrink-0 transition-transform",
+                monthMenuOpen && "rotate-180"
+              )}
+              strokeWidth={2.4}
+              aria-hidden
+            />
+          </button>
+          {monthMenuOpen ? (
+            <div className="absolute left-0 top-full z-30 mt-2 w-52 overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
+              <div className="max-h-64 overflow-y-auto py-1">
+                {monthOptions.map((monthDate) => {
+                  const isCurrent = isSameMonth(monthDate, visibleMonth);
+                  return (
+                    <button
+                      key={format(monthDate, "yyyy-MM")}
+                      type="button"
+                      onClick={() => {
+                        onVisibleMonthChange(monthDate);
+                        setMonthMenuOpen(false);
+                      }}
+                      className={cn(
+                        "block w-full px-3 py-2 text-left text-[15px] capitalize transition-colors",
+                        isCurrent
+                          ? "bg-primary/10 font-semibold text-primary"
+                          : "text-popover-foreground hover:bg-muted/60"
+                      )}
+                    >
+                      {format(monthDate, "MMMM yyyy", { locale: fr })}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
         <div className="flex items-center gap-3.5 text-primary">
           <button
             type="button"
@@ -425,7 +454,7 @@ export const SessionCalendarView = ({
                   <SwipeConfirmCard
                     key={session.id}
                     onConfirm={() => onConfirmSession(session)}
-                    onComment={() => (onCommentSession ? onCommentSession(session) : onSessionClick(session))}
+                    onComment={() => onCommentSession?.(session)}
                   >
                     {rowInner}
                   </SwipeConfirmCard>

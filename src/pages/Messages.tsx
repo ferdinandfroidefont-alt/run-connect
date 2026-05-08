@@ -257,7 +257,9 @@ const Messages = () => {
   const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
+  const [conversationToPin, setConversationToPin] = useState<Conversation | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [showPinDialog, setShowPinDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [showCoachCreate, setShowCoachCreate] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
@@ -471,6 +473,28 @@ const Messages = () => {
     });
   }, [keyboardInsetBottom, selectedConversation]);
 
+  // iOS iMessage-style keyboard fix: track visual viewport height via JS and expose it
+  // as --vvh so the conversation container (position:fixed) can size itself correctly.
+  useEffect(() => {
+    if (!selectedConversation) {
+      document.documentElement.style.removeProperty('--vvh');
+      return;
+    }
+    const vv = window.visualViewport;
+    const update = () => {
+      const h = vv ? vv.height : window.innerHeight;
+      document.documentElement.style.setProperty('--vvh', `${h}px`);
+    };
+    update();
+    vv?.addEventListener('resize', update);
+    vv?.addEventListener('scroll', update);
+    return () => {
+      vv?.removeEventListener('resize', update);
+      vv?.removeEventListener('scroll', update);
+      document.documentElement.style.removeProperty('--vvh');
+    };
+  }, [selectedConversation]);
+
   // Single effect for tab bar visibility + chrome color.
   // Tab bar visible on inbox list, hidden only inside a conversation thread.
   // Ne pas remettre le suppressor à false dans le cleanup : sinon éclair entre deux conversations (liste swipe host).
@@ -491,14 +515,18 @@ const Messages = () => {
         root.style.backgroundColor = threadBg;
         document.body.style.backgroundColor = threadBg;
       }
+      // Prevent iOS rubber-band scroll that shifts the fixed conversation layout
+      document.body.style.overscrollBehavior = 'none';
     } else {
       const bg = hslVar('--background');
       if (bg) {
         root.style.backgroundColor = bg;
         document.body.style.backgroundColor = bg;
       }
+      document.body.style.overscrollBehavior = '';
     }
     return () => {
+      document.body.style.overscrollBehavior = '';
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
   }, [selectedConversation, setBottomNavSuppressed, location.pathname]);
@@ -961,6 +989,18 @@ const Messages = () => {
       setConversationToDelete(conversation);
     }
     setShowDeleteDialog(true);
+  };
+
+  const confirmPinConversation = (conversation: Conversation) => {
+    setConversationToPin(conversation);
+    setShowPinDialog(true);
+  };
+
+  const applyPinConversation = () => {
+    if (!conversationToPin) return;
+    togglePinConversation(conversationToPin.id);
+    setShowPinDialog(false);
+    setConversationToPin(null);
   };
 
   const deleteConversation = async () => {
@@ -2287,6 +2327,41 @@ const Messages = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={showPinDialog}
+        onOpenChange={(open) => {
+          setShowPinDialog(open);
+          if (!open) setConversationToPin(null);
+        }}
+      >
+        <DialogContent className="max-w-md z-[150]" overlayClassName="z-[150]">
+          <DialogHeader>
+            <DialogTitle>
+              {conversationToPin && pinnedConversations.has(conversationToPin.id) ? "Confirmer le désépinglage" : "Confirmer l'épinglage"}
+            </DialogTitle>
+            <DialogDescription>
+              {conversationToPin && pinnedConversations.has(conversationToPin.id)
+                ? "Voulez-vous retirer cette conversation des conversations épinglées ?"
+                : "Voulez-vous épingler cette conversation en haut de la liste ?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-ios-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPinDialog(false);
+                setConversationToPin(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button onClick={applyPinConversation}>
+              {conversationToPin && pinnedConversations.has(conversationToPin.id) ? "Désépingler" : "Épingler"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 
@@ -2314,7 +2389,18 @@ const Messages = () => {
     
     return (
       <>
-        <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#f5f5f7] dark:bg-secondary">
+        <div
+          className="flex min-h-0 flex-col overflow-hidden bg-[#f5f5f7] dark:bg-secondary"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 'var(--vvh, 100dvh)',
+            overscrollBehavior: 'none',
+            zIndex: 10,
+          }}
+        >
           <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col">
             <IosFixedPageHeaderShell
               className="min-h-0 flex-1"
@@ -2322,7 +2408,13 @@ const Messages = () => {
               scrollRef={threadScrollRef}
               headerWrapperClassName="z-50 shrink-0 border-b border-[#e0e0e0] bg-white dark:border-border dark:bg-card"
               header={
-                isDirectMessage ? (
+                <>
+                  <div
+                    className="bg-white dark:bg-card"
+                    style={{ height: "max(env(safe-area-inset-top, 0px), 12px)" }}
+                    aria-hidden="true"
+                  />
+                {isDirectMessage ? (
                   <div className="flex items-center gap-2.5 px-4 py-2">
                     <Button
                       variant="ghost"
@@ -2605,7 +2697,8 @@ const Messages = () => {
                       </DropdownMenu>
                     </div>
                   </div>
-                )
+                )}
+                </>
               }
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
             footer={
@@ -3571,10 +3664,10 @@ const Messages = () => {
         >
         <div
           className={cn(
-            "min-h-0 pb-ios-2",
+            "min-h-0 flex flex-1 flex-col pb-ios-2",
             activeRootTab === "create-club"
-              ? "min-h-0 flex-1 bg-secondary pt-2.5"
-              : "min-h-0 flex-1 apple-grouped-bg"
+              ? "bg-secondary pt-2.5"
+              : "apple-grouped-bg"
           )}
         >
           {activeRootTab === "conversations" ? (
@@ -3647,7 +3740,7 @@ const Messages = () => {
                           setConversationToDelete(conversation);
                           confirmDeleteConversation(conversation);
                         }}
-                        onSwipeRight={() => togglePinConversation(conversation.id)}
+                        onSwipeRight={() => confirmPinConversation(conversation)}
                       >
                         <div
                           className={cn(

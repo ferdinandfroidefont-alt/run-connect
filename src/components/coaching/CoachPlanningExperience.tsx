@@ -1014,6 +1014,7 @@ export function CoachPlanningExperience() {
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const planningContinuousRef = useRef<HTMLDivElement | null>(null);
   const myPlanContinuousRef = useRef<HTMLDivElement | null>(null);
+  const weekPlannerTopRef = useRef<HTMLDivElement | null>(null);
   const didInitialTodayCenterRef = useRef<{ planning: boolean; myPlan: boolean }>({ planning: false, myPlan: false });
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
@@ -2842,6 +2843,12 @@ export function CoachPlanningExperience() {
   const weekPlannerMode =
     activeMenuKey === "planning" && !effectiveAthleteMode && (!!activeAthleteId || !!activeGroupId || coachWeekProgrammerOpen);
 
+  const scrollWeekPlannerTopIntoView = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      weekPlannerTopRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+    });
+  }, []);
+
   useEffect(() => {
     if (!weekPlannerMode) {
       didInitialTodayCenterRef.current.planning = false;
@@ -3313,7 +3320,9 @@ export function CoachPlanningExperience() {
             )}
 
             {weekPlannerMode ? (
-              <div className="sticky top-0 z-20 bg-secondary/95 pt-1 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur">
+              <>
+                <div ref={weekPlannerTopRef} className="h-0 w-full" aria-hidden />
+                <div className="sticky top-0 z-20 bg-secondary/95 pt-1 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur">
                 <PlanningSearchBar
                   bare
                   value={search}
@@ -3331,6 +3340,8 @@ export function CoachPlanningExperience() {
                           setActiveGroupId(group.id);
                           setActiveAthleteId(undefined);
                           setCoachWeekProgrammerOpen(false);
+                          setSearch("");
+                          scrollWeekPlannerTopIntoView();
                         }}
                       >
                         <span className="text-[15px] font-medium text-foreground">{group.name}</span>
@@ -3346,6 +3357,8 @@ export function CoachPlanningExperience() {
                           setActiveAthleteId(athlete.id);
                           setActiveGroupId(undefined);
                           setCoachWeekProgrammerOpen(false);
+                          setSearch("");
+                          scrollWeekPlannerTopIntoView();
                         }}
                       >
                         <span className="text-[15px] font-medium text-foreground">{athlete.name}</span>
@@ -3354,19 +3367,30 @@ export function CoachPlanningExperience() {
                     ))}
                   </div>
                 ) : null}
-              </div>
+                </div>
+              </>
             ) : null}
 
             {weekPlannerMode && (activeAthlete || activeGroup) ? (
               <div className="px-4 pb-[18px] pt-3">
                 {activeAthlete ? (
                   <div className="flex items-center gap-3 rounded-[14px] border border-[rgba(10,132,255,0.25)] bg-card py-2.5 pl-2.5 pr-2 shadow-[0_0_0_3px_rgba(10,132,255,0.08)]">
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
-                      style={{ backgroundColor: `hsl(${avatarHueFromId(activeAthlete.id)},85%,52%)` }}
-                    >
-                      {initialsFromName(activeAthlete.name)}
-                    </div>
+                    {activeAthlete.avatarUrl ? (
+                      <img
+                        src={activeAthlete.avatarUrl}
+                        alt={`Photo de profil de ${activeAthlete.name}`}
+                        className="h-10 w-10 shrink-0 rounded-full object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
+                        style={{ backgroundColor: `hsl(${avatarHueFromId(activeAthlete.id)},85%,52%)` }}
+                      >
+                        {initialsFromName(activeAthlete.name)}
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[16px] font-semibold tracking-[-0.03em] text-foreground">{activeAthlete.name}</p>
                       <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Athlète</p>
@@ -4081,25 +4105,25 @@ export function CoachPlanningExperience() {
                   className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
                 >
                   <div className="space-y-3 px-4 py-3">
-                    <div className="grid grid-cols-4 gap-2">
-                      {SPORTS.map((sport) => (
+                    <div className="grid grid-cols-4 gap-[10px]">
+                      {[
+                        { id: "running", emoji: "🏃", bg: "#007AFF" },
+                        { id: "cycling", emoji: "🚴", bg: "#FF3B30" },
+                        { id: "swimming", emoji: "🏊", bg: "#5AC8FA" },
+                        { id: "strength", emoji: "💪", bg: "#FF9500" },
+                      ].map((sport) => (
                         <button
                           key={sport.id}
                           type="button"
-                          onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id }))}
-                          className={cn(
-                            "flex flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 transition-all",
-                            draft.sport === sport.id
-                              ? "border-[#007AFF] bg-[rgba(0,122,255,0.1)] text-[#007AFF] shadow-[0_0_0_1px_rgba(0,122,255,0.22)]"
-                              : "border-border/80 bg-white text-foreground dark:bg-card"
-                          )}
-                          title={sport.label}
-                          aria-label={sport.label}
+                          onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id as typeof prev.sport }))}
+                          aria-label={sport.id}
+                          className="relative aspect-square rounded-[14px] text-[36px] leading-none flex items-center justify-center transition-transform active:scale-95"
+                          style={{ backgroundColor: sport.bg }}
                         >
-                          <span className="text-[24px] leading-none" aria-hidden="true">
-                            {sport.emoji}
-                          </span>
-                          <span className="text-[12px] font-medium leading-none text-muted-foreground">{sport.label}</span>
+                          {draft.sport === sport.id && (
+                            <span className="pointer-events-none absolute inset-0 rounded-[14px] shadow-[0_0_0_2px_#f5f5f7,0_0_0_4px_#0066cc]" />
+                          )}
+                          {sport.emoji}
                         </button>
                       ))}
                     </div>
@@ -4110,16 +4134,16 @@ export function CoachPlanningExperience() {
                   className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
                 >
                   <div className="space-y-3 px-4 py-3">
-                    <p className="px-1 text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Schéma de séance</p>
+                    <p className="px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Schéma de séance</p>
                     <div className="min-w-0 rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
                         <div className="flex min-w-0 gap-2">
-                          <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-between py-0 text-[9px] font-semibold text-muted-foreground/80">
-                            <span className="text-[#AF52DE]">Z6</span>
-                            <span className="text-[#FF3B30]">Z5</span>
-                            <span className="text-[#FF9500]">Z4</span>
-                            <span className="text-[#FFCC00]">Z3</span>
-                            <span className="text-[#34C759]">Z2</span>
-                            <span className="text-[#5AC8FA]">Z1</span>
+                          <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-between py-0 text-[9px] font-semibold" style={{ color: "#7a7a7a" }}>
+                            <span>Z6</span>
+                            <span>Z5</span>
+                            <span>Z4</span>
+                            <span>Z3</span>
+                            <span>Z2</span>
+                            <span>Z1</span>
                           </div>
                           <div
                             ref={schemaPreviewRef}
@@ -4134,12 +4158,12 @@ export function CoachPlanningExperience() {
                             title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                           >
                             <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col-reverse rounded-[10px] overflow-hidden">
-                              <div className="flex-1 bg-[#5AC8FA]/[0.06]" />
+                              <div className="flex-1 bg-[#B5B5BA]/[0.06]" />
+                              <div className="flex-1 bg-[#0066cc]/[0.06]" />
                               <div className="flex-1 bg-[#34C759]/[0.06]" />
                               <div className="flex-1 bg-[#FFCC00]/[0.06]" />
                               <div className="flex-1 bg-[#FF9500]/[0.06]" />
                               <div className="flex-1 bg-[#FF3B30]/[0.06]" />
-                              <div className="flex-1 bg-[#AF52DE]/[0.06]" />
                             </div>
                             <MiniWorkoutProfile
                               blocks={previewBars}
@@ -4196,7 +4220,7 @@ export function CoachPlanningExperience() {
                         </div>
                     </div>
 
-                    <p className="mb-2 mt-5 px-1 text-[12px] uppercase tracking-[0.5px] text-muted-foreground">Ajouter un bloc</p>
+                    <p className="mb-[10px] mt-5 px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Ajouter un bloc</p>
                     <div className="grid grid-cols-4 gap-2">
                       {(
                         [
@@ -4204,8 +4228,8 @@ export function CoachPlanningExperience() {
                             key: "steady" as const,
                             title: "Continu",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="12" width="72" height="12" rx="4" fill="#10B981" fillOpacity="0.92" />
+                              <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                                <rect x="2" y="9" width="40" height="6" rx="2" fill="#0066cc"/>
                               </svg>
                             ),
                           },
@@ -4213,11 +4237,12 @@ export function CoachPlanningExperience() {
                             key: "interval" as const,
                             title: "Intervalle",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="6" y="6" width="16" height="24" rx="2" fill="#FF9500" fillOpacity="0.96" />
-                                <rect x="26" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
-                                <rect x="46" y="6" width="16" height="24" rx="2" fill="#FF9500" fillOpacity="0.96" />
-                                <rect x="66" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
+                              <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                                <rect x="2"  y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="11" y="14" width="3" height="6"  rx="1"   fill="#B5B5BA"/>
+                                <rect x="17" y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="26" y="14" width="3" height="6"  rx="1"   fill="#B5B5BA"/>
+                                <rect x="32" y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
                               </svg>
                             ),
                           },
@@ -4225,12 +4250,13 @@ export function CoachPlanningExperience() {
                             key: "pyramid" as const,
                             title: "Pyramide",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#FFCC00" fillOpacity="0.92" />
-                                <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#FF9500" fillOpacity="0.93" />
-                                <rect x="36" y="4" width="12" height="26" rx="2" fill="#FF3B30" fillOpacity="0.95" />
-                                <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#FF9500" fillOpacity="0.93" />
-                                <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#FFCC00" fillOpacity="0.92" />
+                              <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                                <rect x="2"  y="14" width="5" height="6"  rx="1"   fill="#34C759"/>
+                                <rect x="9"  y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
+                                <rect x="16" y="4"  width="5" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="23" y="4"  width="5" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="30" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
+                                <rect x="37" y="14" width="5" height="6"  rx="1"   fill="#34C759"/>
                               </svg>
                             ),
                           },
@@ -4255,16 +4281,16 @@ export function CoachPlanningExperience() {
                             }
                           }}
                           className={cn(
-                            "group flex cursor-grab flex-col overflow-hidden rounded-2xl border select-none touch-none transition active:cursor-grabbing",
+                            "group flex cursor-grab flex-col items-center gap-2 rounded-[14px] border select-none touch-none transition active:cursor-grabbing py-[14px] px-2 pb-[10px]",
                             card.key === "pyramid"
-                              ? "border-2 border-[#007AFF] bg-[#E8F0FF]"
-                              : "border-slate-200/90 bg-[#F2F2F7] hover:border-[#2563EB]/45"
+                              ? "border-2 border-[#0066cc] bg-white"
+                              : "border-[#e0e0e0] bg-white hover:border-[#0066cc]/40"
                           )}
                         >
-                          <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
+                          <div className="pointer-events-none flex items-center justify-center">
                             {card.mini}
                           </div>
-                          <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">{card.title}</p>
+                          <p className="shrink-0 text-center text-[12px] leading-none tracking-[-0.12px]" style={{ color: "#1d1d1f" }}>{card.title}</p>
                         </div>
                       ))}
 
@@ -4286,22 +4312,19 @@ export function CoachPlanningExperience() {
                             addQuickSchemaBlock("variation");
                           }
                         }}
-                        className="group flex cursor-grab flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-[#F2F2F7] select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing"
+                        className="group flex cursor-grab flex-col items-center gap-2 rounded-[14px] border border-[#e0e0e0] bg-white py-[14px] px-2 pb-[10px] select-none touch-none transition hover:border-[#0066cc]/40 active:cursor-grabbing"
                       >
-                        <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
-                          <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                            <defs>
-                              <linearGradient id="variationZoneGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#34C759" />
-                                <stop offset="33%" stopColor="#FFCC00" />
-                                <stop offset="66%" stopColor="#FF9500" />
-                                <stop offset="100%" stopColor="#FF3B30" />
-                              </linearGradient>
-                            </defs>
-                            <polygon points="8,30 76,4 76,30" fill="url(#variationZoneGradient)" fillOpacity="0.95" />
+                        <div className="pointer-events-none flex items-center justify-center">
+                          <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                            <rect x="2"  y="16" width="5" height="4"  rx="1"   fill="#B5B5BA"/>
+                            <rect x="9"  y="12" width="5" height="8"  rx="1"   fill="#34C759"/>
+                            <rect x="16" y="6"  width="5" height="14" rx="1.3" fill="#FF9500"/>
+                            <rect x="23" y="14" width="5" height="6"  rx="1"   fill="#0066cc"/>
+                            <rect x="30" y="4"  width="5" height="16" rx="1.5" fill="#FF3B30"/>
+                            <rect x="37" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
                           </svg>
                         </div>
-                        <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">
+                        <p className="shrink-0 text-center text-[12px] leading-none tracking-[-0.12px]" style={{ color: "#1d1d1f" }}>
                           Variation
                         </p>
                       </div>

@@ -8,11 +8,11 @@ import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome'
 
 const ACTIVITY_EMOJI_BG: Record<string, string> = {
   course: 'bg-[#0A66D0]',
-  trail: 'bg-[#0A66D0]',
-  velo: 'bg-[#FF9500]',
-  vtt: 'bg-[#FF9500]',
+  trail: 'bg-[#AF52DE]',
+  velo: 'bg-[#FF3B30]',
+  vtt: 'bg-[#8B5E3C]',
   bmx: 'bg-[#FF9500]',
-  gravel: 'bg-[#FF9500]',
+  gravel: 'bg-[#FFCC00]',
   natation: 'bg-[#5AC8FA]',
   marche: 'bg-[#34C759]',
   randonnee: 'bg-[#34C759]',

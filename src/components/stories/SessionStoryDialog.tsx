@@ -88,6 +88,7 @@ const LONG_PRESS_MS = 380;
 const SWIPE_CLOSE_PX = 110;
 const SWIPE_INSIGHTS_PX = 90;
 const SWIPE_NAV_PX = 70;
+const ACTION_PANEL_CLOSE_SWIPE_PX = 70;
 const TAP_EDGE = 0.32;
 /** Laisse la zone des boutons bas hors du layer de gestes (tap / pause). */
 const GESTURE_BOTTOM_CLEAR = "calc(5.75rem + env(safe-area-inset-bottom, 0px))";
@@ -131,6 +132,7 @@ export function SessionStoryDialog({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressRef = useRef<{ t: number; x: number; y: number; longFired: boolean } | null>(null);
   const swipeRef = useRef<{ x0: number; y0: number } | null>(null);
+  const actionPanelSwipeRef = useRef<{ y0: number; startScrollTop: number } | null>(null);
   const progressRaf = useRef<number | null>(null);
 
   const current = stories[index];
@@ -625,6 +627,25 @@ export function SessionStoryDialog({
     setIsPaused(false);
   };
 
+  const onActionPanelTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    actionPanelSwipeRef.current = {
+      y0: e.touches[0].clientY,
+      startScrollTop: target.scrollTop,
+    };
+  };
+
+  const onActionPanelTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const swipe = actionPanelSwipeRef.current;
+    actionPanelSwipeRef.current = null;
+    if (!swipe) return;
+    const deltaY = e.changedTouches[0].clientY - swipe.y0;
+    // Ferme seulement si l'utilisateur tire vers le bas depuis le haut du sheet.
+    if (swipe.startScrollTop <= 0 && deltaY > ACTION_PANEL_CLOSE_SWIPE_PX) {
+      closeActionPanel();
+    }
+  };
+
   const onPointerDownCapture = (e: React.PointerEvent) => {
     if (actionMode) return;
     pressRef.current = { t: Date.now(), x: e.clientX, y: e.clientY, longFired: false };
@@ -768,6 +789,8 @@ export function SessionStoryDialog({
             "pb-[max(env(safe-area-inset-bottom),16px)]"
           )}
           onClick={(e) => e.stopPropagation()}
+          onTouchStart={onActionPanelTouchStart}
+          onTouchEnd={onActionPanelTouchEnd}
         >
           {actionMode === "menu" && (
             <>

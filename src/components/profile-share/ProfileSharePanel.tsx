@@ -5,10 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 import { ProfileShareArtboard } from './ProfileShareArtboard';
-import {
-  ProfileShareActionsGrid,
-  type ProfileShareChannel,
-} from './ProfileShareActionsGrid';
+import { type ProfileShareChannel } from './ProfileShareActionsGrid';
 import { useToast } from '@/hooks/use-toast';
 import {
   generateProfileShareImage,
@@ -156,12 +153,14 @@ export function ProfileSharePanel({ compact = false }: Props) {
             « Ouvrir avec RunConnect ».
           </p>
 
-          <div className="mt-6 w-full max-w-sm">
-            <ProfileShareActionsGrid
-              busy={exporting || !payload}
-              onChannel={(c) => void handleChannel(c)}
-            />
-          </div>
+          <button
+            type="button"
+            disabled={exporting || !payload}
+            onClick={() => void handleChannel('more')}
+            className="mt-6 w-full max-w-sm rounded-2xl bg-[#2563eb] px-4 py-3 text-center text-[15px] font-semibold text-white shadow-[0_10px_28px_rgba(37,99,235,0.35)] transition-opacity hover:opacity-95 active:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            Partager mon profil
+          </button>
         </div>
       </div>
 

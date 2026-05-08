@@ -35,15 +35,6 @@ const DISTANCE_CHIPS: Array<{ id: string; label: string; km: number | null }> = 
   { id: "custom", label: "Autre", km: null },
 ];
 
-const SPORT_EMOJI: Partial<Record<ProfileSportRecordKey, string>> & Record<string, string> = {
-  running: "🏃",
-  cycling: "🚴",
-  swimming: "🏊",
-  walking: "🚶",
-  triathlon: "🔱",
-  other: "➕",
-};
-
 const PRIMARY_SPORT_ORDER: ProfileSportRecordKey[] = ["running", "cycling", "swimming", "walking"];
 const EXTRA_SPORTS: ProfileSportRecordKey[] = ["triathlon", "other"];
 
