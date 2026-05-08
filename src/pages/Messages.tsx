@@ -502,19 +502,23 @@ const Messages = () => {
   }, [selectedConversation]);
 
   // Single effect for tab bar visibility + chrome color.
-  // Tab bar visible on inbox list, hidden only inside a conversation thread.
+  // Tab bar visible sur la liste seulement : masquée dans un fil, « Nouveau message », ou création club/groupe
+  // (sinon la barre fixed z-[120] reste au-dessus du contenu Messages, qui vit sous MainTabsSwipeHost + transform).
   // Ne pas remettre le suppressor à false dans le cleanup : sinon éclair entre deux conversations (liste swipe host).
   useEffect(() => {
     const onMessagesPage = location.pathname.startsWith("/messages");
     const inThread = onMessagesPage && !!selectedConversation;
-    setBottomNavSuppressed("messages-thread", inThread);
+    const inNewMessageCompose = onMessagesPage && showNewConversation;
+    const inClubComposer = onMessagesPage && activeRootTab === "create-club";
+    const suppressTabBar = inThread || inNewMessageCompose || inClubComposer;
+    setBottomNavSuppressed("messages-thread", suppressTabBar);
 
     const root = document.documentElement;
     const hslVar = (name: string) => {
       const t = getComputedStyle(root).getPropertyValue(name).trim();
       return t ? `hsl(${t})` : '';
     };
-    if (inThread) {
+    if (inThread || inNewMessageCompose) {
       const dark = root.classList.contains("dark");
       const threadBg = dark ? hslVar("--secondary") || "" : "#f5f5f7";
       if (threadBg) {
@@ -535,7 +539,7 @@ const Messages = () => {
       document.body.style.overscrollBehavior = '';
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
-  }, [selectedConversation, setBottomNavSuppressed, location.pathname]);
+  }, [selectedConversation, showNewConversation, activeRootTab, setBottomNavSuppressed, location.pathname]);
 
   useEffect(() => {
     return () => {
@@ -3569,7 +3573,7 @@ const Messages = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
-                            className="z-[130] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
+                            className="z-[200] w-56 rounded-ios-lg border border-border bg-card shadow-lg"
                           >
                             <DropdownMenuItem
                               className="cursor-pointer gap-2 py-ios-3"
@@ -3582,12 +3586,14 @@ const Messages = () => {
                             <DropdownMenuItem
                               className="cursor-pointer gap-2 py-ios-3"
                               onSelect={() => openCreateClubTab()}
+                              onClick={() => openCreateClubTab()}
                             >
                               <Users className="h-4 w-4" />
                               Créer un club
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="cursor-pointer gap-2 py-ios-3"
+                              onSelect={() => openCreateClubTab()}
                               onClick={() => openCreateClubTab()}
                             >
                               <UserPlus className="h-4 w-4" />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -298,8 +299,12 @@ export const NewConversationView = ({
 
   const displayedFriends = searchQuery.trim() ? searchResults : allFriends;
 
-  return (
-    <div className="fixed inset-0 z-50" style={{ backgroundColor: '#ffffff' }}>
+  const tree = (
+    <div
+      className="fixed inset-0 z-[125] flex h-[100dvh] min-h-0 flex-col overflow-hidden"
+      style={{ backgroundColor: "#ffffff" }}
+      data-no-tab-swipe="true"
+    >
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
@@ -710,4 +715,7 @@ export const NewConversationView = ({
       )}
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(tree, document.body);
 };
