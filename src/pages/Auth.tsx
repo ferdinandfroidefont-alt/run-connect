@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useNavigate, Link, useSearchParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
@@ -15,6 +15,7 @@ import { Loader2, Lock, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowL
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { Browser } from '@capacitor/browser';
 import { getIosSupabaseOAuthBridgeRedirectTo } from "@/lib/oauthMobile";
+import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import {
   AuthFlowProgress,
   AuthLegalFooter,
@@ -63,6 +64,8 @@ const Auth = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptSignupTerms, setAcceptSignupTerms] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<CaptchaWidgetRef>(null);
   const { toast } = useToast();
 
   const waitForSessionAndNavigateHome = async (opts?: { timeoutMs?: number; source?: string }) => {
@@ -503,6 +506,8 @@ const Auth = () => {
       window.setTimeout(() => {
         setOtpBackView(view === "email-signup" ? "email-signup" : "email-signin-form");
         setView("otp");
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
         toast({
           title: "Aperçu — code e-mail",
           description: "Aucun e-mail envoyé. Saisissez six chiffres (ex. 123456) pour la suite.",
@@ -519,9 +524,13 @@ const Auth = () => {
           password: password.trim(),
           options: {
             emailRedirectTo: `${window.location.origin}/`,
+            captchaToken: captchaToken || undefined,
           }
         });
         if (error) throw error;
+
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
 
         const referralCode = sessionStorage.getItem('referralCode');
         if (referralCode && signUpData.user && signUpData.session?.access_token) {
@@ -551,9 +560,13 @@ const Auth = () => {
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             shouldCreateUser: true,
+            captchaToken: captchaToken || undefined,
           }
         });
         if (error) throw error;
+
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
 
         setOtpBackView("email-signin-form");
         setView("otp");
@@ -672,7 +685,11 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse.trim(),
         password: password,
+        options: { captchaToken: captchaToken || undefined },
       });
+
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
 
       if (error) throw error;
       await waitForSessionAndNavigateHome({ timeoutMs: 7000, source: 'password-signin' });
@@ -742,8 +759,12 @@ const Auth = () => {
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           shouldCreateUser: true,
+          captchaToken: captchaToken || undefined,
         }
       });
+
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
 
       if (error) {
         if (error.message.includes('429') || error.message.includes('rate limit')) {
@@ -783,16 +804,29 @@ const Auth = () => {
       });
       return;
     }
+    if (!captchaToken) {
+      toast({
+        title: "Vérification requise",
+        description: "Validez le CAPTCHA d'abord",
+        variant: "destructive"
+      });
+      return;
+    }
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
         redirectTo: 'https://run-connect.lovable.app/auth',
+        captchaToken,
       });
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
       if (error) throw error;
       toast({
         title: "Email envoyé ✅",
         description: "Vérifiez votre boîte mail"
       });
     } catch (error: any) {
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     }
   };
@@ -833,7 +867,11 @@ const Auth = () => {
         <div className="flex h-11 items-center justify-between">
           <button
             type="button"
-            onClick={() => setView("landing")}
+            onClick={() => {
+              setCaptchaToken(null);
+              captchaRef.current?.resetCaptcha();
+              setView("landing");
+            }}
             className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
             aria-label="Retour"
           >
@@ -900,10 +938,25 @@ const Auth = () => {
               </div>
             </div>
           </div>
+          <div className="px-4 pb-2">
+            {!captchaToken && (
+              <CaptchaWidget
+                ref={captchaRef}
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+                onError={() => setCaptchaToken(null)}
+              />
+            )}
+            {captchaToken && (
+              <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
+                ✅ Vérification réussie
+              </div>
+            )}
+          </div>
           <div className="px-2">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !captchaToken}
               className="apple-pill apple-pill-large w-full disabled:opacity-50"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -912,7 +965,8 @@ const Auth = () => {
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
+              disabled={!captchaToken}
+              className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60 disabled:opacity-50"
             >
               Mot de passe oublié ?
             </button>
@@ -921,6 +975,8 @@ const Auth = () => {
               onClick={() => {
                 const u = usernameOrEmail.trim();
                 if (u.includes("@")) setEmail(u);
+                setCaptchaToken(null);
+                captchaRef.current?.resetCaptcha();
                 setView("email-signin-form");
               }}
               disabled={isLoading}
@@ -932,7 +988,11 @@ const Auth = () => {
         </form>
         <button
           type="button"
-          onClick={() => setView("email-signup")}
+          onClick={() => {
+            setCaptchaToken(null);
+            captchaRef.current?.resetCaptcha();
+            setView("email-signup");
+          }}
           disabled={isLoading}
           className="mt-3 flex h-[44px] w-full items-center justify-center px-2 text-[15px] text-primary active:opacity-60 disabled:opacity-50"
         >
@@ -985,7 +1045,11 @@ const Auth = () => {
           <div className="flex h-11 items-center justify-between">
             <button
               type="button"
-              onClick={() => setView("email-signin")}
+              onClick={() => {
+                setView("email-signin");
+                setCaptchaToken(null);
+                captchaRef.current?.resetCaptcha();
+              }}
               className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
               aria-label="Retour"
             >
@@ -1017,11 +1081,27 @@ const Auth = () => {
         </form>
       </div>
 
+      <div className="px-4 pb-2">
+        {!captchaToken && (
+          <CaptchaWidget
+            ref={captchaRef}
+            onVerify={(token) => setCaptchaToken(token)}
+            onExpire={() => setCaptchaToken(null)}
+            onError={() => setCaptchaToken(null)}
+          />
+        )}
+        {captchaToken && (
+          <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
+            ✅ Vérification réussie
+          </div>
+        )}
+      </div>
+
       <div className="px-4">
         <button
           type="button"
           onClick={(e) => handleEmailSubmit(e as unknown as React.FormEvent)}
-          disabled={isLoading}
+          disabled={isLoading || !captchaToken}
           className="apple-pill apple-pill-large apple-pill-secondary w-full disabled:opacity-50"
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1029,7 +1109,11 @@ const Auth = () => {
         </button>
         <button
           type="button"
-          onClick={() => setView('email-signup')}
+          onClick={() => {
+            setCaptchaToken(null);
+            captchaRef.current?.resetCaptcha();
+            setView('email-signup');
+          }}
           className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
         >
           Vous n&apos;avez pas de compte ? S&apos;inscrire
@@ -1054,7 +1138,7 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   // ██  EMAIL SIGNUP — Mockup 03 (Apple Inscription)  ██
   // NavBar Annuler/Inscription/step + Group(FieldRow Email/Password)
-  // + Group(Cell CGU check) + Pill Continuer.
+  // + CAPTCHA + Group(Cell CGU check) + Pill Continuer.
   // Logique : `handleEmailSubmit`, `acceptSignupTerms` — préservés.
   // ══════════════════════════════════════════════
   const renderEmailSignup = () => (
@@ -1070,6 +1154,8 @@ const Auth = () => {
               onClick={() => {
                 setView("landing");
                 setAcceptSignupTerms(false);
+                setCaptchaToken(null);
+                captchaRef.current?.resetCaptcha();
               }}
               className="text-[17px] text-primary active:opacity-60"
             >
@@ -1118,6 +1204,22 @@ const Auth = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="px-4 pb-2">
+          {!captchaToken && (
+            <CaptchaWidget
+              ref={captchaRef}
+              onVerify={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => setCaptchaToken(null)}
+            />
+          )}
+          {captchaToken && (
+            <div className="text-center text-[13px] font-medium text-[hsl(var(--success,142_76%_36%))] dark:text-green-500">
+              ✅ Vérification réussie
+            </div>
+          )}
         </div>
 
         {/* Group : Conditions d'utilisation (Cell check style mockup) */}
@@ -1169,7 +1271,7 @@ const Auth = () => {
         <div className="mt-2 px-4">
           <button
             type="submit"
-            disabled={isLoading || !acceptSignupTerms}
+            disabled={isLoading || !acceptSignupTerms || !captchaToken}
             className="apple-pill apple-pill-large w-full disabled:opacity-50"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1177,7 +1279,11 @@ const Auth = () => {
           </button>
           <button
             type="button"
-            onClick={() => setView('email-signin')}
+            onClick={() => {
+              setCaptchaToken(null);
+              captchaRef.current?.resetCaptcha();
+              setView('email-signin');
+            }}
             className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
           >
             Déjà inscrit ? Se connecter
