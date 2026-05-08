@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, CloudMoon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Gauge } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Gauge } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -79,7 +79,11 @@ import {
   getSessionVisualState,
   type SessionVisibilityVisualState,
 } from '@/lib/sessionVisibility';
-import { getActivityEmoji, getDiscoverSportTileClass } from '@/lib/discoverSessionVisual';
+import {
+  DISCOVER_FILTER_EMOJI_BADGE_CLASS,
+  getActivityEmoji,
+  getDiscoverSportTileClass,
+} from '@/lib/discoverSessionVisual';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -193,10 +197,10 @@ interface Filter {
 
 // Time slot definitions for filtering sessions by time of day
 const TIME_SLOTS = [
-  { id: "morning" as const, icon: Sunrise, label: "6h-12h", startHour: 6, endHour: 12 },
-  { id: "afternoon" as const, icon: Sun, label: "12h-18h", startHour: 12, endHour: 18 },
-  { id: "evening" as const, icon: Moon, label: "18h-23h", startHour: 18, endHour: 23 },
-  { id: "night" as const, icon: CloudMoon, label: "23h-6h", startHour: 23, endHour: 6 },
+  { id: "morning" as const, label: "6h-12h", startHour: 6, endHour: 12 },
+  { id: "afternoon" as const, label: "12h-18h", startHour: 12, endHour: 18 },
+  { id: "evening" as const, label: "18h-23h", startHour: 18, endHour: 23 },
+  { id: "night" as const, label: "23h-6h", startHour: 23, endHour: 6 },
 ];
 
 /** Pastilles type « À la une » : fond saturé + glyphe blanc */
@@ -206,6 +210,45 @@ const TIME_SLOT_TILE_BG: Record<'morning' | 'afternoon' | 'evening' | 'night', s
   evening: 'bg-[#5856D6]',
   night: 'bg-[#312E81]',
 };
+
+const TIME_SLOT_SHEET_EMOJI: Record<"morning" | "afternoon" | "evening" | "night", string> = {
+  morning: "🌅",
+  afternoon: "☀️",
+  evening: "🌆",
+  night: "🌙",
+};
+
+const SESSION_TYPE_SHEET_BADGE: Record<string, { emoji: string; bg: string }> = {
+  all: { emoji: "✨", bg: "bg-[#8E8E93]" },
+  footing: { emoji: "🏃", bg: "bg-[#007AFF]" },
+  sortie_longue: { emoji: "🛣️", bg: "bg-[#34C759]" },
+  fractionne: { emoji: "⚡", bg: "bg-[#FF9500]" },
+  competition: { emoji: "🏆", bg: "bg-[#AF52DE]" },
+};
+
+const LEVEL_SHEET_BADGE_BG = [
+  "",
+  "bg-[#34C759]",
+  "bg-[#30D158]",
+  "bg-[#FFCC00]",
+  "bg-[#FF9500]",
+  "bg-[#FF3B30]",
+  "bg-[#AF52DE]",
+] as const;
+
+function homeMapClubBadgeClass(seed: string): string {
+  const options = [
+    "bg-[#007AFF]",
+    "bg-[#5856D6]",
+    "bg-[#5ac8fa]",
+    "bg-[#34C759]",
+    "bg-[#FF3B30]",
+    "bg-[#AF52DE]",
+  ] as const;
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 1009;
+  return options[h % options.length];
+}
 
 const ACTIVITY_OPTIONS: { id: string; label: string; values: string[] }[] = [
   { id: 'all', label: 'Tous sports', values: [] },
@@ -2098,7 +2141,7 @@ export const InteractiveMap = ({
                         leading={
                           <div
                             className={cn(
-                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[22px] leading-none text-white shadow-sm",
+                              DISCOVER_FILTER_EMOJI_BADGE_CLASS,
                               opt.id === "all"
                                 ? "bg-[#8E8E93]"
                                 : getDiscoverSportTileClass(activityKey ?? ""),
@@ -2123,11 +2166,17 @@ export const InteractiveMap = ({
                   {SESSION_TYPE_OPTIONS.map((opt) => {
                     const active =
                       JSON.stringify(filters.session_types) === JSON.stringify(opt.values);
+                    const badge = SESSION_TYPE_SHEET_BADGE[opt.id] ?? SESSION_TYPE_SHEET_BADGE.all;
                     return (
                       <HomeMapFilterRow
                         key={opt.id}
                         label={opt.label}
                         selected={active}
+                        leading={
+                          <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, badge.bg)} aria-hidden>
+                            {badge.emoji}
+                          </div>
+                        }
                         onClick={() => {
                           setFilters((prev) => ({ ...prev, session_types: opt.values }));
                           setExpandedFilter(null);
@@ -2144,6 +2193,11 @@ export const InteractiveMap = ({
                     label="Toutes les séances"
                     hint="Affichage selon les règles de visibilité"
                     selected={!filters.friends_only}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#007AFF]")} aria-hidden>
+                        🌐
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, friends_only: false }));
                       setExpandedFilter(null);
@@ -2153,6 +2207,11 @@ export const InteractiveMap = ({
                     label="Amis uniquement"
                     hint="Séances de tes amis et les tiennes"
                     selected={filters.friends_only}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#34C759]")} aria-hidden>
+                        👥
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, friends_only: true }));
                       setExpandedFilter(null);
@@ -2165,7 +2224,6 @@ export const InteractiveMap = ({
                 <HomeMapFilterGroupedList>
                   {TIME_SLOTS.map((slot) => {
                     const active = filters.time_slot === slot.id;
-                    const Icon = slot.icon;
                     return (
                       <HomeMapFilterRow
                         key={slot.id}
@@ -2183,18 +2241,12 @@ export const InteractiveMap = ({
                         leading={
                           <div
                             className={cn(
-                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] shadow-sm",
+                              DISCOVER_FILTER_EMOJI_BADGE_CLASS,
                               active ? "bg-primary" : TIME_SLOT_TILE_BG[slot.id],
                             )}
                             aria-hidden
                           >
-                            <Icon
-                              className={cn(
-                                "h-[22px] w-[22px]",
-                                active ? "text-primary-foreground" : "text-white",
-                              )}
-                              strokeWidth={2}
-                            />
+                            {TIME_SLOT_SHEET_EMOJI[slot.id]}
                           </div>
                         }
                         onClick={() => {
@@ -2216,6 +2268,11 @@ export const InteractiveMap = ({
                     label="Tous les clubs"
                     hint="Aucun filtre par équipe"
                     selected={filters.selected_club_ids.length === 0}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#8E8E93]")} aria-hidden>
+                        ✨
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, selected_club_ids: [] }));
                       setExpandedFilter(null);
@@ -2229,6 +2286,14 @@ export const InteractiveMap = ({
                         label={club.name}
                         selected={active}
                         trailing={club.memberCount}
+                        leading={
+                          <div
+                            className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, homeMapClubBadgeClass(club.id))}
+                            aria-hidden
+                          >
+                            🏟️
+                          </div>
+                        }
                         onClick={() =>
                           setFilters((prev) => ({
                             ...prev,
@@ -2265,6 +2330,11 @@ export const InteractiveMap = ({
                     label="Tous niveaux"
                     hint="Pas de filtre de difficulté"
                     selected={filters.level == null}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#8E8E93]")} aria-hidden>
+                        ✨
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, level: null }));
                       setExpandedFilter(null);
@@ -2275,6 +2345,14 @@ export const InteractiveMap = ({
                       key={lvl}
                       label={`Niveau ${lvl}`}
                       selected={filters.level === lvl}
+                      leading={
+                        <div
+                          className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, LEVEL_SHEET_BADGE_BG[lvl])}
+                          aria-hidden
+                        >
+                          <span className="text-[13px] font-semibold tabular-nums">{lvl}</span>
+                        </div>
+                      }
                       onClick={() => {
                         setFilters((prev) => ({
                           ...prev,

@@ -3,7 +3,11 @@ import { MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import { cn } from '@/lib/utils';
-import { getActivityEmoji, getDiscoverSportTileClass } from '@/lib/discoverSessionVisual';
+import {
+  DISCOVER_FILTER_EMOJI_BADGE_CLASS,
+  getActivityEmoji,
+  getDiscoverSportTileClass,
+} from '@/lib/discoverSessionVisual';
 
 interface DiscoverFiltersProps {
   maxDistance: number;
@@ -58,7 +62,7 @@ export const DiscoverFilters = ({
               >
                 <span
                   className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-[14px] leading-none text-white",
+                    DISCOVER_FILTER_EMOJI_BADGE_CLASS,
                     getDiscoverSportTileClass(activity.value)
                   )}
                   aria-hidden

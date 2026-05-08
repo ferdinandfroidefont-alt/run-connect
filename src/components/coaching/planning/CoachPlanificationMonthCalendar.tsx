@@ -11,7 +11,6 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ChevronDown, Plus, Search } from "lucide-react";
-import { CoachingRolePill } from "@/components/coaching/handoff/CoachingRolePill";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,14 +41,6 @@ interface Props {
   onCreateSession: (date: Date) => void;
   onOpenSession: (sessionId: string) => void;
   onSelectAthlete?: (athleteId: string) => void;
-  currentView?: "athlete" | "coach";
-  onViewChange?: (view: "athlete" | "coach") => void;
-  /** Avatar / initial de l'utilisateur (fallback si pas de club) */
-  userInitial?: string;
-  /** Photo du club — remplace l'avatar lettre */
-  clubAvatarUrl?: string | null;
-  clubName?: string | null;
-  onPressClubAvatar?: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -96,12 +87,6 @@ export function CoachPlanificationMonthCalendar({
   onCreateSession,
   onOpenSession,
   onSelectAthlete,
-  currentView = "coach",
-  onViewChange,
-  userInitial = "C",
-  clubAvatarUrl,
-  clubName,
-  onPressClubAvatar,
 }: Props) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(today));
@@ -137,60 +122,10 @@ export function CoachPlanificationMonthCalendar({
   const selectedDayCapitalized =
     selectedDayLabel.charAt(0).toUpperCase() + selectedDayLabel.slice(1);
 
-  const selectedDayBtnLabel = format(selectedDay, "EEEE", { locale: fr }).toLowerCase();
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white">
-      {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="flex items-end justify-between px-5 pb-[14px] pt-3">
-        <h1
-          className="text-[32px] font-extrabold leading-none tracking-[-0.025em]"
-          style={{ color: "#1d1d1f" }}
-        >
-          Planification
-        </h1>
-        {onPressClubAvatar ? (
-          <button
-            type="button"
-            onClick={onPressClubAvatar}
-            className="mb-1 overflow-hidden rounded-[10px] transition-opacity active:opacity-70"
-            aria-label="Fiche du club"
-            style={{ width: 36, height: 36 }}
-          >
-            {clubAvatarUrl ? (
-              <img
-                src={clubAvatarUrl}
-                alt={clubName ?? "Club"}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div
-                className="flex h-full w-full items-center justify-center text-[14px] font-semibold text-white"
-                style={{ background: "#0066cc" }}
-              >
-                {(clubName ?? "C")[0].toUpperCase()}
-              </div>
-            )}
-          </button>
-        ) : (
-          <div
-            className="mb-1 flex h-8 w-8 items-center justify-center rounded-full text-[15px] font-semibold"
-            style={{ background: "rgba(0,102,204,0.1)", color: "#0066cc" }}
-          >
-            {userInitial}
-          </div>
-        )}
-      </div>
-
-      {/* ── Même segmented que l’ancien header (CoachingRolePill) ─────────── */}
-      <CoachingRolePill
-        active={currentView === "athlete" ? "athlete" : "coach"}
-        onSelect={(role) => onViewChange?.(role)}
-        className="px-5 pb-[18px] pt-0"
-      />
-
-      {/* ── Sub-header: mois + actions ───────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 pb-3">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* ── Sub-header: mois + actions (titre + Athlète/Coach = shell PlanningHeader + CoachingRolePill) ── */}
+      <div className="flex items-center justify-between px-4 pb-3 pt-1">
         <button
           type="button"
           className="flex items-center gap-1"
@@ -305,7 +240,7 @@ export function CoachPlanificationMonthCalendar({
 
       {/* ── Day detail panel ─────────────────────────────────────────────── */}
       <div
-        className="mt-2 flex-1 border-t px-5 pb-[18px] pt-4"
+        className="mt-2 flex-1 border-t px-4 pb-[18px] pt-4"
         style={{ background: "#F2F2F7", borderColor: "#E5E5EA" }}
       >
         {/* Panel header */}
@@ -411,7 +346,7 @@ export function CoachPlanificationMonthCalendar({
 
       {/* ── Mes athlètes ─────────────────────────────────────────────────── */}
       {athletes.length > 0 && (
-        <div className="px-5 pb-5 pt-4" style={{ background: "#F2F2F7" }}>
+        <div className="px-4 pb-5 pt-4" style={{ background: "#F2F2F7" }}>
           <p
             className="mb-[10px] text-[11px] font-semibold uppercase tracking-[0.08em]"
             style={{ color: "#8E8E93" }}

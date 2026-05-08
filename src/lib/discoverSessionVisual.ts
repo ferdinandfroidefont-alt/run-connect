@@ -1,6 +1,10 @@
 /**
  * Icônes « mockup 04 Découvrir » : emoji dans pastille colorée (pas Lucide).
+ * Pastille partagée : bottom sheet Découvrir + feuille filtres carte.
  */
+export const DISCOVER_FILTER_EMOJI_BADGE_CLASS =
+  "flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-[14px] leading-none text-white";
+
 export function getActivityEmoji(activityType: string): string {
   const t = (activityType ?? "").toLowerCase();
   if (t.includes("velo") || t.includes("vtt") || t.includes("bike") || t.includes("cycl") || t.includes("gravel"))

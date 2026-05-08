@@ -3307,7 +3307,7 @@ export function CoachPlanningExperience() {
                   title="Suivi athlète"
                 />
               </div>
-            ) : showCoachLanding ? null : (
+            ) : (
               <PlanningHeader
                 onOpenMenu={() => setDrawerOpen(true)}
                 title={coachingHeaderTitle}
@@ -3320,7 +3320,11 @@ export function CoachPlanningExperience() {
             )
           }
           scrollClassName={
-            weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking" || activeMenuKey === "my-plan"
+            weekPlannerMode ||
+            activeMenuKey === "club" ||
+            activeMenuKey === "tracking" ||
+            activeMenuKey === "my-plan" ||
+            showCoachLanding
               ? "apple-grouped-bg"
               : "bg-white"
           }
@@ -3583,15 +3587,6 @@ export function CoachPlanningExperience() {
               <CoachPlanificationMonthCalendar
                 sessions={calendarSessions}
                 athletes={calendarAthletes}
-                currentView={effectiveAthleteMode ? "athlete" : "coach"}
-                userInitial={
-                  userProfile?.display_name
-                    ? userProfile.display_name[0].toUpperCase()
-                    : "C"
-                }
-                clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
-                clubName={activeClubId ? activeClubName : undefined}
-                onPressClubAvatar={activeClubId ? openClubProfileSheet : undefined}
                 onCreateSession={() => {
                   setActiveAthleteId(undefined);
                   setActiveGroupId(undefined);
@@ -3601,15 +3596,6 @@ export function CoachPlanningExperience() {
                 onOpenSession={(id) => openEditSession(id)}
                 onSelectAthlete={(id) => {
                   goToCoachSection("tracking", { trackingAthleteId: id });
-                }}
-                onViewChange={(view) => {
-                  if (view === "athlete") {
-                    setViewAsAthlete(true);
-                    setActiveMenuKey("my-plan");
-                  } else {
-                    setViewAsAthlete(false);
-                    setActiveMenuKey("planning");
-                  }
                 }}
               />
             ) : activeMenuKey === "planning" ? (
