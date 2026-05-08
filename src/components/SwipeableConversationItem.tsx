@@ -20,6 +20,7 @@ export const SwipeableConversationItem = ({
   const [isRevealed, setIsRevealed] = useState<'left' | 'right' | null>(null);
   const x = useMotionValue(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const suppressClickRef = useRef(false);
   
   const SWIPE_THRESHOLD = 80;
   const MAX_SWIPE = 120;
@@ -42,7 +43,7 @@ export const SwipeableConversationItem = ({
   }, [x]);
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const { offset } = info;
+    const { offset, velocity } = info;
     
     // Factor in velocity for more natural feel
     const swipe = offset.x + velocity.x * 0.2;
@@ -70,6 +71,9 @@ export const SwipeableConversationItem = ({
   };
 
   const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (Math.abs(info.offset.x) > 6) {
+      suppressClickRef.current = true;
+    }
     if (info.offset.x < -20) {
       setIsRevealed('left');
     } else if (info.offset.x > 20) {
@@ -135,6 +139,15 @@ export const SwipeableConversationItem = ({
         style={{ x }}
         whileDrag={{ cursor: 'grabbing' }}
         className="relative bg-background z-10 touch-pan-y"
+        onClickCapture={(event) => {
+          if (!suppressClickRef.current) return;
+          event.preventDefault();
+          event.stopPropagation();
+          // Let the swipe finish before allowing regular clicks again.
+          window.setTimeout(() => {
+            suppressClickRef.current = false;
+          }, 0);
+        }}
         onPointerDownCapture={(event) => {
           if (!isRevealed) return;
           event.preventDefault();

@@ -4056,12 +4056,12 @@ export function CoachPlanningExperience() {
                     </button>
                   }
                 />
-                <div className="grid grid-cols-2 gap-2 px-4 pb-2">
+                <div className="grid grid-cols-2 gap-2 px-4 pb-1.5">
                   <button
                     type="button"
                     onClick={() => setEditorTab("build")}
                     className={cn(
-                      "h-11 rounded-full border text-center text-[15px] font-semibold transition-colors",
+                      "h-8 rounded-full border text-center text-[13px] font-semibold transition-colors",
                       editorTab === "build"
                         ? "border-[#0066cc] bg-[#0066cc] text-white"
                         : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
@@ -4073,7 +4073,7 @@ export function CoachPlanningExperience() {
                     type="button"
                     onClick={() => setEditorTab("models")}
                     className={cn(
-                      "h-11 rounded-full border text-center text-[15px] font-semibold transition-colors",
+                      "h-8 rounded-full border text-center text-[13px] font-semibold transition-colors",
                       editorTab === "models"
                         ? "border-[#0066cc] bg-[#0066cc] text-white"
                         : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
@@ -4100,11 +4100,9 @@ export function CoachPlanningExperience() {
             }
           >
             {editorTab === "build" ? (
-              <div className="space-y-3 px-4 pb-6">
-                <div
-                  className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
-                >
-                  <div className="space-y-3 px-4 py-3">
+              <div className="space-y-4 px-4 pb-6">
+                <div className="py-3">
+                  <div className="space-y-3">
                     <div className="grid grid-cols-4 gap-[10px]">
                       {[
                         { id: "running", emoji: "🏃", bg: "#007AFF" },
@@ -4130,14 +4128,12 @@ export function CoachPlanningExperience() {
                   </div>
                 </div>
 
-                <div
-                  className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
-                >
-                  <div className="space-y-3 px-4 py-3">
+                <div className="space-y-3">
+                  <div className="space-y-3">
                     <p className="px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Schéma de séance</p>
                     <div className="min-w-0 rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
                         <div className="flex min-w-0 gap-2">
-                          <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-between py-0 text-[9px] font-semibold" style={{ color: "#7a7a7a" }}>
+                          <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-around py-0 text-[9px] font-semibold leading-none" style={{ color: "#7a7a7a" }}>
                             <span>Z6</span>
                             <span>Z5</span>
                             <span>Z4</span>
@@ -4157,13 +4153,21 @@ export function CoachPlanningExperience() {
                             )}
                             title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                           >
-                            <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col-reverse rounded-[10px] overflow-hidden">
-                              <div className="flex-1 bg-[#B5B5BA]/[0.06]" />
-                              <div className="flex-1 bg-[#0066cc]/[0.06]" />
-                              <div className="flex-1 bg-[#34C759]/[0.06]" />
-                              <div className="flex-1 bg-[#FFCC00]/[0.06]" />
-                              <div className="flex-1 bg-[#FF9500]/[0.06]" />
-                              <div className="flex-1 bg-[#FF3B30]/[0.06]" />
+                            <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
+                              {[0, 1, 2, 3, 4, 5].map((i) => (
+                                <div
+                                  key={i}
+                                  className="absolute left-0 right-0"
+                                  style={{
+                                    top: `${(i / 6) * 100}%`,
+                                    borderTop: "1px dashed #e0e0e0",
+                                  }}
+                                />
+                              ))}
+                              <div
+                                className="absolute bottom-0 left-0 right-0"
+                                style={{ borderTop: "1px solid rgba(29,29,31,0.18)" }}
+                              />
                             </div>
                             <MiniWorkoutProfile
                               blocks={previewBars}

@@ -71,7 +71,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       bottomNavSuppressors["coaching-create"] ||
         bottomNavSuppressors["home-overlays"] ||
         bottomNavSuppressors["route-creation"] ||
-        bottomNavSuppressors["messages-thread"]
+        bottomNavSuppressors["messages-thread"] ||
+        bottomNavSuppressors["activities-discussion"]
     );
   }, [bottomNavSuppressors]);
 

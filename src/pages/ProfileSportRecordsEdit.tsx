@@ -14,7 +14,6 @@ import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsD
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import { kmToMiles, milesToKm } from "@/lib/distanceUnits";
 import { cn } from "@/lib/utils";
-import { getSportIconComponent, getSportColorClass } from "@/components/ui/SportIcon";
 
 /** Maquette 21 · RunConnect accent & surfaces */
 const RC = {
@@ -37,6 +36,15 @@ const DISTANCE_CHIPS: Array<{ id: string; label: string; km: number | null }> = 
 
 const PRIMARY_SPORT_ORDER: ProfileSportRecordKey[] = ["running", "cycling", "swimming", "walking"];
 const EXTRA_SPORTS: ProfileSportRecordKey[] = ["triathlon", "other"];
+
+const SPORT_EMOJI_BADGE: Record<ProfileSportRecordKey, { emoji: string; bg: string }> = {
+  running: { emoji: "🏃", bg: "#007AFF" },
+  cycling: { emoji: "🚴", bg: "#FF3B30" },
+  swimming: { emoji: "🏊", bg: "#5AC8FA" },
+  walking: { emoji: "🚶", bg: "#34C759" },
+  triathlon: { emoji: "🔱", bg: "#AF52DE" },
+  other: { emoji: "➕", bg: "#8E8E93" },
+};
 
 function formatDurationParts(totalSec: number): { h: string; m: string; s: string } {
   const safe = Math.max(0, Math.round(totalSec));
@@ -306,51 +314,69 @@ export default function ProfileSportRecordsEdit() {
             >
               Sport
             </div>
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {PRIMARY_SPORT_ORDER.map((k) => {
-                const active = sportKey === k;
-                const Icon = getSportIconComponent(k);
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setSportKey(k)}
-                    className={cn(
-                      "flex h-14 w-14 items-center justify-center rounded-[14px] transition-transform active:scale-95",
-                      active
-                        ? cn(getSportColorClass(k), "text-white")
-                        : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
-                    )}
-                    aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
-                    aria-pressed={active}
-                  >
-                    <Icon className="h-6 w-6" strokeWidth={2.25} aria-hidden />
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {EXTRA_SPORTS.map((k) => {
-                const active = sportKey === k;
-                const Icon = getSportIconComponent(k);
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setSportKey(k)}
-                    className={cn(
-                      "flex h-14 w-14 items-center justify-center rounded-[14px] transition-transform active:scale-95",
-                      active
-                        ? cn(getSportColorClass(k), "text-white")
-                        : "border-[1.5px] border-[#e0e0e0] bg-[#f5f5f7] text-[#1d1d1f]",
-                    )}
-                    aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
-                    aria-pressed={active}
-                  >
-                    <Icon className="h-6 w-6" strokeWidth={2.25} aria-hidden />
-                  </button>
-                );
-              })}
+            <div className="mt-2.5 space-y-2.5">
+              <div className="overflow-hidden rounded-[14px] border border-[#e0e0e0] bg-white">
+                {PRIMARY_SPORT_ORDER.map((k, index) => {
+                  const active = sportKey === k;
+                  const badge = SPORT_EMOJI_BADGE[k];
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setSportKey(k)}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-[#f5f5f7]",
+                        index < PRIMARY_SPORT_ORDER.length - 1 && "border-b border-[#e0e0e0]"
+                      )}
+                      aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
+                      aria-pressed={active}
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-[16px] leading-none"
+                        style={{ backgroundColor: badge.bg }}
+                        aria-hidden
+                      >
+                        {badge.emoji}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[17px] font-normal tracking-tight text-[#1d1d1f]">
+                        {PROFILE_SPORT_RECORD_LABELS[k]}
+                      </span>
+                      {active ? <Check className="h-5 w-5 shrink-0 text-[#007AFF]" strokeWidth={2.5} /> : <span className="h-5 w-5 shrink-0" aria-hidden />}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="overflow-hidden rounded-[14px] border border-[#e0e0e0] bg-white">
+                {EXTRA_SPORTS.map((k, index) => {
+                  const active = sportKey === k;
+                  const badge = SPORT_EMOJI_BADGE[k];
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setSportKey(k)}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-[#f5f5f7]",
+                        index < EXTRA_SPORTS.length - 1 && "border-b border-[#e0e0e0]"
+                      )}
+                      aria-label={PROFILE_SPORT_RECORD_LABELS[k]}
+                      aria-pressed={active}
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-[16px] leading-none"
+                        style={{ backgroundColor: badge.bg }}
+                        aria-hidden
+                      >
+                        {badge.emoji}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[17px] font-normal tracking-tight text-[#1d1d1f]">
+                        {PROFILE_SPORT_RECORD_LABELS[k]}
+                      </span>
+                      {active ? <Check className="h-5 w-5 shrink-0 text-[#007AFF]" strokeWidth={2.5} /> : <span className="h-5 w-5 shrink-0" aria-hidden />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </section>
 

@@ -10,6 +10,7 @@ import { useDiscoverFeed, type DiscoverSession } from "@/hooks/useDiscoverFeed";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAppContext } from "@/contexts/AppContext";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
@@ -191,6 +192,12 @@ function DiscussionView({
   const [comments, setComments] = useState<DiscussionComment[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const { setBottomNavSuppressed } = useAppContext();
+
+  useEffect(() => {
+    setBottomNavSuppressed("activities-discussion", true);
+    return () => setBottomNavSuppressed("activities-discussion", false);
+  }, [setBottomNavSuppressed]);
 
   useEffect(() => {
     const load = async () => {
@@ -257,13 +264,15 @@ function DiscussionView({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#f5f5f7]">
-      <div className="flex h-11 items-center px-4">
-        <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-[17px] text-[#0066cc]">
-          <ChevronLeft className="h-5 w-5" />
-          Retour
-        </button>
-        <p className="flex-1 pr-8 text-center text-[17px] font-semibold">Discussion</p>
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#f5f5f7]">
+      <div className="shrink-0 border-b border-[#e0e0e0] bg-white pt-[var(--safe-area-top)]">
+        <div className="flex h-11 items-center px-4">
+          <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-[17px] text-[#0066cc]">
+            <ChevronLeft className="h-5 w-5" />
+            Retour
+          </button>
+          <p className="flex-1 pr-8 text-center text-[17px] font-semibold">Discussion</p>
+        </div>
       </div>
 
       <div className="space-y-2 overflow-y-auto px-4 pb-36">
@@ -314,7 +323,10 @@ function DiscussionView({
         ))}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 border-t border-[#e0e0e0] bg-white/95 px-4 pb-7 pt-3">
+      <div
+        className="absolute bottom-0 left-0 right-0 border-t border-[#e0e0e0] bg-white/95 px-4 pt-3"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+      >
         <div className="mb-1 text-[12px] text-[#7a7a7a]">Visible sur Toutes les publications</div>
         <div className="flex items-center gap-2">
           <input
