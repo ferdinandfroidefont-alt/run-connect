@@ -1685,7 +1685,7 @@ export function CoachPlanningExperience() {
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(previewSegments),
+    () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
     [previewSegments]
   );
   const sessionTimeAxisLabels = useMemo(() => {
