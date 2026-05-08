@@ -295,17 +295,17 @@ export const CreatorValidationView = ({ session, onBack, onComplete }: CreatorVa
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0">
-        <header className="flex h-11 items-center justify-between px-4">
+      <div className="shrink-0 bg-white pb-2 pt-[calc(env(safe-area-inset-top,0px)+10px)] shadow-[0_1px_0_rgba(60,60,67,0.12)]">
+        <header className="flex h-12 items-center justify-between px-4">
         <button
           type="button"
           onClick={onBack ?? onComplete}
-          className="inline-flex items-center gap-0.5 text-[17px] font-normal text-[#007AFF]"
+          className="inline-flex min-w-0 items-center gap-0.5 text-[17px] font-normal text-[#007AFF]"
         >
-          <ChevronLeft className="h-5 w-5" />
-          Séances
+          <ChevronLeft className="h-5 w-5 shrink-0" />
+          <span className="truncate">Séance</span>
         </button>
-        <h1 className="truncate px-2 text-[17px] font-semibold tracking-[-0.4px] text-foreground">
+        <h1 className="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-semibold tracking-[-0.4px] text-foreground">
           Confirmer la séance
         </h1>
         <button

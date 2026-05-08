@@ -249,7 +249,10 @@ export function SessionExperienceFeedbackDialog({
                   variant="secondary"
                   size="sm"
                   className="h-9 flex-1 gap-1.5 text-[13px]"
-                  onClick={() => navigate("/confirm-presence")}
+                  onClick={() => {
+                    if (!session) return;
+                    navigate(`/my-sessions/confirm/${session.sessionId}?flow=gps`);
+                  }}
                 >
                   <MapPin className="h-3.5 w-3.5" />
                   Confirmer (GPS)

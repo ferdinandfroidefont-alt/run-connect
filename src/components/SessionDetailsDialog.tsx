@@ -987,7 +987,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 </button>
                 {!isScheduled && (
                   <button
-                    onClick={() => navigate(`/confirm-presence/${session.id}`)}
+                    onClick={() => navigate(`/my-sessions/confirm/${session.id}`)}
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#34C759] text-white h-11 text-[14px] font-semibold active:opacity-90"
                   >
                     <CheckCircle2 className="h-4 w-4" /> Valider les participants

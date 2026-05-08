@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
-import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
@@ -1122,7 +1121,12 @@ export default function MySessions() {
                 onClick={() => {
                   if (!confirmTarget) return;
                   closeConfirmDialog();
-                  navigate(`/my-sessions/confirm/${confirmTarget.sessionId}`);
+                  const base = `/my-sessions/confirm/${confirmTarget.sessionId}`;
+                  if (confirmTarget.isCreator) {
+                    navigate(base);
+                    return;
+                  }
+                  navigate(`${base}?flow=gps`);
                 }}
               >
                 <p className="text-[15px] font-semibold text-foreground">
@@ -1132,19 +1136,21 @@ export default function MySessions() {
                 </p>
               </button>
 
-              <button
-                type="button"
-                className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
-                onClick={() => {
-                  if (!confirmTarget) return;
-                  closeConfirmDialog();
-                  navigate(`/my-sessions/confirm/${confirmTarget.sessionId}`);
-                }}
-              >
-                <p className="text-[15px] font-semibold text-foreground">
-                  Confirmer ma séance avec mes activités Strava
-                </p>
-              </button>
+              {!confirmTarget?.isCreator ? (
+                <button
+                  type="button"
+                  className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
+                  onClick={() => {
+                    if (!confirmTarget) return;
+                    closeConfirmDialog();
+                    navigate(`/my-sessions/confirm/${confirmTarget.sessionId}?flow=strava`);
+                  }}
+                >
+                  <p className="text-[15px] font-semibold text-foreground">
+                    Confirmer ma séance avec mes activités Strava
+                  </p>
+                </button>
+              ) : null}
 
               <AlertDialogCancel
                 className="w-full mt-ios-1"

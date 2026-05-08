@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
 import { ParticipantValidationView } from '@/components/ParticipantValidationView';
+import { ParticipantGpsConfirmView } from '@/components/ParticipantGpsConfirmView';
 import { cn } from '@/lib/utils';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ChevronLeft, Loader2, UserCheck, Users, MapPin } from 'lucide-react';
@@ -38,6 +39,7 @@ export default function ConfirmPresence({
 }: ConfirmPresenceProps = {}) {
   const { sessionId: sessionIdFromRoute } = useParams<{ sessionId?: string }>();
   const sessionId = forcedSessionId || sessionIdFromRoute;
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -205,6 +207,14 @@ export default function ConfirmPresence({
     setUserRole(role);
   };
 
+  const exitToSessions = useCallback(() => {
+    if (embedded) {
+      onEmbeddedBack?.();
+    } else {
+      navigate('/my-sessions');
+    }
+  }, [embedded, navigate, onEmbeddedBack]);
+
   const handleBack = () => {
     if (selectedSession) {
       setSelectedSession(null);
@@ -216,10 +226,12 @@ export default function ConfirmPresence({
       if (embedded) {
         onEmbeddedBack?.();
       } else {
-        navigate(-1);
+        navigate('/my-sessions');
       }
     }
   };
+
+  const participantConfirmMode = searchParams.get('flow') === 'gps' ? 'gps' : 'strava';
 
   return (
     <div
@@ -245,8 +257,8 @@ export default function ConfirmPresence({
 
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-ios-4',
-          selectedSession ? 'overflow-y-hidden' : 'overflow-y-auto',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden',
+          selectedSession ? 'overflow-y-hidden px-0' : 'overflow-y-auto px-ios-4',
           embedded && 'pt-ios-2',
         )}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'none' }}
@@ -375,15 +387,22 @@ export default function ConfirmPresence({
             {userRole === 'creator' ? (
               <CreatorValidationView
                 session={selectedSession}
-                onBack={handleBack}
-                onComplete={() => navigate('/')}
+                onBack={exitToSessions}
+                onComplete={exitToSessions}
+              />
+            ) : participantConfirmMode === 'gps' ? (
+              <ParticipantGpsConfirmView
+                session={selectedSession}
+                userId={user?.id || ''}
+                onBack={exitToSessions}
+                onComplete={exitToSessions}
               />
             ) : (
               <ParticipantValidationView
                 session={selectedSession}
                 userId={user?.id || ''}
-                onBack={handleBack}
-                onComplete={() => navigate('/')}
+                onBack={exitToSessions}
+                onComplete={exitToSessions}
               />
             )}
           </div>

@@ -153,17 +153,17 @@ export const ParticipantValidationView = ({ session, userId, onBack, onComplete 
 
   return (
     <div className="flex h-full min-h-0 flex-col pb-[max(10px,env(safe-area-inset-bottom))]">
-      <div className="shrink-0">
-        <header className="flex h-11 items-center justify-between px-4">
+      <div className="shrink-0 bg-white pb-2 pt-[calc(env(safe-area-inset-top,0px)+10px)] shadow-[0_1px_0_rgba(60,60,67,0.12)]">
+        <header className="flex h-12 items-center justify-between px-4">
           <button
             type="button"
             onClick={onBack ?? onComplete}
-            className="inline-flex items-center text-[17px] font-medium text-[#007AFF]"
+            className="inline-flex min-w-0 items-center text-[17px] font-medium text-[#007AFF]"
           >
-            <ChevronLeft className="h-5 w-5" />
-            Séances
+            <ChevronLeft className="h-5 w-5 shrink-0" />
+            <span className="truncate">Séance</span>
           </button>
-          <h1 className="truncate px-2 text-[17px] font-semibold tracking-[-0.4px] text-foreground">
+          <h1 className="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-semibold tracking-[-0.4px] text-foreground">
             Confirmer ma séance
           </h1>
           <button
@@ -175,7 +175,7 @@ export const ParticipantValidationView = ({ session, userId, onBack, onComplete 
           </button>
         </header>
 
-        <section className="mx-4 mt-2 rounded-[12px] bg-white p-[12px_14px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <section className="mx-4 mt-2 rounded-[12px] bg-[#f5f5f7] p-[12px_14px]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.11em] text-[#8E8E93]">
               Séance à confirmer
