@@ -311,7 +311,7 @@ export const CreatorValidationView = ({ session, onBack, onComplete }: CreatorVa
         <button
           type="button"
           onClick={onComplete}
-          className="text-[17px] font-semibold text-[#007AFF]"
+          className="shrink-0 text-[17px] font-semibold text-[#007AFF]"
         >
           OK
         </button>

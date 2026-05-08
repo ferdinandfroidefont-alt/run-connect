@@ -80,6 +80,7 @@ import { CoachingDraftsPage, type CoachingDraftListItem } from "@/components/coa
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
 import { CoachingRolePill } from "@/components/coaching/handoff/CoachingRolePill";
 import { CoachPlanificationLanding, type CoachUpcomingSessionRow, type LandingAthleteCard } from "@/components/coaching/handoff/CoachPlanificationLanding";
+import { CoachPlanificationMonthCalendar, type PlanCalendarSession, type PlanCalendarAthlete } from "@/components/coaching/planning/CoachPlanificationMonthCalendar";
 import { Group } from "@/components/apple/Group";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
@@ -2841,6 +2842,51 @@ export function CoachPlanningExperience() {
     });
   }, [landingWeekSessions, athletes]);
 
+  // ── Données pour le nouveau calendrier mensuel ────────────────────────────
+  const calendarSessions = useMemo((): PlanCalendarSession[] => {
+    return sessions.map((s) => {
+      const athleteEntry = s.athleteId ? athletes.find((a) => a.id === s.athleteId) : undefined;
+      const status: PlanCalendarSession["status"] =
+        s.athleteParticipationStatus === "completed"
+          ? "validated"
+          : s.sent
+            ? "pending"
+            : "draft";
+      const d = new Date(s.assignedDate);
+      const timeStr = !Number.isNaN(d.getTime()) ? format(d, "HH:mm") : undefined;
+      return {
+        id: s.id,
+        title: s.title,
+        sport: s.sport,
+        assignedDate: s.assignedDate,
+        time: timeStr,
+        athleteName: athleteEntry?.name,
+        status,
+      };
+    });
+  }, [sessions, athletes]);
+
+  const calendarAthletes = useMemo((): PlanCalendarAthlete[] => {
+    return athletes.map((a) => {
+      const mine = sessions.filter((s) => s.athleteId === a.id);
+      const statusColor: PlanCalendarAthlete["statusColor"] = mine.some(
+        (s) => s.sent && s.athleteParticipationStatus !== "completed"
+      )
+        ? "red"
+        : mine.some((s) => !s.sent)
+          ? "orange"
+          : mine.length > 0
+            ? "green"
+            : "gray";
+      return {
+        id: a.id,
+        name: a.name,
+        avatarUrl: a.avatarUrl ?? undefined,
+        statusColor,
+      };
+    });
+  }, [athletes, sessions]);
+
   const showCoachLanding =
     activeMenuKey === "planning" && !effectiveAthleteMode && !activeAthleteId && !activeGroupId && !coachWeekProgrammerOpen;
   const weekPlannerMode =
@@ -3534,36 +3580,34 @@ export function CoachPlanningExperience() {
                 })}
                 </div>
             ) : activeMenuKey === "planning" && showCoachLanding ? (
-              <CoachPlanificationLanding
-                weekStart={weekAnchor}
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
-                onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
-                indicatorsByDate={landingIndicatorsByDate}
-                sessionsScheduled={landingStats.sessionsScheduled}
-                athletesActive={landingStats.athletesActive}
-                validatedCount={landingStats.validatedCount}
-                pendingCount={landingStats.pendingCount}
-                monthLine={landingMonthLine}
-                athletes={landingAthleteCards}
-                onSelectAthlete={(id) => {
-                  goToCoachSection("tracking", { trackingAthleteId: id });
-                }}
-                onSeeAllAthletes={
-                  athletes.length > 6
-                    ? () => toast.info("Athlètes", "Choisis un athlète à programmer : recherche ou carte ci-dessus après sélection.")
-                    : undefined
+              <CoachPlanificationMonthCalendar
+                sessions={calendarSessions}
+                athletes={calendarAthletes}
+                currentView={effectiveAthleteMode ? "athlete" : "coach"}
+                userInitial={
+                  userProfile?.display_name
+                    ? userProfile.display_name[0].toUpperCase()
+                    : "C"
                 }
-                upcomingSessions={upcomingCoachRows}
-                onOpenSession={(id) => openEditSession(id)}
                 onCreateSession={() => {
                   setActiveAthleteId(undefined);
                   setActiveGroupId(undefined);
                   setSearch("");
                   setCoachWeekProgrammerOpen(true);
                 }}
-                onOpenMonthView={() => toast.info("Vue mois", "Le calendrier mois complet arrive bientôt.")}
+                onOpenSession={(id) => openEditSession(id)}
+                onSelectAthlete={(id) => {
+                  goToCoachSection("tracking", { trackingAthleteId: id });
+                }}
+                onViewChange={(view) => {
+                  if (view === "athlete") {
+                    setViewAsAthlete(true);
+                    setActiveMenuKey("my-plan");
+                  } else {
+                    setViewAsAthlete(false);
+                    setActiveMenuKey("planning");
+                  }
+                }}
               />
             ) : activeMenuKey === "planning" ? (
               <>

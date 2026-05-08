@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -768,15 +767,14 @@ export function SessionStoryDialog({
     return parts.join(" · ");
   }, [current?.session]);
 
-  const portalZ = "z-[220]";
   const displayUrl = resolvedMediaUrl ?? current?.media?.media_url ?? null;
 
-  const actionsPortal =
-    open &&
+  /** Panneau d’actions : doit rester *dans* le `DialogContent` Radix. Avec `modal`, Radix met `pointer-events: none` sur `body` : un portal sur `document.body` hérite du `none` et ne reçoit aucun clic/touch. */
+  const actionsOverlay =
+    !!current &&
     actionMode &&
-    typeof document !== "undefined" &&
-    createPortal(
-      <div className={cn("fixed inset-0", portalZ)} role="presentation">
+    open && (
+      <div className="pointer-events-auto absolute inset-0 z-[200]" role="presentation">
         <button
           type="button"
           className="absolute inset-0 bg-black/55"
@@ -794,7 +792,12 @@ export function SessionStoryDialog({
         >
           {actionMode === "menu" && (
             <>
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
+              <button
+                type="button"
+                className="mx-auto mb-3 block h-1 w-10 cursor-pointer rounded-full bg-muted"
+                aria-label="Fermer les options"
+                onClick={closeActionPanel}
+              />
               <p className="mb-3 text-center text-sm font-semibold">Options</p>
               <div className="flex flex-col gap-1">
                 {isOwnStory && (
@@ -994,8 +997,7 @@ export function SessionStoryDialog({
             </>
           )}
         </div>
-      </div>,
-      document.body
+      </div>
     );
 
   return (
@@ -1012,7 +1014,7 @@ export function SessionStoryDialog({
             stackNested && "!z-[130]"
           )}
           aria-describedby={undefined}
-          /* Le menu ⋯ est en portal sur document.body : sans ça, Radix traite les clics comme « outside » et ferme la story avant l’action. */
+          /* Empêche la fermeture de la story par un « outside » tant que le panneau ⋯ est ouvert (le voile est dans le content). */
           onPointerDownOutside={(e) => {
             if (actionMode) e.preventDefault();
           }}
@@ -1184,10 +1186,9 @@ export function SessionStoryDialog({
               </div>
             </>
           )}
+          {actionsOverlay}
         </DialogContent>
       </Dialog>
-
-      {actionsPortal}
     </>
   );
 }

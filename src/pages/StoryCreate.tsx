@@ -2959,8 +2959,8 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {/* Outils à droite : intégration type éditeur natif */}
-        <div className="absolute right-[max(12px,env(safe-area-inset-right,0px))] top-[max(12px,env(safe-area-inset-top,0px))] z-20 flex flex-col gap-2.5">
+        {/* Outils à droite — même pastilles que la carte accueil (map-overlay-fab), sous la barre Sauvegarder */}
+        <div className="absolute right-[max(12px,env(safe-area-inset-right,0px))] top-[calc(max(12px,env(safe-area-inset-top,12px))+3.25rem)] z-20 flex flex-col gap-2">
           {[
             {
               id: "text",
@@ -3074,19 +3074,23 @@ export default function StoryCreate() {
               },
             },
           ].map((tool) => (
-            <button
+            <div
               key={tool.id}
-              type="button"
-              onClick={tool.onClick}
               className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-2xl border border-white/18 bg-black/38 text-white shadow-[0_6px_28px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition-all duration-200 ease-out active:scale-[0.93]",
-                tool.active && "border-primary/35 bg-primary text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.38)]",
+                "map-overlay-fab-shell",
+                tool.active && "ring-2 ring-primary ring-offset-2 ring-offset-black",
               )}
-              aria-label={tool.label}
-              title={tool.label}
             >
-              <tool.icon className="h-5 w-5" />
-            </button>
+              <button
+                type="button"
+                onClick={tool.onClick}
+                className="map-overlay-fab-inner"
+                aria-label={tool.label}
+                title={tool.label}
+              >
+                <tool.icon className="h-[15px] w-[15px]" strokeWidth={2} aria-hidden />
+              </button>
+            </div>
           ))}
         </div>
       </div>
