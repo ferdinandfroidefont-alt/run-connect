@@ -120,6 +120,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               void refreshSubscription();
             });
           }
+        } else {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          setSubscriptionInfo(null);
+          clearTimeout(failSafe);
         }
       })
       .catch((err) => {

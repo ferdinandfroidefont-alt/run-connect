@@ -91,6 +91,12 @@ const queryClient = new QueryClient({
   },
 });
 
+function replaceBrowserRoute(route: string): void {
+  if (`${window.location.pathname}${window.location.search}${window.location.hash}` === route) return;
+  window.history.replaceState({}, "", route);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 const App = () => {
   /** Toujours afficher le splash au lancement de l'app (minimum géré dans LoadingScreen). */
   const [isAppLoaded, setIsAppLoaded] = useState(false);
@@ -216,12 +222,12 @@ const App = () => {
               if (parsed.error) params.set("error", parsed.error);
               if (parsed.errorDescription) params.set("error_description", parsed.errorDescription);
               const suffix = params.toString();
-              const target = `${window.location.origin}/auth/callback${suffix ? `?${suffix}` : ""}`;
+              const target = `/auth/callback${suffix ? `?${suffix}` : ""}`;
               console.warn(`[OAuth/App] fallback -> /auth/callback (${source})`, {
                 hasCode: !!parsed.code,
                 hasError: !!parsed.error,
               });
-              window.location.replace(target);
+              replaceBrowserRoute(target);
             };
 
             try {
@@ -305,12 +311,12 @@ const App = () => {
             if (parsed.error) params.set("error", parsed.error);
             if (parsed.errorDescription) params.set("error_description", parsed.errorDescription);
             const suffix = params.toString();
-            const target = `${window.location.origin}/auth/callback${suffix ? `?${suffix}` : ""}`;
+            const target = `/auth/callback${suffix ? `?${suffix}` : ""}`;
             console.warn(`[OAuth/App] cold-start fallback -> /auth/callback (${source})`, {
               hasCode: !!parsed.code,
               hasError: !!parsed.error,
             });
-            window.location.replace(target);
+            replaceBrowserRoute(target);
           };
 
           console.log('[OAuth/App] cold start auth callback');
@@ -330,7 +336,7 @@ const App = () => {
             console.log('[OAuth/App] cold start session OK → /auth/callback (stabilise la session)');
             const path = window.location.pathname;
             if (path !== '/auth/callback' && path !== '/auth/callback/') {
-              window.location.replace(`${window.location.origin}/auth/callback`);
+              replaceBrowserRoute('/auth/callback');
             }
           } else {
             console.warn('[OAuth/App] cold start finalize failed', result.reason);
