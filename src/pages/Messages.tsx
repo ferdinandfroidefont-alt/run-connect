@@ -3567,14 +3567,14 @@ const Messages = () => {
                           >
                             <DropdownMenuItem
                               className="cursor-pointer gap-2 py-ios-3"
-                              onClick={() => setShowNewConversation(true)}
+                              onSelect={() => setShowNewConversation(true)}
                             >
                               <MessageCircle className="h-4 w-4" />
                               Nouvelle conversation
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="cursor-pointer gap-2 py-ios-3"
-                              onClick={() => openCreateClubTab()}
+                              onSelect={() => openCreateClubTab()}
                             >
                               <Users className="h-4 w-4" />
                               Créer un club
@@ -3676,7 +3676,7 @@ const Messages = () => {
               {isInboxSearchMode ? (
                 <div className="mx-4 mt-3.5 min-h-[280px] rounded-[18px] bg-card">
                   <SearchTabs activeTab={messageDiscoveryTab} onTabChange={setMessageDiscoveryTab} />
-                  <div className="ios-scroll-region">
+                  <div className="min-w-0">
                     {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "clubs" && <ClubsTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "strava" && <StravaTab searchQuery={conversationSearch} />}
@@ -3687,7 +3687,7 @@ const Messages = () => {
                 /* Liste — carte blanche arrondie (maquette 17) */
                 <div
                   className={cn(
-                    "ios-scroll-region mx-4 mt-3.5 min-h-[280px] rounded-[18px] bg-card pb-ios-4",
+                    "mx-4 mt-3.5 min-h-[280px] rounded-[18px] bg-card pb-ios-4",
                     filteredAndSortedConversations.length > 0 && "divide-y divide-border"
                   )}
                 >

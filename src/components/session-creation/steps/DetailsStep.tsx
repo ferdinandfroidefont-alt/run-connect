@@ -1,14 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Textarea } from '@/components/ui/textarea';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { SessionFormData, SelectedLocation } from '../types';
 import { cn } from '@/lib/utils';
-import { estimateSessionDurationMinutes } from '@/lib/estimateSessionDurationMinutes';
 import { normalizeBlocksForStorage, resolveSessionTotals } from '@/lib/sessionBlockCalculations';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { computeBlocksDistanceKm, formatDistanceForInput } from '../utils/computeBlocksDistance';
 import { AppleStepFooter } from './AppleStepChrome';
+import { useState } from 'react';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -59,62 +58,21 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   }, [formData.session_mode, onFormDataChange]);
 
   // Auto-compute distance from structured blocks
-  const isStructured = true;
   const resolvedBlocks = React.useMemo(
     () => normalizeBlocksForStorage(formData.blocks),
     [formData.blocks]
   );
   const computedDistanceKm = React.useMemo(
-    () => (isStructured ? computeBlocksDistanceKm(resolvedBlocks) : null),
-    [isStructured, resolvedBlocks]
+    () => computeBlocksDistanceKm(resolvedBlocks),
+    [resolvedBlocks]
   );
   useEffect(() => {
-    if (!isStructured || computedDistanceKm == null) return;
+    if (computedDistanceKm == null) return;
     const formatted = formatDistanceForInput(computedDistanceKm);
     if (formatted !== formData.distance_km) {
       onFormDataChange({ distance_km: formatted });
     }
-  }, [isStructured, computedDistanceKm, formData.distance_km, onFormDataChange]);
-
-  const resolvedTotals = useMemo(
-    () => resolveSessionTotals(normalizeBlocksForStorage(formData.blocks)),
-    [formData.blocks]
-  );
-  const estimatedDurationMin = useMemo(
-    () =>
-      estimateSessionDurationMinutes({
-        session_blocks: formData.blocks,
-        distance_km:
-          resolvedTotals.distanceKm ??
-          (formData.distance_km ? Number.parseFloat(formData.distance_km) : null),
-        interval_distance: formData.interval_distance
-          ? Number.parseFloat(formData.interval_distance)
-          : null,
-        interval_count: formData.interval_count ? Number.parseInt(formData.interval_count, 10) : null,
-        interval_pace: formData.interval_pace || null,
-        pace_general: formData.pace_general || null,
-      }),
-    [
-      formData.blocks,
-      formData.distance_km,
-      formData.interval_count,
-      formData.interval_distance,
-      formData.interval_pace,
-      formData.pace_general,
-      resolvedTotals.distanceKm,
-    ]
-  );
-
-  const distanceLabel = useMemo(() => {
-    const km = resolvedTotals.distanceKm ?? (formData.distance_km ? Number.parseFloat(formData.distance_km) : null);
-    if (!km || Number.isNaN(km)) return null;
-    return `${km.toFixed(km >= 10 ? 0 : 1).replace('.', ',')} km`;
-  }, [formData.distance_km, resolvedTotals.distanceKm]);
-
-  const durationLabel = useMemo(() => {
-    if (!estimatedDurationMin || estimatedDurationMin <= 0) return null;
-    return `~${Math.round(estimatedDurationMin)} min`;
-  }, [estimatedDurationMin]);
+  }, [computedDistanceKm, formData.distance_km, onFormDataChange]);
 
   return (
     <motion.div
@@ -129,31 +87,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4'
         )}
       >
-        <div className="px-1">
-          <div className="grid grid-cols-2 gap-2 rounded-full border border-[#d8d8dd] bg-white p-1">
-            <button
-              type="button"
-              className={cn(
-                'h-10 rounded-full text-[15px] font-semibold tracking-[-0.2px]',
-                builderTab === 'build' ? 'bg-[#0066cc] text-white' : 'text-[#1d1d1f]'
-              )}
-              onClick={() => setBuilderTab('build')}
-            >
-              Construire
-            </button>
-            <button
-              type="button"
-              className={cn(
-                'h-10 rounded-full text-[15px] font-semibold tracking-[-0.2px]',
-                builderTab === 'templates' ? 'bg-[#0066cc] text-white' : 'text-[#1d1d1f]'
-              )}
-              onClick={() => setBuilderTab('templates')}
-            >
-              Modèles
-            </button>
-          </div>
-        </div>
-
+        {/* Titre inline — même style que la page coaching */}
         <div className="px-1">
           <input
             className="w-full bg-transparent font-display text-[42px] font-semibold tracking-[-0.8px] text-[#1d1d1f] placeholder:text-[#7a7a7a] focus:outline-none"
@@ -161,35 +95,42 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             value={formData.title}
             onChange={(e) => onFormDataChange({ title: e.target.value })}
           />
-          <p className="mt-1 text-[14px] text-[#7a7a7a]">
-            {[distanceLabel, durationLabel].filter(Boolean).join(' · ') || 'Ajoute des blocs pour estimer la séance'}
-          </p>
+        </div>
+
+        {/* Tabs coaching-style */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className={cn(
+              'h-8 rounded-full border text-center text-[13px] font-semibold transition-colors',
+              builderTab === 'build'
+                ? 'border-[#0066cc] bg-[#0066cc] text-white'
+                : 'border-[#e0e0e0] bg-white text-[#1d1d1f]'
+            )}
+            onClick={() => setBuilderTab('build')}
+          >
+            Construire
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'h-8 rounded-full border text-center text-[13px] font-semibold transition-colors',
+              builderTab === 'templates'
+                ? 'border-[#0066cc] bg-[#0066cc] text-white'
+                : 'border-[#e0e0e0] bg-white text-[#1d1d1f]'
+            )}
+            onClick={() => setBuilderTab('templates')}
+          >
+            Modèles
+          </button>
         </div>
 
         {builderTab === 'build' ? (
-          <>
-            <div className="rounded-[18px] border border-[#e0e0e0] bg-white px-3 py-3">
-              <SessionBlockBuilder
-                blocks={formData.blocks}
-                activityType={formData.activity_type || 'course'}
-                onBlocksChange={(blocks) => onFormDataChange({ blocks })}
-              />
-            </div>
-
-            <div className="space-y-2 px-1">
-              <p className="px-1 text-[14px] font-semibold text-[#333333]">Description</p>
-              <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-3">
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => onFormDataChange({ description: e.target.value })}
-                  placeholder="27' à 5'30/km + 2 × 2 km à 3'30/km..."
-                  rows={3}
-                  className="resize-none border-none bg-transparent px-0 py-0 text-[14px] leading-[1.4] text-[#333333] shadow-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
-          </>
+          <SessionBlockBuilder
+            blocks={formData.blocks}
+            activityType={formData.activity_type || 'course'}
+            onBlocksChange={(blocks) => onFormDataChange({ blocks })}
+          />
         ) : (
           <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-4 text-[14px] text-[#7a7a7a]">
             Modèles prédéfinis bientôt disponibles.

@@ -4104,6 +4104,12 @@ export function CoachPlanningExperience() {
           >
             {editorTab === "build" ? (
               <div className="space-y-4 px-4 pb-6">
+                <input
+                  value={draft.title}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Nom de la séance"
+                  className="w-full bg-transparent font-display text-[42px] font-semibold tracking-[-0.8px] text-[#1d1d1f] placeholder:text-[#7a7a7a] focus:outline-none"
+                />
                 <div className="py-3">
                   <div className="space-y-3">
                     <div className="grid grid-cols-4 gap-[10px]">
@@ -4732,26 +4738,6 @@ export function CoachPlanningExperience() {
                       })}
                     </div>
                   ) : null}
-                  <div className="rounded-[14px] bg-white p-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-                    <Input
-                      value={draft.title}
-                      onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="Nom du bloc"
-                      className="min-h-[44px] rounded-[12px] border-0 bg-transparent px-3.5 text-[16px] tracking-[-0.02em] shadow-none"
-                    />
-                  </div>
-                  <p className="px-1 text-[12px] text-muted-foreground">
-                    {[previewMetrics.distanceLabel, previewMetrics.durationLabel && `~${previewMetrics.durationLabel}`]
-                      .filter(Boolean)
-                      .join(" · ") || "Charge estimée après blocs"}
-                    {previewMetrics.feedbackLabel ? (
-                      <>
-                        {" "}
-                        ·{" "}
-                        <span className="font-semibold text-[#007AFF]">{previewMetrics.feedbackLabel}</span>
-                      </>
-                    ) : null}
-                  </p>
                   {shouldShowAthleteZoneLegend ? (
                     <div className="mt-2 rounded-xl border border-slate-100 bg-white/95 px-2.5 py-2">
                       <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
