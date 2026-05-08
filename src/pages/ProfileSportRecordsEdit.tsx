@@ -89,6 +89,36 @@ function formatDistanceByUnit(km: number, unit: "km" | "mi"): string {
   return `${v.toFixed(v >= 10 ? 1 : 2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1")} ${suffix}`;
 }
 
+function parseDurationPartsFromRecordHeader(timeStr: string): number {
+  const parts = timeStr.split(":").map((p) => parseInt(p.trim(), 10));
+  if (parts.some((n) => Number.isNaN(n))) return 0;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return 0;
+}
+
+/** Reprend temps + distance depuis `record_value` (format émis par cet écran). */
+function parseStoredRecordDistanceAndDuration(recordValue: string): { durationSec: number; distanceKm: number } | null {
+  const parts = recordValue.split(" - ").map((s) => s.trim());
+  if (parts.length < 2) return null;
+  const dur = parseDurationPartsFromRecordHeader(parts[0]);
+  const dm = parts[1].match(/^([\d.]+)\s*(km|mi)$/i);
+  if (!dm) return null;
+  const n = Number(dm[1]);
+  const u = dm[2].toLowerCase();
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const km = u === "mi" ? milesToKm(n) : n;
+  if (dur <= 0 || km <= 0) return null;
+  return { durationSec: dur, distanceKm: km };
+}
+
+function presetIdForDistanceKm(km: number): string {
+  for (const d of DISTANCE_CHIPS) {
+    if (d.km != null && Math.abs(d.km - km) < 0.02) return d.id;
+  }
+  return "custom";
+}
+
 export default function ProfileSportRecordsEdit() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -118,6 +148,9 @@ export default function ProfileSportRecordsEdit() {
   const [durS, setDurS] = useState("18");
   const [speedWhole, setSpeedWhole] = useState("25");
   const [speedDec, setSpeedDec] = useState("0");
+
+  /** Ligne liste en cours d’édition (OK envoie un UPDATE par id). */
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -181,9 +214,23 @@ export default function ProfileSportRecordsEdit() {
         : `${speedKmh.toFixed(1)} km/h`;
 
   const showNewPrBadge = useMemo(() => {
+    if (editingRowId) return false;
     const label = eventLabel.trim().toLowerCase();
     return !rows.some((r) => r.sport_key === sportKey && r.event_label.trim().toLowerCase() === label);
-  }, [rows, sportKey, eventLabel]);
+  }, [rows, sportKey, eventLabel, editingRowId]);
+
+  const loadRowForEdit = useCallback((r: ProfileSportRecordRow) => {
+    const sk = r.sport_key;
+    setSportKey(isProfileSportRecordKey(sk) ? sk : "other");
+    setEditingRowId(r.id);
+    setEventLabel(r.event_label);
+    const parsed = parseStoredRecordDistanceAndDuration(r.record_value);
+    if (parsed) {
+      setDistanceKm(parsed.distanceKm);
+      setDurationSec(parsed.durationSec);
+      setPresetId(presetIdForDistanceKm(parsed.distanceKm));
+    }
+  }, []);
 
   const canSave = eventLabel.trim().length > 0 && distanceKm > 0 && durationSec > 0;
 
@@ -220,17 +267,63 @@ export default function ProfileSportRecordsEdit() {
     setEventLabel(label);
   };
 
-  const handleAdd = async () => {
+  const handleSave = async () => {
     if (!user?.id || !canSave) return;
     setSaving(true);
     try {
+      const trimmedLabel = eventLabel.trim();
+      const labelNorm = trimmedLabel.toLowerCase();
+
+      if (editingRowId) {
+        const { data, error } = await (supabase as any)
+          .from("profile_sport_records")
+          .update({
+            sport_key: sportKey,
+            event_label: trimmedLabel,
+            record_value: recordValue,
+          })
+          .eq("id", editingRowId)
+          .eq("user_id", user.id)
+          .select("id, sport_key, event_label, record_value, sort_order")
+          .single();
+        if (error) throw error;
+        setRows((prev) => prev.map((x) => (x.id === editingRowId ? (data as ProfileSportRecordRow) : x)));
+        setEditingRowId(null);
+        window.dispatchEvent(new Event("profile-records-updated"));
+        toast({ title: "Record mis à jour" });
+        return;
+      }
+
+      const existing = rows.find(
+        (row) => row.sport_key === sportKey && row.event_label.trim().toLowerCase() === labelNorm,
+      );
+
+      if (existing) {
+        const { data, error } = await (supabase as any)
+          .from("profile_sport_records")
+          .update({
+            sport_key: sportKey,
+            event_label: trimmedLabel,
+            record_value: recordValue,
+          })
+          .eq("id", existing.id)
+          .eq("user_id", user.id)
+          .select("id, sport_key, event_label, record_value, sort_order")
+          .single();
+        if (error) throw error;
+        setRows((prev) => prev.map((x) => (x.id === existing.id ? (data as ProfileSportRecordRow) : x)));
+        window.dispatchEvent(new Event("profile-records-updated"));
+        toast({ title: "Record mis à jour" });
+        return;
+      }
+
       const nextOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.sort_order)) + 1 : 0;
       const { data, error } = await (supabase as any)
         .from("profile_sport_records")
         .insert({
           user_id: user.id,
           sport_key: sportKey,
-          event_label: eventLabel.trim(),
+          event_label: trimmedLabel,
           record_value: recordValue,
           sort_order: nextOrder,
         })
@@ -240,8 +333,12 @@ export default function ProfileSportRecordsEdit() {
       setRows((prev) => [...prev, data as ProfileSportRecordRow]);
       window.dispatchEvent(new Event("profile-records-updated"));
       toast({ title: "Record ajouté" });
-    } catch {
-      toast({ title: "Erreur", description: "Impossible d'ajouter le record.", variant: "destructive" });
+    } catch (e: any) {
+      toast({
+        title: "Erreur",
+        description: e?.message || "Impossible d'enregistrer le record.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -254,6 +351,7 @@ export default function ProfileSportRecordsEdit() {
       const { error } = await (supabase as any).from("profile_sport_records").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
+      setEditingRowId((cur) => (cur === id ? null : cur));
       window.dispatchEvent(new Event("profile-records-updated"));
       toast({ title: "Record supprimé" });
     } catch {
@@ -270,9 +368,6 @@ export default function ProfileSportRecordsEdit() {
   const speedWholeOpts = Array.from({ length: 101 }, (_, i) => ({ value: String(i), label: String(i) }));
   const timeParts = formatDurationParts(durationSec);
 
-  const iconBtnClass =
-    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#e0e0e0] bg-white text-[#1d1d1f] shadow-none transition-transform active:scale-95";
-
   return (
     <IosFixedPageHeaderShell
       className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-white"
@@ -286,17 +381,17 @@ export default function ProfileSportRecordsEdit() {
               onClick: () => navigate(-1),
               label: "Page précédente",
             }}
-            title="Ajouter un record"
+            title={editingRowId ? "Modifier le record" : "Ajouter un record"}
             right={
               <button
                 type="button"
-                className={cn(iconBtnClass, "border-0 text-white")}
+                className="flex h-11 min-w-[52px] shrink-0 items-center justify-center rounded-full px-3.5 text-[17px] font-semibold leading-none text-white shadow-none transition-transform active:scale-95 disabled:opacity-50"
                 style={{ backgroundColor: RC.primary }}
                 aria-label="Enregistrer le record"
                 disabled={!canSave || saving}
-                onClick={() => void handleAdd()}
+                onClick={() => void handleSave()}
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Check className="h-4 w-4 stroke-[2.4] text-white" />}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "OK"}
               </button>
             }
           />
@@ -306,6 +401,17 @@ export default function ProfileSportRecordsEdit() {
     >
       <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <div className="space-y-[22px] px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
+          {editingRowId ? (
+            <div
+              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-[14px]"
+              style={{ backgroundColor: "rgba(0,102,204,0.08)" }}
+            >
+              <span className="min-w-0 text-[#1d1d1f]">Modification en cours</span>
+              <button type="button" className="shrink-0 font-semibold" style={{ color: RC.primary }} onClick={() => setEditingRowId(null)}>
+                Annuler
+              </button>
+            </div>
+          ) : null}
           {/* Sport — maquette 21 */}
           <section>
             <div
@@ -473,15 +579,31 @@ export default function ProfileSportRecordsEdit() {
             ) : (
               <ul className="divide-y divide-[#e0e0e0] rounded-2xl border border-[#e0e0e0] bg-white px-1">
                 {rows.map((r) => (
-                  <li key={r.id} className="flex items-center gap-3 py-3 pl-3 pr-1">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] text-[#7a7a7a]">{isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}</p>
+                  <li
+                    key={r.id}
+                    className={cn("flex items-center gap-3 py-3 pl-3 pr-1", editingRowId === r.id && "rounded-xl bg-[#f5faff]")}
+                  >
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 rounded-lg px-0 py-0 text-left active:opacity-80"
+                      onClick={() => loadRowForEdit(r)}
+                    >
+                      <p className="text-[13px] text-[#7a7a7a]">
+                        {isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}
+                      </p>
                       <p className="truncate font-display text-[16px] font-bold text-[#1d1d1f]">{r.event_label}</p>
                       <p className="font-mono text-[14px] tabular-nums" style={{ color: RC.primary }}>
                         {r.record_value}
                       </p>
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive" onClick={() => void handleDelete(r.id)} disabled={saving}>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => void handleDelete(r.id)}
+                      disabled={saving}
+                    >
                       <Trash2 className="h-5 w-5" />
                     </Button>
                   </li>

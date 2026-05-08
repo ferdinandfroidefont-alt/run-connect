@@ -24,6 +24,7 @@ import { QRShareDialog } from "@/components/QRShareDialog";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
+import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
@@ -689,9 +690,6 @@ const Profile = () => {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  const runningRecords = profile?.running_records && typeof profile.running_records === "object" ? profile.running_records : {};
-  const record5k = runningRecords["5k"] || runningRecords["5 km"] || runningRecords["5km"] || "19:42";
-  const record10k = runningRecords["10k"] || runningRecords["10 km"] || runningRecords["10km"] || "41:18";
   const formatCompactCount = (value: number) =>
     new Intl.NumberFormat("fr-FR", {
       notation: "compact",
@@ -915,27 +913,32 @@ const Profile = () => {
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
           </button>
 
-          <div>
-            <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">RECORDS PERSONNELS</p>
-            <div className="overflow-hidden rounded-xl border border-border bg-white px-3">
-            <button
-              type="button"
-              onClick={() => navigate('/profile/records')}
-              className="flex w-full items-center justify-between px-1 py-3 text-left active:bg-secondary/50"
-            >
-              <span className="text-[16px] text-foreground">5 km</span>
-              <span className="text-[16px] text-foreground">{record5k} &gt;</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/profile/records')}
-              className="flex w-full items-center justify-between border-t border-border px-1 py-3 text-left active:bg-secondary/50"
-            >
-              <span className="text-[16px] text-foreground">10 km</span>
-              <span className="text-[16px] text-foreground">{record10k} &gt;</span>
-            </button>
+          {user?.id ? (
+            <div>
+              <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">
+                RECORDS PERSONNELS
+              </p>
+              <div className="overflow-hidden rounded-xl border border-border bg-white">
+                <ProfileRecordsDisplay
+                  userId={user.id}
+                  legacy={{
+                    running_records: profile?.running_records,
+                    cycling_records: profile?.cycling_records,
+                    swimming_records: profile?.swimming_records,
+                    triathlon_records: profile?.triathlon_records,
+                    walking_records: profile?.walking_records,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => navigate("/profile/records")}
+                  className="flex w-full items-center justify-center border-t border-border px-3 py-3 text-[15px] font-medium text-primary active:bg-secondary/50"
+                >
+                  Gérer mes records
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
 
         {!isViewingOtherUser && isEditing && (
           <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">

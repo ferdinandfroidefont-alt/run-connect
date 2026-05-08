@@ -1,13 +1,10 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { SessionFormData, SelectedLocation } from '../types';
 import { cn } from '@/lib/utils';
-import { normalizeBlocksForStorage, resolveSessionTotals } from '@/lib/sessionBlockCalculations';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
-import { computeBlocksDistanceKm, formatDistanceForInput } from '../utils/computeBlocksDistance';
 import { AppleStepFooter } from './AppleStepChrome';
-import { useState } from 'react';
+import { CoachingBlockEditorPanel, type CoachingSessionBlock } from '@/components/coaching/CoachingBlockEditorPanel';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -36,6 +33,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   hideNavigation = false,
 }) => {
   const [builderTab, setBuilderTab] = useState<'build' | 'templates'>('build');
+  const [coachingBlocks, setCoachingBlocks] = useState<CoachingSessionBlock[]>([]);
 
   // Auto-generate title suggestion
   useEffect(() => {
@@ -50,29 +48,13 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     }
   }, [formData.activity_type, formData.title, onFormDataChange, selectedLocation]);
 
-  // Keep structured mode for the visual builder.
-  useEffect(() => {
-    if (formData.session_mode !== 'structured') {
-      onFormDataChange({ session_mode: 'structured' });
-    }
-  }, [formData.session_mode, onFormDataChange]);
-
-  // Auto-compute distance from structured blocks
-  const resolvedBlocks = React.useMemo(
-    () => normalizeBlocksForStorage(formData.blocks),
-    [formData.blocks]
-  );
-  const computedDistanceKm = React.useMemo(
-    () => computeBlocksDistanceKm(resolvedBlocks),
-    [resolvedBlocks]
-  );
-  useEffect(() => {
-    if (computedDistanceKm == null) return;
-    const formatted = formatDistanceForInput(computedDistanceKm);
-    if (formatted !== formData.distance_km) {
-      onFormDataChange({ distance_km: formatted });
-    }
-  }, [computedDistanceKm, formData.distance_km, onFormDataChange]);
+  const sportProp = useMemo((): "running" | "cycling" | "swimming" | "strength" => {
+    const t = formData.activity_type;
+    if (t === 'cycling' || t === 'velo') return 'cycling';
+    if (t === 'swimming' || t === 'natation') return 'swimming';
+    if (t === 'strength' || t === 'renforcement') return 'strength';
+    return 'running';
+  }, [formData.activity_type]);
 
   return (
     <motion.div
@@ -126,10 +108,10 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         </div>
 
         {builderTab === 'build' ? (
-          <SessionBlockBuilder
-            blocks={formData.blocks}
-            activityType={formData.activity_type || 'course'}
-            onBlocksChange={(blocks) => onFormDataChange({ blocks })}
+          <CoachingBlockEditorPanel
+            sport={sportProp}
+            initialBlocks={coachingBlocks.length ? coachingBlocks : undefined}
+            onChange={setCoachingBlocks}
           />
         ) : (
           <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-4 text-[14px] text-[#7a7a7a]">

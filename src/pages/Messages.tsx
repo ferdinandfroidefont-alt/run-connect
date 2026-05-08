@@ -337,6 +337,12 @@ const Messages = () => {
     }, { replace: true });
   }, [setSearchParams]);
 
+  const openNewConversationView = useCallback(() => {
+    setActiveRootTab("conversations");
+    setSelectedConversation(null);
+    setShowNewConversation(true);
+  }, []);
+
   useEffect(() => {
     if (!user?.id) return;
     void supabase
@@ -3567,7 +3573,8 @@ const Messages = () => {
                           >
                             <DropdownMenuItem
                               className="cursor-pointer gap-2 py-ios-3"
-                              onSelect={() => setShowNewConversation(true)}
+                              onSelect={() => openNewConversationView()}
+                              onClick={() => openNewConversationView()}
                             >
                               <MessageCircle className="h-4 w-4" />
                               Nouvelle conversation
@@ -3705,7 +3712,7 @@ const Messages = () => {
                         </p>
                       </div>
                       <Button
-                        onClick={() => setShowNewConversation(true)}
+                        onClick={() => openNewConversationView()}
                         className="w-full max-w-xs"
                       >
                         <Plus className="h-5 w-5 mr-ios-2" />
