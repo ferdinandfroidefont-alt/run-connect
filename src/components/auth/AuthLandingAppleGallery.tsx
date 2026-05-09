@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RUCONNECT_ONBOARDING_ARRIVAL_BG_URL } from "@/lib/ruconnectSplashChrome";
 
 /** Tokens design system Apple / RunConnect (DESIGN-apple) — hex explicites pour cette surface marketing. */
 const RC = {
@@ -55,7 +56,7 @@ export type AuthLandingAppleGalleryProps = {
   onSignUp: () => void;
   onSignIn: () => void;
   disabled?: boolean;
-  /** Image hero full-bleed (défaut : splash marque). */
+  /** Image hero full-bleed (défaut : photo accueil RunConnect). */
   heroImageSrc?: string;
 };
 
@@ -173,7 +174,7 @@ export function AuthLandingAppleGallery({
   onSignUp,
   onSignIn,
   disabled,
-  heroImageSrc = "/brand/runconnect-loading-splash.jpg",
+  heroImageSrc = RUCONNECT_ONBOARDING_ARRIVAL_BG_URL,
 }: AuthLandingAppleGalleryProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -210,8 +211,11 @@ export function AuthLandingAppleGallery({
     <div className="relative flex min-h-0 w-full flex-1 flex-col bg-black">
       {/* Fond photo + overlay lisibilité (comme la maquette — dégradé fonctionnel sur photo). */}
       <div
-        className="pointer-events-none absolute inset-0 z-[1] bg-cover bg-center"
-        style={{ backgroundImage: `url("${heroImageSrc.replace(/"/g, "")}")` }}
+        className="pointer-events-none absolute inset-0 z-[1] bg-cover"
+        style={{
+          backgroundImage: `url("${heroImageSrc.replace(/"/g, "")}")`,
+          backgroundPosition: "center 30%",
+        }}
         aria-hidden
       />
       <div
