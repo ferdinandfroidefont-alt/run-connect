@@ -23,6 +23,9 @@ export const RUCONNECT_LOADING_SCREEN_FALLBACK_URL = '/brand/runconnect-loading-
 /** GIF optionnel (non utilisé par défaut ; conserver pour tests / assets alternatifs). */
 export const RUCONNECT_LOADING_SCREEN_GIF_URL = '/brand/runconnect-loading-splash.gif';
 
+/** Photo plein écran pendant la préparation du tunnel d’arrivée (`Onboarding`). */
+export const RUCONNECT_ONBOARDING_ARRIVAL_BG_URL = '/brand/onboarding-arrival-bg.png';
+
 /** URL « principale » du splash (vidéo). */
 export const RUCONNECT_LOADING_SCREEN_URL = RUCONNECT_LOADING_SCREEN_MP4_URL;
 
