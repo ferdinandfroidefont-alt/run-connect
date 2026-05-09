@@ -70,18 +70,48 @@
       }
 
       html,
-      #root:empty {
+      #root {
         background: #0066CC url('/brand/runconnect-loading-splash.svg') center / cover no-repeat;
       }
 
-      #root:empty::before {
-        content: "";
+      .boot-splash {
         position: fixed;
         inset: 0;
+        z-index: 100;
+        min-height: 100dvh;
+        width: 100%;
+        overflow: hidden;
         background: #0066CC url('/brand/runconnect-loading-splash.svg') center / cover no-repeat;
       }
+
+      .boot-splash__media {
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+        display: block;
+        height: 100%;
+        width: 100%;
+        user-select: none;
+        object-fit: cover;
+        object-position: center;
+      }
     </style>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-splash" role="status" aria-busy="true" aria-live="polite">
+        <video
+          class="boot-splash__media"
+          src="/brand/runconnect-loading.mp4"
+          poster="/brand/runconnect-loading-splash.svg"
+          autoplay
+          loop
+          muted
+          playsinline
+          preload="auto"
+          disablepictureinpicture
+          aria-hidden="true"
+        ></video>
+      </div>
+    </div>
     
     <script>
       window.__fcmTokenReceived = false;
