@@ -19,7 +19,7 @@ import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
 
 import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
-import { Group, Cell, EmojiBadge } from '@/components/apple';
+import { Cell, EmojiBadge } from '@/components/apple';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -124,70 +124,67 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
           <h3 className="mb-3 text-[15px] font-semibold text-foreground">Publication</h3>
         )}
 
-        {/* Hero recap card — Apple product tile aesthetic */}
         {!embedInFinalize && (
-          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card shadow-[var(--shadow-card)]">
-            {/* Carte Mapbox réelle + pin séance sur le lieu de rendez-vous */}
-            <div className="relative h-40 w-full overflow-hidden bg-[#c5d9e8] dark:bg-[#1a3550]">
-              {selectedLocation ? (
-                <MiniMapPreview
-                  lat={selectedLocation.lat}
-                  lng={selectedLocation.lng}
-                  avatarUrl={pinAvatarUrl}
-                  activityType={formData.activity_type}
-                  interactive={false}
-                  showHint={false}
-                  zoom={13}
-                  className="h-full w-full"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                  <MapPin className="h-5 w-5" />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1 px-4 pb-5 pt-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.4px] text-primary">
-                {activityShort}
-                {formData.distance_km
-                  ? ` · ${String(formData.distance_km).replace(',', '.')} km`
-                  : ''}
+          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card shadow-[var(--shadow-card)] divide-y divide-border/60">
+            {/* Récap carte + infos */}
+            <div>
+              <div className="relative h-40 w-full overflow-hidden bg-[#c5d9e8] dark:bg-[#1a3550]">
+                {selectedLocation ? (
+                  <MiniMapPreview
+                    lat={selectedLocation.lat}
+                    lng={selectedLocation.lng}
+                    avatarUrl={pinAvatarUrl}
+                    activityType={formData.activity_type}
+                    interactive={false}
+                    showHint={false}
+                    zoom={13}
+                    className="h-full w-full"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                )}
               </div>
-              <h3 className="font-display text-[24px] font-semibold leading-[1.12] tracking-[-0.5px] text-foreground">
-                {formData.scheduled_at
-                  ? `${new Date(formData.scheduled_at).toLocaleDateString('fr-FR', {
-                      weekday: 'long',
-                    })} · ${new Date(formData.scheduled_at).toLocaleTimeString('fr-FR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}`
-                  : previewTitle}
-              </h3>
-              <p className="text-[15px] leading-snug text-muted-foreground">
-                {selectedLocation
-                  ? `${selectedLocation.name}${
-                      formData.max_participants
-                        ? ` · ${formData.max_participants} places`
-                        : ''
-                    }`
-                  : previewTitle}
-                {formData.visibility_type === 'friends'
-                  ? ' · Amis invités'
-                  : formData.visibility_type === 'public'
-                    ? ' · Visible publiquement'
-                    : formData.visibility_type === 'club'
-                      ? ' · Club'
-                      : ''}
-              </p>
-            </div>
-          </div>
-        )}
 
-        {/* Photo, itinéraire, visibilité, live tracking, note — avant le booster */}
-        {!embedInFinalize && (
-          <>
-            <AppleGroup>
+              <div className="space-y-1 px-4 pb-5 pt-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.4px] text-primary">
+                  {activityShort}
+                  {formData.distance_km
+                    ? ` · ${String(formData.distance_km).replace(',', '.')} km`
+                    : ''}
+                </div>
+                <h3 className="font-display text-[24px] font-semibold leading-[1.12] tracking-[-0.5px] text-foreground">
+                  {formData.scheduled_at
+                    ? `${new Date(formData.scheduled_at).toLocaleDateString('fr-FR', {
+                        weekday: 'long',
+                      })} · ${new Date(formData.scheduled_at).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+                    : previewTitle}
+                </h3>
+                <p className="text-[15px] leading-snug text-muted-foreground">
+                  {selectedLocation
+                    ? `${selectedLocation.name}${
+                        formData.max_participants
+                          ? ` · ${formData.max_participants} places`
+                          : ''
+                      }`
+                    : previewTitle}
+                  {formData.visibility_type === 'friends'
+                    ? ' · Amis invités'
+                    : formData.visibility_type === 'public'
+                      ? ' · Visible publiquement'
+                      : formData.visibility_type === 'club'
+                        ? ' · Club'
+                        : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* Illustration */}
+            <div>
               <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
                 <EmojiBadge emoji="📷" className="bg-[#FF9500]" />
                 <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
@@ -245,77 +242,74 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   />
                 </div>
               )}
-            </AppleGroup>
+            </div>
 
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 px-4">
+            {/* Itinéraire */}
+            <div>
+              <div className="flex items-center gap-2 px-4 py-3">
                 <EmojiBadge emoji="🗺️" className="bg-[#0A66D0]" />
                 <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
                   Itinéraire
                 </span>
               </div>
-              <RouteSelector
-                selectedRouteId={formData.route_id}
-                onRouteSelect={(route) =>
-                  route
-                    ? onFormDataChange({ route_id: route.id })
-                    : onFormDataChange({ route_id: null })
-                }
-                onAutoFill={({ distance_km, elevation_gain }) =>
-                  onFormDataChange({ distance_km, elevation_gain })
-                }
-              />
-            </section>
+              <div className="px-4 pb-3">
+                <RouteSelector
+                  embedded
+                  selectedRouteId={formData.route_id}
+                  onRouteSelect={(route) =>
+                    route ? onFormDataChange({ route_id: route.id }) : onFormDataChange({ route_id: null })
+                  }
+                  onAutoFill={({ distance_km, elevation_gain }) =>
+                    onFormDataChange({ distance_km, elevation_gain })
+                  }
+                />
+              </div>
+            </div>
 
-            <div className="px-1">
-              <VisibilitySelector
-                visibilityType={formData.visibility_type}
-                hiddenFromUsers={formData.hidden_from_users}
-                isPremium={isPremium}
-                onVisibilityChange={handleVisibilityChange}
-                onHiddenUsersChange={handleHiddenUsersChange}
-                clubId={formData.club_id}
+            {/* Visibilité */}
+            <VisibilitySelector
+              embedded
+              visibilityType={formData.visibility_type}
+              hiddenFromUsers={formData.hidden_from_users}
+              isPremium={isPremium}
+              onVisibilityChange={handleVisibilityChange}
+              onHiddenUsersChange={handleHiddenUsersChange}
+              clubId={formData.club_id}
+            />
+
+            {formData.visibility_type === 'friends' && formData.hidden_from_users?.length > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 text-[12px] text-amber-500">
+                <EmojiBadge emoji="🙈" className="bg-[#FF9500]/25" />
+                <span className="min-w-0">
+                  {formData.hidden_from_users.length} ami
+                  {formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance
+                </span>
+              </div>
+            )}
+
+            {/* Live tracking */}
+            <div className="flex items-start gap-3 px-4 py-3">
+              <EmojiBadge
+                emoji={formData.live_tracking_enabled ? '📡' : '📍'}
+                className={formData.live_tracking_enabled ? 'bg-[#34C759]' : 'bg-[#8E8E93]'}
+              />
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="text-[15px] font-medium tracking-tight text-foreground">Live tracking</p>
+                <p className="text-[12px] leading-relaxed text-muted-foreground">
+                  {formData.live_tracking_enabled
+                    ? 'Les participants pourront partager leur position pendant la séance.'
+                    : 'Aucune position partagée sur la carte.'}
+                </p>
+              </div>
+              <Switch
+                className="mt-1 shrink-0"
+                checked={formData.live_tracking_enabled}
+                onCheckedChange={(v) => onFormDataChange({ live_tracking_enabled: v })}
               />
             </div>
 
-            {formData.visibility_type === 'friends' &&
-              formData.hidden_from_users?.length > 0 && (
-                <div className="flex items-center gap-3 px-4 text-[12px] text-amber-500">
-                  <EmojiBadge emoji="🙈" className="bg-[#FF9500]/25" />
-                  <span className="min-w-0">
-                    {formData.hidden_from_users.length} ami
-                    {formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance
-                  </span>
-                </div>
-              )}
-
-            <AppleGroup>
-              <div className="flex items-start gap-3 px-4 py-3">
-                <EmojiBadge
-                  emoji={formData.live_tracking_enabled ? '📡' : '📍'}
-                  className={
-                    formData.live_tracking_enabled ? 'bg-[#34C759]' : 'bg-[#8E8E93]'
-                  }
-                />
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <p className="text-[15px] font-medium tracking-tight text-foreground">
-                    Live tracking
-                  </p>
-                  <p className="text-[12px] leading-relaxed text-muted-foreground">
-                    {formData.live_tracking_enabled
-                      ? 'Les participants pourront partager leur position pendant la séance.'
-                      : 'Aucune position partagée sur la carte.'}
-                  </p>
-                </div>
-                <Switch
-                  className="mt-1 shrink-0"
-                  checked={formData.live_tracking_enabled}
-                  onCheckedChange={(v) => onFormDataChange({ live_tracking_enabled: v })}
-                />
-              </div>
-            </AppleGroup>
-
-            <AppleGroup>
+            {/* Note */}
+            <div>
               <div className="flex items-start gap-3 border-b border-border/50 px-4 py-3">
                 <EmojiBadge emoji="📝" className="bg-[#AF52DE]" />
                 <div className="min-w-0">
@@ -323,7 +317,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   <p className="text-[13px] text-muted-foreground">Optionnel · pour les participants</p>
                 </div>
               </div>
-              <div className="min-w-0 px-4 py-3">
+              <div className="min-w-0 px-4 pb-4 pt-3">
                 <Textarea
                   value={formData.description}
                   onChange={(e) => onFormDataChange({ description: e.target.value })}
@@ -332,78 +326,113 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   className="min-h-[88px] resize-none rounded-[12px] border-border/70 bg-secondary/40 text-[15px] leading-snug"
                 />
               </div>
-            </AppleGroup>
-          </>
+            </div>
+
+            {/* Booster */}
+            {!isCoachingMode ? (
+              <div>
+                <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
+                  <EmojiBadge emoji="⚡" className="bg-[#0066CC]" />
+                  <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+                    Booster
+                  </span>
+                </div>
+                <Cell
+                  icon={<span className="text-[15px]">⚡</span>}
+                  iconBg="#0066CC"
+                  title="Visibilité globale"
+                  subtitle="Affiché en tête de la carte"
+                  onClick={() => {
+                    if (!isPremium) {
+                      navigate('/subscription');
+                      return;
+                    }
+                    onFormDataChange({ visibility_type: 'public', friends_only: false });
+                    toast({
+                      title: 'Visibilité globale',
+                      description: 'La séance est visible en mode public.',
+                    });
+                  }}
+                />
+                <Cell
+                  icon={<span className="text-[15px]">📺</span>}
+                  iconBg="#FF9500"
+                  title="Regarder une vidéo · 15s"
+                  subtitle="Pour activer le boost gratuitement"
+                  onClick={() =>
+                    toast({
+                      title: 'Bientôt disponible',
+                      description: 'Le boost vidéo arrive dans une prochaine version.',
+                    })
+                  }
+                />
+                <Cell
+                  icon={<span className="text-[15px]">✨</span>}
+                  iconBg="#AF52DE"
+                  title="Passer Premium"
+                  subtitle="Boost illimité"
+                  accent
+                  last
+                  onClick={() => navigate('/subscription')}
+                />
+              </div>
+            ) : null}
+
+            {/* Récurrence */}
+            <div>
+              <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
+                <EmojiBadge emoji="🔁" className="bg-[#FF9500]" />
+                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+                  Récurrence
+                </span>
+              </div>
+              <div className="px-4 pb-4 pt-3">
+                <RecurrenceSelector
+                  recurrenceType={formData.recurrence_type}
+                  recurrenceCount={formData.recurrence_count}
+                  onRecurrenceTypeChange={handleRecurrenceTypeChange}
+                  onRecurrenceCountChange={handleRecurrenceCountChange}
+                />
+                {formData.recurrence_type === 'weekly' && (
+                  <div className="mt-3 flex items-center gap-3 border-t border-border/55 pt-3 text-[12px] text-primary">
+                    <EmojiBadge emoji="✨" className="bg-primary/15" />
+                    <span className="min-w-0">
+                      {formData.recurrence_count} séances seront créées automatiquement
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Maquette 12 — section Booster */}
-        {!embedInFinalize && !isCoachingMode ? (
-          <Group inset={false} className="mb-0" title="Booster">
-            <Cell
-              icon={<span className="text-[15px]">⚡</span>}
-              iconBg="#0066CC"
-              title="Visibilité globale"
-              subtitle="Affiché en tête de la carte"
-              onClick={() => {
-                if (!isPremium) {
-                  navigate('/subscription');
-                  return;
-                }
-                onFormDataChange({ visibility_type: 'public', friends_only: false });
-                toast({
-                  title: 'Visibilité globale',
-                  description: 'La séance est visible en mode public.',
-                });
-              }}
-            />
-            <Cell
-              icon={<span className="text-[15px]">📺</span>}
-              iconBg="#FF9500"
-              title="Regarder une vidéo · 15s"
-              subtitle="Pour activer le boost gratuitement"
-              onClick={() =>
-                toast({
-                  title: 'Bientôt disponible',
-                  description: 'Le boost vidéo arrive dans une prochaine version.',
-                })
-              }
-            />
-            <Cell
-              icon={<span className="text-[15px]">✨</span>}
-              iconBg="#AF52DE"
-              title="Passer Premium"
-              subtitle="Boost illimité"
-              accent
-              last
-              onClick={() => navigate('/subscription')}
-            />
-          </Group>
-        ) : null}
-
-        <AppleGroup>
-          <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-            <EmojiBadge emoji="🔁" className="bg-[#FF9500]" />
-            <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
-              Récurrence
-            </span>
-          </div>
-          <div className="px-4 py-3">
-            <RecurrenceSelector
-              recurrenceType={formData.recurrence_type}
-              recurrenceCount={formData.recurrence_count}
-              onRecurrenceTypeChange={handleRecurrenceTypeChange}
-              onRecurrenceCountChange={handleRecurrenceCountChange}
-            />
-          </div>
-        </AppleGroup>
-
-        {formData.recurrence_type === 'weekly' && (
-          <div className="flex items-center gap-3 px-4 text-[12px] text-primary">
-            <EmojiBadge emoji="✨" className="bg-primary/15" />
-            <span className="min-w-0">
-              {formData.recurrence_count} séances seront créées automatiquement
-            </span>
-          </div>
+        {embedInFinalize && (
+          <>
+            <AppleGroup>
+              <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
+                <EmojiBadge emoji="🔁" className="bg-[#FF9500]" />
+                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+                  Récurrence
+                </span>
+              </div>
+              <div className="px-4 py-3">
+                <RecurrenceSelector
+                  recurrenceType={formData.recurrence_type}
+                  recurrenceCount={formData.recurrence_count}
+                  onRecurrenceTypeChange={handleRecurrenceTypeChange}
+                  onRecurrenceCountChange={handleRecurrenceCountChange}
+                />
+              </div>
+            </AppleGroup>
+            {formData.recurrence_type === 'weekly' && (
+              <div className="flex items-center gap-3 px-4 text-[12px] text-primary">
+                <EmojiBadge emoji="✨" className="bg-primary/15" />
+                <span className="min-w-0">
+                  {formData.recurrence_count} séances seront créées automatiquement
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
 

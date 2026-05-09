@@ -87,7 +87,10 @@ export function MainTopHeader({
   return (
     <div
       ref={containerRef}
-      className={cn("shrink-0 pt-[var(--safe-area-top)]", className)}
+      className={cn(
+        "main-top-header shrink-0 pt-[env(safe-area-inset-top,0px)]",
+        className
+      )}
       style={{
         backgroundColor: progress > 0.02 ? `hsl(var(--muted) / ${0.22 + progress * 0.18})` : "transparent",
         backdropFilter: progress > 0.02 ? `blur(${22 + progress * 12}px) saturate(${1.6 + progress * 0.4})` : "none",

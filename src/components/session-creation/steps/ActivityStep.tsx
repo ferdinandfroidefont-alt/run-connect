@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { ACTIVITY_TYPES, SESSION_TYPES } from '../types';
+import { ACTIVITY_TYPES, ACTIVITY_CARD_SUBTITLE, SESSION_TYPES } from '../types';
 import { cn } from '@/lib/utils';
 import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
 
@@ -37,39 +37,6 @@ const ACTIVITY_EMOJI_BG: Record<string, string> = {
   golf: 'bg-[#34C759]',
   kayak: 'bg-[#06B6D4]',
   surf: 'bg-[#06B6D4]',
-};
-
-const ACTIVITY_SUBTITLE: Record<string, string> = {
-  course: 'Trail · route',
-  trail: 'Trail · route',
-  velo: 'Route · gravel · MTB',
-  vtt: 'Route · gravel · MTB',
-  bmx: 'Route · gravel · MTB',
-  gravel: 'Route · gravel · MTB',
-  natation: 'Piscine · open water',
-  marche: 'Marche · trek',
-  randonnee: 'Marche · trek',
-  ski: 'Alpin · rando',
-  snowboard: 'Alpin · rando',
-  yoga: 'Étirements · mobilité',
-  football: 'Match · entraînement',
-  basket: 'Terrain · match',
-  volley: 'Indoor · beach',
-  badminton: 'Simple · double',
-  pingpong: 'Loisir · compétition',
-  tennis: 'Simple · double',
-  escalade: 'Bloc · voie',
-  petanque: 'Loisir · concours',
-  rugby: 'XV · VII',
-  handball: 'Indoor · match',
-  fitness: 'Cardio · renfo',
-  musculation: 'Force · hypertrophie',
-  crossfit: 'WOD · force',
-  boxe: 'Technique · sparring',
-  arts_martiaux: 'Kata · combat',
-  golf: 'Practice · parcours',
-  kayak: 'Rivière · mer',
-  surf: 'Vagues · technique',
 };
 
 const ACTIVITY_TITLE_OVERRIDE: Record<string, string> = {
@@ -170,7 +137,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                       {ACTIVITY_TITLE_OVERRIDE[activity.value] ?? activity.label.replace(/^[^\s]+\s/, '')}
                     </div>
                     <div className="truncate text-[14px] leading-tight text-muted-foreground">
-                      {ACTIVITY_SUBTITLE[activity.value] ?? 'Sport'}
+                      {ACTIVITY_CARD_SUBTITLE[activity.value] ?? 'Sport'}
                     </div>
                   </div>
                   {selected ? (
@@ -211,7 +178,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                         {ACTIVITY_TITLE_OVERRIDE[activity.value] ?? activity.label.replace(/^[^\s]+\s/, '')}
                       </div>
                       <div className="truncate text-[14px] leading-tight text-muted-foreground">
-                        {ACTIVITY_SUBTITLE[activity.value] ?? 'Sport'}
+                        {ACTIVITY_CARD_SUBTITLE[activity.value] ?? 'Sport'}
                       </div>
                     </div>
                     {selected ? (

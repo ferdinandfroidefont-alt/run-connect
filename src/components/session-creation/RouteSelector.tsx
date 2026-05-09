@@ -18,12 +18,15 @@ interface RouteSelectorProps {
   selectedRouteId: string | null;
   onRouteSelect: (route: RouteData | null) => void;
   onAutoFill?: (data: { distance_km: string; elevation_gain: string }) => void;
+  /** Intègre le sélecteur dans un bloc continu (pas de carte/bord externe dédiée). */
+  embedded?: boolean;
 }
 
 export const RouteSelector: React.FC<RouteSelectorProps> = ({
   selectedRouteId,
   onRouteSelect,
   onAutoFill,
+  embedded = false,
 }) => {
   const { user } = useAuth();
   const [routes, setRoutes] = useState<RouteData[]>([]);
@@ -73,9 +76,13 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
     onRouteSelect(null);
   };
 
+  const outerCard = cn(
+    embedded ? 'rounded-none border-0 bg-transparent p-0' : 'rounded-xl border border-border bg-card p-4',
+  );
+
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className={outerCard}>
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 shrink-0 animate-pulse rounded-[7px] bg-secondary" />
           <div className="flex-1 space-y-2">
@@ -89,7 +96,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
 
   if (routes.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className={outerCard}>
         <div className="flex items-center gap-3">
           <EmojiBadge emoji="🗺️" className="bg-[#8E8E93]" />
           <div className="min-w-0 flex-1">
@@ -102,12 +109,16 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className={cn(!embedded && 'space-y-2')}>
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "rounded-xl bg-card border border-border/70 p-2.5 cursor-pointer transition-all",
-          isExpanded && "ring-2 ring-primary/30"
+          'cursor-pointer p-2.5 transition-all active:bg-secondary/50',
+          embedded
+            ? 'rounded-lg bg-secondary/35 ring-inset ring-1 ring-border/40 hover:bg-secondary/45'
+            : 'rounded-xl border border-border/70 bg-card hover:bg-muted/40',
+          isExpanded && embedded && 'bg-secondary/55 ring-primary/35',
+          isExpanded && !embedded && 'ring-2 ring-primary/30'
         )}
       >
         {selectedRoute ? (
@@ -156,17 +167,25 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="space-y-1 pt-1 max-h-48 overflow-y-auto">
+            <div className="max-h-48 space-y-0 overflow-y-auto pt-1">
               {routes.map((route) => (
                 <button
                   key={route.id}
                   type="button"
                   onClick={() => handleSelect(route)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left",
-                    selectedRouteId === route.id
-                      ? "bg-primary/10 border border-primary/30"
-                      : "bg-secondary hover:bg-secondary/80"
+                    'w-full text-left transition-colors',
+                    embedded
+                      ? 'flex items-center gap-3 border-border/55 border-t px-2 py-2.5 first:border-t-0 first:pt-0 hover:bg-secondary/40'
+                      : 'flex items-center gap-3 rounded-lg p-2.5',
+                    !embedded &&
+                      (selectedRouteId === route.id
+                        ? 'border border-primary/30 bg-primary/10 hover:bg-primary/15'
+                        : 'bg-secondary hover:bg-secondary/80'),
+                    embedded &&
+                      (selectedRouteId === route.id
+                        ? 'bg-primary/12'
+                        : 'bg-transparent')
                   )}
                 >
                   {selectedRouteId === route.id ? (

@@ -3540,7 +3540,8 @@ const Messages = () => {
           className="min-h-0 flex-1"
           contentScroll={activeRootTab !== "conversations"}
           pinHeader={activeRootTab === "conversations"}
-          forcePin={activeRootTab === "conversations"}
+          /** Même logique que le coaching : épinglé seulement sous WebKit iOS (clavier), pas sur desktop. */
+          forcePin={false}
           contentTopOffsetPx={0}
           headerWrapperClassName="z-50 apple-grouped-bg"
           header={

@@ -1,16 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { addDays, startOfWeek } from 'date-fns';
-import { SessionFormData, SelectedLocation } from '../types';
+import { SessionFormData, SelectedLocation, type SessionBlock } from '../types';
 import { cn } from '@/lib/utils';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { AppleStepFooter } from './AppleStepChrome';
 import { CoachingBlockEditorPanel, type CoachingSessionBlock } from '@/components/coaching/CoachingBlockEditorPanel';
 import { ModelsPage } from '@/components/coaching/models/ModelsPage';
 import type { SessionModelItem } from '@/components/coaching/models/types';
-import { parseRCC } from '@/lib/rccParser';
+import { parseRCC, rccToSessionBlocks } from '@/lib/rccParser';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  normalizeBlocksForStorage,
+  parseDurationSeconds,
+  parseDistanceMeters,
+  parsePaceToSecondsPerKm,
+  formatDurationSeconds,
+  formatDistanceMeters,
+} from '@/lib/sessionBlockCalculations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +31,28 @@ function paceStringToSecPerKm(pace?: string) {
 
 function uid() {
   return Math.random().toString(36).slice(2);
+}
+
+function isCoachingPositive(value?: number): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function paceSecPerKmToRunPaceString(sec?: number): string {
+  if (!sec || sec <= 0) return '';
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function blockIntensityToZone(intensity?: string | null): NonNullable<CoachingSessionBlock['zone']> {
+  const z = intensity?.trim().toLowerCase();
+  if (z === 'z1') return 'Z1';
+  if (z === 'z2') return 'Z2';
+  if (z === 'z3') return 'Z3';
+  if (z === 'z4') return 'Z4';
+  if (z === 'z5') return 'Z5';
+  if (z === 'z6') return 'Z6';
+  return 'Z2';
 }
 
 function parsedRccToCoachingBlocks(rccCode: string): CoachingSessionBlock[] {
@@ -39,6 +69,80 @@ function parsedRccToCoachingBlocks(rccCode: string): CoachingSessionBlock[] {
     intensityMode: 'zones' as const,
     zone: 'Z2' as const,
   }));
+}
+
+function coachingBlocksToSessionBlocks(blocks: CoachingSessionBlock[]): SessionBlock[] {
+  return blocks.map((block) => {
+    if (block.type === 'interval') {
+      const pace = paceSecPerKmToRunPaceString(block.paceSecPerKm);
+      const hasDistance = isCoachingPositive(block.distanceM);
+      return {
+        id: block.id,
+        type: 'interval',
+        repetitions: Math.max(1, block.repetitions ?? 1),
+        blockRepetitions: Math.max(1, block.blockRepetitions ?? 1),
+        effortType: hasDistance ? 'distance' : 'time',
+        effortDistance: hasDistance ? formatDistanceMeters(block.distanceM) : '',
+        effortDuration: hasDistance ? '' : formatDurationSeconds(block.durationSec),
+        effortPace: pace,
+        recoveryDuration: formatDurationSeconds(block.recoveryDurationSec),
+        recoveryType: 'trot',
+        effortIntensity: block.zone ? block.zone.toLowerCase() : undefined,
+      };
+    }
+    const sessionType: 'warmup' | 'steady' | 'cooldown' =
+      block.type === 'warmup' ? 'warmup' : block.type === 'cooldown' ? 'cooldown' : 'steady';
+    const pace = paceSecPerKmToRunPaceString(block.paceSecPerKm);
+    return {
+      id: block.id,
+      type: sessionType,
+      durationType: isCoachingPositive(block.distanceM) && !isCoachingPositive(block.durationSec) ? 'distance' : 'time',
+      duration: formatDurationSeconds(block.durationSec),
+      distance: formatDistanceMeters(block.distanceM),
+      pace,
+      intensity: block.zone?.toLowerCase(),
+    };
+  });
+}
+
+function sessionBlocksToCoachingBlocks(blocks: SessionBlock[]): CoachingSessionBlock[] {
+  return blocks.map((b, index) => {
+    if (b.type === 'interval') {
+      const effortDuration = parseDurationSeconds(b.effortDuration);
+      const effortDistance = parseDistanceMeters(b.effortDistance);
+      const recoveryDuration = parseDurationSeconds(b.recoveryDuration);
+      return {
+        id: b.id || uid(),
+        order: index + 1,
+        type: 'interval',
+        durationSec: b.effortType === 'distance' ? undefined : effortDuration ?? undefined,
+        distanceM: effortDistance ?? undefined,
+        paceSecPerKm: parsePaceToSecondsPerKm(b.effortPace) ?? undefined,
+        repetitions: b.repetitions,
+        blockRepetitions: b.blockRepetitions,
+        recoveryDurationSec: recoveryDuration ?? undefined,
+        intensityMode: 'zones',
+        zone: blockIntensityToZone(b.effortIntensity),
+      };
+    }
+    const durationSec = parseDurationSeconds(b.duration);
+    const distanceM = parseDistanceMeters(b.distance);
+    const mapType = (): CoachingSessionBlock['type'] => {
+      if (b.type === 'warmup') return 'warmup';
+      if (b.type === 'cooldown') return 'cooldown';
+      return 'steady';
+    };
+    return {
+      id: b.id || uid(),
+      order: index + 1,
+      type: mapType(),
+      durationSec: durationSec ?? undefined,
+      distanceM: distanceM ?? undefined,
+      paceSecPerKm: parsePaceToSecondsPerKm(b.pace) ?? undefined,
+      intensityMode: 'zones',
+      zone: blockIntensityToZone(b.intensity),
+    };
+  });
 }
 
 // ─── Modèles de base ──────────────────────────────────────────────────────────
@@ -81,6 +185,8 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   const [builderTab, setBuilderTab] = useState<'build' | 'templates'>('build');
   const [coachingBlocks, setCoachingBlocks] = useState<CoachingSessionBlock[]>([]);
   const [myModels, setMyModels] = useState<SessionModelItem[]>([]);
+  const [schemaEditorKey, setSchemaEditorKey] = useState(0);
+  const hydratedStructuredRef = useRef(false);
 
   // Auto-generate title suggestion
   useEffect(() => {
@@ -94,6 +200,21 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       });
     }
   }, [formData.activity_type, formData.title, onFormDataChange, selectedLocation]);
+
+  useEffect(() => {
+    if (formData.session_mode === 'structured' && formData.blocks?.length) {
+      if (!hydratedStructuredRef.current) {
+        setCoachingBlocks(sessionBlocksToCoachingBlocks(formData.blocks));
+        setSchemaEditorKey((k) => k + 1);
+        hydratedStructuredRef.current = true;
+      }
+      return;
+    }
+    if (formData.session_mode === 'simple' && (!formData.blocks || formData.blocks.length === 0)) {
+      hydratedStructuredRef.current = false;
+      setCoachingBlocks([]);
+    }
+  }, [formData.session_mode, formData.blocks]);
 
   // Charger les modèles de l'utilisateur depuis Supabase
   useEffect(() => {
@@ -119,21 +240,46 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       });
   }, [user]);
 
-  // Jours de la semaine courante (requis par ModelsPage)
+  // Jours de la semaine courante (requis par ModelsPage côté planning ; inutilisé en flux séance)
   const weekDays = useMemo(() => {
     const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
     return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   }, []);
 
-  // Applique un modèle au builder : charge ses blocs et bascule vers "Construire"
-  const applyModel = (model: SessionModelItem) => {
-    const blocks = parsedRccToCoachingBlocks(model.rccCode);
-    if (blocks.length) setCoachingBlocks(blocks);
-    if (model.title && !formData.title) onFormDataChange({ title: model.title });
+  const handleCoachingBlocksChange = (next: CoachingSessionBlock[]) => {
+    setCoachingBlocks(next);
+    const sessionBlocks = normalizeBlocksForStorage(coachingBlocksToSessionBlocks(next));
+    onFormDataChange({
+      blocks: sessionBlocks,
+      session_mode: sessionBlocks.length ? 'structured' : 'simple',
+    });
+  };
+
+  const applyModelToSession = (model: SessionModelItem) => {
+    hydratedStructuredRef.current = true;
+    const parsed = parseRCC(model.rccCode);
+    const raw = rccToSessionBlocks(parsed.blocks) as SessionBlock[];
+    const blocks = normalizeBlocksForStorage(raw);
+
+    const obj = model.objective?.trim();
+    const desc = formData.description?.trim();
+    let description = formData.description;
+    if (obj && (!desc || !desc.includes(obj))) {
+      description = desc ? `${desc}\n\nObjectif : ${obj}` : `Objectif : ${obj}`;
+    }
+
+    onFormDataChange({
+      blocks,
+      session_mode: blocks.length ? 'structured' : 'simple',
+      title: model.title?.trim() || formData.title,
+      ...(description !== formData.description ? { description } : {}),
+    });
+    setCoachingBlocks(parsedRccToCoachingBlocks(model.rccCode));
+    setSchemaEditorKey((k) => k + 1);
     setBuilderTab('build');
   };
 
-  const sportProp = useMemo((): "running" | "cycling" | "swimming" | "strength" => {
+  const sportProp = useMemo((): 'running' | 'cycling' | 'swimming' | 'strength' => {
     const t = formData.activity_type;
     if (t === 'cycling' || t === 'velo') return 'cycling';
     if (t === 'swimming' || t === 'natation') return 'swimming';
@@ -194,9 +340,10 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
 
         {builderTab === 'build' ? (
           <CoachingBlockEditorPanel
+            key={schemaEditorKey}
             sport={sportProp}
             initialBlocks={coachingBlocks.length ? coachingBlocks : undefined}
-            onChange={setCoachingBlocks}
+            onChange={handleCoachingBlocksChange}
           />
         ) : (
           <ModelsPage
@@ -205,9 +352,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             myModels={myModels}
             baseModels={BASE_MODELS}
             onCreateModel={() => setBuilderTab('build')}
-            onAddToPlanning={(model) => applyModel(model)}
-            onEditModel={(model) => applyModel(model)}
-            onDuplicateModel={() => {/* non applicable dans ce contexte */}}
+            onApplyToSession={(model) => applyModelToSession(model)}
+            onEditModel={(model) => applyModelToSession(model)}
+            onDuplicateModel={() => {
+              /* non applicable dans ce contexte */
+            }}
             onDeleteModel={async (model) => {
               if (model.source !== 'mine') return;
               await supabase.from('coaching_templates').delete().eq('id', model.id);

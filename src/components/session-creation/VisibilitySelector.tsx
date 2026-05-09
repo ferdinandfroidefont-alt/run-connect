@@ -27,6 +27,8 @@ interface VisibilitySelectorProps {
   clubId?: string | null;
   /** N’affiche que la section « masquer certains amis » (liste déroulante). */
   friendsHiddenSectionOnly?: boolean;
+  /** Fusionné dans un bloc parent continu (sans cartes imbriquées). */
+  embedded?: boolean;
 }
 
 const VISIBILITY_OPTIONS = [
@@ -67,6 +69,7 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
   onHiddenUsersChange,
   clubId,
   friendsHiddenSectionOnly = false,
+  embedded = false,
 }) => {
   const { user } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -169,7 +172,12 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl bg-card">
+            <div
+              className={cn(
+                'overflow-hidden rounded-xl bg-card',
+                embedded && 'rounded-none border-0 bg-transparent'
+              )}
+            >
               <div className="border-b border-border p-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -239,8 +247,8 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 px-1">
+    <div className={embedded ? 'divide-y divide-border/60' : 'space-y-4'}>
+      <div className={cn('flex items-center gap-2', embedded ? 'px-4 py-3' : 'px-1')}>
         <EmojiBadge emoji="👁️" className="bg-[#5856D6]" />
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Qui peut voir
@@ -248,7 +256,12 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
       </div>
 
       {/* Visibility options - iOS grouped list style */}
-      <div className="bg-card rounded-xl overflow-hidden divide-y divide-border">
+      <div
+        className={cn(
+          'divide-y divide-border overflow-hidden',
+          embedded ? 'rounded-none bg-transparent' : 'rounded-xl bg-card'
+        )}
+      >
         {VISIBILITY_OPTIONS.map((option) => {
           const isSelected = visibilityType === option.value;
           const isDisabled = 
@@ -322,15 +335,20 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
 
       {/* Hidden users section - only show for friends visibility */}
       {visibilityType === 'friends' && friends.length > 0 && (
-        <>
-          <div className="mt-6 flex items-center gap-2 px-1">
+        <div className={embedded ? 'contents' : 'mt-6 space-y-4'}>
+          <div className={cn('flex items-center gap-2', embedded ? 'px-4 py-3' : 'px-1')}>
             <EmojiBadge emoji="🙈" className="bg-[#AF52DE]" />
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Masquer pour (optionnel)
             </div>
           </div>
 
-          <div className="bg-card rounded-xl overflow-hidden">
+          <div
+            className={cn(
+              'overflow-hidden',
+              embedded ? 'rounded-none bg-transparent' : 'rounded-xl bg-card'
+            )}
+          >
             {/* Search bar */}
             <div className="p-3 border-b border-border">
               <div className="relative">
@@ -396,7 +414,7 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

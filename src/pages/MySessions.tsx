@@ -626,7 +626,7 @@ export default function MySessions() {
       <>
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
           {/* iOS Header */}
-          <div className="z-50 shrink-0 bg-card pt-[var(--safe-area-top)]">
+          <div className="z-50 shrink-0 bg-card pt-[env(safe-area-inset-top,0px)]">
             <div className="flex items-center justify-between px-4 py-2">
               <Button
                 variant="ghost"
@@ -1009,7 +1009,7 @@ export default function MySessions() {
           </div>
         </div>
 
-        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg" style={{ paddingTop: "calc(var(--safe-area-top) + 96px)" }}>
+        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 96px)" }}>
           <>
             {loading ? (
                 <div className="space-y-3 px-4">

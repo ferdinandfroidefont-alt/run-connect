@@ -156,6 +156,40 @@ export const ACTIVITY_TYPES = [
   { value: 'surf', label: '🏄 Surf', icon: '🏄' },
 ];
 
+/** Sous-titres cartes sport : une ligne par discipline, sans recouper les autres cartes listées dans `ACTIVITY_TYPES`. */
+export const ACTIVITY_CARD_SUBTITLE: Record<string, string> = {
+  course: 'Route · piste',
+  trail: 'Sentiers · dénivelé',
+  velo: 'Route · endurance',
+  vtt: 'Chemins · tout-terrain',
+  bmx: 'Piste · park',
+  gravel: 'Chemins · gravier',
+  natation: 'Piscine · open water',
+  marche: 'Marche · trek',
+  randonnee: 'Marche · trek',
+  ski: 'Alpin · rando',
+  snowboard: 'Alpin · rando',
+  yoga: 'Étirements · mobilité',
+  football: 'Match · entraînement',
+  basket: 'Terrain · match',
+  volley: 'Indoor · beach',
+  badminton: 'Simple · double',
+  pingpong: 'Loisir · compétition',
+  tennis: 'Simple · double',
+  escalade: 'Bloc · voie',
+  petanque: 'Loisir · concours',
+  rugby: 'XV · VII',
+  handball: 'Indoor · match',
+  fitness: 'Cardio · renfo',
+  musculation: 'Force · hypertrophie',
+  crossfit: 'WOD · force',
+  boxe: 'Technique · sparring',
+  arts_martiaux: 'Kata · combat',
+  golf: 'Practice · parcours',
+  kayak: 'Rivière · mer',
+  surf: 'Vagues · technique',
+};
+
 export const SESSION_TYPES = [
   { value: 'footing', label: 'Footing', description: 'Sortie tranquille à allure confortable' },
   { value: 'sortie_longue', label: 'Sortie longue', description: 'Endurance fondamentale sur longue distance' },

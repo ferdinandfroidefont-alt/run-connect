@@ -18,7 +18,10 @@ interface ModelsPageProps {
   myModels: SessionModelItem[];
   baseModels: SessionModelItem[];
   onCreateModel: () => void;
-  onAddToPlanning: (model: SessionModelItem, day: Date, replaceExisting: boolean) => void;
+  /** Flux coach : choix du jour puis insertion au planning. */
+  onAddToPlanning?: (model: SessionModelItem, day: Date, replaceExisting: boolean) => void;
+  /** Assistant « créer une séance » : appliquer le schéma à la séance en cours (pas de planning). */
+  onApplyToSession?: (model: SessionModelItem) => void;
   onEditModel: (model: SessionModelItem) => void;
   onDuplicateModel: (model: SessionModelItem) => void;
   onDeleteModel: (model: SessionModelItem) => void;
@@ -37,6 +40,7 @@ export function ModelsPage({
   baseModels,
   onCreateModel,
   onAddToPlanning,
+  onApplyToSession,
   onEditModel,
   onDuplicateModel,
   onDeleteModel,
@@ -46,6 +50,19 @@ export function ModelsPage({
   const [filter, setFilter] = useState<ModelSportFilter>("all");
   const [selectedModel, setSelectedModel] = useState<SessionModelItem | null>(null);
   const [sheetModel, setSheetModel] = useState<SessionModelItem | null>(null);
+
+  const sessionFlow = Boolean(onApplyToSession);
+  const addButtonLabel = sessionFlow ? "Utiliser pour cette séance" : "Ajouter au planning";
+
+  const pickModel = (model: SessionModelItem) => {
+    if (onApplyToSession) {
+      onApplyToSession(model);
+      setSheetModel(null);
+      setSelectedModel(null);
+      return;
+    }
+    setSheetModel(model);
+  };
 
   const list = activeTab === "mine" ? myModels : baseModels;
   const filtered = useMemo(() => {
@@ -66,20 +83,27 @@ export function ModelsPage({
   if (selectedModel) {
     return (
       <>
-        <ModelDetail model={selectedModel} onBack={() => setSelectedModel(null)} onAdd={() => setSheetModel(selectedModel)} />
-        <AddToPlanningSheet
-          open={!!sheetModel}
-          model={sheetModel}
-          days={weekDays}
-          getExistingSessionTitle={(day) => existingSessionsByDay[day.toISOString().slice(0, 10)]}
-          onClose={() => setSheetModel(null)}
-          onConfirm={(day, replaceExisting) => {
-            if (!sheetModel) return;
-            onAddToPlanning(sheetModel, day, replaceExisting);
-            setSheetModel(null);
-            setSelectedModel(null);
-          }}
+        <ModelDetail
+          model={selectedModel}
+          onBack={() => setSelectedModel(null)}
+          onAdd={() => pickModel(selectedModel)}
+          addButtonLabel={addButtonLabel}
         />
+        {!sessionFlow ? (
+          <AddToPlanningSheet
+            open={!!sheetModel}
+            model={sheetModel}
+            days={weekDays}
+            getExistingSessionTitle={(day) => existingSessionsByDay[day.toISOString().slice(0, 10)]}
+            onClose={() => setSheetModel(null)}
+            onConfirm={(day, replaceExisting) => {
+              if (!sheetModel || !onAddToPlanning) return;
+              onAddToPlanning(sheetModel, day, replaceExisting);
+              setSheetModel(null);
+              setSelectedModel(null);
+            }}
+          />
+        ) : null}
       </>
     );
   }
@@ -130,8 +154,9 @@ export function ModelsPage({
                 previewLine={preview}
                 accentColor={workoutAccentColor(segments, model.activityType as any)}
                 miniProfile={renderWorkoutMiniProfile(segments, { density: "compact" })}
+                addButtonLabel={addButtonLabel}
                 onOpen={() => setSelectedModel(model)}
-                onAdd={() => setSheetModel(model)}
+                onAdd={() => pickModel(model)}
                 onMenu={
                   model.source === "mine"
                     ? () => {
@@ -154,19 +179,20 @@ export function ModelsPage({
         </div>
       </div>
 
-      <AddToPlanningSheet
-        open={!!sheetModel}
-        model={sheetModel}
-        days={weekDays}
-        getExistingSessionTitle={(day) => existingSessionsByDay[day.toISOString().slice(0, 10)]}
-        onClose={() => setSheetModel(null)}
-        onConfirm={(day, replaceExisting) => {
-          if (!sheetModel) return;
-          onAddToPlanning(sheetModel, day, replaceExisting);
-          setSheetModel(null);
-        }}
-      />
+      {!sessionFlow ? (
+        <AddToPlanningSheet
+          open={!!sheetModel}
+          model={sheetModel}
+          days={weekDays}
+          getExistingSessionTitle={(day) => existingSessionsByDay[day.toISOString().slice(0, 10)]}
+          onClose={() => setSheetModel(null)}
+          onConfirm={(day, replaceExisting) => {
+            if (!sheetModel || !onAddToPlanning) return;
+            onAddToPlanning(sheetModel, day, replaceExisting);
+            setSheetModel(null);
+          }}
+        />
+      ) : null}
     </>
   );
 }
-

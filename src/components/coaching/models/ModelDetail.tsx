@@ -10,9 +10,10 @@ interface ModelDetailProps {
   model: SessionModelItem;
   onBack: () => void;
   onAdd: () => void;
+  addButtonLabel?: string;
 }
 
-export function ModelDetail({ model, onBack, onAdd }: ModelDetailProps) {
+export function ModelDetail({ model, onBack, onAdd, addButtonLabel = "Ajouter au planning" }: ModelDetailProps) {
   const parsed = parseRCC(model.rccCode);
   const segments = buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any });
   const metrics = resolveWorkoutMetrics({ segments });
@@ -57,7 +58,7 @@ export function ModelDetail({ model, onBack, onAdd }: ModelDetailProps) {
 
       <Button type="button" className="h-11 w-full rounded-xl text-[15px] font-semibold" onClick={onAdd}>
         <Plus className="mr-1.5 h-4 w-4" />
-        Ajouter au planning
+        {addButtonLabel}
       </Button>
     </div>
   );

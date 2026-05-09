@@ -20,7 +20,7 @@ const sportConfig: Record<
   Exclude<ProfileSportRecordKey, "other">,
   { icon: typeof PersonStanding; color: string; label: string }
 > = {
-  running: { icon: PersonStanding, color: "bg-orange-500", label: PROFILE_SPORT_RECORD_LABELS.running },
+  running: { icon: PersonStanding, color: "bg-primary", label: PROFILE_SPORT_RECORD_LABELS.running },
   cycling: { icon: Bike, color: "bg-green-500", label: PROFILE_SPORT_RECORD_LABELS.cycling },
   swimming: { icon: Waves, color: "bg-blue-500", label: PROFILE_SPORT_RECORD_LABELS.swimming },
   triathlon: { icon: Trophy, color: "bg-purple-500", label: PROFILE_SPORT_RECORD_LABELS.triathlon },
@@ -43,6 +43,23 @@ function legacyEntries(rec: unknown): { label: string; value: string }[] {
       label: String(distance),
       value: String(time),
     }));
+}
+
+/**
+ * Valeurs issues de ProfileSportRecordsEdit : "durée - distance - allure|vitesse".
+ * Sur le profil on n'affiche que durée + distance (l'allure est un détail d'édition).
+ */
+function formatRecordValueForProfileList(raw: string): string {
+  const parts = raw
+    .split(" - ")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  if (parts.length < 3) return raw.trim();
+  const last = parts[parts.length - 1] ?? "";
+  const isPaceOrSpeedMeta =
+    /\/km\s*$/i.test(last) || /\/100m\s*$/i.test(last) || /\bkm\/h\s*$/i.test(last);
+  if (!isPaceOrSpeedMeta) return raw.trim();
+  return `${parts[0]} · ${parts[1]}`;
 }
 
 export function ProfileRecordsDisplay({
@@ -178,7 +195,7 @@ export function ProfileRecordsDisplay({
                   </div>
                 </div>
                 <p className="shrink-0 text-right font-mono text-ios-body font-semibold tabular-nums text-primary">
-                  {row.record_value}
+                  {formatRecordValueForProfileList(row.record_value)}
                 </p>
               </div>
             );
