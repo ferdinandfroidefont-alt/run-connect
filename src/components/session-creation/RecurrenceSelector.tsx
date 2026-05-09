@@ -1,7 +1,7 @@
 import React from 'react';
-import { Repeat, Calendar } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { RecurrenceType } from './types';
+import { EmojiBadge } from '@/components/apple';
 
 interface RecurrenceSelectorProps {
   recurrenceType: RecurrenceType;
@@ -23,15 +23,10 @@ export const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
   return (
     <div className="space-y-3">
       {/* Toggle récurrence */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#FF9500] flex items-center justify-center">
-            <Repeat className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-[15px] font-medium text-foreground">Séance récurrente</p>
-            <p className="text-[13px] text-muted-foreground">Répéter chaque semaine</p>
-          </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-medium tracking-tight text-foreground">Séance récurrente</p>
+          <p className="text-[13px] text-muted-foreground">Répéter chaque semaine</p>
         </div>
         <Switch
           checked={isRecurring}
@@ -61,9 +56,9 @@ export const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
               </button>
             ))}
           </div>
-          <div className="mt-3 p-3 rounded-xl bg-secondary/50 flex items-start gap-2">
-            <Calendar className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-            <p className="text-[13px] text-muted-foreground">
+          <div className="mt-3 flex items-start gap-3 rounded-xl bg-secondary/50 p-3">
+            <EmojiBadge emoji="📅" className="bg-[#0A66D0]" />
+            <p className="min-w-0 text-[13px] leading-snug text-muted-foreground">
               {recurrenceCount} séances seront créées automatiquement, une chaque semaine au même jour et heure.
             </p>
           </div>

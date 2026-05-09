@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, Globe, Building2, Search, Lock, Check, Crown } from 'lucide-react';
+import { Search, Lock, Check, Crown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { EmojiBadge } from '@/components/apple';
 import { cn } from '@/lib/utils';
 
 export type VisibilityType = 'friends' | 'club' | 'public';
@@ -33,9 +34,8 @@ const VISIBILITY_OPTIONS = [
     value: 'friends' as VisibilityType,
     label: 'Amis uniquement',
     description: 'Visible par vos amis',
-    icon: Users,
-    color: 'bg-green-500',
-    iconColor: 'text-green-500',
+    emoji: '👥',
+    badgeClass: 'bg-[#34C759]',
     recommended: true,
     premium: false,
   },
@@ -43,9 +43,8 @@ const VISIBILITY_OPTIONS = [
     value: 'club' as VisibilityType,
     label: 'Club',
     description: 'Visible par les membres du club',
-    icon: Building2,
-    color: 'bg-blue-500',
-    iconColor: 'text-blue-500',
+    emoji: '🏢',
+    badgeClass: 'bg-[#0A66D0]',
     recommended: false,
     premium: false,
   },
@@ -53,9 +52,8 @@ const VISIBILITY_OPTIONS = [
     value: 'public' as VisibilityType,
     label: 'Public',
     description: 'Visible localement dans Découvrir',
-    icon: Globe,
-    color: 'bg-orange-500',
-    iconColor: 'text-orange-500',
+    emoji: '🌐',
+    badgeClass: 'bg-[#FF9500]',
     recommended: false,
     premium: true,
   },
@@ -164,8 +162,11 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
       <>
         {visibilityType === 'friends' && (
           <>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1 pt-1">
-              Masquer pour (optionnel)
+            <div className="flex items-center gap-2 px-1 pt-1">
+              <EmojiBadge emoji="🙈" className="bg-[#AF52DE]" />
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Masquer pour (optionnel)
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-xl bg-card">
@@ -239,9 +240,11 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Section header */}
-      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-        Qui peut voir
+      <div className="flex items-center gap-2 px-1">
+        <EmojiBadge emoji="👁️" className="bg-[#5856D6]" />
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Qui peut voir
+        </div>
       </div>
 
       {/* Visibility options - iOS grouped list style */}
@@ -263,13 +266,7 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
                 isSelected && "bg-primary/5"
               )}
             >
-              {/* Icon */}
-              <div className={cn(
-                "w-9 h-9 rounded-lg flex items-center justify-center",
-                option.color + "/10"
-              )}>
-                <option.icon className={cn("w-5 h-5", option.iconColor)} />
-              </div>
+              <EmojiBadge emoji={option.emoji} className={option.badgeClass} />
 
               {/* Content */}
               <div className="flex-1 min-w-0">
@@ -326,8 +323,11 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
       {/* Hidden users section - only show for friends visibility */}
       {visibilityType === 'friends' && friends.length > 0 && (
         <>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mt-6">
-            Masquer pour (optionnel)
+          <div className="mt-6 flex items-center gap-2 px-1">
+            <EmojiBadge emoji="🙈" className="bg-[#AF52DE]" />
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Masquer pour (optionnel)
+            </div>
           </div>
 
           <div className="bg-card rounded-xl overflow-hidden">

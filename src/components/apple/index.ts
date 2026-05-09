@@ -10,6 +10,7 @@
 
 export { PillButton } from "./PillButton";
 export { SocialButton } from "./SocialButton";
+export { EmojiBadge, EMOJI_BADGE_BASE_CLASS } from "./EmojiBadge";
 export { Cell } from "./Cell";
 export { Group } from "./Group";
 export { NavBar } from "./NavBar";

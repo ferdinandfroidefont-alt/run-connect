@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Route, ChevronRight, Check, X, Mountain, Ruler, Sparkles } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { EmojiBadge } from '@/components/apple';
 
 interface RouteData {
   id: string;
@@ -74,12 +75,12 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
 
   if (loading) {
     return (
-      <div className="rounded-xl bg-card border border-border p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-secondary animate-pulse" />
+          <div className="h-8 w-8 shrink-0 animate-pulse rounded-[7px] bg-secondary" />
           <div className="flex-1 space-y-2">
-            <div className="h-4 bg-secondary rounded animate-pulse w-24" />
-            <div className="h-3 bg-secondary rounded animate-pulse w-32" />
+            <div className="h-4 w-24 animate-pulse rounded bg-secondary" />
+            <div className="h-3 w-32 animate-pulse rounded bg-secondary" />
           </div>
         </div>
       </div>
@@ -88,12 +89,10 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
 
   if (routes.length === 0) {
     return (
-      <div className="rounded-xl bg-card border border-border p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-            <Route className="w-5 h-5 text-muted-foreground" />
-          </div>
-          <div className="flex-1">
+          <EmojiBadge emoji="🗺️" className="bg-[#8E8E93]" />
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-muted-foreground">Aucun itinéraire</p>
             <p className="text-xs text-muted-foreground/70">Créez un itinéraire sur la carte</p>
           </div>
@@ -113,28 +112,17 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
       >
         {selectedRoute ? (
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Route className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium truncate">{selectedRoute.name}</p>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <EmojiBadge emoji="🗺️" className="bg-[#0A66D0]" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-medium">{selectedRoute.name}</p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
                 {selectedRoute.total_distance && (
-                  <span className="flex items-center gap-1">
-                    <Ruler className="w-3 h-3" />
-                    {(selectedRoute.total_distance / 1000).toFixed(1)} km
-                  </span>
+                  <span>{(selectedRoute.total_distance / 1000).toFixed(1)} km</span>
                 )}
                 {selectedRoute.total_elevation_gain && (
-                  <span className="flex items-center gap-1">
-                    <Mountain className="w-3 h-3" />
-                    D+ {selectedRoute.total_elevation_gain}m
-                  </span>
+                  <span>D+ {selectedRoute.total_elevation_gain} m</span>
                 )}
-                <span className="flex items-center gap-1 text-primary">
-                  <Sparkles className="w-3 h-3" />
-                  Auto
-                </span>
+                <span className="text-primary">✨ Auto</span>
               </div>
             </div>
             <button
@@ -146,10 +134,8 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#ff9500]/15 flex items-center justify-center">
-              <MapPin className="w-4 h-4 text-[#ff9500]" />
-            </div>
-            <div className="flex-1 min-w-0">
+            <EmojiBadge emoji="📍" className="bg-[#FF9500]" />
+            <div className="min-w-0 flex-1">
               <p className="text-[14px] font-medium">Choisir un itinéraire</p>
               <p className="text-[11px] text-muted-foreground">Auto-remplir distance et D+</p>
             </div>
@@ -183,16 +169,11 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
                       : "bg-secondary hover:bg-secondary/80"
                   )}
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center",
-                    selectedRouteId === route.id ? "bg-primary text-primary-foreground" : "bg-card"
-                  )}>
-                    {selectedRouteId === route.id ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Route className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </div>
+                  {selectedRouteId === route.id ? (
+                    <EmojiBadge emoji="✓" className="bg-primary text-primary-foreground" />
+                  ) : (
+                    <EmojiBadge emoji="🗺️" className="bg-[#8E8E93]" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{route.name}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">

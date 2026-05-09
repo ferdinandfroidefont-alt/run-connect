@@ -4,10 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Check,
   MapPin,
-  EyeOff,
-  Repeat,
-  Radio,
-  ImagePlus,
   X,
 } from 'lucide-react';
 import {
@@ -23,7 +19,7 @@ import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
 
 import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
-import { Group, Cell } from '@/components/apple';
+import { Group, Cell, EmojiBadge } from '@/components/apple';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -191,7 +187,13 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         {/* Photo, itinéraire, visibilité, live tracking, note — avant le booster */}
         {!embedInFinalize && (
           <>
-            <AppleGroup title="Illustration">
+            <AppleGroup>
+              <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
+                <EmojiBadge emoji="📷" className="bg-[#FF9500]" />
+                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+                  Illustration
+                </span>
+              </div>
               <input
                 ref={photoInputRef}
                 type="file"
@@ -205,7 +207,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               {!imagePreview ? (
                 <Cell
                   icon={<span className="text-[15px]">📷</span>}
-                  iconBg="#ff9500"
+                  iconBg="#FF9500"
                   title="Ajouter une photo"
                   subtitle="Optionnel · JPG, PNG ou WebP, max 5 Mo"
                   accessory="chevron"
@@ -233,8 +235,8 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                     </button>
                   </div>
                   <Cell
-                    icon={<ImagePlus className="h-[15px] w-[15px]" />}
-                    iconBg="#ff9500"
+                    icon={<span className="text-[15px]">📷</span>}
+                    iconBg="#FF9500"
                     title="Remplacer la photo"
                     subtitle="Choisir une autre image"
                     accessory="chevron"
@@ -246,8 +248,11 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             </AppleGroup>
 
             <section className="space-y-2">
-              <div className="px-4 text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
-                Itinéraire
+              <div className="flex items-center gap-2 px-4">
+                <EmojiBadge emoji="🗺️" className="bg-[#0A66D0]" />
+                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+                  Itinéraire
+                </span>
               </div>
               <RouteSelector
                 selectedRouteId={formData.route_id}
@@ -262,24 +267,22 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               />
             </section>
 
-            <AppleGroup title="Visibilité">
-              <div className="px-4 py-3">
-                <VisibilitySelector
-                  visibilityType={formData.visibility_type}
-                  hiddenFromUsers={formData.hidden_from_users}
-                  isPremium={isPremium}
-                  onVisibilityChange={handleVisibilityChange}
-                  onHiddenUsersChange={handleHiddenUsersChange}
-                  clubId={formData.club_id}
-                />
-              </div>
-            </AppleGroup>
+            <div className="px-1">
+              <VisibilitySelector
+                visibilityType={formData.visibility_type}
+                hiddenFromUsers={formData.hidden_from_users}
+                isPremium={isPremium}
+                onVisibilityChange={handleVisibilityChange}
+                onHiddenUsersChange={handleHiddenUsersChange}
+                clubId={formData.club_id}
+              />
+            </div>
 
             {formData.visibility_type === 'friends' &&
               formData.hidden_from_users?.length > 0 && (
-                <div className="flex items-center gap-2 px-4 text-[12px] text-amber-500">
-                  <EyeOff className="h-3.5 w-3.5" />
-                  <span>
+                <div className="flex items-center gap-3 px-4 text-[12px] text-amber-500">
+                  <EmojiBadge emoji="🙈" className="bg-[#FF9500]/25" />
+                  <span className="min-w-0">
                     {formData.hidden_from_users.length} ami
                     {formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance
                   </span>
@@ -288,16 +291,12 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
 
             <AppleGroup>
               <div className="flex items-start gap-3 px-4 py-3">
-                <div
-                  className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]',
-                    formData.live_tracking_enabled
-                      ? 'bg-emerald-500/15 text-emerald-600'
-                      : 'bg-muted text-muted-foreground'
-                  )}
-                >
-                  <Radio className="h-4 w-4" />
-                </div>
+                <EmojiBadge
+                  emoji={formData.live_tracking_enabled ? '📡' : '📍'}
+                  className={
+                    formData.live_tracking_enabled ? 'bg-[#34C759]' : 'bg-[#8E8E93]'
+                  }
+                />
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <p className="text-[15px] font-medium tracking-tight text-foreground">
                     Live tracking
@@ -316,7 +315,14 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               </div>
             </AppleGroup>
 
-            <AppleGroup title="Note">
+            <AppleGroup>
+              <div className="flex items-start gap-3 border-b border-border/50 px-4 py-3">
+                <EmojiBadge emoji="📝" className="bg-[#AF52DE]" />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium tracking-tight text-foreground">Note</p>
+                  <p className="text-[13px] text-muted-foreground">Optionnel · pour les participants</p>
+                </div>
+              </div>
               <div className="min-w-0 px-4 py-3">
                 <Textarea
                   value={formData.description}
@@ -352,7 +358,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             />
             <Cell
               icon={<span className="text-[15px]">📺</span>}
-              iconBg="#ff9500"
+              iconBg="#FF9500"
               title="Regarder une vidéo · 15s"
               subtitle="Pour activer le boost gratuitement"
               onClick={() =>
@@ -364,7 +370,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             />
             <Cell
               icon={<span className="text-[15px]">✨</span>}
-              iconBg="#af52de"
+              iconBg="#AF52DE"
               title="Passer Premium"
               subtitle="Boost illimité"
               accent
@@ -374,8 +380,13 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
           </Group>
         ) : null}
 
-        {/* Recurrence */}
-        <AppleGroup title="Récurrence">
+        <AppleGroup>
+          <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
+            <EmojiBadge emoji="🔁" className="bg-[#FF9500]" />
+            <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+              Récurrence
+            </span>
+          </div>
           <div className="px-4 py-3">
             <RecurrenceSelector
               recurrenceType={formData.recurrence_type}
@@ -387,9 +398,9 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         </AppleGroup>
 
         {formData.recurrence_type === 'weekly' && (
-          <div className="flex items-center gap-2 px-4 text-[12px] text-primary">
-            <Repeat className="h-3.5 w-3.5" />
-            <span>
+          <div className="flex items-center gap-3 px-4 text-[12px] text-primary">
+            <EmojiBadge emoji="✨" className="bg-primary/15" />
+            <span className="min-w-0">
               {formData.recurrence_count} séances seront créées automatiquement
             </span>
           </div>

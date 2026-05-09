@@ -858,9 +858,9 @@ html, body {
   }
   .apple-cell-last { border-bottom: none; }
   .apple-cell-icon {
-    @apply flex h-[29px] w-[29px] shrink-0 items-center justify-center rounded-[6.5px] text-white;
+    /* Même géométrie que les badges sport (ActivityStep) + Cell paramètres (icônes blanches via le node `icon`). */
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[15px] leading-none;
     background: hsl(var(--primary));
-    font-size: 15px;
   }
   .apple-cell-title {
     @apply min-w-0 flex-1 truncate text-[17px] tracking-[-0.4px] text-foreground;
