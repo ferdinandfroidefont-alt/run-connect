@@ -53,6 +53,12 @@ export function PlanningHeader({
   /** Dès qu’une action fiche club est fournie, afficher le bouton (initiale de secours si pas encore nom/photo). */
   const showClubMark = Boolean(onPressClubAvatar);
   const showOnlyClubAction = showClubMark && !showBellAndSettings;
+  /**
+   * Mon plan / Planification : pas de cloche ni réglages dans la barre compacte.
+   * Tant que les clubs ne sont pas résolus, éviter la pastille RC en haut puis un saut vers l’avatar à côté du titre :
+   * on aligne toujours marque ou avatar sur la ligne du grand titre.
+   */
+  const brandBesideLargeTitle = hideDrawerActions && !coachLandingBrand;
   const clubInitial = (clubName || "Club").trim().slice(0, 1).toUpperCase() || "C";
   const clubCompactBarClass =
     "inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary active:opacity-80";
@@ -73,6 +79,20 @@ export function PlanningHeader({
       )}
     </button>
   );
+  const largeTitleAccessory =
+    brandBesideLargeTitle ? (
+      showClubMark ? (
+        clubMarkButton
+      ) : (
+        <RunConnectHeaderMark />
+      )
+    ) : showOnlyClubAction ? (
+      clubMarkButton
+    ) : undefined;
+
+  const alignLargeTitleAccessory =
+    Boolean(largeTitleAccessory) && (brandBesideLargeTitle || showOnlyClubAction);
+
   return (
     <MainTopHeader
       title={title}
@@ -81,13 +101,13 @@ export function PlanningHeader({
       disableScrollCollapse
       tabs={tabs}
       tabsAriaLabel={`Navigation ${title}`}
-      largeTitleRight={showOnlyClubAction ? clubMarkButton : undefined}
-      largeTitleFlexClassName={showOnlyClubAction ? "items-end" : undefined}
-      largeTitleAccessoryWrapperClassName={showOnlyClubAction ? "pb-px" : undefined}
+      largeTitleRight={largeTitleAccessory}
+      largeTitleFlexClassName={alignLargeTitleAccessory ? "items-end" : undefined}
+      largeTitleAccessoryWrapperClassName={alignLargeTitleAccessory ? "pb-px" : undefined}
       right={
         <>
-          {showClubMark && !showOnlyClubAction ? clubMarkButton : null}
-          {!showClubMark ? <RunConnectHeaderMark /> : null}
+          {showClubMark && showBellAndSettings ? clubMarkButton : null}
+          {!showClubMark && !brandBesideLargeTitle ? <RunConnectHeaderMark /> : null}
           {showBellAndSettings ? (
             <>
               <div className="flex shrink-0 items-center justify-center">

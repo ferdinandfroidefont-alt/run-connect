@@ -185,12 +185,6 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
 
             {/* Illustration */}
             <div>
-              <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-                <EmojiBadge emoji="📷" className="bg-[#FF9500]" />
-                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
-                  Illustration
-                </span>
-              </div>
               <input
                 ref={photoInputRef}
                 type="file"
@@ -204,7 +198,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               {!imagePreview ? (
                 <Cell
                   icon={<span className="text-[15px]">📷</span>}
-                  iconBg="#FF9500"
+                  iconBg="#34B5DA"
                   title="Ajouter une photo"
                   subtitle="Optionnel · JPG, PNG ou WebP, max 5 Mo"
                   accessory="chevron"
@@ -233,7 +227,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   </div>
                   <Cell
                     icon={<span className="text-[15px]">📷</span>}
-                    iconBg="#FF9500"
+                    iconBg="#34B5DA"
                     title="Remplacer la photo"
                     subtitle="Choisir une autre image"
                     accessory="chevron"
@@ -245,25 +239,17 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             </div>
 
             {/* Itinéraire */}
-            <div>
-              <div className="flex items-center gap-2 px-4 py-3">
-                <EmojiBadge emoji="🗺️" className="bg-[#0A66D0]" />
-                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
-                  Itinéraire
-                </span>
-              </div>
-              <div className="px-4 pb-3">
-                <RouteSelector
-                  embedded
-                  selectedRouteId={formData.route_id}
-                  onRouteSelect={(route) =>
-                    route ? onFormDataChange({ route_id: route.id }) : onFormDataChange({ route_id: null })
-                  }
-                  onAutoFill={({ distance_km, elevation_gain }) =>
-                    onFormDataChange({ distance_km, elevation_gain })
-                  }
-                />
-              </div>
+            <div className="px-4 py-3">
+              <RouteSelector
+                embedded
+                selectedRouteId={formData.route_id}
+                onRouteSelect={(route) =>
+                  route ? onFormDataChange({ route_id: route.id }) : onFormDataChange({ route_id: null })
+                }
+                onAutoFill={({ distance_km, elevation_gain }) =>
+                  onFormDataChange({ distance_km, elevation_gain })
+                }
+              />
             </div>
 
             {/* Visibilité */}
@@ -277,24 +263,18 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               clubId={formData.club_id}
             />
 
-            {formData.visibility_type === 'friends' && formData.hidden_from_users?.length > 0 && (
-              <div className="flex items-center gap-3 px-4 py-3 text-[12px] text-amber-500">
-                <EmojiBadge emoji="🙈" className="bg-[#FF9500]/25" />
-                <span className="min-w-0">
-                  {formData.hidden_from_users.length} ami
-                  {formData.hidden_from_users.length > 1 ? 's' : ''} ne verra pas cette séance
-                </span>
-              </div>
-            )}
-
             {/* Live tracking */}
-            <div className="flex items-start gap-3 px-4 py-3">
+            <div className="flex items-center gap-3 px-4 py-3">
               <EmojiBadge
-                emoji={formData.live_tracking_enabled ? '📡' : '📍'}
-                className={formData.live_tracking_enabled ? 'bg-[#34C759]' : 'bg-[#8E8E93]'}
+                emoji={formData.live_tracking_enabled ? '📡' : '🌍'}
+                className={
+                  formData.live_tracking_enabled ? 'bg-[#30D158]' : 'bg-[#48484A]'
+                }
               />
               <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="text-[15px] font-medium tracking-tight text-foreground">Live tracking</p>
+                <p className="text-[17px] font-normal leading-snug tracking-[-0.4px] text-foreground">
+                  Live tracking
+                </p>
                 <p className="text-[12px] leading-relaxed text-muted-foreground">
                   {formData.live_tracking_enabled
                     ? 'Les participants pourront partager leur position pendant la séance.'
@@ -302,41 +282,35 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                 </p>
               </div>
               <Switch
-                className="mt-1 shrink-0"
+                className="shrink-0"
                 checked={formData.live_tracking_enabled}
                 onCheckedChange={(v) => onFormDataChange({ live_tracking_enabled: v })}
               />
             </div>
 
             {/* Note */}
-            <div>
-              <div className="flex items-start gap-3 border-b border-border/50 px-4 py-3">
-                <EmojiBadge emoji="📝" className="bg-[#AF52DE]" />
-                <div className="min-w-0">
-                  <p className="text-[15px] font-medium tracking-tight text-foreground">Note</p>
+            <div className="px-4 pb-4 pt-2">
+              <div className="mb-3 flex gap-3">
+                <EmojiBadge emoji="📝" className="bg-[#64D2FF] shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[17px] font-normal tracking-[-0.4px] text-foreground leading-snug">
+                    Note
+                  </p>
                   <p className="text-[13px] text-muted-foreground">Optionnel · pour les participants</p>
                 </div>
               </div>
-              <div className="min-w-0 px-4 pb-4 pt-3">
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => onFormDataChange({ description: e.target.value })}
-                  placeholder="Détails pour les participants · niveau, matériel, consignes…"
-                  rows={3}
-                  className="min-h-[88px] resize-none rounded-[12px] border-border/70 bg-secondary/40 text-[15px] leading-snug"
-                />
-              </div>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => onFormDataChange({ description: e.target.value })}
+                placeholder="Détails pour les participants · niveau, matériel, consignes…"
+                rows={3}
+                className="min-h-[88px] w-full resize-none rounded-[12px] border-border/70 bg-secondary/40 text-[15px] leading-snug"
+              />
             </div>
 
             {/* Booster */}
             {!isCoachingMode ? (
               <div>
-                <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-                  <EmojiBadge emoji="⚡" className="bg-[#0066CC]" />
-                  <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
-                    Booster
-                  </span>
-                </div>
                 <Cell
                   icon={<span className="text-[15px]">⚡</span>}
                   iconBg="#0066CC"
@@ -356,7 +330,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                 />
                 <Cell
                   icon={<span className="text-[15px]">📺</span>}
-                  iconBg="#FF9500"
+                  iconBg="#FF6482"
                   title="Regarder une vidéo · 15s"
                   subtitle="Pour activer le boost gratuitement"
                   onClick={() =>
@@ -368,7 +342,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                 />
                 <Cell
                   icon={<span className="text-[15px]">✨</span>}
-                  iconBg="#AF52DE"
+                  iconBg="#FFD60A"
                   title="Passer Premium"
                   subtitle="Boost illimité"
                   accent
@@ -379,59 +353,27 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             ) : null}
 
             {/* Récurrence */}
-            <div>
-              <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-                <EmojiBadge emoji="🔁" className="bg-[#FF9500]" />
-                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
-                  Récurrence
-                </span>
-              </div>
-              <div className="px-4 pb-4 pt-3">
-                <RecurrenceSelector
-                  recurrenceType={formData.recurrence_type}
-                  recurrenceCount={formData.recurrence_count}
-                  onRecurrenceTypeChange={handleRecurrenceTypeChange}
-                  onRecurrenceCountChange={handleRecurrenceCountChange}
-                />
-                {formData.recurrence_type === 'weekly' && (
-                  <div className="mt-3 flex items-center gap-3 border-t border-border/55 pt-3 text-[12px] text-primary">
-                    <EmojiBadge emoji="✨" className="bg-primary/15" />
-                    <span className="min-w-0">
-                      {formData.recurrence_count} séances seront créées automatiquement
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
+            <RecurrenceSelector
+              variant="integrated"
+              recurrenceType={formData.recurrence_type}
+              recurrenceCount={formData.recurrence_count}
+              onRecurrenceTypeChange={handleRecurrenceTypeChange}
+              onRecurrenceCountChange={handleRecurrenceCountChange}
+            />
           </div>
         )}
 
         {embedInFinalize && (
           <>
             <AppleGroup>
-              <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-                <EmojiBadge emoji="🔁" className="bg-[#FF9500]" />
-                <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
-                  Récurrence
-                </span>
-              </div>
-              <div className="px-4 py-3">
-                <RecurrenceSelector
-                  recurrenceType={formData.recurrence_type}
-                  recurrenceCount={formData.recurrence_count}
-                  onRecurrenceTypeChange={handleRecurrenceTypeChange}
-                  onRecurrenceCountChange={handleRecurrenceCountChange}
-                />
-              </div>
+              <RecurrenceSelector
+                variant="integrated"
+                recurrenceType={formData.recurrence_type}
+                recurrenceCount={formData.recurrence_count}
+                onRecurrenceTypeChange={handleRecurrenceTypeChange}
+                onRecurrenceCountChange={handleRecurrenceCountChange}
+              />
             </AppleGroup>
-            {formData.recurrence_type === 'weekly' && (
-              <div className="flex items-center gap-3 px-4 text-[12px] text-primary">
-                <EmojiBadge emoji="✨" className="bg-primary/15" />
-                <span className="min-w-0">
-                  {formData.recurrence_count} séances seront créées automatiquement
-                </span>
-              </div>
-            )}
           </>
         )}
       </div>

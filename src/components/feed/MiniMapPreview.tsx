@@ -10,6 +10,18 @@ import {
   SESSION_PIN_CENTER_OFFSET_Y,
 } from '@/lib/mapSessionPin';
 
+/** Paris — évite Number(null)===0 et la paire (0,0) souvent stockée à tort quand les coords manquent. */
+const COORD_FALLBACK = { lat: 48.8566, lng: 2.3522 };
+
+function normalizePreviewCoords(lat: number, lng: number): { lat: number; lng: number } {
+  const la = Number(lat);
+  const ln = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return COORD_FALLBACK;
+  if (Math.abs(la) > 90 || Math.abs(ln) > 180) return COORD_FALLBACK;
+  if (la === 0 && ln === 0) return COORD_FALLBACK;
+  return { lat: la, lng: ln };
+}
+
 interface MiniMapPreviewProps {
   lat: number;
   lng: number;
@@ -48,9 +60,10 @@ export const MiniMapPreview = ({
       onOpenSession();
       return;
     }
+    const c = normalizePreviewCoords(lat, lng);
     const params = new URLSearchParams({
-      lat: lat.toString(),
-      lng: lng.toString(),
+      lat: c.lat.toString(),
+      lng: c.lng.toString(),
       zoom: '15',
       ...(sessionId && { sessionId }),
     });
@@ -58,11 +71,8 @@ export const MiniMapPreview = ({
   }, [interactive, lat, lng, onOpenSession, sessionId, navigate]);
 
   useEffect(() => {
-    if (!mapRef.current || lat === undefined || lat === null || lng === undefined || lng === null) {
-      setIsLoading(false);
-      setError(true);
-      return;
-    }
+    setError(false);
+    setIsLoading(true);
 
     if (!getMapboxAccessToken()) {
       setIsLoading(false);
@@ -70,18 +80,49 @@ export const MiniMapPreview = ({
       return;
     }
 
+    const { lat: cLat, lng: cLng } = normalizePreviewCoords(lat, lng);
     let cancelled = false;
+    let resizeObserver: ResizeObserver | null = null;
 
     const initMap = async () => {
       try {
-        if (!mapRef.current || cancelled) return;
+        await new Promise<void>((r) => requestAnimationFrame(() => r()));
+        await new Promise<void>((r) => requestAnimationFrame(() => r()));
+        if (!mapRef.current || cancelled) {
+          if (!cancelled) {
+            setError(true);
+            setIsLoading(false);
+          }
+          return;
+        }
 
         const map = await createEmbeddedMapboxMap(mapRef.current, {
-          center: { lat, lng },
+          center: { lat: cLat, lng: cLng },
           zoom,
           interactive,
         });
         mapInstanceRef.current = map;
+
+        const resizeMap = () => {
+          if (cancelled) return;
+          try {
+            map.resize();
+          } catch {
+            /* ignore */
+          }
+        };
+
+        const onReady = () => {
+          resizeMap();
+          requestAnimationFrame(() => requestAnimationFrame(resizeMap));
+        };
+        if (map.isStyleLoaded()) onReady();
+        else map.once('load', onReady);
+
+        if (mapRef.current) {
+          resizeObserver = new ResizeObserver(() => resizeMap());
+          resizeObserver.observe(mapRef.current);
+        }
 
         const wrap = document.createElement('div');
         wrap.className = 'rc-session-pin';
@@ -104,7 +145,7 @@ export const MiniMapPreview = ({
           anchor: 'bottom',
           offset: [0, SESSION_PIN_CENTER_OFFSET_Y],
         })
-          .setLngLat([lng, lat])
+          .setLngLat([cLng, cLat])
           .addTo(map);
 
         map.on('click', handleMapClick);
@@ -123,6 +164,8 @@ export const MiniMapPreview = ({
 
     return () => {
       cancelled = true;
+      resizeObserver?.disconnect();
+      resizeObserver = null;
       markerRef.current?.remove();
       markerRef.current = null;
       mapInstanceRef.current?.remove();

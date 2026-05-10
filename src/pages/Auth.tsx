@@ -987,18 +987,6 @@ const Auth = () => {
             </button>
           </div>
         </form>
-        <button
-          type="button"
-          onClick={() => {
-            setCaptchaToken(null);
-            captchaRef.current?.resetCaptcha();
-            setView("email-signup");
-          }}
-          disabled={isLoading}
-          className="mt-3 flex h-[44px] w-full items-center justify-center px-2 text-[15px] text-primary active:opacity-60 disabled:opacity-50"
-        >
-          Pas encore de compte ? S&apos;inscrire
-        </button>
       </div>
 
       {/* "ou" séparateur hairline (mockup 02) */}
@@ -1110,19 +1098,8 @@ const Auth = () => {
         </button>
         <button
           type="button"
-          onClick={() => {
-            setCaptchaToken(null);
-            captchaRef.current?.resetCaptcha();
-            setView('email-signup');
-          }}
-          className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
-        >
-          Vous n&apos;avez pas de compte ? S&apos;inscrire
-        </button>
-        <button
-          type="button"
           onClick={forceCleanSession}
-          className="mt-1 flex h-9 w-full items-center justify-center text-[12px] text-muted-foreground/60 hover:text-destructive"
+          className="mt-3 flex h-9 w-full items-center justify-center text-[12px] text-muted-foreground/60 hover:text-destructive"
         >
           Problème de connexion ? Nettoyer la session
         </button>

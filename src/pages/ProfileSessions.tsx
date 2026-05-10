@@ -18,6 +18,13 @@ import { toast } from "sonner";
 
 const PARIS_FALLBACK = { lat: 48.8566, lng: 2.3522 };
 
+/** Évite `Number(null) === 0` qui cassait les mini-cartes quand lat/lng absents en base. */
+function pickSessionCoord(value: number | null | undefined, fallback: number): number {
+  if (value == null) return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 interface PastSession {
   id: string;
   title: string;
@@ -194,8 +201,8 @@ export default function ProfileSessions() {
     if (!discussionSessionId) return null;
     const fromList = sessions.find((s) => s.id === discussionSessionId);
     if (fromList) {
-      const lat = Number.isFinite(Number(fromList.location_lat)) ? Number(fromList.location_lat) : PARIS_FALLBACK.lat;
-      const lng = Number.isFinite(Number(fromList.location_lng)) ? Number(fromList.location_lng) : PARIS_FALLBACK.lng;
+      const lat = pickSessionCoord(fromList.location_lat, PARIS_FALLBACK.lat);
+      const lng = pickSessionCoord(fromList.location_lng, PARIS_FALLBACK.lng);
       const session: FeedSession = {
         id: fromList.id,
         title: fromList.title,
@@ -261,8 +268,8 @@ export default function ProfileSessions() {
 
   const openDetailsForSession = (s: PastSession) => {
     if (!user || !me) return;
-    const lat = Number.isFinite(Number(s.location_lat)) ? Number(s.location_lat) : PARIS_FALLBACK.lat;
-    const lng = Number.isFinite(Number(s.location_lng)) ? Number(s.location_lng) : PARIS_FALLBACK.lng;
+    const lat = pickSessionCoord(s.location_lat, PARIS_FALLBACK.lat);
+    const lng = pickSessionCoord(s.location_lng, PARIS_FALLBACK.lng);
     setSelectedSessionDialog({
       ...s,
       session_type: s.activity_type || "course",
@@ -372,8 +379,8 @@ export default function ProfileSessions() {
               const tone = toneHexForActivity(session.activity_type || "");
               const whenPast = format(new Date(session.scheduled_at), "d MMM yyyy · HH:mm", { locale: fr });
               const when = live ? "EN COURS · live" : whenPast;
-              const lat = Number.isFinite(Number(session.location_lat)) ? Number(session.location_lat) : PARIS_FALLBACK.lat;
-              const lng = Number.isFinite(Number(session.location_lng)) ? Number(session.location_lng) : PARIS_FALLBACK.lng;
+              const lat = pickSessionCoord(session.location_lat, PARIS_FALLBACK.lat);
+              const lng = pickSessionCoord(session.location_lng, PARIS_FALLBACK.lng);
               const nComments = commentCountBySession[session.id] ?? 0;
               const commentLabel = nComments > 0 ? `Commenter (${nComments})` : "Commenter";
 

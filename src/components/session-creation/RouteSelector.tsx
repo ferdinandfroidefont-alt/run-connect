@@ -100,8 +100,8 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
         <div className="flex items-center gap-3">
           <EmojiBadge emoji="🗺️" className="bg-[#8E8E93]" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-muted-foreground">Aucun itinéraire</p>
-            <p className="text-xs text-muted-foreground/70">Créez un itinéraire sur la carte</p>
+            <p className="text-[15px] font-medium text-muted-foreground">Aucun itinéraire</p>
+            <p className="text-[13px] text-muted-foreground/80">Créez un itinéraire sur la carte</p>
           </div>
         </div>
       </div>
@@ -113,7 +113,9 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          'cursor-pointer p-2.5 transition-all active:bg-secondary/50',
+          embedded
+            ? 'min-h-[48px] cursor-pointer px-4 py-3 transition-all active:bg-secondary/55'
+            : 'cursor-pointer p-2.5 transition-all active:bg-secondary/50',
           embedded
             ? 'rounded-lg bg-secondary/35 ring-inset ring-1 ring-border/40 hover:bg-secondary/45'
             : 'rounded-xl border border-border/70 bg-card hover:bg-muted/40',
@@ -125,8 +127,10 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           <div className="flex items-center gap-3">
             <EmojiBadge emoji="🗺️" className="bg-[#0A66D0]" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-medium">{selectedRoute.name}</p>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+              <p className="truncate text-[17px] font-normal tracking-[-0.4px] text-foreground">
+                {selectedRoute.name}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-muted-foreground">
                 {selectedRoute.total_distance && (
                   <span>{(selectedRoute.total_distance / 1000).toFixed(1)} km</span>
                 )}
@@ -145,10 +149,12 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <EmojiBadge emoji="📍" className="bg-[#FF9500]" />
+            <EmojiBadge emoji="📍" className="bg-[#5E5CE6]" />
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium">Choisir un itinéraire</p>
-              <p className="text-[11px] text-muted-foreground">Auto-remplir distance et D+</p>
+              <p className="text-[17px] font-normal tracking-[-0.4px] text-foreground">
+                Choisir un itinéraire
+              </p>
+              <p className="text-[13px] text-muted-foreground">Auto-remplir distance et D+</p>
             </div>
             <ChevronRight className={cn(
               "w-4 h-4 text-muted-foreground transition-transform",
@@ -193,9 +199,9 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
                   ) : (
                     <EmojiBadge emoji="🗺️" className="bg-[#8E8E93]" />
                   )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{route.name}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-medium">{route.name}</p>
+                    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
                       {route.total_distance && (
                         <span>{(route.total_distance / 1000).toFixed(1)} km</span>
                       )}

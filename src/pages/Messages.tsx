@@ -3725,9 +3725,9 @@ const Messages = () => {
         >
         <div
           className={cn(
-            "min-h-0 flex flex-1 flex-col pb-ios-2",
+            "flex min-h-0 w-full min-w-0 flex-col pb-ios-2",
             activeRootTab === "create-club"
-              ? "bg-secondary pt-2.5"
+              ? "flex-1 bg-secondary pt-2.5"
               : "apple-grouped-bg"
           )}
         >
