@@ -14,8 +14,12 @@
 		"Geolocation": {},
 		"Camera": {},
 		"StatusBar": {
-			"style": "LIGHT",
-			"backgroundColor": "#FFFFFF"
+			"style": "DARK",
+			"backgroundColor": "#0066CC"
+		},
+		"Keyboard": {
+			"resize": "native",
+			"resizeOnFullScreen": true
 		}
 	},
 	"android": {
@@ -34,10 +38,11 @@
 		"preferredContentMode": "mobile",
 		"limitsNavigationsToAppBoundDomains": false,
 		"scheme": "runconnect",
-		"backgroundColor": "#FFFFFF",
+		"backgroundColor": "#0066CC",
 		"appendUserAgent": "RunConnect-iOS/1.3"
 	},
 	"packageClassList": [
+		"AdMobPlugin",
 		"ContactsPlugin",
 		"AppPlugin",
 		"CAPBrowserPlugin",
@@ -45,7 +50,9 @@
 		"DevicePlugin",
 		"FilesystemPlugin",
 		"GeolocationPlugin",
+		"HapticsPlugin",
 		"InAppBrowserPlugin",
+		"KeyboardPlugin",
 		"PushNotificationsPlugin",
 		"SharePlugin",
 		"StatusBarPlugin"

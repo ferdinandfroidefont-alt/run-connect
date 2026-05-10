@@ -76,6 +76,8 @@ import { ProfilesTab } from "@/components/search/ProfilesTab";
 import { ClubsTab } from "@/components/search/ClubsTab";
 import { StravaTab } from "@/components/search/StravaTab";
 import { ContactsTab } from "@/components/search/ContactsTab";
+import { StoryReplyBubble } from "@/components/StoryReplyBubble";
+import { parseStoryReplyContent } from "@/lib/storyReplyMessage";
 
 const NewConversationView = lazy(() =>
   import("@/components/NewConversationView").then((m) => ({ default: m.NewConversationView }))
@@ -267,7 +269,10 @@ const Messages = () => {
   const [showCoachCreate, setShowCoachCreate] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
-  const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
+  const [storyViewerOpen, setStoryViewerOpen] = useState<{
+    authorId: string;
+    storyId?: string | null;
+  } | null>(null);
   const [storiesRefreshToken, setStoriesRefreshToken] = useState(0);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -294,9 +299,7 @@ const Messages = () => {
   /** Recherche locale dans le fil de messages ouvert */
   const [threadSearchOpen, setThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
-  const [keyboardInsetBottom, setKeyboardInsetBottom] = useState(0);
   const [composerHeight, setComposerHeight] = useState(0);
-  const viewportBaseHeightRef = useRef(0);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
@@ -419,49 +422,6 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  useEffect(() => {
-    if (!selectedConversation) {
-      setKeyboardInsetBottom(0);
-      viewportBaseHeightRef.current = 0;
-      return;
-    }
-
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const syncKeyboardInset = () => {
-      const viewportBottom = vv.height + vv.offsetTop;
-      const hasBaseline = viewportBaseHeightRef.current > 0;
-
-      if (!hasBaseline || viewportBottom > viewportBaseHeightRef.current - 8) {
-        viewportBaseHeightRef.current = viewportBottom;
-      }
-
-      const active = document.activeElement as HTMLElement | null;
-      const hasInputFocus = !!active && (
-        active.tagName === "INPUT" ||
-        active.tagName === "TEXTAREA" ||
-        active.isContentEditable
-      );
-
-      // Use a stable visual viewport baseline to avoid iOS innerHeight jumps.
-      const nextInset = hasInputFocus
-        ? Math.max(0, viewportBaseHeightRef.current - viewportBottom)
-        : 0;
-      setKeyboardInsetBottom((prev) => (Math.abs(prev - nextInset) > 1 ? nextInset : prev));
-    };
-
-    syncKeyboardInset();
-    vv.addEventListener("resize", syncKeyboardInset);
-    vv.addEventListener("scroll", syncKeyboardInset);
-    window.addEventListener("orientationchange", syncKeyboardInset);
-
-    return () => {
-      vv.removeEventListener("resize", syncKeyboardInset);
-      vv.removeEventListener("scroll", syncKeyboardInset);
-      window.removeEventListener("orientationchange", syncKeyboardInset);
-    };
-  }, [selectedConversation]);
 
   useEffect(() => {
     if (!selectedConversation) return;
@@ -479,43 +439,18 @@ const Messages = () => {
     return () => ro.disconnect();
   }, [selectedConversation, replyTo, showEmojiPicker, uploadProgress, isRecording, newMessage]);
 
+  // Capacitor: scroll to bottom when keyboard opens so the last message stays visible.
   useEffect(() => {
     if (!selectedConversation) return;
-    const activeEl = document.activeElement;
-    const isComposerFocused = !!(activeEl && composerRef.current?.contains(activeEl));
-    if (!isComposerFocused && keyboardInsetBottom <= 0) return;
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-    });
-  }, [keyboardInsetBottom, selectedConversation]);
-
-  // iOS iMessage-style keyboard fix: track visual viewport height via JS and expose it
-  // as --vvh (general sizing) and --keyboard-height (used by composer transform).
-  // Using transform on the composer (GPU-composited) avoids layout reflow on every frame,
-  // which is deferred by iOS during keyboard animation causing the --vvh height approach to lag.
-  useEffect(() => {
-    if (!selectedConversation) {
-      document.documentElement.style.removeProperty('--vvh');
-      document.documentElement.style.removeProperty('--keyboard-height');
-      return;
-    }
-    const vv = window.visualViewport;
-    const update = () => {
-      const vvh = vv ? vv.height : window.innerHeight;
-      const kbh = Math.max(0, window.innerHeight - vvh - (vv ? vv.offsetTop : 0));
-      document.documentElement.style.setProperty('--vvh', `${vvh}px`);
-      document.documentElement.style.setProperty('--keyboard-height', `${kbh}px`);
-    };
-    update();
-    vv?.addEventListener('resize', update);
-    vv?.addEventListener('scroll', update);
-    return () => {
-      vv?.removeEventListener('resize', update);
-      vv?.removeEventListener('scroll', update);
-      document.documentElement.style.removeProperty('--vvh');
-      document.documentElement.style.removeProperty('--keyboard-height');
-    };
+    let handle: { remove: () => void } | null = null;
+    Keyboard.addListener('keyboardWillShow', () => {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      });
+    }).then((h) => { handle = h; });
+    return () => { handle?.remove(); };
   }, [selectedConversation]);
+
 
   // Single effect for tab bar visibility + chrome color.
   // Tab bar visible sur la liste seulement : masquée dans un fil, « Nouveau message », ou création club/groupe
@@ -2739,9 +2674,7 @@ const Messages = () => {
                   "dark:backdrop-blur-none"
                 )}
                 style={{
-                  paddingBottom: keyboardInsetBottom > 0 ? "8px" : "max(26px, env(safe-area-inset-bottom, 0px))",
-                  transform: 'translateY(calc(-1 * var(--keyboard-height, 0px)))',
-                  willChange: 'transform',
+                  paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
                 }}
               >
                 {replyTo && (
@@ -2976,7 +2909,7 @@ const Messages = () => {
             )}
             <div
               className="flex flex-1 flex-col gap-2 bg-[#f5f5f7] px-4 pb-2 pt-2 dark:bg-secondary"
-              style={{ paddingBottom: `calc(${composerHeight + 8}px + var(--keyboard-height, 0px))` }}
+              style={{ paddingBottom: composerHeight + 8 }}
             >
               {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -3024,6 +2957,23 @@ const Messages = () => {
                   !message.deleted_at &&
                   !message.reply_to &&
                   !(message.content && message.content.trim().length > 0);
+
+                const storyReplyParsed = parseStoryReplyContent(message.content);
+                const dmPeerUserId =
+                  isDirectMessage && user?.id
+                    ? selectedConversation.participant_1 === user.id
+                      ? selectedConversation.participant_2
+                      : selectedConversation.participant_1
+                    : null;
+                const storyAuthorForReply =
+                  user?.id && dmPeerUserId ? (isOwnMessage ? dmPeerUserId : user.id) : null;
+                const isStoryReplyRich =
+                  !!storyReplyParsed &&
+                  !message.deleted_at &&
+                  (!message.message_type || message.message_type === "text") &&
+                  !message.file_url &&
+                  !!storyAuthorForReply &&
+                  !!user?.id;
 
                 return (
                   <div key={message.id}>
@@ -3099,6 +3049,19 @@ const Messages = () => {
                           }}
                         >
 
+                          {isStoryReplyRich && storyReplyParsed && storyAuthorForReply ? (
+                            <StoryReplyBubble
+                              message={message}
+                              replyText={storyReplyParsed.replyText}
+                              isOwnMessage={isOwnMessage}
+                              currentUserId={user!.id}
+                              storyAuthorId={storyAuthorForReply}
+                              onOpenStory={(authorId, storyId) =>
+                                setStoryViewerOpen({ authorId, storyId: storyId ?? null })
+                              }
+                            />
+                          ) : (
+                            <>
                           {/* Image - iMessage rounded style */}
                           {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
                             <SignedImage 
@@ -3118,7 +3081,10 @@ const Messages = () => {
                           {/* Bulles — maquette RC #18 */}
                           {(message.message_type === 'session' || message.message_type === 'coaching_session' || 
                             (message.file_url && !message.file_type?.startsWith('image/')) ||
-                            (message.content && !message.content.match(/^(Image partagée)$/i) && !isOnlyEmojis(message.content)) ||
+                            (message.content &&
+                              !message.content.match(/^(Image partagée)$/i) &&
+                              !isOnlyEmojis(message.content) &&
+                              !isStoryReplyRich) ||
                             message.deleted_at ||
                             message.reply_to) && (
                             <div
@@ -3290,6 +3256,8 @@ const Messages = () => {
                               </div>
                             </div>
                           )}
+                            </>
+                          )}
                         </div>
 
                         {/* Reactions display only */}
@@ -3439,6 +3407,16 @@ const Messages = () => {
           }}
         />
       </Suspense>
+
+      <SessionStoryDialog
+        open={!!storyViewerOpen}
+        onOpenChange={(open) => {
+          if (!open) setStoryViewerOpen(null);
+        }}
+        authorId={storyViewerOpen?.authorId ?? null}
+        storyId={storyViewerOpen?.storyId ?? null}
+        viewerUserId={user?.id ?? null}
+      />
       </>
     );
   }
@@ -3687,7 +3665,7 @@ const Messages = () => {
                       <SessionStoriesStrip
                         currentUserId={user?.id ?? null}
                         refreshToken={storiesRefreshToken}
-                        onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+                        onOpenStory={(authorId) => setStoryViewerOpen({ authorId })}
                         onCreateStory={() => navigate("/stories/create")}
                         className="border-0 bg-transparent"
                       />
@@ -4116,11 +4094,12 @@ const Messages = () => {
         </Suspense>
 
         <SessionStoryDialog
-          open={!!storyAuthorId}
+          open={!!storyViewerOpen}
           onOpenChange={(open) => {
-            if (!open) setStoryAuthorId(null);
+            if (!open) setStoryViewerOpen(null);
           }}
-          authorId={storyAuthorId}
+          authorId={storyViewerOpen?.authorId ?? null}
+          storyId={storyViewerOpen?.storyId ?? null}
           viewerUserId={user?.id ?? null}
         />
 
