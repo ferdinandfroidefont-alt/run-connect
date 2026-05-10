@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import {
@@ -48,13 +49,15 @@ interface MeProfile {
 
 export default function ProfileSessions() {
   const { user } = useAuth();
+  const { userId: routeUserId } = useParams<{ userId?: string }>();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [reliabilityRate, setReliabilityRate] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
   const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
   const [sessions, setSessions] = useState<PastSession[]>([]);
-  const [me, setMe] = useState<MeProfile | null>(null);
+  const [subjectProfile, setSubjectProfile] = useState<MeProfile | null>(null);
   const [commentCountBySession, setCommentCountBySession] = useState<Record<string, number>>({});
 
   const [discussionSessionId, setDiscussionSessionId] = useState<string | null>(null);
@@ -62,10 +65,8 @@ export default function ProfileSessions() {
   const [discussionSessionFetching, setDiscussionSessionFetching] = useState(false);
   const [selectedSessionDialog, setSelectedSessionDialog] = useState<Record<string, unknown> | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    void loadData();
-  }, [user?.id]);
+  const subjectUserId = routeUserId ?? user?.id ?? null;
+  const viewingOther = Boolean(user && routeUserId && routeUserId !== user.id);
 
   const bumpCommentCount = useCallback((sessionId: string) => {
     setCommentCountBySession((prev) => ({
@@ -94,15 +95,15 @@ export default function ProfileSessions() {
     [user, bumpCommentCount],
   );
 
-  const loadData = async () => {
-    if (!user) return;
+  const loadData = useCallback(async () => {
+    if (!user || !subjectUserId) return;
     setLoading(true);
     try {
       const { data: stats } = await supabase
         .from("user_stats")
         .select("reliability_rate, total_sessions_joined, total_sessions_completed, total_sessions_absent")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", subjectUserId)
+        .maybeSingle();
 
       setReliabilityRate(Math.max(0, Math.min(100, Number(stats?.reliability_rate) || 0)));
       setTotalSessionsJoined(stats?.total_sessions_joined || 0);
@@ -112,10 +113,10 @@ export default function ProfileSessions() {
       const { data: profileRow } = await supabase
         .from("profiles")
         .select("username, display_name, avatar_url")
-        .eq("user_id", user.id)
+        .eq("user_id", subjectUserId)
         .maybeSingle();
 
-      setMe({
+      setSubjectProfile({
         username: profileRow?.username || "user",
         display_name: profileRow?.display_name || profileRow?.username || "Utilisateur",
         avatar_url: profileRow?.avatar_url ?? null,
@@ -127,7 +128,7 @@ export default function ProfileSessions() {
         .select(
           "id, title, scheduled_at, activity_type, location_name, location_lat, location_lng, current_participants, max_participants, description, organizer_id, created_at",
         )
-        .eq("organizer_id", user.id)
+        .eq("organizer_id", subjectUserId)
         .lt("scheduled_at", nowIso)
         .order("scheduled_at", { ascending: false })
         .limit(20);
@@ -152,7 +153,16 @@ export default function ProfileSessions() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, subjectUserId]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (routeUserId && routeUserId === user.id) {
+      navigate("/profile/sessions", { replace: true });
+      return;
+    }
+    void loadData();
+  }, [user, routeUserId, navigate, loadData]);
 
   const ringRadius = 19;
   const ringCircumference = 2 * Math.PI * ringRadius;
@@ -198,7 +208,7 @@ export default function ProfileSessions() {
   }, [discussionSessionId, user, sessions]);
 
   const discussionSession = useMemo(() => {
-    if (!discussionSessionId) return null;
+    if (!discussionSessionId || !subjectProfile) return null;
     const fromList = sessions.find((s) => s.id === discussionSessionId);
     if (fromList) {
       const lat = pickSessionCoord(fromList.location_lat, PARIS_FALLBACK.lat);
@@ -216,10 +226,10 @@ export default function ProfileSessions() {
         description: fromList.description,
         created_at: fromList.created_at,
         organizer: {
-          user_id: user?.id || fromList.organizer_id,
-          username: me?.username || "user",
-          display_name: me?.display_name || me?.username || "Utilisateur",
-          avatar_url: me?.avatar_url || "",
+          user_id: fromList.organizer_id,
+          username: subjectProfile.username || "user",
+          display_name: subjectProfile.display_name || subjectProfile.username || "Utilisateur",
+          avatar_url: subjectProfile.avatar_url || "",
         },
         likes_count: 0,
         comments_count: commentCountBySession[fromList.id] ?? 0,
@@ -230,17 +240,37 @@ export default function ProfileSessions() {
     }
     if (discussionSessionOverride?.id === discussionSessionId) return discussionSessionOverride;
     return null;
-  }, [discussionSessionId, sessions, me, user?.id, discussionSessionOverride, commentCountBySession]);
+  }, [discussionSessionId, sessions, subjectProfile, discussionSessionOverride, commentCountBySession]);
 
   const waitingForDiscussionResolve =
     Boolean(discussionSessionId) && !discussionSession && (loading || discussionSessionFetching);
+
+  const reliabilityBlurb = viewingOther
+    ? "Indicateur calculé à partir des séances où cette personne s’est inscrite et a confirmé sa présence."
+    : "Calculé sur les confirmations de présence de tes séances passées.";
+
+  const headerBack =
+    viewingOther ? (
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors active:bg-muted"
+        aria-label="Retour"
+      >
+        <ArrowLeft className="h-5 w-5 shrink-0" />
+      </button>
+    ) : undefined;
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   if (discussionSessionId && waitingForDiscussionResolve) {
     return (
       <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-secondary">
         <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
           <div className="pointer-events-auto">
-            <MainTopHeader title="Séances" disableScrollCollapse />
+            <MainTopHeader title="Séances" left={headerBack} disableScrollCollapse />
           </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 pb-[calc(env(safe-area-inset-bottom,0)+24px)] pt-[calc(env(safe-area-inset-top,0px)+96px)]">
@@ -264,17 +294,19 @@ export default function ProfileSessions() {
     );
   }
 
-  const whoLabel = me?.display_name || me?.username || "Moi";
+  const whoLabel = viewingOther
+    ? subjectProfile?.display_name || subjectProfile?.username || "Sportif"
+    : subjectProfile?.display_name || subjectProfile?.username || "Moi";
 
   const openDetailsForSession = (s: PastSession) => {
-    if (!user || !me) return;
+    if (!user || !subjectProfile) return;
     const lat = pickSessionCoord(s.location_lat, PARIS_FALLBACK.lat);
     const lng = pickSessionCoord(s.location_lng, PARIS_FALLBACK.lng);
     setSelectedSessionDialog({
       ...s,
       session_type: s.activity_type || "course",
       intensity: "moderate",
-      organizer_id: user.id,
+      organizer_id: s.organizer_id,
       location_lat: lat,
       location_lng: lng,
       location_name: s.location_name || "",
@@ -282,9 +314,9 @@ export default function ProfileSessions() {
       current_participants: s.current_participants ?? 0,
       description: s.description ?? "",
       profiles: {
-        username: me.username,
-        display_name: me.display_name,
-        avatar_url: me.avatar_url || undefined,
+        username: subjectProfile.username,
+        display_name: subjectProfile.display_name,
+        avatar_url: subjectProfile.avatar_url || undefined,
       },
     });
   };
@@ -293,7 +325,12 @@ export default function ProfileSessions() {
     <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-secondary">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
         <div className="pointer-events-auto">
-          <MainTopHeader title="Séances" disableScrollCollapse />
+          <MainTopHeader
+            title="Séances"
+            subtitle={viewingOther ? subjectProfile?.display_name || subjectProfile?.username : undefined}
+            left={headerBack}
+            disableScrollCollapse
+          />
         </div>
       </div>
 
@@ -322,9 +359,7 @@ export default function ProfileSessions() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[17px] font-semibold text-foreground">Fiabilité</p>
-                <p className="text-[13px] text-muted-foreground">
-                  Calculé sur les confirmations de présence de tes séances passées.
-                </p>
+                <p className="text-[13px] text-muted-foreground">{reliabilityBlurb}</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 pt-3 text-center">
@@ -396,7 +431,7 @@ export default function ProfileSessions() {
                   commentLabel={commentLabel}
                   locationLat={lat}
                   locationLng={lng}
-                  avatarUrl={me?.avatar_url}
+                  avatarUrl={subjectProfile?.avatar_url}
                   activityType={session.activity_type || undefined}
                   onCardPress={() => openDetailsForSession(session)}
                   onCommentPress={() => setDiscussionSessionId(session.id)}

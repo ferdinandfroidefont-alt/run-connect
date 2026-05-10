@@ -16,6 +16,7 @@ import {
   Star,
   MessageCircle,
   Users,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
@@ -723,12 +724,27 @@ const PublicProfile = () => {
           />
 
           <div className="min-w-0">
-            <p className="mb-2 px-0.5 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
-              Activités récentes
-            </p>
-            <div className="ios-card min-w-0 border border-border/60 p-3 shadow-[var(--shadow-card)] sm:p-4">
-              <RecentActivities userId={profile.user_id} viewerUserId={user?.id ?? null} limit={3} />
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (!profile || !user) {
+                  handleSubscribeGuest();
+                  return;
+                }
+                navigate(`/profile/${profile.user_id}/sessions`);
+              }}
+              className="flex w-full flex-col rounded-2xl text-left transition-colors active:opacity-90"
+            >
+              <div className="mb-2 flex items-center gap-2 px-0.5">
+                <p className="min-w-0 flex-1 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+                  Activités récentes
+                </p>
+                {user ? <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : null}
+              </div>
+              <div className="ios-card min-w-0 border border-border/60 p-3 shadow-[var(--shadow-card)] sm:p-4">
+                <RecentActivities userId={profile.user_id} viewerUserId={user?.id ?? null} limit={3} />
+              </div>
+            </button>
           </div>
 
           <div className="ios-card flex min-w-0 items-center gap-3 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">

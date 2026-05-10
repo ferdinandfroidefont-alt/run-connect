@@ -412,6 +412,7 @@ const App = () => {
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
                   <Route path="/profile/sessions" element={<Layout><PageTransition><PageSuspense><ProfileSessions /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile/:userId/sessions" element={<Layout><PageTransition><PageSuspense><ProfileSessions /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/referral" element={<Layout><PageTransition><PageSuspense><Referral /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />

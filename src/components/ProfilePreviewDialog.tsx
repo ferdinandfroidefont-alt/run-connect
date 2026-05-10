@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { UserPlus, UserMinus, BadgeCheck, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Lock, Share2, ShieldBan, Info } from "lucide-react";
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { PersonalRecords } from "@/components/PersonalRecords";
-import { RecentActivities } from "@/components/profile/RecentActivities";
 import { getCountryLabel } from "@/lib/countryLabels";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -73,7 +72,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [followDialogTab, setFollowDialogTab] = useState<'followers' | 'following'>('followers');
   const [showRecordsSheet, setShowRecordsSheet] = useState(false);
-  const [showActivitiesSheet, setShowActivitiesSheet] = useState(false);
   const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
   const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0 });
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
@@ -855,22 +853,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               }}
               />
             )}
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-
-      {/* Recent Activities Sheet */}
-      <Sheet open={showActivitiesSheet} onOpenChange={setShowActivitiesSheet}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
-          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
-            <SheetTitle className="text-[17px]">Séances récentes</SheetTitle>
-          </SheetHeader>
-          <ScrollArea className="h-full pb-8">
-            <div className="p-4">
-              {userId && (
-                <RecentActivities userId={userId} viewerUserId={user?.id ?? null} limit={20} />
-              )}
-            </div>
           </ScrollArea>
         </SheetContent>
       </Sheet>
