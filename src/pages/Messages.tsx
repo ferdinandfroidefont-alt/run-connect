@@ -490,16 +490,21 @@ const Messages = () => {
   }, [keyboardInsetBottom, selectedConversation]);
 
   // iOS iMessage-style keyboard fix: track visual viewport height via JS and expose it
-  // as --vvh so the conversation container (position:fixed) can size itself correctly.
+  // as --vvh (general sizing) and --keyboard-height (used by composer transform).
+  // Using transform on the composer (GPU-composited) avoids layout reflow on every frame,
+  // which is deferred by iOS during keyboard animation causing the --vvh height approach to lag.
   useEffect(() => {
     if (!selectedConversation) {
       document.documentElement.style.removeProperty('--vvh');
+      document.documentElement.style.removeProperty('--keyboard-height');
       return;
     }
     const vv = window.visualViewport;
     const update = () => {
-      const h = vv ? vv.height : window.innerHeight;
-      document.documentElement.style.setProperty('--vvh', `${h}px`);
+      const vvh = vv ? vv.height : window.innerHeight;
+      const kbh = Math.max(0, window.innerHeight - vvh - (vv ? vv.offsetTop : 0));
+      document.documentElement.style.setProperty('--vvh', `${vvh}px`);
+      document.documentElement.style.setProperty('--keyboard-height', `${kbh}px`);
     };
     update();
     vv?.addEventListener('resize', update);
@@ -508,6 +513,7 @@ const Messages = () => {
       vv?.removeEventListener('resize', update);
       vv?.removeEventListener('scroll', update);
       document.documentElement.style.removeProperty('--vvh');
+      document.documentElement.style.removeProperty('--keyboard-height');
     };
   }, [selectedConversation]);
 
@@ -2420,7 +2426,7 @@ const Messages = () => {
             top: 0,
             left: 0,
             right: 0,
-            height: 'var(--vvh, 100dvh)',
+            bottom: 0,
             overscrollBehavior: 'none',
             zIndex: 10,
           }}
@@ -2733,7 +2739,9 @@ const Messages = () => {
                   "dark:backdrop-blur-none"
                 )}
                 style={{
-                  paddingBottom: "max(26px, env(safe-area-inset-bottom, 0px))",
+                  paddingBottom: keyboardInsetBottom > 0 ? "8px" : "max(26px, env(safe-area-inset-bottom, 0px))",
+                  transform: 'translateY(calc(-1 * var(--keyboard-height, 0px)))',
+                  willChange: 'transform',
                 }}
               >
                 {replyTo && (
@@ -2968,7 +2976,7 @@ const Messages = () => {
             )}
             <div
               className="flex flex-1 flex-col gap-2 bg-[#f5f5f7] px-4 pb-2 pt-2 dark:bg-secondary"
-              style={{ paddingBottom: composerHeight + 8 }}
+              style={{ paddingBottom: `calc(${composerHeight + 8}px + var(--keyboard-height, 0px))` }}
             >
               {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
