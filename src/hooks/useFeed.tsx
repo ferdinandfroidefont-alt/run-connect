@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+import { firstMapPointFromRouteCoordinates, pickSessionCoordinate } from '@/lib/geoUtils';
+
 export interface FeedSession {
   id: string;
   title: string;
@@ -78,6 +80,7 @@ export const useFeed = () => {
           location_name,
           location_lat,
           location_lng,
+          route_id,
           scheduled_at,
           max_participants,
           current_participants,
@@ -139,15 +142,31 @@ export const useFeed = () => {
             .in('user_id', commenterIds)
         : { data: [] };
 
+      const routeIds = [...new Set(sessions.map((s) => s.route_id).filter(Boolean))] as string[];
+      const routeAnchorById = new Map<string, { lat: number; lng: number }>();
+      if (routeIds.length > 0) {
+        const { data: routes } = await supabase.from("routes").select("id, coordinates").in("id", routeIds);
+        for (const r of routes || []) {
+          const pt = firstMapPointFromRouteCoordinates(r.coordinates);
+          if (pt) routeAnchorById.set(r.id, pt);
+        }
+      }
+
+      const PARIS_LAT = 48.8566;
+      const PARIS_LNG = 2.3522;
+
       // Assembler les données
-      const enrichedSessions: FeedSession[] = sessions.map(session => {
-        const organizer = profiles?.find(p => p.user_id === session.organizer_id);
-        const sessionLikes = likes?.filter(l => l.session_id === session.id).length || 0;
-        const isLiked = userLikes?.some(l => l.session_id === session.id) || false;
-        const sessionComments = comments?.filter(c => c.session_id === session.id) || [];
-        
+      const enrichedSessions: FeedSession[] = sessions.map((session) => {
+        const organizer = profiles?.find((p) => p.user_id === session.organizer_id);
+        const sessionLikes = likes?.filter((l) => l.session_id === session.id).length || 0;
+        const isLiked = userLikes?.some((l) => l.session_id === session.id) || false;
+        const sessionComments = comments?.filter((c) => c.session_id === session.id) || [];
+        const anchor = session.route_id ? routeAnchorById.get(session.route_id) : undefined;
+
         return {
           ...session,
+          location_lat: pickSessionCoordinate(session.location_lat, anchor?.lat ?? PARIS_LAT),
+          location_lng: pickSessionCoordinate(session.location_lng, anchor?.lng ?? PARIS_LNG),
           organizer: organizer || {
             user_id: session.organizer_id,
             username: 'user',

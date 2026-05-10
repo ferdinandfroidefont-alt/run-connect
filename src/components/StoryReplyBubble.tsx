@@ -137,6 +137,7 @@ export function StoryReplyBubble({
         }
       );
     },
+    enabled: !!storyAuthorId?.trim(),
     staleTime: 60_000,
   });
 
@@ -170,10 +171,10 @@ export function StoryReplyBubble({
 
   return (
     <div className="flex max-w-[220px] min-w-0 flex-col gap-1.5 font-sans">
-      {message.reply_to && !message.deleted_at && (
+      {message.reply_to && !message.deleted_at && message.reply_to.sender && (
         <div className="mb-0.5 rounded-lg border-l-2 border-primary bg-muted/50 px-2.5 py-1.5 dark:bg-muted/30">
           <p className="truncate text-[11px] font-semibold text-foreground">
-            {message.reply_to.sender.username || message.reply_to.sender.display_name}
+            {message.reply_to.sender.username || message.reply_to.sender.display_name || "Message"}
           </p>
           <p className="truncate text-[11px] text-muted-foreground">{message.reply_to.content}</p>
         </div>

@@ -2960,7 +2960,7 @@ const Messages = () => {
 
                 const storyReplyParsed = parseStoryReplyContent(message.content);
                 const dmPeerUserId =
-                  isDirectMessage && user?.id
+                  isDirectMessage && user?.id && selectedConversation
                     ? selectedConversation.participant_1 === user.id
                       ? selectedConversation.participant_2
                       : selectedConversation.participant_1
@@ -3049,12 +3049,12 @@ const Messages = () => {
                           }}
                         >
 
-                          {isStoryReplyRich && storyReplyParsed && storyAuthorForReply ? (
+                          {isStoryReplyRich && storyReplyParsed && storyAuthorForReply && user?.id ? (
                             <StoryReplyBubble
                               message={message}
                               replyText={storyReplyParsed.replyText}
                               isOwnMessage={isOwnMessage}
-                              currentUserId={user!.id}
+                              currentUserId={user.id}
                               storyAuthorId={storyAuthorForReply}
                               onOpenStory={(authorId, storyId) =>
                                 setStoryViewerOpen({ authorId, storyId: storyId ?? null })
@@ -3103,7 +3103,11 @@ const Messages = () => {
                               {message.reply_to && !message.deleted_at && (
                                 <ReplyBubble
                                   replyContent={message.reply_to.content}
-                                  replySenderName={message.reply_to.sender.username || message.reply_to.sender.display_name}
+                                  replySenderName={
+                                    message.reply_to.sender?.username ||
+                                    message.reply_to.sender?.display_name ||
+                                    "Message"
+                                  }
                                   isOwnMessage={isOwnMessage}
                                 />
                               )}

@@ -15,15 +15,19 @@ import { fetchFeedSessionForDiscussion, SessionDiscussionView } from "@/componen
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { FeedSession } from "@/hooks/useFeed";
-import { toast } from "sonner";
+import { firstMapPointFromRouteCoordinates, pickSessionCoordinate, type MapCoord } from "@/lib/geoUtils";
 
-const PARIS_FALLBACK = { lat: 48.8566, lng: 2.3522 };
+const PARIS_FALLBACK: MapCoord = { lat: 48.8566, lng: 2.3522 };
 
-/** Évite `Number(null) === 0` qui cassait les mini-cartes quand lat/lng absents en base. */
-function pickSessionCoord(value: number | null | undefined, fallback: number): number {
-  if (value == null) return fallback;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
+function resolveSessionMapCoords(
+  session: Pick<PastSession, "location_lat" | "location_lng" | "route_id">,
+  routeAnchorById: Record<string, MapCoord>,
+): MapCoord {
+  const r = session.route_id ? routeAnchorById[session.route_id] : undefined;
+  return {
+    lat: pickSessionCoordinate(session.location_lat, r?.lat ?? PARIS_FALLBACK.lat),
+    lng: pickSessionCoordinate(session.location_lng, r?.lng ?? PARIS_FALLBACK.lng),
+  };
 }
 
 interface PastSession {
@@ -34,6 +38,7 @@ interface PastSession {
   location_name: string | null;
   location_lat: number | null;
   location_lng: number | null;
+  route_id: string | null;
   current_participants: number | null;
   max_participants: number | null;
   description: string | null;
@@ -59,6 +64,7 @@ export default function ProfileSessions() {
   const [sessions, setSessions] = useState<PastSession[]>([]);
   const [subjectProfile, setSubjectProfile] = useState<MeProfile | null>(null);
   const [commentCountBySession, setCommentCountBySession] = useState<Record<string, number>>({});
+  const [routeAnchorById, setRouteAnchorById] = useState<Record<string, MapCoord>>({});
 
   const [discussionSessionId, setDiscussionSessionId] = useState<string | null>(null);
   const [discussionSessionOverride, setDiscussionSessionOverride] = useState<FeedSession | null>(null);
@@ -126,7 +132,7 @@ export default function ProfileSessions() {
       const { data: pastSessions } = await supabase
         .from("sessions")
         .select(
-          "id, title, scheduled_at, activity_type, location_name, location_lat, location_lng, current_participants, max_participants, description, organizer_id, created_at",
+          "id, title, scheduled_at, activity_type, location_name, location_lat, location_lng, route_id, current_participants, max_participants, description, organizer_id, created_at",
         )
         .eq("organizer_id", subjectUserId)
         .lt("scheduled_at", nowIso)
@@ -138,8 +144,20 @@ export default function ProfileSessions() {
 
       if (cleanSessions.length === 0) {
         setCommentCountBySession({});
+        setRouteAnchorById({});
         return;
       }
+
+      const routeIds = [...new Set(cleanSessions.map((s) => s.route_id).filter(Boolean))] as string[];
+      const anchors: Record<string, MapCoord> = {};
+      if (routeIds.length > 0) {
+        const { data: routes } = await supabase.from("routes").select("id, coordinates").in("id", routeIds);
+        for (const row of routes || []) {
+          const pt = firstMapPointFromRouteCoordinates(row.coordinates);
+          if (pt) anchors[row.id] = pt;
+        }
+      }
+      setRouteAnchorById(anchors);
 
       const sessionIds = cleanSessions.map((s) => s.id);
       const { data: commentRows } = await supabase.from("session_comments").select("session_id").in("session_id", sessionIds);
@@ -211,8 +229,7 @@ export default function ProfileSessions() {
     if (!discussionSessionId || !subjectProfile) return null;
     const fromList = sessions.find((s) => s.id === discussionSessionId);
     if (fromList) {
-      const lat = pickSessionCoord(fromList.location_lat, PARIS_FALLBACK.lat);
-      const lng = pickSessionCoord(fromList.location_lng, PARIS_FALLBACK.lng);
+      const { lat, lng } = resolveSessionMapCoords(fromList, routeAnchorById);
       const session: FeedSession = {
         id: fromList.id,
         title: fromList.title,
@@ -240,7 +257,7 @@ export default function ProfileSessions() {
     }
     if (discussionSessionOverride?.id === discussionSessionId) return discussionSessionOverride;
     return null;
-  }, [discussionSessionId, sessions, subjectProfile, discussionSessionOverride, commentCountBySession]);
+  }, [discussionSessionId, sessions, subjectProfile, discussionSessionOverride, commentCountBySession, routeAnchorById]);
 
   const waitingForDiscussionResolve =
     Boolean(discussionSessionId) && !discussionSession && (loading || discussionSessionFetching);
@@ -300,8 +317,7 @@ export default function ProfileSessions() {
 
   const openDetailsForSession = (s: PastSession) => {
     if (!user || !subjectProfile) return;
-    const lat = pickSessionCoord(s.location_lat, PARIS_FALLBACK.lat);
-    const lng = pickSessionCoord(s.location_lng, PARIS_FALLBACK.lng);
+    const { lat, lng } = resolveSessionMapCoords(s, routeAnchorById);
     setSelectedSessionDialog({
       ...s,
       session_type: s.activity_type || "course",
@@ -414,8 +430,7 @@ export default function ProfileSessions() {
               const tone = toneHexForActivity(session.activity_type || "");
               const whenPast = format(new Date(session.scheduled_at), "d MMM yyyy · HH:mm", { locale: fr });
               const when = live ? "EN COURS · live" : whenPast;
-              const lat = pickSessionCoord(session.location_lat, PARIS_FALLBACK.lat);
-              const lng = pickSessionCoord(session.location_lng, PARIS_FALLBACK.lng);
+              const { lat, lng } = resolveSessionMapCoords(session, routeAnchorById);
               const nComments = commentCountBySession[session.id] ?? 0;
               const commentLabel = nComments > 0 ? `Commenter (${nComments})` : "Commenter";
 

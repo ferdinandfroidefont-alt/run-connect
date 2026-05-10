@@ -693,7 +693,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
                         <button
                           type="button"
-                          onClick={() => setShowActivitiesSheet(true)}
+                          onClick={() => {
+                            if (!userId) return;
+                            if (isOwnProfile) {
+                              navigate("/profile/sessions");
+                            } else {
+                              navigate(`/profile/${userId}/sessions`);
+                            }
+                            onClose();
+                          }}
                           className="flex w-full min-w-0 items-center gap-3 rounded-[14px] border border-border/60 bg-white px-4 py-3.5 text-left transition-colors active:bg-secondary/60"
                         >
                           <span

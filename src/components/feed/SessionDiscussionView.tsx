@@ -8,6 +8,10 @@ import { useAppContext } from "@/contexts/AppContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { initials } from "@/components/feed/FeedSessionTile";
+import { firstMapPointFromRouteCoordinates, pickSessionCoordinate } from "@/lib/geoUtils";
+
+const PARIS_LAT = 48.8566;
+const PARIS_LNG = 2.3522;
 
 /** Charge une séance pour la vue discussion (hors fil amis : ex. organisateur / Mes séances). */
 export async function fetchFeedSessionForDiscussion(sessionId: string): Promise<FeedSession | null> {
@@ -20,6 +24,7 @@ export async function fetchFeedSessionForDiscussion(sessionId: string): Promise<
       location_name,
       location_lat,
       location_lng,
+      route_id,
       scheduled_at,
       max_participants,
       current_participants,
@@ -31,6 +36,19 @@ export async function fetchFeedSessionForDiscussion(sessionId: string): Promise<
     .maybeSingle();
 
   if (error || !sessionRow) return null;
+
+  let routeAnchor: ReturnType<typeof firstMapPointFromRouteCoordinates> = null;
+  if (sessionRow.route_id) {
+    const { data: route } = await supabase
+      .from("routes")
+      .select("coordinates")
+      .eq("id", sessionRow.route_id)
+      .maybeSingle();
+    routeAnchor = firstMapPointFromRouteCoordinates(route?.coordinates);
+  }
+
+  const location_lat = pickSessionCoordinate(sessionRow.location_lat, routeAnchor?.lat ?? PARIS_LAT);
+  const location_lng = pickSessionCoordinate(sessionRow.location_lng, routeAnchor?.lng ?? PARIS_LNG);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -47,6 +65,8 @@ export async function fetchFeedSessionForDiscussion(sessionId: string): Promise<
 
   return {
     ...sessionRow,
+    location_lat,
+    location_lng,
     organizer: {
       user_id: organizer.user_id,
       username: organizer.username,

@@ -3259,12 +3259,17 @@ export function CoachPlanningExperience() {
     }
   };
 
+  /** Mon plan / Planification : header dans le flux (pas d’ancrage fixe iOS) — autres vues gardent le pin clavier-safe. */
+  const pinCoachShellHeader =
+    weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking";
+
   return (
     <>
       <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden" data-tutorial="tutorial-coaching">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           contentTopOffsetPx={0}
+          pinHeader={pinCoachShellHeader}
           scrollRef={coachingMainScrollRef}
           headerWrapperClassName={
             weekPlannerMode

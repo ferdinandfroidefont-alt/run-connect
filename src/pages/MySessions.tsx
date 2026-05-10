@@ -1009,7 +1009,7 @@ export default function MySessions() {
           </div>
         </div>
 
-        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 96px)" }}>
+        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 88px)" }}>
           <>
             {loading ? (
                 <div className="space-y-3 px-4">

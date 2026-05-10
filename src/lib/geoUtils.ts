@@ -1,5 +1,39 @@
 export type MapCoord = { lat: number; lng: number };
 
+/**
+ * Coordonnées carte pour une séance : évite `Number(null) === 0` (Supabase renvoie souvent null).
+ */
+export function pickSessionCoordinate(value: number | string | null | undefined, fallback: number): number {
+  if (value == null || value === "") return fallback;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/**
+ * Premier point exploitable d’un JSON `routes.coordinates` (objets {lat,lng} ou positions [lng,lat]).
+ */
+export function firstMapPointFromRouteCoordinates(raw: unknown): MapCoord | null {
+  if (!raw || !Array.isArray(raw) || raw.length === 0) return null;
+  const first = raw[0] as unknown;
+  if (first && typeof first === "object" && !Array.isArray(first)) {
+    const o = first as { lat?: unknown; lng?: unknown };
+    const lat = Number(o.lat);
+    const lng = Number(o.lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+    return null;
+  }
+  if (Array.isArray(first) && first.length >= 2) {
+    const a = Number(first[0]);
+    const b = Number(first[1]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    // GeoJSON / Mapbox: [lng, lat]
+    if (Math.abs(a) <= 180 && Math.abs(b) <= 90) return { lat: b, lng: a };
+  }
+  return null;
+}
+
 /** Distance géodésique approximative en mètres (Haversine). */
 export function distanceMeters(a: MapCoord, b: MapCoord): number {
   const R = 6371000;
