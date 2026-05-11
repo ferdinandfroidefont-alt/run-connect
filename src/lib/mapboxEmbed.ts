@@ -3,6 +3,7 @@ import { getMapboxAccessToken } from "@/lib/mapboxConfig";
 import { getHomeMapboxStyleUrl } from "@/lib/mapboxMapStylePreference";
 import type { MapCoord } from "@/lib/geoUtils";
 import { loadMapboxGl, type MapboxGL } from "@/lib/mapboxLazy";
+import { getMapboxLowDataOptions } from "@/lib/networkQuality";
 
 let accessTokenSet = false;
 
@@ -47,6 +48,7 @@ export async function createEmbeddedMapboxMap(
   ensureMapboxToken(mapboxgl);
   const c = options.center ?? { lat: 48.8566, lng: 2.3522 };
   const styleUrl = options.style ?? getHomeMapboxStyleUrl();
+  const lowData = getMapboxLowDataOptions();
   return new mapboxgl.Map({
     container,
     style: styleUrl,
@@ -56,9 +58,13 @@ export async function createEmbeddedMapboxMap(
     attributionControl: false,
     dragRotate: false,
     pitchWithRotate: false,
-    antialias: options.antialias ?? true,
+    antialias: options.antialias ?? lowData.antialias,
     renderWorldCopies: options.renderWorldCopies ?? false,
     pitch: options.pitch ?? 0,
+    localIdeographFontFamily: lowData.localIdeographFontFamily,
+    maxTileCacheSize: lowData.maxTileCacheSize,
+    crossSourceCollisions: lowData.crossSourceCollisions,
+    fadeDuration: lowData.fadeDuration,
   });
 }
 

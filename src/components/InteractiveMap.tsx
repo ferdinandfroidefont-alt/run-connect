@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Gauge } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Gauge, RefreshCw, WifiOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -59,6 +59,7 @@ import {
   HOME_MAP_FILTER_PORTAL_SELECTOR,
 } from '@/components/map/HomeMapFilterSheet';
 import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
+import { getMapboxLowDataOptions, useNetworkQuality } from '@/lib/networkQuality';
 import type { MapCoord } from '@/lib/geoUtils';
 import { pathLengthMeters, resamplePathEvenlyMapCoords } from '@/lib/geoUtils';
 import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
@@ -406,6 +407,12 @@ export const InteractiveMap = ({
   const sessionPolylines = useRef<unknown[]>([]);
   const userLocationMarker = useRef<Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  /** Vrai si le premier rendu Mapbox tarde (offline / 2G / hotspot saturé) — déclenche le CTA « Réessayer ». */
+  const [isSlowBoot, setIsSlowBoot] = useState(false);
+  /** Incrémenté par le bouton « Réessayer » pour forcer un re-mount complet de la carte. */
+  const [bootAttempt, setBootAttempt] = useState(0);
+  const networkQuality = useNetworkQuality();
+  const isOffline = networkQuality === 'offline';
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -1220,14 +1227,20 @@ export const InteractiveMap = ({
             : [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat];
         const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_NAVIGATION_DAY_STYLE;
 
+        const lowData = getMapboxLowDataOptions();
         const mapInstance = new mapboxgl.Map({
           container: mapContainer.current,
           style: styleUrl,
           center: mapCenterLngLat,
           zoom: HOME_MAP_BOOT_ZOOM,
           pitch: 0,
-          antialias: true,
           renderWorldCopies: false,
+          /** Options bandwidth-aware : antialias coupé, glyphes locales, cache plus large en conn lente. */
+          antialias: lowData.antialias,
+          localIdeographFontFamily: lowData.localIdeographFontFamily,
+          maxTileCacheSize: lowData.maxTileCacheSize,
+          crossSourceCollisions: lowData.crossSourceCollisions,
+          fadeDuration: lowData.fadeDuration,
         });
 
         mapInstance.on('style.load', () => {
@@ -1397,6 +1410,28 @@ export const InteractiveMap = ({
       setMapboxMap(null);
       setIsMapLoaded(false);
     };
+    // `bootAttempt` permet à `retryMapBoot` de relancer un boot propre (cleanup + new Map).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bootAttempt]);
+
+  /**
+   * Détection « boot lent » : si la carte n'a pas répondu après quelques secondes (3G/hotspot/offline),
+   * on bascule sur un overlay actionnable au lieu de laisser l'utilisateur fixer un fond gris.
+   */
+  useEffect(() => {
+    if (isMapLoaded) {
+      setIsSlowBoot(false);
+      return;
+    }
+    const slowMs = networkQuality === 'slow' || networkQuality === 'offline' ? 4000 : 9000;
+    const t = window.setTimeout(() => setIsSlowBoot(true), slowMs);
+    return () => window.clearTimeout(t);
+  }, [isMapLoaded, networkQuality, bootAttempt]);
+
+  const retryMapBoot = useCallback(() => {
+    setIsSlowBoot(false);
+    setIsMapLoaded(false);
+    setBootAttempt((n) => n + 1);
   }, []);
 
   /** Marqueur position utilisateur : stable, couleur primaire, mise à jour par setLngLat (évite clignotements). */
@@ -1814,11 +1849,47 @@ export const InteractiveMap = ({
         />
         <div
           className={cn(
-            'pointer-events-none absolute inset-0 z-[1] bg-muted/20 transition-opacity duration-200 motion-reduce:transition-none',
-            isMapLoaded ? 'opacity-0' : 'opacity-100'
+            'absolute inset-0 z-[2] flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none',
+            isMapLoaded ? 'pointer-events-none opacity-0' : 'opacity-100'
           )}
-          aria-hidden
-        />
+          role="status"
+          aria-live="polite"
+          aria-hidden={isMapLoaded}
+        >
+          {!isMapLoaded && (
+            <div className="pointer-events-auto flex max-w-[280px] flex-col items-center gap-3 px-6 text-center">
+              {isOffline ? (
+                <WifiOff className="h-7 w-7 text-amber-500" strokeWidth={1.75} aria-hidden />
+              ) : isSlowBoot ? (
+                <RefreshCw className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+              ) : (
+                <Loader2 className="h-7 w-7 animate-spin text-primary" strokeWidth={1.75} aria-hidden />
+              )}
+              <p className="text-[13px] font-medium leading-snug text-foreground/85">
+                {isOffline
+                  ? 'Pas de connexion'
+                  : isSlowBoot
+                    ? 'Connexion lente — la carte met du temps à charger'
+                    : networkQuality === 'slow'
+                      ? 'Chargement de la carte… (réseau lent)'
+                      : 'Chargement de la carte…'}
+              </p>
+              {(isSlowBoot || isOffline) && (
+                <button
+                  type="button"
+                  onClick={retryMapBoot}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground shadow-sm',
+                    'transition-transform duration-150 active:scale-[0.97]'
+                  )}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+                  Réessayer
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Immersive Mode: Minimal top bar with back button */}
