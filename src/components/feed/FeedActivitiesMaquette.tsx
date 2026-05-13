@@ -26,7 +26,14 @@ import { toast } from "sonner";
 
 type FeedMode = "friends" | "discover";
 
-export function FeedActivitiesMaquette() {
+type FeedActivitiesMaquetteProps = {
+  /** Sous l’onglet Découvrir : même header pastel + pastilles ; pas de shell « Activités ». */
+  embeddedInDiscoverChrome?: boolean;
+};
+
+export function FeedActivitiesMaquette({
+  embeddedInDiscoverChrome = false,
+}: FeedActivitiesMaquetteProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -166,16 +173,21 @@ export function FeedActivitiesMaquette() {
     (friendsLoading || discussionSessionFetching);
 
   if (discussionSessionId && waitingForDiscussionResolve) {
-    return (
+    const inner = (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 bg-secondary px-6 pb-[calc(env(safe-area-inset-bottom,0)+24px)] pt-[calc(var(--safe-area-top)+24px)]">
         <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
         <p className="text-center text-ios-subheadline text-muted-foreground">Ouverture de la discussion…</p>
       </div>
     );
+    return embeddedInDiscoverChrome ? (
+      <div className="fixed inset-0 z-[140] flex bg-secondary">{inner}</div>
+    ) : (
+      inner
+    );
   }
 
   if (discussionSession) {
-    return (
+    const inner = (
       <SessionDiscussionView
         session={discussionSession}
         onBack={() => {
@@ -184,6 +196,210 @@ export function FeedActivitiesMaquette() {
         }}
         onAddComment={addComment}
       />
+    );
+    return embeddedInDiscoverChrome ? (
+      <div className="fixed inset-0 z-[140] flex min-h-0 bg-background">{inner}</div>
+    ) : (
+      inner
+    );
+  }
+
+  const feedPaddingX = embeddedInDiscoverChrome ? "px-0" : "px-4";
+  const dialogs = (
+    <>
+      <SessionDetailsDialog
+        session={selectedDiscoverSession as any}
+        onClose={() => setSelectedDiscoverSession(null)}
+        onSessionUpdated={() => void refreshDiscover()}
+      />
+
+      <SessionDetailsDialog
+        session={selectedFriendsSession as any}
+        onClose={() => setSelectedFriendsSession(null)}
+        onSessionUpdated={() => void refreshFriends()}
+      />
+    </>
+  );
+
+  if (embeddedInDiscoverChrome) {
+    return (
+      <>
+        <div className="min-w-0 pb-2 pt-1">
+          <div className="flex gap-1.5 pb-1 pt-2">
+            <button
+              type="button"
+              onClick={() => setMode("friends")}
+              className={cn(
+                "h-9 shrink-0 rounded-full px-[18px] text-[15px] font-normal tracking-[-0.3px] transition-transform active:scale-95",
+                mode === "friends"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-primary bg-transparent text-primary",
+              )}
+            >
+              {friendLabel}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("discover")}
+              className={cn(
+                "h-9 shrink-0 rounded-full px-[18px] text-[15px] font-normal tracking-[-0.3px] transition-transform active:scale-95",
+                mode === "discover"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-primary bg-transparent text-primary",
+              )}
+            >
+              Découvrir
+            </button>
+          </div>
+          {mode === "discover" ? (
+            <div className="pb-2 pt-1">
+              <DiscoverFilters
+                maxDistance={maxDistance}
+                setMaxDistance={setMaxDistance}
+                selectedActivities={selectedActivities}
+                toggleActivity={toggleActivity}
+                toggleAllActivities={toggleAllActivities}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          className={cn(
+            "box-border w-full max-w-full space-y-3.5 pb-28 pt-3.5",
+            feedPaddingX,
+          )}
+          data-tutorial="tutorial-feed"
+        >
+          {mode === "friends" && loading && feedItems.length === 0 ? (
+            <div className="flex flex-col gap-3.5">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="overflow-hidden rounded-[18px] bg-card p-0 dark:bg-card">
+                  <div className="flex items-center gap-2.5 p-3.5">
+                    <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-muted" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-4 w-1/2 animate-pulse rounded-full bg-muted" />
+                      <div className="h-3 w-1/3 animate-pulse rounded-full bg-muted" />
+                    </div>
+                  </div>
+                  <div className="h-[130px] animate-pulse bg-muted/60" />
+                  <div className="flex items-center justify-between border-t border-border/50 p-3.5">
+                    <div className="h-4 w-2/3 animate-pulse rounded-full bg-muted" />
+                    <div className="h-9 w-24 animate-pulse rounded-full bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : mode === "friends" && feedItems.length === 0 ? (
+            <div className="mx-auto max-w-md py-6">
+              <FeedEmptyState />
+            </div>
+          ) : mode === "friends" ? (
+            <>
+              {feedItems.map((s) => {
+                const who = s.organizer.display_name || s.organizer.username;
+                const loc = shortLocation(s.location_name);
+                const title = loc ? `${s.title} · ${loc}` : s.title;
+                const live = sessionLikelyLive(s.scheduled_at);
+                const tone = toneHexForActivity(s.activity_type);
+                return (
+                  <div key={s.id} className="space-y-0">
+                    <FeedSessionTile
+                      who={who}
+                      when={renderFriendsWhen(s)}
+                      title={title}
+                      tone={tone}
+                      live={live}
+                      actionLabel={live ? "Suivre" : "Rejoindre"}
+                      commentLabel="Commenter"
+                      locationLat={s.location_lat}
+                      locationLng={s.location_lng}
+                      avatarUrl={s.organizer.avatar_url || undefined}
+                      activityType={s.activity_type}
+                      onCardPress={() =>
+                        setSelectedFriendsSession({
+                          ...s,
+                          session_type: s.activity_type,
+                          intensity: "moderate",
+                          organizer_id: s.organizer.user_id,
+                          profiles: {
+                            username: s.organizer.username,
+                            display_name: s.organizer.display_name,
+                            avatar_url: s.organizer.avatar_url || undefined,
+                          },
+                        })
+                      }
+                      onActionPress={() => handleJoinFromFeed(s.id)}
+                      onCommentPress={() => setDiscussionSessionId(s.id)}
+                    />
+                  </div>
+                );
+              })}
+              {hasMore ? (
+                <div ref={loadMoreRef} className="flex justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                feedItems.length > 0 && (
+                  <p className="py-6 text-center text-[13px] text-muted-foreground">Vous êtes à jour !</p>
+                )
+              )}
+            </>
+          ) : loading && discoverSessions.length === 0 ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : discoverSessions.length === 0 ? (
+            <div className="mx-auto max-w-md py-4">
+              <DiscoverEmptyState
+                hasLocation={hasLocation}
+                onResetFilters={() => {
+                  resetFilters();
+                  void refreshDiscover();
+                }}
+              />
+            </div>
+          ) : (
+            discoverSessions.map((s) => {
+              const who = s.organizer.display_name || s.organizer.username;
+              const loc = shortLocation(s.location_name);
+              const title = loc ? `${s.title} · ${loc}` : s.title;
+              const live = sessionLikelyLive(s.scheduled_at);
+              const tone = toneHexForActivity(s.activity_type);
+              return (
+                <FeedSessionTile
+                  key={s.id}
+                  who={who}
+                  when={renderDiscoverWhen(s)}
+                  title={title}
+                  tone={tone}
+                  live={live}
+                  actionLabel={live ? "Suivre" : "Rejoindre"}
+                  locationLat={s.location_lat}
+                  locationLng={s.location_lng}
+                  avatarUrl={s.organizer.avatar_url || undefined}
+                  activityType={s.activity_type}
+                  onCardPress={() =>
+                    setSelectedDiscoverSession({
+                      ...s,
+                      session_type: s.activity_type,
+                      profiles: {
+                        username: s.organizer.username,
+                        display_name: s.organizer.display_name,
+                        avatar_url: s.organizer.avatar_url || undefined,
+                      },
+                    })
+                  }
+                  onActionPress={() => {
+                    void joinSession(s);
+                  }}
+                />
+              );
+            })
+          )}
+        </div>
+        {dialogs}
+      </>
     );
   }
 
@@ -242,7 +458,13 @@ export function FeedActivitiesMaquette() {
       }
     >
       <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-        <div className="box-border w-full max-w-full space-y-3.5 px-4 pb-[6.5rem] pt-3.5" data-tutorial="tutorial-feed">
+        <div
+          className={cn(
+            "box-border w-full max-w-full space-y-3.5 pb-[6.5rem] pt-3.5",
+            feedPaddingX,
+          )}
+          data-tutorial="tutorial-feed"
+        >
           {mode === "friends" && loading && feedItems.length === 0 ? (
             <div className="flex flex-col gap-3.5">
               {[0, 1, 2].map((i) => (
@@ -371,18 +593,7 @@ export function FeedActivitiesMaquette() {
           )}
         </div>
       </ScrollArea>
-
-      <SessionDetailsDialog
-        session={selectedDiscoverSession as any}
-        onClose={() => setSelectedDiscoverSession(null)}
-        onSessionUpdated={() => void refreshDiscover()}
-      />
-
-      <SessionDetailsDialog
-        session={selectedFriendsSession as any}
-        onClose={() => setSelectedFriendsSession(null)}
-        onSessionUpdated={() => void refreshFriends()}
-      />
+      {dialogs}
     </IosFixedPageHeaderShell>
   );
 }

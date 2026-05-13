@@ -4,13 +4,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { FloatingCreateSessionButton } from "@/components/FloatingCreateSessionButton";
 import {
   DiscoverIcon,
   SessionsIcon,
   CoachingIcon,
   MessagesIcon,
-  ProfileIcon,
 } from "@/components/apple/TabIcons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type SVGProps } from "react";
 import {
@@ -49,13 +47,12 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [showNoClubDialog, setShowNoClubDialog] = useState(false);
-  const { hideBottomNav } = useAppContext();
+  const { hideBottomNav, openCreateSession } = useAppContext();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pathname = location.pathname;
-  const isHome = pathname === "/";
 
-  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages → Profil
+  /** Ordre fixe : Accueil → Mes séances | [+] | Coaching → Messages
    *  Icônes SF-style (refonte handoff) : DiscoverIcon, SessionsIcon, etc. */
   const navItems = useMemo<NavItem[]>(
     () => [
@@ -63,7 +60,8 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         path: "/",
         icon: DiscoverIcon,
         label: t("navigation.home"),
-        isActive: (p) => p === "/" || p === "/feed",
+        isActive: (p) =>
+          p === "/" || p === "/feed" || p === "/discover/live" || p === "/itinerary/hub",
       },
       {
         path: "/my-sessions",
@@ -85,12 +83,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         tutorialId: "nav-messages",
         isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
         showUnreadBadge: true,
-      },
-      {
-        path: "/profile",
-        icon: ProfileIcon,
-        label: "Profil",
-        isActive: (p) => p === "/profile" || p.startsWith("/profile/"),
       },
     ],
     [t]
@@ -149,7 +141,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
     };
   }, [user, fetchUnreadCount]);
 
-  /** Toujours montée : masquage visuel uniquement (pas d’animation / pas de translate). */
+  /** Toujours montée : masquage visuel uniquement (pas d'animation / pas de translate). */
   const tabBarHidden = hideBottomNav || isProfileRoute;
 
   const handleNavClick = async (path: string) => {
@@ -164,7 +156,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         .eq("user_id", user.id)
         .limit(1);
 
-      // Fallback to current behavior if membership check fails.
       if (error) {
         navigate(path);
         return;
@@ -178,11 +169,71 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
     navigate(path);
   };
 
+  const handlePlusClick = () => {
+    if (pathname !== "/") {
+      navigate("/");
+      window.setTimeout(() => openCreateSession(), 100);
+    } else {
+      openCreateSession();
+    }
+  };
+
+  const leftItems = navItems.slice(0, 2);
+  const rightItems = navItems.slice(2);
+
+  const renderNavButton = (item: NavItem) => {
+    const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
+    const isActive = item.isActive(pathname);
+    const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
+
+    return (
+      <button
+        key={item.path}
+        type="button"
+        onClick={() => handleNavClick(item.path)}
+        data-tutorial={tutorialId}
+        aria-current={isActive ? "page" : undefined}
+        className={cn(
+          "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-[2px] rounded-xl",
+          "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]"
+        )}
+      >
+        <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
+          <Icon
+            size={26}
+            className={cn(
+              "transition-colors duration-300 ease-ios",
+              isActive
+                ? "text-primary"
+                : "text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
+            )}
+            strokeWidth={isActive ? 2.2 : 1.7}
+            aria-hidden
+          />
+          {showBadge && (
+            <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[11px] font-bold text-white">
+              {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+            </span>
+          )}
+        </div>
+        <span
+          className={cn(
+            "w-full truncate text-center text-[10px] leading-none tracking-[-0.1px] transition-colors duration-300 ease-ios",
+            isActive
+              ? "font-medium text-primary"
+              : "font-medium text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
+          )}
+        >
+          {label}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <nav
       className={cn(
         "fixed inset-x-0 z-[120] w-full overflow-visible",
-        // Refonte Apple : blur + bord supérieur fin (apple-tabbar dans index.css)
         "apple-tabbar",
         tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
         "[transition:none] motion-reduce:transition-none"
@@ -196,9 +247,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         transition: "none",
       }}
     >
-      {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
-      {isHome && <FloatingCreateSessionButton />}
-      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-1 pb-0">
+      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-visible pt-1 pb-0">
         <div
           className="mx-auto flex max-w-full items-stretch justify-center"
           style={{
@@ -207,55 +256,37 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
             paddingRight: "0.5rem",
           }}
         >
-          {navItems.map((item) => {
-            const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
-            const isActive = item.isActive(pathname);
-            const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
+          {leftItems.map(renderNavButton)}
 
-            return (
-              <button
-                key={item.path}
-                type="button"
-                onClick={() => handleNavClick(item.path)}
-                data-tutorial={tutorialId}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-[2px] rounded-xl",
-                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]"
-                )}
+          {/* Bouton + central — légèrement surélevé comme dans la maquette */}
+          <div className="flex flex-1 basis-0 items-center justify-center">
+            <button
+              type="button"
+              onClick={handlePlusClick}
+              aria-label="Planifier une séance"
+              className={cn(
+                "flex h-14 w-14 items-center justify-center rounded-full -translate-y-3",
+                "touch-manipulation transition-transform duration-150 ease-ios active:scale-[0.94]",
+                "bg-primary text-primary-foreground",
+                "shadow-[0_4px_12px_rgba(0,122,255,0.35)]"
+              )}
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 28 28"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                aria-hidden
               >
-                <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
-                  <Icon
-                    size={26}
-                    className={cn(
-                      "transition-colors duration-300 ease-ios",
-                      // Apple iOS : icône active = system blue, inactive = ink60 (rgba(60,60,67,0.6))
-                      isActive
-                        ? "text-primary"
-                        : "text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
-                    )}
-                    strokeWidth={isActive ? 2.2 : 1.7}
-                    aria-hidden
-                  />
-                  {showBadge && (
-                    <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[11px] font-bold text-white">
-                      {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "w-full truncate text-center text-[10px] leading-none tracking-[-0.1px] transition-colors duration-300 ease-ios",
-                    isActive
-                      ? "font-medium text-primary"
-                      : "font-medium text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
-                  )}
-                >
-                  {label}
-                </span>
-              </button>
-            );
-          })}
+                <path d="M14 4v20M4 14h20" />
+              </svg>
+            </button>
+          </div>
+
+          {rightItems.map(renderNavButton)}
         </div>
       </div>
       <AlertDialog open={showNoClubDialog} onOpenChange={setShowNoClubDialog}>

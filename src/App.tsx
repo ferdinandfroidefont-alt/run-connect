@@ -29,6 +29,8 @@ import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Feed = lazy(() => import("./pages/Feed"));
+const DiscoverLivePage = lazy(() => import("./pages/DiscoverLivePage"));
+const DiscoverItinerariesPage = lazy(() => import("./pages/DiscoverItinerariesPage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
 const ProfileSportRecordsEdit = lazy(() => import("./pages/ProfileSportRecordsEdit"));
@@ -403,6 +405,7 @@ const App = () => {
                   <Route path="/onboarding" element={<PageTransition><PageSuspense><Onboarding /></PageSuspense></PageTransition>} />
                   <Route path="/" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/discover/live" element={<Layout><PageTransition><PageSuspense><DiscoverLivePage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/my-sessions/confirm/:sessionId" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
@@ -418,6 +421,7 @@ const App = () => {
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
+                  <Route path="/itinerary/hub" element={<Layout><PageTransition><PageSuspense><DiscoverItinerariesPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary" element={<Navigate to="/route-create" replace />} />
                   <Route path="/itinerary/my-routes" element={<Layout><PageTransition><PageSuspense><ItineraryMyRoutes /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/route/:routeId" element={<Layout><PageTransition><PageSuspense><ItineraryRouteDetail /></PageSuspense></PageTransition></Layout>} />

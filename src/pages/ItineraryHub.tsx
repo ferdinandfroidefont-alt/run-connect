@@ -35,8 +35,54 @@ const hubItems = [
   },
 ] as const;
 
-export default function ItineraryHub() {
+type ItineraryHubProps = {
+  embedded?: boolean;
+};
+
+export default function ItineraryHub({ embedded = false }: ItineraryHubProps) {
   const navigate = useNavigate();
+
+  const body = (
+    <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-8">
+      <div
+        className={`box-border min-w-0 w-full max-w-full ${embedded ? "px-0 ios-shell:px-0" : "px-4 ios-shell:px-2"}`}
+      >
+        <p
+          className={`mb-4 px-0.5 text-ios-subheadline leading-relaxed ${embedded ? "text-[#8E8E93]" : "text-muted-foreground"}`}
+        >
+          Créez un tracé, retrouvez vos parcours ou lancez un mode guidé — tout est regroupé ici.
+        </p>
+        <div
+          className={`ios-card w-full min-w-0 overflow-hidden ${embedded ? "border border-[rgba(0,0,0,0.06)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]" : "border border-border/60"}`}
+          data-tutorial="tutorial-itinerary-hub"
+        >
+          {hubItems.map((item, index) => (
+            <div key={item.path}>
+              <button
+                type="button"
+                onClick={() => navigate(item.path)}
+                className={`flex w-full min-w-0 max-w-full items-center gap-2.5 py-3 transition-colors min-h-[56px] active:bg-secondary ios-shell:px-2.5 ${embedded ? "px-4" : "px-4"}`}
+              >
+                <div className={`ios-list-row-icon shrink-0 ${item.color}`}>
+                  <item.icon className="h-4 w-4 text-white" />
+                </div>
+                <div className="min-w-0 flex-1 overflow-hidden text-left">
+                  <span className="block truncate text-[17px] font-medium text-foreground">{item.title}</span>
+                  <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{item.description}</span>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+              </button>
+              {index < hubItems.length - 1 ? <div className="ios-list-row-inset-sep" /> : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (embedded) {
+    return <div className="mt-4 min-w-0">{body}</div>;
+  }
 
   return (
     <IosFixedPageHeaderShell
@@ -56,42 +102,7 @@ export default function ItineraryHub() {
       }
     >
       <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-        {/*
-          Tab bar visible : le <main> s’arrête déjà au-dessus de la nav (safe-area gérée sur la nav seule).
-          Éviter pb + safe-area-bottom ici → doublon visuel / insets qui peuvent perturber WebKit au retour accueil.
-        */}
-        {/* Même empilement que SettingsDialog hub : pas de max-w-2xl / mx entre ScrollArea et le wrapper px (évite le clip iOS). */}
-        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-8">
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-            <p className="mb-4 px-0.5 text-ios-subheadline leading-relaxed text-muted-foreground">
-              Créez un tracé, retrouvez vos parcours ou lancez un mode guidé — tout est regroupé ici.
-            </p>
-            <div
-              className="ios-card w-full min-w-0 overflow-hidden border border-border/60"
-              data-tutorial="tutorial-itinerary-hub"
-            >
-              {hubItems.map((item, index) => (
-                <div key={item.path}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(item.path)}
-                    className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-3 transition-colors active:bg-secondary ios-shell:px-2.5 min-h-[56px]"
-                  >
-                    <div className={`ios-list-row-icon shrink-0 ${item.color}`}>
-                      <item.icon className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1 overflow-hidden text-left">
-                      <span className="block truncate text-[17px] font-medium text-foreground">{item.title}</span>
-                      <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{item.description}</span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  </button>
-                  {index < hubItems.length - 1 && <div className="ios-list-row-inset-sep" />}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {body}
       </ScrollArea>
     </IosFixedPageHeaderShell>
   );
