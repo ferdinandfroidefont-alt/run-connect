@@ -166,6 +166,7 @@ export function DiscoverChromeShell({
   return (
     <div
       ref={scrollRef}
+      data-no-tab-swipe="true"
       className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain"
       style={{
         background: DISCOVER_BG,
