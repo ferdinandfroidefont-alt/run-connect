@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useTransition, useMemo, useCallback } from "react";
+import { lazy, Suspense, Fragment, useState, useEffect, useRef, useTransition, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +31,7 @@ import { useCamera } from "@/hooks/useCamera";
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import {
   MessageCircle, 
+  MessageSquare,
   Users, 
   Send,
   ArrowLeft,
@@ -54,7 +55,8 @@ import {
   Smile,
   BarChart3,
   Camera,
-  ChevronRight
+  ChevronRight,
+  Landmark,
 } from "lucide-react";
 import { format, isToday, isYesterday, isValid, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -69,9 +71,9 @@ import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
 import { CoachingMessageCard } from "@/components/coaching/CoachingMessageCard";
 import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
 import { SignedImage } from "@/components/SignedImage";
-import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
-import { SearchTabs } from "@/components/SearchTabs";
+import { MessagesInboxStickyScroll } from "@/components/messages/MessagesInboxStickyScroll";
+import { MessagesDiscoveryTabsMaquette } from "@/components/messages/MessagesDiscoveryTabsMaquette";
 import { ProfilesTab } from "@/components/search/ProfilesTab";
 import { ClubsTab } from "@/components/search/ClubsTab";
 import { StravaTab } from "@/components/search/StravaTab";
@@ -273,7 +275,6 @@ const Messages = () => {
     authorId: string;
     storyId?: string | null;
   } | null>(null);
-  const [storiesRefreshToken, setStoriesRefreshToken] = useState(0);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Conversation settings states
@@ -3547,16 +3548,15 @@ const Messages = () => {
         )}
         data-tutorial="tutorial-messages"
       >
-        <IosFixedPageHeaderShell
-          className="min-h-0 flex-1"
-          contentScroll={activeRootTab !== "conversations"}
-          pinHeader={activeRootTab === "conversations"}
-          /** Même logique que le coaching : épinglé seulement sous WebKit iOS (clavier), pas sur desktop. */
-          forcePin={false}
-          contentTopOffsetPx={0}
-          headerWrapperClassName="z-50 apple-grouped-bg"
-          header={
-            activeRootTab === "create-club" ? (
+        {activeRootTab === "create-club" ? (
+          <IosFixedPageHeaderShell
+            className="min-h-0 flex-1"
+            contentScroll={false}
+            pinHeader
+            forcePin={false}
+            contentTopOffsetPx={0}
+            headerWrapperClassName="z-50 apple-grouped-bg"
+            header={
               <MainTopHeader
                 title="Créer un club"
                 disableScrollCollapse
@@ -3578,191 +3578,176 @@ const Messages = () => {
                   </button>
                 }
               />
-            ) : (
-              <div>
-                <div onClick={() => isInboxSearchMode && setIsInboxSearchMode(false)}>
-                  <MainTopHeader
-                    title="Messages"
-                    disableScrollCollapse
-                    className="apple-grouped-bg"
-                    largeTitleRight={
-                      <div className="flex items-center text-primary">
-                        <button
-                          type="button"
-                          onClick={() => setMessagesComposeSheetOpen(true)}
-                          className="tap-highlight-none flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full active:bg-black/[0.04] dark:active:bg-white/[0.06]"
-                          aria-label="Nouvelle conversation, club ou groupe"
-                          aria-expanded={messagesComposeSheetOpen}
-                          aria-haspopup="dialog"
-                        >
-                          <Plus className="h-[23px] w-[23px]" strokeWidth={2.5} />
-                        </button>
-                        <Sheet open={messagesComposeSheetOpen} onOpenChange={setMessagesComposeSheetOpen}>
-                          <SheetContent
-                            side="bottom"
-                            overlayClassName="z-[130]"
-                            className={cn(
-                              "z-[130] max-h-[85dvh] gap-0 rounded-t-[14px] border-t border-[#e0e0e0] bg-card p-0",
-                              "pb-[max(1.25rem,env(safe-area-inset-bottom))]"
-                            )}
-                            showCloseButton={false}
-                          >
-                            <SheetHeader className="border-b border-[#e0e0e0] px-5 py-4 text-left">
-                              <SheetTitle className="text-[17px] font-semibold tracking-[-0.37px] text-foreground">
-                                Nouveau
-                              </SheetTitle>
-                            </SheetHeader>
-                            <div className="flex flex-col px-2 py-2">
-                              <button
-                                type="button"
-                                className="flex min-h-[48px] w-full items-center gap-3 rounded-ios-md px-4 py-3 text-left active:bg-muted"
-                                data-no-tab-swipe="true"
-                                onClick={() => openNewConversationView()}
-                              >
-                                <MessageCircle className="h-5 w-5 shrink-0 text-primary" />
-                                <span className="text-[17px] font-normal leading-snug tracking-[-0.37px] text-foreground">
-                                  Nouvelle conversation
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                className="flex min-h-[48px] w-full items-center gap-3 rounded-ios-md px-4 py-3 text-left active:bg-muted"
-                                data-no-tab-swipe="true"
-                                onClick={() => openCreateClubTab()}
-                              >
-                                <Users className="h-5 w-5 shrink-0 text-primary" />
-                                <span className="text-[17px] font-normal leading-snug tracking-[-0.37px] text-foreground">
-                                  Créer un club
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                className="flex min-h-[48px] w-full items-center gap-3 rounded-ios-md px-4 py-3 text-left active:bg-muted"
-                                data-no-tab-swipe="true"
-                                onClick={() => openCreateClubTab()}
-                              >
-                                <UserPlus className="h-5 w-5 shrink-0 text-primary" />
-                                <span className="text-[17px] font-normal leading-snug tracking-[-0.37px] text-foreground">
-                                  Créer un groupe
-                                </span>
-                              </button>
-                            </div>
-                            <div className="px-4 pb-2">
-                              <button
-                                type="button"
-                                className="tap-highlight-none flex min-h-[48px] w-full items-center justify-center rounded-full border border-[#e0e0e0] bg-transparent px-4 text-[17px] font-medium text-foreground active:bg-muted"
-                                data-no-tab-swipe="true"
-                                onClick={() => setMessagesComposeSheetOpen(false)}
-                              >
-                                Annuler
-                              </button>
-                            </div>
-                          </SheetContent>
-                        </Sheet>
-                      </div>
-                    }
-                  />
-                </div>
-
-                <div className="mt-3 px-5 py-1">
-                  <div className="apple-search min-h-9 w-full gap-1.5 px-2 py-0">
-                    <Search
-                      className="pointer-events-none h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                      strokeWidth={1.8}
-                      aria-hidden
-                    />
-                    <input
-                      value={conversationSearch}
-                      onChange={(e) => setConversationSearch(e.target.value)}
-                      onFocus={() => setIsInboxSearchMode(true)}
-                      placeholder="Rechercher amis · clubs · groupes"
-                      className="min-h-9 min-w-0 flex-1 border-0 bg-transparent py-1 text-[17px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
-                      aria-label="Rechercher une conversation"
-                      autoCorrect="off"
-                      autoCapitalize="none"
-                    />
-                  </div>
-                </div>
-
-                {!isInboxSearchMode && (
-                  <>
-                    <div className="mt-2.5">
-                      <SessionStoriesStrip
-                        currentUserId={user?.id ?? null}
-                        refreshToken={storiesRefreshToken}
-                        onOpenStory={(authorId) => setStoryViewerOpen({ authorId })}
-                        onCreateStory={() => navigate("/stories/create")}
-                        className="border-0 bg-transparent"
+            }
+          >
+            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-secondary pt-2.5 pb-ios-2">
+              <Suspense fallback={<div className="min-h-[50vh] bg-secondary" />}>
+                <CreateClubFormPanel
+                  active={activeRootTab === "create-club"}
+                  onSuccess={() => {
+                    void loadConversations();
+                    setActiveRootTab("conversations");
+                  }}
+                />
+              </Suspense>
+            </div>
+          </IosFixedPageHeaderShell>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <MessagesInboxStickyScroll onOpenCompose={() => setMessagesComposeSheetOpen(true)}>
+              {isInboxSearchMode ? (
+                <>
+                  <div className="flex w-full items-center gap-2">
+                    <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl bg-[#E5E5EA] px-3 py-2">
+                      <Search className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.5} aria-hidden />
+                      <input
+                        value={conversationSearch}
+                        onChange={(e) => setConversationSearch(e.target.value)}
+                        placeholder="Rechercher amis · clubs · groupes"
+                        className="min-w-0 flex-1 bg-transparent py-1 text-[15px] font-medium text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+                        aria-label="Rechercher utilisateurs ou clubs"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        autoFocus
                       />
                     </div>
-
-                    <div
-                      role="tablist"
-                      aria-label="Filtrer les conversations"
-                      className="mt-3.5 flex min-h-0 flex-nowrap items-center gap-1.5 overflow-x-auto overscroll-x-contain px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    <button
+                      type="button"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#8E8E93] active:bg-black/[0.06]"
+                      aria-label="Quitter la recherche"
+                      onClick={() => setIsInboxSearchMode(false)}
                     >
-                      {(
-                        [
-                          { id: "all" as const, label: "Conversations" },
-                          { id: "clubs" as const, label: `Clubs · ${inboxClubCount}` },
-                          { id: "groups" as const, label: `Groupes · ${inboxGroupCount}` },
-                        ] as const
-                      ).map((chip) => {
-                        const active = messagesInboxSegment === chip.id;
-                        return (
-                          <button
-                            key={chip.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={active}
-                            onClick={() => setMessagesInboxSegment(chip.id)}
-                            className={cn(
-                              "inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold tracking-[-0.1px] transition-[transform,opacity] active:scale-[0.98]",
-                              active
-                                ? "border-[#0066cc] bg-[#0066cc] text-white shadow-none"
-                                : "border-[#0066cc] bg-white text-[#0066cc]"
-                            )}
-                          >
-                            {chip.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )
-          }
-        >
-        <div
-          className={cn(
-            "flex w-full min-w-0 flex-col pb-ios-2",
-            activeRootTab === "create-club"
-              ? "min-h-0 flex-1 bg-secondary pt-2.5"
-              : /* shrink-0 : sans cela, min-h-0 laisse le flex réduire le bloc sous le header — la « bulle » liste est rognée et ne scroll pas toute la liste */
-                "shrink-0 apple-grouped-bg"
-          )}
-        >
-          {activeRootTab === "conversations" ? (
-            <>
-              {isInboxSearchMode ? (
-                <div className="mx-4 mt-3.5 overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card dark:border-border">
-                  <SearchTabs activeTab={messageDiscoveryTab} onTabChange={setMessageDiscoveryTab} />
-                  <div className="min-w-0">
+                      <X className="h-5 w-5" strokeWidth={2.2} />
+                    </button>
+                  </div>
+
+                  <div className="-mx-5 px-5">
+                    <MessagesDiscoveryTabsMaquette
+                      activeTab={messageDiscoveryTab}
+                      onTabChange={setMessageDiscoveryTab}
+                    />
+                  </div>
+
+                  <div className="mt-2 min-w-0 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                     {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "clubs" && <ClubsTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "strava" && <StravaTab searchQuery={conversationSearch} />}
                     {messageDiscoveryTab === "contacts" && <ContactsTab searchQuery={conversationSearch} />}
                   </div>
-                </div>
+                </>
               ) : (
-                /* Liste — carte blanche arrondie (maquette 17) : overflow-hidden pour que les coins 18px restent visibles */
-                <div
-                  className={cn(
-                    "mx-4 mt-3.5 overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card pb-ios-4 dark:border-border",
-                    filteredAndSortedConversations.length > 0 && "divide-y divide-border"
-                  )}
-                >
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsInboxSearchMode(true)}
+                    className="flex w-full items-center gap-2 rounded-xl bg-[#E5E5EA] px-3 py-2.5 text-left active:opacity-90"
+                  >
+                    <Search className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.5} aria-hidden />
+                    <span className="text-[15px] font-medium text-[#8E8E93]">
+                      Rechercher amis · clubs · groupes
+                    </span>
+                  </button>
+
+                  <div className="mt-5 flex items-end gap-3">
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]"
+                        onClick={() => navigate("/profile")}
+                        aria-label="Mon profil"
+                      >
+                        <Avatar className="h-16 w-16 rounded-full border-2 border-[#E5E5EA]">
+                          <AvatarImage
+                            src={
+                              typeof user?.user_metadata?.avatar_url === "string"
+                                ? user.user_metadata.avatar_url
+                                : ""
+                            }
+                          />
+                          <AvatarFallback
+                            className="font-display text-xl font-semibold text-white"
+                            style={{
+                              background: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                            }}
+                          >
+                            {(typeof user?.user_metadata?.username === "string"
+                              ? user.user_metadata.username
+                              : user?.email || "U")[0]?.toUpperCase() ?? "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                      <button
+                        type="button"
+                        className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#F2F2F7] active:opacity-90"
+                        style={{ background: "#007AFF" }}
+                        aria-label="Création rapide — conversation, club ou groupe"
+                        data-no-tab-swipe="true"
+                        onClick={() => setMessagesComposeSheetOpen(true)}
+                      >
+                        <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="mb-1 text-left text-[13px] font-semibold text-[#0A0F1F] active:opacity-80"
+                      onClick={() => navigate("/profile")}
+                    >
+                      Toi
+                    </button>
+                  </div>
+
+                  <div
+                    role="tablist"
+                    aria-label="Filtrer les conversations"
+                    className="mt-5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {(
+                      [
+                        { id: "all" as const, label: "Conversations", count: null as number | null },
+                        { id: "clubs" as const, label: "Clubs", count: inboxClubCount },
+                        { id: "groups" as const, label: "Groupes", count: inboxGroupCount },
+                      ] as const
+                    ).map((chip) => {
+                      const active = messagesInboxSegment === chip.id;
+                      return (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setMessagesInboxSegment(chip.id)}
+                          className="flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-semibold transition-all active:scale-95"
+                          style={{
+                            background: active ? "#007AFF" : "#E8E8ED",
+                            color: active ? "white" : "#0A0F1F",
+                            boxShadow: active ? "0 4px 12px rgba(0, 122, 255, 0.25)" : "none",
+                          }}
+                        >
+                          <span>{chip.label}</span>
+                          {chip.count !== null && chip.count > 0 ? (
+                            <span
+                              className="text-center text-[11px] font-bold"
+                              style={{
+                                background: active ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.1)",
+                                color: active ? "white" : "#0A0F1F",
+                                padding: "2px 7px",
+                                borderRadius: 999,
+                                minWidth: 20,
+                              }}
+                            >
+                              {chip.count}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    className={cn(
+                      "mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
+                    )}
+                  >
                   {conversations.length === 0 ? (
                     <div className={emptyStateSx.shell}>
                       <div className={emptyStateSx.iconCircle}>
@@ -3796,206 +3781,257 @@ const Messages = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="sm:mx-auto sm:max-w-2xl">
-                      {filteredAndSortedConversations.map((conversation) => {
-                      const when = formatConversationListTime(
-                        conversation.last_message_date || conversation.updated_at
-                      );
-                      const unread = conversation.unread_count > 0;
-                      const isClub = !!(conversation.is_group && conversation.club_code);
-                      const isGrp = !!(conversation.is_group && !conversation.club_code);
-                      return (
-                      <SwipeableConversationItem
-                        key={conversation.id}
-                        isPinned={pinnedConversations.has(conversation.id)}
-                        disabled={isSelectionMode}
-                        onSwipeLeft={() => {
-                          setConversationToDelete(conversation);
-                          confirmDeleteConversation(conversation);
-                        }}
-                        onSwipeRight={() => confirmPinConversation(conversation)}
-                      >
-                        <div
-                          className={cn(
-                            "relative flex items-center gap-3 bg-card px-5 py-3",
-                            selectedConversations.has(conversation.id) && "bg-primary/5"
-                          )}
-                          onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
-                          onTouchEnd={handleLongPressEnd}
-                          onTouchCancel={handleLongPressEnd}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setConversationToDelete(conversation);
-                            confirmDeleteConversation(conversation);
-                          }}
-                        >
-                          <button
-                            type="button"
-                            className="relative shrink-0 rounded-full"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isSelectionMode) {
-                                toggleConversationSelection(conversation.id);
-                              }
-                            }}
-                            aria-label={
-                              isSelectionMode
-                                ? selectedConversations.has(conversation.id)
-                                  ? "Désélectionner la conversation"
-                                  : "Sélectionner la conversation"
-                                : "Avatar"
-                            }
-                          >
-                            {isSelectionMode && selectedConversations.has(conversation.id) ? (
-                              <div className="flex h-[50px] w-[50px] min-h-[50px] min-w-[50px] items-center justify-center rounded-full border-2 border-primary bg-primary">
-                                <Check className="h-5 w-5 text-primary-foreground" />
-                              </div>
-                            ) : (
-                              <Avatar className="avatar-fixed aspect-square h-[50px] w-[50px] min-h-[50px] min-w-[50px]">
-                                {conversation.is_group ? (
-                                  <>
-                                    <AvatarImage src={conversation.group_avatar_url || ""} />
-                                    <AvatarFallback className="bg-secondary">
-                                      <Users className="h-6 w-6 text-muted-foreground" />
-                                    </AvatarFallback>
-                                  </>
-                                ) : (
-                                  <>
-                                    <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                                    <AvatarFallback className="bg-secondary text-[17px] font-semibold">
-                                      {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
-                                    </AvatarFallback>
-                                  </>
-                                )}
-                              </Avatar>
-                            )}
-                            {!conversation.is_group && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
-                              <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
-                            )}
-                            {(isClub || isGrp) && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
+                    <>
+                      {filteredAndSortedConversations.map((conversation, rowIdx) => {
+                        const when = formatConversationListTime(
+                          conversation.last_message_date || conversation.updated_at,
+                        );
+                        const unread = conversation.unread_count > 0;
+                        const isClub = !!(conversation.is_group && conversation.club_code);
+                        const groupHasImage = !!(conversation.group_avatar_url && conversation.group_avatar_url.trim());
+                        return (
+                          <Fragment key={conversation.id}>
+                            <SwipeableConversationItem
+                              isPinned={pinnedConversations.has(conversation.id)}
+                              disabled={isSelectionMode}
+                              onSwipeLeft={() => {
+                                setConversationToDelete(conversation);
+                                confirmDeleteConversation(conversation);
+                              }}
+                              onSwipeRight={() => confirmPinConversation(conversation)}
+                            >
                               <div
-                                className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card text-[10px]"
-                                aria-hidden
+                                className={cn(
+                                  "relative flex items-center gap-3 bg-white px-3 py-3",
+                                  selectedConversations.has(conversation.id) && "bg-[#007AFF]/[0.06]",
+                                )}
+                                onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
+                                onTouchEnd={handleLongPressEnd}
+                                onTouchCancel={handleLongPressEnd}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  setConversationToDelete(conversation);
+                                  confirmDeleteConversation(conversation);
+                                }}
                               >
-                                {isClub ? "🏛" : "👥"}
-                              </div>
-                            )}
-                          </button>
+                                <button
+                                  type="button"
+                                  className="relative shrink-0 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isSelectionMode) {
+                                      toggleConversationSelection(conversation.id);
+                                    }
+                                  }}
+                                  aria-label={
+                                    isSelectionMode
+                                      ? selectedConversations.has(conversation.id)
+                                        ? "Désélectionner la conversation"
+                                        : "Sélectionner la conversation"
+                                      : "Avatar"
+                                  }
+                                >
+                                  {isSelectionMode && selectedConversations.has(conversation.id) ? (
+                                    <div className="flex h-12 w-12 min-h-12 min-w-12 items-center justify-center rounded-full border-2 border-[#007AFF] bg-[#007AFF]">
+                                      <Check className="h-5 w-5 text-white" />
+                                    </div>
+                                  ) : conversation.is_group ? (
+                                    <div className="relative h-12 w-12 shrink-0">
+                                      {groupHasImage ? (
+                                        <Avatar className="h-12 w-12 rounded-full">
+                                          <AvatarImage src={conversation.group_avatar_url || ""} />
+                                          <AvatarFallback className="rounded-full bg-[#E5E5EA]">
+                                            <Users className="h-6 w-6 text-[#8E8E93]" strokeWidth={2} />
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      ) : (
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E5E5EA]">
+                                          <Users className="h-6 w-6 text-[#8E8E93]" strokeWidth={2} />
+                                        </div>
+                                      )}
+                                      {isClub && (!isSelectionMode || !selectedConversations.has(conversation.id)) ? (
+                                        <div className="absolute -bottom-0.5 -right-0.5 rounded-full bg-[#F2F2F7] p-0.5">
+                                          <Landmark className="h-3 w-3 text-[#8E8E93]" strokeWidth={2} />
+                                        </div>
+                                      ) : null}
+                                      {unread && (
+                                        <div
+                                          className="absolute bottom-0 left-0 h-3 w-3 rounded-full border-2 border-white bg-red-500"
+                                          aria-label="Non lu"
+                                        />
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="relative">
+                                      <Avatar className="h-12 w-12 rounded-full">
+                                        <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                                        <AvatarFallback className="bg-[#E5E5EA] text-[17px] font-semibold text-[#8E8E93]">
+                                          {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      {unread && (
+                                        <div
+                                          className="pointer-events-none absolute bottom-0 left-0 h-3 w-3 rounded-full border-2 border-white bg-red-500"
+                                          aria-hidden
+                                        />
+                                      )}
+                                      {!isSelectionMode || !selectedConversations.has(conversation.id) ? (
+                                        <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
+                                      ) : null}
+                                    </div>
+                                  )}
+                                </button>
 
-                          <div
-                            className="min-w-0 flex-1"
-                            onClick={() => {
-                              if (isSelectionMode) {
-                                toggleConversationSelection(conversation.id);
-                              } else {
-                                setSelectedConversation(conversation);
-                                loadMessages(conversation.id);
-                                markMessagesAsReadOnOpen(conversation.id);
-                              }
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex min-w-0 items-center gap-1.5">
-                                {pinnedConversations.has(conversation.id) ? (
-                                  <span className="flex-shrink-0 text-[12px]" aria-hidden>
-                                    📌
-                                  </span>
-                                ) : null}
-                                <p className="truncate font-display text-[15px] font-bold text-foreground">
-                                  {conversation.is_group
-                                    ? conversation.group_name
-                                    : conversation.other_participant?.username || "Utilisateur"}
-                                </p>
-                              </div>
-                              <span
-                                className={cn(
-                                  "shrink-0 text-[11px] tabular-nums",
-                                  unread
-                                    ? "font-bold text-primary"
-                                    : "font-medium text-muted-foreground"
-                                )}
-                              >
-                                {when}
-                              </span>
-                            </div>
-                            <div className="mt-0.5 flex items-center justify-between gap-2">
-                              <p
-                                className={cn(
-                                  "min-w-0 truncate text-[13px] text-muted-foreground",
-                                  unread && "font-medium text-foreground/90"
-                                )}
-                              >
-                                {conversation.last_message ? (
-                                  <>
-                                    {conversation.last_message.message_type === "image" && (
-                                      <span className="inline-flex items-center gap-ios-2">
-                                        {conversation.last_message.file_url ? (
-                                          <SignedImage
-                                            fileUrl={conversation.last_message.file_url}
-                                            className="inline-block h-4 w-4 rounded-ios-sm object-cover"
-                                          />
-                                        ) : null}
-                                        Photo
-                                      </span>
-                                    )}
-                                    {conversation.last_message.message_type === "file" && "Fichier"}
-                                    {conversation.last_message.message_type === "voice" && "Message vocal"}
-                                    {conversation.last_message.message_type === "session" && "Session partagée"}
-                                    {conversation.last_message.message_type === "poll" && "📊 Sondage"}
-                                    {conversation.last_message.message_type === "coaching_session" && "🎓 Séance coach"}
-                                    {conversation.last_message.message_type === "system" && (
-                                      <span className="italic">{conversation.last_message.content}</span>
-                                    )}
-                                    {(!conversation.last_message.message_type ||
-                                      conversation.last_message.message_type === "text") &&
-                                      (conversation.last_message.content?.length > 40
-                                        ? `${conversation.last_message.content.substring(0, 40)}…`
-                                        : conversation.last_message.content || "Message supprimé")}
-                                  </>
-                                ) : conversation.is_group ? (
-                                  `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? "s" : ""}`
-                                ) : (
-                                  "Aucun message"
-                                )}
-                              </p>
-                              {unread ? (
-                                conversation.unread_count === 1 ? (
-                                  <span
-                                    className="mx-1 h-2 w-2 shrink-0 rounded-full bg-primary"
-                                    aria-label="Non lu"
-                                  />
-                                ) : (
-                                  <div className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5">
-                                    <span className="text-[11px] font-bold text-primary-foreground">
-                                      {conversation.unread_count > 99 ? "99+" : conversation.unread_count}
-                                    </span>
+                                <div
+                                  className="min-w-0 flex-1"
+                                  role="presentation"
+                                  onClick={() => {
+                                    if (isSelectionMode) {
+                                      toggleConversationSelection(conversation.id);
+                                    } else {
+                                      setSelectedConversation(conversation);
+                                      loadMessages(conversation.id);
+                                      markMessagesAsReadOnOpen(conversation.id);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex min-w-0 items-center gap-1">
+                                      {pinnedConversations.has(conversation.id) ? (
+                                        <span className="flex-shrink-0 text-sm" aria-hidden>
+                                          📌
+                                        </span>
+                                      ) : null}
+                                      <p className="truncate text-[16px] font-bold text-[#0A0F1F]">
+                                        {conversation.is_group
+                                          ? conversation.group_name
+                                          : conversation.other_participant?.username || "Utilisateur"}
+                                      </p>
+                                    </div>
+                                    <span className={cn("shrink-0 text-[12px] tabular-nums text-[#8E8E93]")}>{when}</span>
                                   </div>
-                                )
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </SwipeableConversationItem>
-                      );
+                                  <p
+                                    className={cn(
+                                      "mt-0.5 truncate text-[14px] text-[#8E8E93]",
+                                      conversation.last_message?.message_type === "system" && "italic",
+                                    )}
+                                  >
+                                    {conversation.last_message ? (
+                                      <>
+                                        {conversation.last_message.message_type === "image" && (
+                                          <span className="inline-flex items-center gap-ios-2">
+                                            {conversation.last_message.file_url ? (
+                                              <SignedImage
+                                                fileUrl={conversation.last_message.file_url}
+                                                className="inline-block h-4 w-4 rounded-ios-sm object-cover"
+                                              />
+                                            ) : null}
+                                            Photo
+                                          </span>
+                                        )}
+                                        {conversation.last_message.message_type === "file" && "Fichier"}
+                                        {conversation.last_message.message_type === "voice" && "Message vocal"}
+                                        {conversation.last_message.message_type === "session" && "Session partagée"}
+                                        {conversation.last_message.message_type === "poll" && "📊 Sondage"}
+                                        {conversation.last_message.message_type === "coaching_session" && "🎓 Séance coach"}
+                                        {conversation.last_message.message_type === "system" && (
+                                          <span>{conversation.last_message.content}</span>
+                                        )}
+                                        {(!conversation.last_message.message_type ||
+                                          conversation.last_message.message_type === "text") &&
+                                          (conversation.last_message.content?.length > 40
+                                            ? `${conversation.last_message.content.substring(0, 40)}…`
+                                            : conversation.last_message.content || "Message supprimé")}
+                                      </>
+                                    ) : conversation.is_group ? (
+                                      `${conversation.group_members?.length || 0} membre${(conversation.group_members?.length || 0) > 1 ? "s" : ""}`
+                                    ) : (
+                                      "Aucun message"
+                                    )}
+                                  </p>
+                                  {conversation.unread_count > 1 ? (
+                                    <p className="mt-1 text-[11px] font-semibold text-[#007AFF]">{`${conversation.unread_count} non lues`}</p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </SwipeableConversationItem>
+                            {rowIdx < filteredAndSortedConversations.length - 1 ? (
+                              <div className="ml-[68px] h-px bg-[#F2F2F7]" aria-hidden />
+                            ) : null}
+                          </Fragment>
+                        );
                       })}
-                    </div>
+                    </>
                   )}
                 </div>
+                </>
               )}
-            </>
-          ) : (
-            <Suspense fallback={<div className="min-h-[50vh] bg-secondary" />}>
-              <CreateClubFormPanel
-                active={activeRootTab === "create-club"}
-                onSuccess={() => {
-                  void loadConversations();
-                  setActiveRootTab("conversations");
-                }}
-              />
-            </Suspense>
-          )}
-        </div>
-        </IosFixedPageHeaderShell>
+            </MessagesInboxStickyScroll>
+
+            <Sheet open={messagesComposeSheetOpen} onOpenChange={setMessagesComposeSheetOpen}>
+              <SheetContent
+                side="bottom"
+                overlayClassName="z-[130] bg-black/40 backdrop-blur-sm"
+                className={cn(
+                  "z-[130] max-h-[85dvh] gap-0 rounded-none rounded-t-3xl border-0 bg-white p-0 shadow-2xl",
+                  "pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5",
+                )}
+                showCloseButton={false}
+              >
+                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#D1D1D6]" aria-hidden />
+                <SheetHeader className="space-y-0 px-5 pb-0 pt-0 text-left">
+                  <SheetTitle className="text-[20px] font-extrabold text-[#0A0F1F]">Nouveau</SheetTitle>
+                </SheetHeader>
+                <div className="mx-5 my-3 h-px bg-[#F2F2F7]" />
+                <div className="flex flex-col space-y-1 px-5">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-lg py-3 text-left transition-colors active:bg-[#F2F2F7]"
+                    data-no-tab-swipe="true"
+                    onClick={() => openNewConversationView()}
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center">
+                      <MessageSquare className="h-6 w-6" style={{ color: "#007AFF" }} strokeWidth={2.2} />
+                    </div>
+                    <span className="text-[17px] font-semibold text-[#0A0F1F]">Nouvelle conversation</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-lg py-3 text-left transition-colors active:bg-[#F2F2F7]"
+                    data-no-tab-swipe="true"
+                    onClick={() => openCreateClubTab()}
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center">
+                      <Users className="h-6 w-6" style={{ color: "#007AFF" }} strokeWidth={2.2} />
+                    </div>
+                    <span className="text-[17px] font-semibold text-[#0A0F1F]">Créer un club</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-lg py-3 text-left transition-colors active:bg-[#F2F2F7]"
+                    data-no-tab-swipe="true"
+                    onClick={() => openCreateClubTab()}
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center">
+                      <UserPlus className="h-6 w-6" style={{ color: "#007AFF" }} strokeWidth={2.2} />
+                    </div>
+                    <span className="text-[17px] font-semibold text-[#0A0F1F]">Créer un groupe</span>
+                  </button>
+                </div>
+                <div className="px-5 pt-2">
+                  <button
+                    type="button"
+                    className="flex min-h-[48px] w-full items-center justify-center rounded-full border border-[#E5E5EA] bg-transparent text-[16px] font-semibold text-[#0A0F1F] transition-colors active:bg-[#F2F2F7]"
+                    data-no-tab-swipe="true"
+                    onClick={() => setMessagesComposeSheetOpen(false)}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        )}
 
         {/* Club Info Dialog */}
         <Suspense fallback={null}>

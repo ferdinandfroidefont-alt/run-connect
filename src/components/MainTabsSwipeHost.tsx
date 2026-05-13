@@ -84,6 +84,11 @@ export function MainTabsSwipeHost() {
     (e: PointerEvent<HTMLDivElement>) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       if (!canSwipe(e.target)) return;
+      /*
+       * Ne pas capturer le pointeur tant qu’un swipe horizontal n’est pas affirmé :
+       * sinon le viewport reçoit tout le flux d’événements et le scroll vertical des pages
+       * (Découvrir, listes, etc.) est bloqué.
+       */
       dragRef.current = {
         active: true,
         horizontal: false,
@@ -92,7 +97,6 @@ export function MainTabsSwipeHost() {
         startY: e.clientY,
         startTs: performance.now(),
       };
-      e.currentTarget.setPointerCapture(e.pointerId);
     },
     [canSwipe]
   );
@@ -112,6 +116,11 @@ export function MainTabsSwipeHost() {
         if (adx > ady * SWIPE_INTENT_RATIO) {
           st.horizontal = true;
           setDragging(true);
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            /* déjà capturé / contexte fermé */
+          }
         } else {
           st.active = false;
           setDragging(false);
@@ -134,9 +143,22 @@ export function MainTabsSwipeHost() {
     (e: PointerEvent<HTMLDivElement>) => {
       const st = dragRef.current;
       if (!st.active || st.pointerId !== e.pointerId) return;
+
+      const wasHorizontal = st.horizontal;
+
+      try {
+        if (typeof e.currentTarget.hasPointerCapture === "function") {
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
       st.active = false;
 
-      if (!st.horizontal) {
+      if (!wasHorizontal) {
         setDragging(false);
         setDragX(0);
         return;
@@ -193,15 +215,7 @@ export function MainTabsSwipeHost() {
                 }
               >
                 <TabPaneErrorBoundary key={tab.path}>
-                  <div
-                    className={
-                      tab.path === "/"
-                        ? "pointer-events-none flex h-full min-h-0 flex-col"
-                        : "pointer-events-auto flex h-full min-h-0 flex-col"
-                    }
-                  >
-                    {tab.render()}
-                  </div>
+                  <div className="pointer-events-auto flex h-full min-h-0 flex-col">{tab.render()}</div>
                 </TabPaneErrorBoundary>
               </Suspense>
             ) : null}

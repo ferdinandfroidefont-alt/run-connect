@@ -48,8 +48,8 @@ export default function PersistentHomeMap({
     <div
       className={cn(
         "flex h-full min-h-0 w-full flex-1 flex-col",
-        /* `pointer-events-none` sur le parent ne bloque pas les enfants (Mapbox, etc.) — tout le sous-arbre doit être inerte quand la carte est masquée. */
-        !visible && "invisible pointer-events-none [&_*]:pointer-events-none"
+        /* invisible + descendants actifs encore cliquables ; hidden retire tout le subtree du hit-test */
+        !visible && "pointer-events-none hidden [&_*]:pointer-events-none",
       )}
       aria-hidden={!visible}
     >
