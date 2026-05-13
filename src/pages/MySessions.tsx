@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
-import { format, startOfMonth } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
@@ -22,11 +22,14 @@ import { cn } from '@/lib/utils';
 
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
-import { SessionCalendarView } from '@/components/SessionCalendarView';
+import {
+  MySessionsHomeMaquette,
+  participationConfirmed,
+  type MySessionsMaquetteFilterId,
+} from '@/components/sessions/MySessionsHomeMaquette';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
-import { MainTopHeader } from '@/components/layout/MainTopHeader';
 import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
 
 const CreateSessionWizard = lazy(() =>
@@ -61,6 +64,7 @@ interface UserSession {
   interval_pace_unit?: string | null;
   pace_general?: string | null;
   pace_unit?: string | null;
+  distance_km?: number | null;
 }
 
 interface Participant {
@@ -81,12 +85,6 @@ interface OrganizerProfile {
   avatar_url: string | null;
 }
 
-type ConfirmTarget = {
-  sessionId: string;
-  scheduledAt: string;
-  isCreator: boolean;
-};
-
 export default function MySessions() {
   const { user } = useAuth();
   const { openCreateSession } = useAppContext();
@@ -95,8 +93,12 @@ export default function MySessions() {
   const location = useLocation();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
   const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
-  const [calendarMonth, setCalendarMonth] = useState<Date>(() => startOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [listFilter, setListFilter] = useState<MySessionsMaquetteFilterId>('toutes');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [participationBySessionId, setParticipationBySessionId] = useState<
+    Map<string, { validation_status: string | null; confirmed_by_gps: boolean | null; confirmed_by_creator: boolean | null }>
+  >(new Map());
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
   const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
@@ -109,8 +111,6 @@ export default function MySessions() {
   const [showSessionShare, setShowSessionShare] = useState(false);
   const [showShareConversationDialog, setShowShareConversationDialog] = useState(false);
   const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
-  const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedSessionForDialog, setSelectedSessionForDialog] = useState<Record<string, unknown> | null>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
 
@@ -583,8 +583,6 @@ export default function MySessions() {
     }
   };
 
-  const nowMs = Date.now();
-
   const mergedSessions = useMemo(() => {
     const merged = [...sessions, ...joinedSessions];
     const seen = new Set<string>();
@@ -597,23 +595,107 @@ export default function MySessions() {
     return unique;
   }, [sessions, joinedSessions]);
 
-  const openConfirmDialog = (session: UserSession) => {
-    setConfirmTarget({
-      sessionId: session.id,
-      scheduledAt: session.scheduled_at,
-      isCreator: session.organizer_id === user?.id,
-    });
-    setConfirmDialogOpen(true);
-  };
+  const mergedSessionIdsKey = useMemo(
+    () => mergedSessions.map((s) => s.id).sort().join(","),
+    [mergedSessions],
+  );
 
-  const closeConfirmDialog = () => {
-    setConfirmDialogOpen(false);
-    setConfirmTarget(null);
-  };
+  useEffect(() => {
+    if (!user?.id || mergedSessions.length === 0) {
+      setParticipationBySessionId(new Map());
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const ids = mergedSessions.map((s) => s.id);
+      const { data, error } = await supabase
+        .from("session_participants")
+        .select("session_id, validation_status, confirmed_by_gps, confirmed_by_creator")
+        .eq("user_id", user.id)
+        .in("session_id", ids);
+      if (cancelled) return;
+      if (error) {
+        console.error(error);
+        return;
+      }
+      const m = new Map<
+        string,
+        { validation_status: string | null; confirmed_by_gps: boolean | null; confirmed_by_creator: boolean | null }
+      >();
+      for (const row of data ?? []) {
+        m.set(row.session_id, row);
+      }
+      setParticipationBySessionId(m);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, mergedSessionIdsKey]);
 
-  const isConfirmExpired = confirmTarget
-    ? nowMs - new Date(confirmTarget.scheduledAt).getTime() > 3 * 24 * 60 * 60 * 1000
-    : false;
+  const WEEKLY_GOAL_KM = 60;
+
+  const weeklyAggregates = useMemo(() => {
+    const now = new Date();
+    const ws = startOfWeek(now, { weekStartsOn: 1 });
+    const we = endOfWeek(now, { weekStartsOn: 1 });
+    let km = 0;
+    let count = 0;
+    for (const s of mergedSessions) {
+      const d = new Date(s.scheduled_at);
+      if (d >= ws && d <= we) {
+        count += 1;
+        const dk = s.distance_km;
+        km += dk != null && Number.isFinite(Number(dk)) ? Number(dk) : 0;
+      }
+    }
+    return { weeklyKm: km, weeklySessionCount: count };
+  }, [mergedSessions]);
+
+  const filteredForMaquette = useMemo(() => {
+    if (listFilter === "draft") return [];
+
+    let base = mergedSessions;
+
+    if (listFilter === "venir") {
+      const todayStart = startOfDay(new Date());
+      base = base.filter((s) => new Date(s.scheduled_at) >= todayStart);
+    }
+
+    if (listFilter === "ok") {
+      base = base.filter((s) =>
+        participationConfirmed(s, user?.id, participationBySessionId.get(s.id)),
+      );
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      base = base.filter(
+        (s) =>
+          (s.title ?? "").toLowerCase().includes(q) ||
+          (s.location_name ?? "").toLowerCase().includes(q),
+      );
+    }
+
+    return base;
+  }, [mergedSessions, listFilter, user?.id, participationBySessionId, searchQuery]);
+
+  const { upcomingRows, pastThisWeekRows } = useMemo(() => {
+    const todayStart = startOfDay(new Date());
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+
+    const upcoming = [...filteredForMaquette]
+      .filter((s) => new Date(s.scheduled_at) >= todayStart)
+      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+
+    const pastWeek = [...filteredForMaquette]
+      .filter((s) => {
+        const d = new Date(s.scheduled_at);
+        return d >= weekStart && d < todayStart;
+      })
+      .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+
+    return { upcomingRows: upcoming, pastThisWeekRows: pastWeek };
+  }, [filteredForMaquette]);
 
   // Session detail view
   if (selectedSession) {
@@ -1003,61 +1085,57 @@ export default function MySessions() {
         className="relative flex h-full min-h-0 flex-col overflow-hidden apple-grouped-bg"
         data-tutorial="tutorial-my-sessions"
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
-          <div className="pointer-events-auto">
-            <MainTopHeader title="Séances" disableScrollCollapse />
+        {loading && mergedSessions.length === 0 ? (
+          <MySessionsHomeMaquette
+            loading
+            listFilter={listFilter}
+            onListFilterChange={setListFilter}
+            searchOpen={searchOpen}
+            onToggleSearch={() => setSearchOpen((v) => !v)}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            weeklyKm={0}
+            weeklySessionCount={0}
+            weeklyGoalKm={WEEKLY_GOAL_KM}
+            upcomingRows={[]}
+            pastThisWeekRows={[]}
+            onSessionClick={(s) => openSessionFromList(s as UserSession)}
+            onOpenCreate={() => openCreateSession()}
+          />
+        ) : mergedSessions.length === 0 ? (
+          <div className={cn(emptyStateSx.shell, "min-h-0 flex-1")}>
+            <div className={emptyStateSx.iconCircle}>
+              <Calendar className="h-12 w-12 text-muted-foreground" />
+            </div>
+            <div className={emptyStateSx.textBlock}>
+              <h3 className="text-ios-title3 font-semibold text-foreground">Aucune séance</h3>
+              <p className="max-w-xs text-ios-subheadline leading-relaxed text-muted-foreground">
+                Créez une séance ou rejoignez-en une depuis Découvrir pour la voir ici.
+              </p>
+            </div>
+            <Button onClick={() => openCreateSession()} className="w-full max-w-xs">
+              <Plus className="mr-ios-2 h-5 w-5" />
+              Créer une séance
+            </Button>
           </div>
-        </div>
-
-        <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pb-ios-6 apple-grouped-bg" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 88px)" }}>
-          <>
-            {loading ? (
-                <div className="space-y-3 px-4">
-                  <div className="ios-card h-48 animate-pulse bg-secondary/40" />
-                  <div className="ios-card h-36 animate-pulse bg-secondary/40" />
-                </div>
-            ) : mergedSessions.length === 0 ? (
-                <div className={emptyStateSx.shell}>
-                  <div className={emptyStateSx.iconCircle}>
-                    <Calendar className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <div className={emptyStateSx.textBlock}>
-                    <h3 className="text-ios-title3 font-semibold text-foreground">
-                      Aucune séance
-                    </h3>
-                    <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
-                      Créez une séance ou rejoignez-en une depuis Découvrir pour la voir ici.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => navigate('/')}
-                    className="w-full max-w-xs"
-                  >
-                    <Plus className="h-5 w-5 mr-ios-2" />
-                    Créer une séance
-                  </Button>
-                </div>
-              ) : (
-                <div className="mb-ios-3 min-w-0">
-                  <SessionCalendarView
-                    sessions={mergedSessions}
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                    visibleMonth={calendarMonth}
-                    onVisibleMonthChange={setCalendarMonth}
-                    onSessionClick={(s) => openSessionFromList(s as UserSession)}
-                    onConfirmSession={openConfirmDialog}
-                    onCommentSession={(s) =>
-                      navigate("/feed", { state: { openFeedCommentSessionId: s.id } })
-                    }
-                    organizerProfiles={organizerProfiles}
-                    currentUserId={user?.id}
-                    onAddSession={() => openCreateSession()}
-                  />
-                </div>
-            )}
-          </>
-        </div>
+        ) : (
+          <MySessionsHomeMaquette
+            loading={false}
+            listFilter={listFilter}
+            onListFilterChange={setListFilter}
+            searchOpen={searchOpen}
+            onToggleSearch={() => setSearchOpen((v) => !v)}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            weeklyKm={weeklyAggregates.weeklyKm}
+            weeklySessionCount={weeklyAggregates.weeklySessionCount}
+            weeklyGoalKm={WEEKLY_GOAL_KM}
+            upcomingRows={upcomingRows}
+            pastThisWeekRows={pastThisWeekRows}
+            onSessionClick={(s) => openSessionFromList(s as UserSession)}
+            onOpenCreate={() => openCreateSession()}
+          />
+        )}
       </div>
 
       <Suspense fallback={null}>
@@ -1091,75 +1169,6 @@ export default function MySessions() {
               Supprimer
             </AlertDialogAction>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent className="rounded-ios-lg max-w-[320px] p-0 gap-0">
-          <AlertDialogHeader className="p-ios-6 pb-ios-4">
-            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
-              {isConfirmExpired ? "Séance expirée" : "Confirmer cette séance"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-ios-subheadline text-muted-foreground mt-ios-2">
-              {isConfirmExpired
-                ? "Cette séance est passée depuis plus de 3 jours."
-                : "Choisissez votre mode de confirmation."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {isConfirmExpired ? (
-            <AlertDialogFooter className="p-ios-4 pt-0">
-              <AlertDialogAction className="w-full" onClick={closeConfirmDialog}>
-                Fermer
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          ) : (
-            <div className="px-ios-4 pb-ios-4 space-y-ios-2">
-              <button
-                type="button"
-                className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
-                onClick={() => {
-                  if (!confirmTarget) return;
-                  closeConfirmDialog();
-                  const base = `/my-sessions/confirm/${confirmTarget.sessionId}`;
-                  if (confirmTarget.isCreator) {
-                    navigate(base);
-                    return;
-                  }
-                  navigate(`${base}?flow=gps`);
-                }}
-              >
-                <p className="text-[15px] font-semibold text-foreground">
-                  {confirmTarget?.isCreator
-                    ? "Créateur : valider la présence des participants"
-                    : "Participant : confirmer ma présence (position actuelle)"}
-                </p>
-              </button>
-
-              {!confirmTarget?.isCreator ? (
-                <button
-                  type="button"
-                  className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
-                  onClick={() => {
-                    if (!confirmTarget) return;
-                    closeConfirmDialog();
-                    navigate(`/my-sessions/confirm/${confirmTarget.sessionId}?flow=strava`);
-                  }}
-                >
-                  <p className="text-[15px] font-semibold text-foreground">
-                    Confirmer ma séance avec mes activités Strava
-                  </p>
-                </button>
-              ) : null}
-
-              <AlertDialogCancel
-                className="w-full mt-ios-1"
-                onClick={closeConfirmDialog}
-              >
-                Annuler
-              </AlertDialogCancel>
-            </div>
-          )}
         </AlertDialogContent>
       </AlertDialog>
 
