@@ -116,10 +116,12 @@ export const useDiscoverFeed = () => {
     try {
       setLoading(true);
       
+      /* Inclut les séances encore dans la fenêtre « live » (voir sessionLikelyLive : début → +3h). */
+      const discoverHorizonStart = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
       const { data: sessionsData, error } = await supabase
         .from('sessions')
         .select('*')
-        .gte('scheduled_at', new Date().toISOString())
+        .gte('scheduled_at', discoverHorizonStart)
         .neq('organizer_id', user.id)
         .eq('is_private', false)
         .order('scheduled_at', { ascending: true });
