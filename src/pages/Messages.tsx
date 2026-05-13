@@ -442,13 +442,32 @@ const Messages = () => {
   // Capacitor: scroll to bottom when keyboard opens so the last message stays visible.
   useEffect(() => {
     if (!selectedConversation) return;
-    let handle: { remove: () => void } | null = null;
-    Keyboard.addListener('keyboardWillShow', () => {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      });
-    }).then((h) => { handle = h; });
-    return () => { handle?.remove(); };
+    let handle: { remove: () => void | Promise<void> } | null = null;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { Keyboard } = await import("@capacitor/keyboard");
+        if (cancelled) return;
+        const h = await Keyboard.addListener("keyboardWillShow", () => {
+          requestAnimationFrame(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+          });
+        });
+        if (cancelled) {
+          void h.remove();
+          return;
+        }
+        handle = h;
+      } catch {
+        /* Web ou plugin Clavier indisponible */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      void handle?.remove();
+    };
   }, [selectedConversation]);
 
 
@@ -2990,7 +3009,9 @@ const Messages = () => {
                         {shouldShowSenderInfo && (
                           <div className="flex items-center gap-ios-2 mb-ios-1 ml-ios-1">
                             <span className="text-[11px] text-muted-foreground font-medium">
-                              {message.sender.username || message.sender.display_name}
+                              {message.sender?.username ||
+                                message.sender?.display_name ||
+                                "Utilisateur"}
                             </span>
                           </div>
                         )}
