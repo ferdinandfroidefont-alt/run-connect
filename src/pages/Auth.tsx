@@ -15,7 +15,7 @@ import { Loader2, Lock, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowL
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { Browser } from '@capacitor/browser';
 import { getIosSupabaseOAuthBridgeRedirectTo } from "@/lib/oauthMobile";
-import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
+import { TurnstileWidget, TurnstileWidgetRef } from "@/components/TurnstileWidget";
 import {
   AuthFlowProgress,
   AuthLegalFooter,
@@ -31,6 +31,17 @@ import appIcon from "@/assets/app-icon.png";
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
 const AUTH_FORM_VIEWS = new Set<AuthView>(['email-signin-form', 'email-signup', 'otp', 'reset']);
+
+function authErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return String(err);
+}
+
+/** Erreur Supabase liée à la vérification (clé côté API : `captcha`). */
+function isSecurityVerificationError(message: string): boolean {
+  return /captcha/i.test(message);
+}
 
 /** UUID factice pour le dialogue profil en parcours arrivée (aucune écriture DB). */
 const ARRIVAL_PREVIEW_FAKE_USER_ID = "00000000-0000-4000-8000-000000000001";
@@ -65,8 +76,8 @@ const Auth = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptSignupTerms, setAcceptSignupTerms] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const captchaRef = useRef<CaptchaWidgetRef>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetRef>(null);
   const { toast } = useToast();
 
   const waitForSessionAndNavigateHome = async (opts?: { timeoutMs?: number; source?: string }) => {
@@ -507,8 +518,8 @@ const Auth = () => {
       window.setTimeout(() => {
         setOtpBackView(view === "email-signup" ? "email-signup" : "email-signin-form");
         setView("otp");
-        setCaptchaToken(null);
-        captchaRef.current?.resetCaptcha();
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
         toast({
           title: "Aperçu — code e-mail",
           description: "Aucun e-mail envoyé. Saisissez six chiffres (ex. 123456) pour la suite.",
@@ -525,13 +536,13 @@ const Auth = () => {
           password: password.trim(),
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            captchaToken: captchaToken || undefined,
+            captchaToken: turnstileToken || undefined,
           }
         });
         if (error) throw error;
 
-        setCaptchaToken(null);
-        captchaRef.current?.resetCaptcha();
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
 
         const referralCode = sessionStorage.getItem('referralCode');
         if (referralCode && signUpData.user && signUpData.session?.access_token) {
@@ -561,13 +572,13 @@ const Auth = () => {
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             shouldCreateUser: true,
-            captchaToken: captchaToken || undefined,
+            captchaToken: turnstileToken || undefined,
           }
         });
         if (error) throw error;
 
-        setCaptchaToken(null);
-        captchaRef.current?.resetCaptcha();
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
 
         setOtpBackView("email-signin-form");
         setView("otp");
@@ -576,8 +587,19 @@ const Auth = () => {
           description: "Vérifiez votre email pour le code à 6 chiffres."
         });
       }
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -686,16 +708,25 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse.trim(),
         password: password,
-        options: { captchaToken: captchaToken || undefined },
+        options: { captchaToken: turnstileToken || undefined },
       });
 
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
 
       if (error) throw error;
       await waitForSessionAndNavigateHome({ timeoutMs: 7000, source: 'password-signin' });
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -760,12 +791,12 @@ const Auth = () => {
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           shouldCreateUser: true,
-          captchaToken: captchaToken || undefined,
+          captchaToken: turnstileToken || undefined,
         }
       });
 
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
 
       if (error) {
         if (error.message.includes('429') || error.message.includes('rate limit')) {
@@ -781,8 +812,19 @@ const Auth = () => {
         setOtp('');
         toast({ title: "Nouveau code envoyé !", description: "Vérifiez votre email." });
       }
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -805,10 +847,10 @@ const Auth = () => {
       });
       return;
     }
-    if (!captchaToken) {
+    if (!turnstileToken) {
       toast({
         title: "Vérification requise",
-        description: "Validez le CAPTCHA d'abord",
+        description: "Complétez la vérification de sécurité avant de continuer.",
         variant: "destructive"
       });
       return;
@@ -816,19 +858,28 @@ const Auth = () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
         redirectTo: 'https://run-connect.lovable.app/auth',
-        captchaToken,
+        captchaToken: turnstileToken,
       });
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
       if (error) throw error;
       toast({
         title: "Email envoyé ✅",
         description: "Vérifiez votre boîte mail"
       });
-    } catch (error: any) {
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     }
   };
 
@@ -869,8 +920,8 @@ const Auth = () => {
           <button
             type="button"
             onClick={() => {
-              setCaptchaToken(null);
-              captchaRef.current?.resetCaptcha();
+              setTurnstileToken(null);
+              turnstileRef.current?.reset();
               setView("landing");
             }}
             className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
@@ -940,15 +991,15 @@ const Auth = () => {
             </div>
           </div>
           <div className="px-4 pb-2">
-            {!captchaToken && (
-              <CaptchaWidget
-                ref={captchaRef}
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken(null)}
-                onError={() => setCaptchaToken(null)}
+            {!turnstileToken && (
+              <TurnstileWidget
+                ref={turnstileRef}
+                onToken={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => setTurnstileToken(null)}
               />
             )}
-            {captchaToken && (
+            {turnstileToken && (
               <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
                 ✅ Vérification réussie
               </div>
@@ -957,7 +1008,7 @@ const Auth = () => {
           <div className="px-2">
             <button
               type="submit"
-              disabled={isLoading || !captchaToken}
+              disabled={isLoading || !turnstileToken}
               className="apple-pill apple-pill-large w-full disabled:opacity-50"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -966,7 +1017,7 @@ const Auth = () => {
             <button
               type="button"
               onClick={handleForgotPassword}
-              disabled={!captchaToken}
+              disabled={!turnstileToken}
               className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60 disabled:opacity-50"
             >
               Mot de passe oublié ?
@@ -976,8 +1027,8 @@ const Auth = () => {
               onClick={() => {
                 const u = usernameOrEmail.trim();
                 if (u.includes("@")) setEmail(u);
-                setCaptchaToken(null);
-                captchaRef.current?.resetCaptcha();
+                setTurnstileToken(null);
+                turnstileRef.current?.reset();
                 setView("email-signin-form");
               }}
               disabled={isLoading}
@@ -1036,8 +1087,8 @@ const Auth = () => {
               type="button"
               onClick={() => {
                 setView("email-signin");
-                setCaptchaToken(null);
-                captchaRef.current?.resetCaptcha();
+                setTurnstileToken(null);
+                turnstileRef.current?.reset();
               }}
               className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
               aria-label="Retour"
@@ -1071,15 +1122,15 @@ const Auth = () => {
       </div>
 
       <div className="px-4 pb-2">
-        {!captchaToken && (
-          <CaptchaWidget
-            ref={captchaRef}
-            onVerify={(token) => setCaptchaToken(token)}
-            onExpire={() => setCaptchaToken(null)}
-            onError={() => setCaptchaToken(null)}
+        {!turnstileToken && (
+          <TurnstileWidget
+            ref={turnstileRef}
+            onToken={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
           />
         )}
-        {captchaToken && (
+        {turnstileToken && (
           <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
             ✅ Vérification réussie
           </div>
@@ -1090,7 +1141,7 @@ const Auth = () => {
         <button
           type="button"
           onClick={(e) => handleEmailSubmit(e as unknown as React.FormEvent)}
-          disabled={isLoading || !captchaToken}
+          disabled={isLoading || !turnstileToken}
           className="apple-pill apple-pill-large apple-pill-secondary w-full disabled:opacity-50"
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1116,7 +1167,7 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   // ██  EMAIL SIGNUP — Mockup 03 (Apple Inscription)  ██
   // NavBar Annuler/Inscription/step + Group(FieldRow Email/Password)
-  // + CAPTCHA + Group(Cell CGU check) + Pill Continuer.
+  // + Turnstile + Group(Cell CGU check) + Pill Continuer.
   // Logique : `handleEmailSubmit`, `acceptSignupTerms` — préservés.
   // ══════════════════════════════════════════════
   const renderEmailSignup = () => (
@@ -1132,8 +1183,8 @@ const Auth = () => {
               onClick={() => {
                 setView("landing");
                 setAcceptSignupTerms(false);
-                setCaptchaToken(null);
-                captchaRef.current?.resetCaptcha();
+                setTurnstileToken(null);
+                turnstileRef.current?.reset();
               }}
               className="text-[17px] text-primary active:opacity-60"
             >
@@ -1185,15 +1236,15 @@ const Auth = () => {
         </div>
 
         <div className="px-4 pb-2">
-          {!captchaToken && (
-            <CaptchaWidget
-              ref={captchaRef}
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
+          {!turnstileToken && (
+            <TurnstileWidget
+              ref={turnstileRef}
+              onToken={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+              onError={() => setTurnstileToken(null)}
             />
           )}
-          {captchaToken && (
+          {turnstileToken && (
             <div className="text-center text-[13px] font-medium text-[hsl(var(--success,142_76%_36%))] dark:text-green-500">
               ✅ Vérification réussie
             </div>
@@ -1249,7 +1300,7 @@ const Auth = () => {
         <div className="mt-2 px-4">
           <button
             type="submit"
-            disabled={isLoading || !acceptSignupTerms || !captchaToken}
+            disabled={isLoading || !acceptSignupTerms || !turnstileToken}
             className="apple-pill apple-pill-large w-full disabled:opacity-50"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1258,8 +1309,8 @@ const Auth = () => {
           <button
             type="button"
             onClick={() => {
-              setCaptchaToken(null);
-              captchaRef.current?.resetCaptcha();
+              setTurnstileToken(null);
+              turnstileRef.current?.reset();
               setView('email-signin');
             }}
             className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"

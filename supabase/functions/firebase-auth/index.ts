@@ -158,7 +158,7 @@ serve(async (req) => {
       throw new Error('Failed to create or retrieve user');
     }
 
-    // 3. Générer une session Supabase via magic link (contourne le captcha)
+    // 3. Générer une session Supabase via magic link (sans widget Turnstile côté client)
     logStructured("firebase-auth", "generate_link", {});
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',

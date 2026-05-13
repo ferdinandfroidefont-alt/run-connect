@@ -18,6 +18,7 @@ import {
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
+import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 
 interface Profile {
   rgpd_accepted?: boolean;
@@ -586,7 +587,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction 
+                      <AlertDialogAction
                         onClick={handleRevokeConsent}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
@@ -596,6 +597,15 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+            </div>
+          )}
+
+          {user && (
+            <div className="space-y-2">
+              <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
+                Suppression du compte
+              </h3>
+              <DeleteAccountCard onClose={onClose} />
             </div>
           )}
         </div>

@@ -20,4 +20,6 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_LEGAL_HOSTING?: string;
   /** Pin carte Accueil : `minimal` | `depth` | `premium` (défaut : depth). */
   readonly VITE_MAP_PIN_VARIANT?: string;
+  /** Clé site publique Cloudflare Turnstile (Vercel / env — voir `src/lib/turnstileConfig.ts`). */
+  readonly VITE_TURNSTILE_SITE_KEY?: string;
 }

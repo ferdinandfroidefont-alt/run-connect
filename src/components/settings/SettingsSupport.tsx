@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { Mail, LogOut, Trash2, Settings, ChevronRight, Loader2, FileText, Info, Shield, GraduationCap, Scale, BookOpen } from "lucide-react";
+import { Mail, LogOut, Settings, ChevronRight, FileText, Info, Shield, GraduationCap, Scale, BookOpen } from "lucide-react";
 import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
@@ -12,7 +10,7 @@ import { useTutorial } from "@/hooks/useTutorial";
 import { notifyTutorialReplayQueued } from "@/lib/tutorials/registry";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getSupportEmail, getSupportMailtoHref } from "@/lib/legalMeta";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
@@ -26,12 +24,10 @@ interface SettingsSupportProps {
 }
 
 export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: SettingsSupportProps) => {
-  const { user, session, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { userProfile } = useUserProfile();
-  const { toast } = useToast();
   const { t } = useLanguage();
   const { restartTutorial } = useTutorial();
-  const [loading, setLoading] = useState(false);
   const [showAdminPremium, setShowAdminPremium] = useState(false);
   const navigate = useNavigate();
 
@@ -47,39 +43,6 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
     // puis navigation forcée dans signOut (évite boutons Auth morts après déconnexion).
     onClose();
     void signOut();
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!user || !session) return;
-
-    try {
-      setLoading(true);
-      
-      const { error } = await supabase.functions.invoke('delete-account', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Compte supprimé",
-        description: "Votre compte a été supprimé avec succès.",
-      });
-
-      onClose();
-      void signOut();
-    } catch (error: any) {
-      console.error('Delete account error:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer votre compte. Contactez le support.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -286,40 +249,7 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Zone de danger
             </h3>
-            <div className="bg-card overflow-hidden">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-destructive/5 transition-colors">
-                    <div className="ios-list-row-icon bg-[#FF3B30]">
-                      <Trash2 className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="text-[15px] font-medium text-destructive">Supprimer mon compte</p>
-                      <p className="text-[13px] text-muted-foreground">Action irréversible</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-destructive/50" />
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Supprimer votre compte</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Cette action est irréversible. Toutes vos données seront perdues.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={handleDeleteAccount}
-                      disabled={loading}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Supprimer'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
+            <DeleteAccountCard onClose={onClose} />
           </div>
           </div>
         </div>
