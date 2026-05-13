@@ -33,6 +33,11 @@ type DiscoverChromeShellProps = {
   children: ReactNode;
   enablePullRefresh?: boolean;
   onPullRefresh?: () => Promise<void>;
+  /**
+   * Si défini : les pastilles appellent ce callback (ex. page d’accueil = vues inline comme la maquette).
+   * Sinon : navigation vers /feed, /discover/live, etc.
+   */
+  onChipPress?: (id: DiscoverChromeActiveChip) => void;
 };
 
 /**
@@ -43,6 +48,7 @@ export function DiscoverChromeShell({
   children,
   enablePullRefresh = false,
   onPullRefresh,
+  onChipPress,
 }: DiscoverChromeShellProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -77,6 +83,13 @@ export function DiscoverChromeShell({
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+    setScrolled(false);
+  }, [activeChip]);
 
   const doRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -143,6 +156,10 @@ export function DiscoverChromeShell({
 
   const goChip = (id: DiscoverChromeActiveChip) => {
     if (id === activeChip) return;
+    if (onChipPress) {
+      onChipPress(id);
+      return;
+    }
     navigate(chipRoute(id));
   };
 
@@ -176,7 +193,7 @@ export function DiscoverChromeShell({
           >
             Découvrir
           </h1>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-3">
             <button
               type="button"
               aria-label="Rechercher"

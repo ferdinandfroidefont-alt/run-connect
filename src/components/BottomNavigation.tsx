@@ -1,17 +1,19 @@
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  Compass,
+  MessageCircle,
+  Plus,
+} from "lucide-react";
+import { useTheme } from "next-themes";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import {
-  DiscoverIcon,
-  SessionsIcon,
-  CoachingIcon,
-  MessagesIcon,
-} from "@/components/apple/TabIcons";
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type SVGProps } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,19 +25,32 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type TabIconProps = SVGProps<SVGSVGElement> & { size?: number };
+/** Maquette RunConnect.jsx ACTION_BLUE (#007AFF) */
+const LIGHT_ACTION_BLUE = "#007AFF";
+const LIGHT_LABEL_GRAY = "#8E8E93";
+
+const TAB_BAR_LIGHT: CSSProperties = {
+  background: "rgba(242, 242, 247, 0.92)",
+  backdropFilter: "blur(20px) saturate(180%)",
+  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+  borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+};
+
+const TAB_BAR_DARK: CSSProperties = {
+  background: "rgba(28, 28, 30, 0.92)",
+  backdropFilter: "blur(20px) saturate(180%)",
+  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+  borderTop: "1px solid rgba(84, 84, 88, 0.65)",
+};
 
 type NavItem = {
   path: string;
-  icon: ComponentType<TabIconProps>;
+  icon: LucideIcon;
   label: string;
   tutorialId?: string;
   isActive: (pathname: string) => boolean;
   showUnreadBadge?: boolean;
 };
-
-/** Maquette RunConnect.jsx — tokens visibles (identique DiscoverChromeShell) */
-const ACTION_BLUE = "#007AFF";
 
 type BottomNavigationProps = {
   /** Route profil : tab bar masquée visuellement (overlay plein écran) sans démontage. */
@@ -47,40 +62,44 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { resolvedTheme } = useTheme();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [showNoClubDialog, setShowNoClubDialog] = useState(false);
   const { hideBottomNav, openCreateSession } = useAppContext();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pathname = location.pathname;
+  const isDark = resolvedTheme === "dark";
+  const activeBlue = isDark ? "#0A84FF" : LIGHT_ACTION_BLUE;
+  const inactiveGray = isDark ? "rgba(235, 235, 245, 0.55)" : LIGHT_LABEL_GRAY;
+  const tabBarSurface = isDark ? TAB_BAR_DARK : TAB_BAR_LIGHT;
 
-  /** Ordre fixe : Accueil → Mes séances | [+] | Coaching → Messages
-   *  Icônes SF-style (refonte handoff) : DiscoverIcon, SessionsIcon, etc. */
+  /** Icônes Lucide identiques à la maquette (Compass, CalendarDays, Clock, MessageCircle). */
   const navItems = useMemo<NavItem[]>(
     () => [
       {
         path: "/",
-        icon: DiscoverIcon,
+        icon: Compass,
         label: t("navigation.home"),
         isActive: (p) =>
           p === "/" || p === "/feed" || p === "/discover/live" || p === "/itinerary/hub",
       },
       {
         path: "/my-sessions",
-        icon: SessionsIcon,
+        icon: CalendarDays,
         label: t("navigation.mySessions"),
         tutorialId: "nav-sessions",
         isActive: (p) => p === "/my-sessions" || p.startsWith("/my-sessions/"),
       },
       {
         path: "/coaching",
-        icon: CoachingIcon,
+        icon: Clock,
         label: t("navigation.coaching"),
         isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
       },
       {
         path: "/messages",
-        icon: MessagesIcon,
+        icon: MessageCircle,
         label: t("navigation.messages"),
         tutorialId: "nav-messages",
         isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
@@ -143,7 +162,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
     };
   }, [user, fetchUnreadCount]);
 
-  /** Toujours montée : masquage visuel uniquement (pas d'animation / pas de translate). */
   const tabBarHidden = hideBottomNav || isProfileRoute;
 
   const handleNavClick = async (path: string) => {
@@ -184,9 +202,13 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const rightItems = navItems.slice(2);
 
   const renderNavButton = (item: NavItem) => {
-    const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
-    const isActive = item.isActive(pathname);
+    const Icon = item.icon;
+    const { label, tutorialId, showUnreadBadge } = item;
+    const active = item.isActive(pathname);
     const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
+
+    /** NavButton maquette : flex flex-col gap-0.5 flex-1 py-1 ; pas active:scale sur les tabs. */
+    const color = active ? activeBlue : inactiveGray;
 
     return (
       <button
@@ -194,90 +216,76 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         type="button"
         onClick={() => handleNavClick(item.path)}
         data-tutorial={tutorialId}
-        aria-current={isActive ? "page" : undefined}
-        className={cn(
-          "flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 py-1",
-          "touch-manipulation transition-[transform,color,opacity] duration-200 ease-ios active:scale-95 active:opacity-95"
-        )}
+        aria-current={active ? "page" : undefined}
+        className="flex min-w-0 flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 py-1"
       >
-        <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+        <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
           <Icon
-            size={24}
-            className={cn(
-              "transition-colors duration-200 ease-ios",
-              isActive
-                ? "text-[#007AFF] dark:text-[#0A84FF]"
-                : "text-[#8E8E93] dark:text-[rgba(235,235,245,0.6)]"
-            )}
-            strokeWidth={isActive ? 2.4 : 2}
             aria-hidden
+            className="h-6 w-6 shrink-0"
+            color={color}
+            strokeWidth={active ? 2.4 : 2}
           />
           {showBadge && (
             <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[11px] font-bold text-white">
               {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
             </span>
           )}
-        </div>
-        <span
-          className={cn(
-            "w-full truncate text-center text-[10px] font-medium leading-none transition-colors duration-200 ease-ios",
-            isActive
-              ? "text-[#007AFF] dark:text-[#0A84FF]"
-              : "text-[#8E8E93] dark:text-[rgba(235,235,245,0.6)]"
-          )}
-        >
+        </span>
+        <span className="w-full px-px text-center text-[10px] font-medium leading-none" style={{ color }}>
           {label}
         </span>
       </button>
     );
   };
 
+  /** Colonne FAB — maquette : bleu #007AFF ; sombre : #0A84FF (système iOS). */
+  const fabBlue = isDark ? "#0A84FF" : LIGHT_ACTION_BLUE;
+
   return (
-    <nav
-      className={cn(
-        "fixed inset-x-0 z-[120] w-full overflow-visible",
-        "apple-tabbar",
-        tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
-        "[transition:none] motion-reduce:transition-none"
-      )}
-      role="navigation"
-      aria-label="Navigation principale"
-      aria-hidden={tabBarHidden}
-      style={{
-        paddingBottom: "var(--tab-bar-ground-strip)",
-        bottom: 0,
-        transition: "none",
-      }}
-    >
-      {/* Pas de ios-nav-shell ici : il masquait le verre `.apple-tabbar` avec un fond thème opaque. */}
-      <div
-        className="relative mx-auto flex min-h-[var(--nav-height)] w-full max-w-full items-stretch justify-around overflow-visible px-2"
-        style={{ paddingTop: 8, paddingBottom: 8 }}
+    <Fragment>
+      <nav
+        className={cn(
+          "fixed inset-x-0 z-[120] flex w-full min-h-[var(--nav-height)] shrink-0 items-stretch justify-around overflow-visible",
+          tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
+          "[transition:none] motion-reduce:transition-none"
+        )}
+        role="navigation"
+        aria-label="Navigation principale"
+        aria-hidden={tabBarHidden}
+        style={{
+          ...tabBarSurface,
+          bottom: 0,
+          paddingTop: 8,
+          paddingBottom: "calc(8px + var(--tab-bar-ground-strip))",
+          transition: "none",
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "SF Pro Display", ui-sans-serif, system-ui, sans-serif',
+        }}
       >
         {leftItems.map(renderNavButton)}
 
-        {/* Maquette : colonne centrale + bouton surélevé (-mt-5), #007AFF + glow */}
-        <div className="relative flex min-w-0 flex-1 items-center justify-center">
+        <div className="relative flex flex-1 items-center justify-center">
           <button
             type="button"
             onClick={handlePlusClick}
-            aria-label="Planifier une séance"
-            className={cn(
-              "flex h-14 w-14 shrink-0 items-center justify-center rounded-full",
-              "-mt-5 shadow-lg",
-              "touch-manipulation transition-transform duration-200 ease-ios active:scale-95"
-            )}
+            aria-label={t("navigation.scheduleSession")}
+            className="-mt-5 flex h-14 w-14 shrink-0 touch-manipulation items-center justify-center rounded-full shadow-lg transition-transform active:scale-95"
             style={{
-              background: ACTION_BLUE,
-              boxShadow: "0 4px 12px rgba(0, 122, 255, 0.35)",
+              background: fabBlue,
+              boxShadow: isDark
+                ? "0 4px 12px rgba(10, 132, 255, 0.45)"
+                : "0 4px 12px rgba(0, 122, 255, 0.35)",
             }}
+            data-tutorial="create-session"
           >
             <Plus className="h-7 w-7 text-white" strokeWidth={3} aria-hidden />
           </button>
         </div>
 
         {rightItems.map(renderNavButton)}
-      </div>
+      </nav>
+
       <AlertDialog open={showNoClubDialog} onOpenChange={setShowNoClubDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -307,6 +315,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </nav>
+    </Fragment>
   );
 };
