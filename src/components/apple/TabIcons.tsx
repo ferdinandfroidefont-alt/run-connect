@@ -18,7 +18,8 @@ function svgProps({ size = 26, strokeWidth = 1.7, ...rest }: Props) {
   return {
     width: size,
     height: size,
-    viewBox: `0 0 ${size} ${size}`,
+    /* Toujours 26×26 : les paths sont construits dans ce système (sinon resize casse les formes). */
+    viewBox: "0 0 26 26",
     fill: "none" as const,
     stroke: "currentColor" as const,
     strokeWidth,

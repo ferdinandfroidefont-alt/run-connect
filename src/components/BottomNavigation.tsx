@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -33,7 +34,8 @@ type NavItem = {
   showUnreadBadge?: boolean;
 };
 
-const ITEM_GAP_PX = 12;
+/** Maquette RunConnect.jsx — tokens visibles (identique DiscoverChromeShell) */
+const ACTION_BLUE = "#007AFF";
 
 type BottomNavigationProps = {
   /** Route profil : tab bar masquée visuellement (overlay plein écran) sans démontage. */
@@ -194,20 +196,20 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         data-tutorial={tutorialId}
         aria-current={isActive ? "page" : undefined}
         className={cn(
-          "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-[2px] rounded-xl",
-          "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]"
+          "flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 py-1",
+          "touch-manipulation transition-[transform,color,opacity] duration-200 ease-ios active:scale-95 active:opacity-95"
         )}
       >
-        <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
+        <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
           <Icon
-            size={26}
+            size={24}
             className={cn(
-              "transition-colors duration-300 ease-ios",
+              "transition-colors duration-200 ease-ios",
               isActive
-                ? "text-primary"
-                : "text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
+                ? "text-[#007AFF] dark:text-[#0A84FF]"
+                : "text-[#8E8E93] dark:text-[rgba(235,235,245,0.6)]"
             )}
-            strokeWidth={isActive ? 2.2 : 1.7}
+            strokeWidth={isActive ? 2.4 : 2}
             aria-hidden
           />
           {showBadge && (
@@ -218,10 +220,10 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         </div>
         <span
           className={cn(
-            "w-full truncate text-center text-[10px] leading-none tracking-[-0.1px] transition-colors duration-300 ease-ios",
+            "w-full truncate text-center text-[10px] font-medium leading-none transition-colors duration-200 ease-ios",
             isActive
-              ? "font-medium text-primary"
-              : "font-medium text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]"
+              ? "text-[#007AFF] dark:text-[#0A84FF]"
+              : "text-[#8E8E93] dark:text-[rgba(235,235,245,0.6)]"
           )}
         >
           {label}
@@ -247,47 +249,34 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         transition: "none",
       }}
     >
-      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-visible pt-1 pb-0">
-        <div
-          className="mx-auto flex max-w-full items-stretch justify-center"
-          style={{
-            gap: ITEM_GAP_PX,
-            paddingLeft: "0.5rem",
-            paddingRight: "0.5rem",
-          }}
-        >
-          {leftItems.map(renderNavButton)}
+      {/* Pas de ios-nav-shell ici : il masquait le verre `.apple-tabbar` avec un fond thème opaque. */}
+      <div
+        className="relative mx-auto flex min-h-[var(--nav-height)] w-full max-w-full items-stretch justify-around overflow-visible px-2"
+        style={{ paddingTop: 8, paddingBottom: 8 }}
+      >
+        {leftItems.map(renderNavButton)}
 
-          {/* Bouton + central — légèrement surélevé comme dans la maquette */}
-          <div className="flex flex-1 basis-0 items-center justify-center">
-            <button
-              type="button"
-              onClick={handlePlusClick}
-              aria-label="Planifier une séance"
-              className={cn(
-                "flex h-14 w-14 items-center justify-center rounded-full -translate-y-3",
-                "touch-manipulation transition-transform duration-150 ease-ios active:scale-[0.94]",
-                "bg-primary text-primary-foreground",
-                "shadow-[0_4px_12px_rgba(0,122,255,0.35)]"
-              )}
-            >
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 28 28"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                aria-hidden
-              >
-                <path d="M14 4v20M4 14h20" />
-              </svg>
-            </button>
-          </div>
-
-          {rightItems.map(renderNavButton)}
+        {/* Maquette : colonne centrale + bouton surélevé (-mt-5), #007AFF + glow */}
+        <div className="relative flex min-w-0 flex-1 items-center justify-center">
+          <button
+            type="button"
+            onClick={handlePlusClick}
+            aria-label="Planifier une séance"
+            className={cn(
+              "flex h-14 w-14 shrink-0 items-center justify-center rounded-full",
+              "-mt-5 shadow-lg",
+              "touch-manipulation transition-transform duration-200 ease-ios active:scale-95"
+            )}
+            style={{
+              background: ACTION_BLUE,
+              boxShadow: "0 4px 12px rgba(0, 122, 255, 0.35)",
+            }}
+          >
+            <Plus className="h-7 w-7 text-white" strokeWidth={3} aria-hidden />
+          </button>
         </div>
+
+        {rightItems.map(renderNavButton)}
       </div>
       <AlertDialog open={showNoClubDialog} onOpenChange={setShowNoClubDialog}>
         <AlertDialogContent>
