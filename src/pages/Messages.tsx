@@ -3715,16 +3715,17 @@ const Messages = () => {
         >
         <div
           className={cn(
-            "flex min-h-0 w-full min-w-0 flex-col pb-ios-2",
+            "flex w-full min-w-0 flex-col pb-ios-2",
             activeRootTab === "create-club"
-              ? "flex-1 bg-secondary pt-2.5"
-              : "apple-grouped-bg"
+              ? "min-h-0 flex-1 bg-secondary pt-2.5"
+              : /* shrink-0 : sans cela, min-h-0 laisse le flex réduire le bloc sous le header — la « bulle » liste est rognée et ne scroll pas toute la liste */
+                "shrink-0 apple-grouped-bg"
           )}
         >
           {activeRootTab === "conversations" ? (
             <>
               {isInboxSearchMode ? (
-                <div className="mx-4 mt-3.5 min-h-[280px] overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card dark:border-border">
+                <div className="mx-4 mt-3.5 overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card dark:border-border">
                   <SearchTabs activeTab={messageDiscoveryTab} onTabChange={setMessageDiscoveryTab} />
                   <div className="min-w-0">
                     {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
@@ -3737,7 +3738,7 @@ const Messages = () => {
                 /* Liste — carte blanche arrondie (maquette 17) : overflow-hidden pour que les coins 18px restent visibles */
                 <div
                   className={cn(
-                    "mx-4 mt-3.5 min-h-[280px] overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card pb-ios-4 dark:border-border",
+                    "mx-4 mt-3.5 overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-card pb-ios-4 dark:border-border",
                     filteredAndSortedConversations.length > 0 && "divide-y divide-border"
                   )}
                 >
