@@ -15,7 +15,6 @@ import {
   RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
   RUCONNECT_SPLASH_ICON_URL,
 } from '@/lib/ruconnectSplashChrome';
-import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
 interface LayoutProps {
@@ -26,7 +25,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const { isPreviewMode } = useAppPreview();
-  const { removeMainBottomInset, homeMapImmersive } = useAppContext();
+  const { removeMainBottomInset } = useAppContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -179,19 +178,12 @@ export const Layout = ({ children }: LayoutProps) => {
             : undefined,
         }}
       >
+        {/* Carte persistée — toujours en arrière-plan (jamais dans le flux flex) */}
         {homeMapPrimed && (
-          <div
-            className={
-              isHome
-                ? /* Accueil : carte dans le flux flex → hauteur réelle > 0 pour Mapbox */
-                  'relative z-20 flex min-h-0 flex-1 flex-col'
-                : /* Autres onglets : carte persistée en arrière-plan */
-                  'absolute inset-0 z-0 flex min-h-0 flex-col'
-            }
-          >
+          <div className="absolute inset-0 z-0 flex min-h-0 flex-col pointer-events-none">
             <Suspense fallback={null}>
               <PersistentHomeMap
-                visible={isHome}
+                visible={false}
                 initialLat={mapInitialLat}
                 initialLng={mapInitialLng}
                 initialZoom={mapInitialZoom}
@@ -200,30 +192,14 @@ export const Layout = ({ children }: LayoutProps) => {
             </Suspense>
           </div>
         )}
-        {/*
-          Accueil : pointer-events-none sur cette colonne pour que les clics atteignent la carte (z-20).
-          Autres onglets : pointer-events-auto — sans cela, toute la chaîne (Layout + PageTransition) reste
-          en « none » et WebKit peut laisser les touches « tomber » sur la carte persistée (z-0) ou les absorber.
-        */}
-        <div
-          className={cn(
-            /* Accueil : calque au-dessus de la carte (même hauteur que le main) */
-            isHome
-              ? 'pointer-events-none absolute inset-0 z-10 flex min-h-0 flex-col overflow-x-hidden overflow-y-hidden bg-transparent'
-              : 'pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-transparent'
-          )}
-        >
-          <div
-            className={cn(
-              'animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-hidden motion-reduce:animate-none',
-              isHome ? 'pointer-events-none' : 'pointer-events-auto'
-            )}
-          >
+
+        {/* Contenu de la page — plein écran, toujours interactif */}
+        <div className="pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-transparent">
+          <div className="animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-hidden pointer-events-auto motion-reduce:animate-none">
             {children}
           </div>
         </div>
       </main>
-      {isHome && !homeMapImmersive && <HomeFeedBottomSheet />}
       <TutorialReplayHost />
       {/*
         Tab bar toujours montée (pas de mount/unmount par route) : visibilité gérée dans BottomNavigation.
