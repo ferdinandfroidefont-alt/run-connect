@@ -1,65 +1,125 @@
 import { useNavigate } from "react-router-dom";
-import { MapPin, Maximize2, Navigation } from "lucide-react";
-import { ACTION_BLUE } from "@/components/discover/DiscoverChromeShell";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
+import { DiscoverMapCard } from "@/components/discover/DiscoverMapCard";
+import { DiscoverMapMaquetteToolbar } from "@/components/discover/DiscoverMapMaquetteToolbar";
 
-export function DiscoverLiveMaquetteSection() {
+type DiscoverLiveMaquetteSectionProps = {
+  liveSessions: DiscoverSession[];
+  discoverLoading: boolean;
+  mapStyleUrl?: string;
+  mapPitch?: number;
+  fullscreen: boolean;
+  onToggleFullscreen: () => void;
+  onOpenStyleSheet: () => void;
+  onOpenFiltersSheet: () => void;
+  onOpenSession: (session: DiscoverSession) => void;
+  joinSession: (session: DiscoverSession) => void | Promise<void>;
+};
+
+/**
+ * Onglet « Live » dans Découvrir : même carte Mapbox que l’onglet Carte, filtrée sur les séances en créneau live (backend via useDiscoverFeed).
+ */
+export function DiscoverLiveMaquetteSection({
+  liveSessions,
+  discoverLoading,
+  mapStyleUrl,
+  mapPitch = 0,
+  fullscreen,
+  onToggleFullscreen,
+  onOpenStyleSheet,
+  onOpenFiltersSheet,
+  onOpenSession,
+  joinSession,
+}: DiscoverLiveMaquetteSectionProps) {
   const navigate = useNavigate();
 
   return (
     <>
       <button
         type="button"
-        onClick={() => navigate("/my-sessions")}
+        onClick={() => navigate("/discover/live")}
         className="mt-4 w-full touch-manipulation rounded-2xl bg-white py-3.5 text-[16px] font-bold text-[#0A0F1F] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
       >
         Voir mes séances live
       </button>
 
-      <div className="mt-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-        <p className="text-[16px] leading-snug text-[#0A0F1F]">
-          Vous ne participez à aucune séance live actuellement.
-        </p>
-      </div>
-
       <div
-        className="relative mt-4 overflow-hidden rounded-2xl"
-        style={{
-          aspectRatio: "1 / 1.1",
-          background: "linear-gradient(135deg, #e8f5e9, #c8e6c9 50%, #a5d6a7)",
-        }}
+        className={`relative mt-4 overflow-hidden rounded-2xl ring-1 ring-black/[0.06] transition-all duration-300 ease-out ${
+          fullscreen ? "h-[calc(100vh-220px)]" : "h-[260px]"
+        }`}
       >
-        <button
-          type="button"
-          aria-label="Navigation"
-          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md"
-        >
-          <Navigation className="h-5 w-5 rotate-45 text-[#0A0F1F]" strokeWidth={2.2} />
-        </button>
-        <button
-          type="button"
-          aria-label="Plein écran"
-          className="absolute right-3 top-16 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md"
-        >
-          <Maximize2 className="h-4 w-4 text-[#0A0F1F]" strokeWidth={2.4} />
-        </button>
-
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div className="relative">
-            <div
-              className="h-14 w-20 overflow-hidden rounded-xl border-[3px] border-white shadow-lg"
-              style={{ background: "linear-gradient(135deg, #6b7280, #4b5563)" }}
-            />
-            <div
-              className="absolute -bottom-3 left-1/2 h-0 w-0 -translate-x-1/2"
-              style={{
-                borderLeft: "10px solid transparent",
-                borderRight: "10px solid transparent",
-                borderTop: `14px solid ${ACTION_BLUE}`,
-              }}
-            />
+        <DiscoverMapCard
+          sessions={liveSessions}
+          mapStyleUrl={mapStyleUrl}
+          mapPitch={mapPitch}
+          onSessionMarkerClick={onOpenSession}
+          className="h-full min-h-0"
+        />
+        {discoverLoading && liveSessions.length === 0 ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/60">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
-        </div>
+        ) : null}
+        <DiscoverMapMaquetteToolbar
+          fullscreen={fullscreen}
+          onToggleFullscreen={onToggleFullscreen}
+          onOpenStyleSheet={onOpenStyleSheet}
+          onOpenFiltersSheet={onOpenFiltersSheet}
+        />
       </div>
+
+      {!fullscreen ? (
+        <>
+          <h2 className="mb-3 mt-6 text-[22px] font-bold text-[#0A0F1F]">En direct près de toi</h2>
+
+          {discoverLoading && liveSessions.length === 0 ? null : liveSessions.length === 0 ? (
+            <div className="mt-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <p className="text-[15px] leading-snug text-[#0A0F1F]">
+                Aucune séance en direct dans ton périmètre pour l’instant. Élargis les filtres ou reviens un peu plus tard.
+              </p>
+            </div>
+          ) : (
+            liveSessions.slice(0, 12).map((s) => (
+              <div
+                key={s.id}
+                className="mb-2.5 flex min-w-0 items-center gap-3 rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+              >
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left touch-manipulation transition-colors active:opacity-85"
+                  onClick={() => onOpenSession(s)}
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#FF3B30]/10">
+                      <div className="h-3 w-3 animate-pulse rounded-full bg-[#FF3B30]" />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-bold text-[#0A0F1F]">{s.title}</p>
+                    <p className="text-[13px] text-[#8E8E93]">
+                      EN COURS · {s.organizer.display_name || s.organizer.username}
+                    </p>
+                    <p className="mt-1 text-[12px] text-[#8E8E93]">
+                      {format(new Date(s.scheduled_at), "HH:mm", { locale: fr })} ·{" "}
+                      {typeof s.distance_km === "number" ? `${s.distance_km.toFixed(1)} km` : "—"} ·{" "}
+                      {s.current_participants} part.
+                    </p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="flex-shrink-0 touch-manipulation rounded-full bg-[#FF3B30] px-3 py-1.5 text-[13px] font-semibold text-white active:opacity-90"
+                  onClick={() => void joinSession(s)}
+                >
+                  Suivre
+                </button>
+              </div>
+            ))
+          )}
+        </>
+      ) : null}
     </>
   );
 }

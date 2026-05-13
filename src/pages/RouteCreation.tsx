@@ -64,6 +64,12 @@ import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderS
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMyRoutesList } from '@/hooks/useMyRoutesList';
+import { ACTION_BLUE } from '@/components/discover/DiscoverChromeShell';
+
+export type RouteCreationProps = {
+  /** Intègre la même expérience que /route-create dans l’onglet Itinéraires de la page Découvrir (pas d’en-tête pleine page). */
+  embedDiscover?: boolean;
+};
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -93,7 +99,7 @@ const ROUTE_DRAFT_STORAGE_KEY = 'runconnect_route_creation_draft_v1';
 /** Réduit le bruit des petites oscillations du MNE (m). */
 const ELEV_NOISE_THRESHOLD_M = 2;
 
-export const RouteCreation = () => {
+export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => {
   const navigate = useNavigate();
   const { pathname: routeCreationPathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -158,7 +164,9 @@ export const RouteCreation = () => {
 
   // MainTabsSwipeHost : la page reste montée en arrière-plan — se fier à la route active.
   const isActiveRouteCreation =
-    routeCreationPathname === "/route-create" || routeCreationPathname === "/route-creation";
+    embedDiscover ||
+    routeCreationPathname === "/route-create" ||
+    routeCreationPathname === "/route-creation";
   useEffect(() => {
     setBottomNavSuppressed("route-creation", isActiveRouteCreation);
     return () => setBottomNavSuppressed("route-creation", false);
@@ -1085,37 +1093,12 @@ export const RouteCreation = () => {
 
   addWaypointRef.current = addWaypoint;
 
-  return (
-    <>
-      <IosFixedPageHeaderShell
-        className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
-        headerWrapperClassName="shrink-0 bg-card"
-        contentScroll
-        scrollClassName="min-h-0 bg-secondary"
-        header={
-          <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-            <IosPageHeaderBar
-              leadingBack={{
-                onClick: () => requestExitWithRouteDraft('/'),
-                label: 'Découvrir',
-              }}
-              title="Itinéraire"
-              sideClassName="w-[7.5rem]"
-              right={
-                <button
-                  type="button"
-                  onClick={() => void handleFinish()}
-                  className="min-w-[44px] py-1 text-right text-[17px] font-semibold text-primary [-webkit-tap-highlight-color:transparent] active:opacity-60"
-                >
-                  OK
-                </button>
-              }
-            />
-          </div>
-        }
-      >
-        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-          <div className="min-w-0 max-w-full space-y-3 px-4 pb-32 pt-3 ios-shell:px-2.5">
+  const scrollInnerClassName = embedDiscover
+    ? 'min-w-0 max-w-full space-y-3 pb-8 pt-1'
+    : 'min-w-0 max-w-full space-y-3 px-4 pb-32 pt-3 ios-shell:px-2.5';
+
+  const body = (
+    <div className={scrollInnerClassName}>
             <div
               className="rounded-[14px] p-1 shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)]"
               style={{ background: 'hsl(var(--card))' }}
@@ -1298,9 +1281,57 @@ export const RouteCreation = () => {
               </div>
               <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/45" aria-hidden />
             </button>
+
+            {embedDiscover ? (
+              <button
+                type="button"
+                onClick={() => void handleFinish()}
+                className="mt-1 w-full touch-manipulation rounded-xl py-3.5 text-[16px] font-semibold text-white [-webkit-tap-highlight-color:transparent] active:opacity-90"
+                style={{ background: ACTION_BLUE }}
+              >
+                Sauvegarder l&apos;itinéraire
+              </button>
+            ) : null}
           </div>
-        </ScrollArea>
-      </IosFixedPageHeaderShell>
+  );
+
+  return (
+    <>
+      {embedDiscover ? (
+        body
+      ) : (
+        <IosFixedPageHeaderShell
+          className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
+          headerWrapperClassName="shrink-0 bg-card"
+          contentScroll
+          scrollClassName="min-h-0 bg-secondary"
+          header={
+            <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
+              <IosPageHeaderBar
+                leadingBack={{
+                  onClick: () => requestExitWithRouteDraft('/'),
+                  label: 'Découvrir',
+                }}
+                title="Itinéraire"
+                sideClassName="w-[7.5rem]"
+                right={
+                  <button
+                    type="button"
+                    onClick={() => void handleFinish()}
+                    className="min-w-[44px] py-1 text-right text-[17px] font-semibold text-primary [-webkit-tap-highlight-color:transparent] active:opacity-60"
+                  >
+                    OK
+                  </button>
+                }
+              />
+            </div>
+          }
+        >
+          <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+            {body}
+          </ScrollArea>
+        </IosFixedPageHeaderShell>
+      )}
 
       <RouteDialog
         isOpen={saveDialogOpen}

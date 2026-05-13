@@ -24,22 +24,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DISCOVER_BG } from "@/components/discover/DiscoverChromeShell";
 
 /** Maquette RunConnect.jsx ACTION_BLUE (#007AFF) */
 const LIGHT_ACTION_BLUE = "#007AFF";
-const LIGHT_LABEL_GRAY = "#8E8E93";
 
+/** Solid : même groupe que « Découvrir » (DISCOVER_BG) ; sans blur sinon la barre prend une teinte différente au-dessus du contenu. */
 const TAB_BAR_LIGHT: CSSProperties = {
-  background: "rgba(242, 242, 247, 0.92)",
-  backdropFilter: "blur(20px) saturate(180%)",
-  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+  background: DISCOVER_BG,
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
   borderTop: "1px solid rgba(0, 0, 0, 0.06)",
 };
 
+/** Alignée sur les conteneurs Messages / listes (« dark:bg-secondary »). */
 const TAB_BAR_DARK: CSSProperties = {
-  background: "rgba(28, 28, 30, 0.92)",
-  backdropFilter: "blur(20px) saturate(180%)",
-  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+  background: "hsl(var(--secondary))",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
   borderTop: "1px solid rgba(84, 84, 88, 0.65)",
 };
 

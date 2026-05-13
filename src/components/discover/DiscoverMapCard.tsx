@@ -14,6 +14,10 @@ import { createUserLocationMapboxMarker } from "@/lib/mapUserLocationIcon";
 type DiscoverMapCardProps = {
   sessions: DiscoverSession[];
   className?: string;
+  /** Style Mapbox explicite (palette Découvrir). */
+  mapStyleUrl?: string;
+  /** Inclinaison après chargement (ex. mode 3D). */
+  mapPitch?: number;
   /** Appelée quand l’utilisateur tape un pin (même comportement intent que la carte accueil). */
   onSessionMarkerClick?: (session: DiscoverSession) => void;
 };
@@ -21,7 +25,13 @@ type DiscoverMapCardProps = {
 /**
  * Carte Mapbox embarquée (pins séances découverte + position utilisateur), même style pins que InteractiveMap.
  */
-export function DiscoverMapCard({ sessions, className = "", onSessionMarkerClick }: DiscoverMapCardProps) {
+export function DiscoverMapCard({
+  sessions,
+  className = "",
+  mapStyleUrl,
+  mapPitch = 0,
+  onSessionMarkerClick,
+}: DiscoverMapCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -87,6 +97,8 @@ export function DiscoverMapCard({ sessions, className = "", onSessionMarkerClick
           center,
           zoom: 12,
           antialias: true,
+          style: mapStyleUrl,
+          pitch: mapPitch,
         });
         mapRef.current = map;
         if (cancelled || runId !== runIdRef.current) {
@@ -151,6 +163,10 @@ export function DiscoverMapCard({ sessions, className = "", onSessionMarkerClick
             if (coords.length > 0) {
               await fitMapToCoords(map, coords, 48);
             }
+            map.setPitch(mapPitch);
+            if (mapPitch > 0) {
+              map.setMaxPitch(85);
+            }
           })();
         });
         setMapError(false);
@@ -168,20 +184,19 @@ export function DiscoverMapCard({ sessions, className = "", onSessionMarkerClick
       ro?.disconnect();
       void teardown();
     };
-  }, [sessions, userCoord]);
+  }, [sessions, userCoord, mapStyleUrl, mapPitch]);
 
   if (mapError) {
     return (
-      <div className={`flex h-64 flex-col items-center justify-center rounded-2xl bg-muted ${className}`}>
+      <div className={`flex min-h-[200px] flex-col items-center justify-center bg-muted ${className}`}>
         <p className="px-4 text-center text-[13px] text-muted-foreground">Carte indisponible</p>
       </div>
     );
   }
 
   return (
-    <div className={`relative h-64 w-full overflow-hidden rounded-2xl bg-muted ${className}`}>
+    <div className={`relative w-full overflow-hidden bg-muted ${className}`}>
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
-      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/[0.06]" aria-hidden />
     </div>
   );
 }

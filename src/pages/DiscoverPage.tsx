@@ -1,23 +1,34 @@
-import { useCallback, useEffect, useState } from "react";
-import { MapPin, Users } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { useDiscoverFeed } from "@/hooks/useDiscoverFeed";
 import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
-import { shortLocation, toneHexForActivity } from "@/components/feed/FeedSessionTile";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import {
   DiscoverChromeShell,
-  type DiscoverChromeActiveChip,
   ACTION_BLUE,
+  type DiscoverChromeActiveChip,
 } from "@/components/discover/DiscoverChromeShell";
 import { DiscoverMapCard } from "@/components/discover/DiscoverMapCard";
+import { DiscoverMapMaquetteToolbar } from "@/components/discover/DiscoverMapMaquetteToolbar";
 import { DiscoverFeedInlineSection } from "@/components/discover/DiscoverFeedInlineSection";
 import { DiscoverLiveMaquetteSection } from "@/components/discover/DiscoverLiveMaquetteSection";
-import { DiscoverItineraryMaquetteSection } from "@/components/discover/DiscoverItineraryMaquetteSection";
+import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
+import {
+  HomeMapFilterGroupedList,
+  HomeMapFilterRow,
+  HomeMapFilterSheet,
+} from "@/components/map/HomeMapFilterSheet";
+import {
+  DISCOVER_MAP_3D_PITCH,
+  DISCOVER_MAP_PALETTE_ROWS,
+  discoverPaletteToStyleUrl,
+  type DiscoverMapPaletteId,
+} from "@/lib/discoverMapStyle";
+import { sessionLikelyLive } from "@/components/feed/FeedSessionTile";
+
+const RouteCreationEmbedded = lazy(() => import("@/pages/RouteCreation"));
 
 function discoverToDialog(session: DiscoverSession): Record<string, unknown> {
   return {
@@ -49,6 +60,14 @@ export function DiscoverPage() {
   const [feedSubTab, setFeedSubTab] = useState<"amis" | "decouvrir">("amis");
   const [friendCount, setFriendCount] = useState<number | null>(null);
   const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
+  const [discoverMapFullscreen, setDiscoverMapFullscreen] = useState(false);
+  const [liveMapFullscreen, setLiveMapFullscreen] = useState(false);
+  const [discoverMapPaletteId, setDiscoverMapPaletteId] = useState<DiscoverMapPaletteId>("standard");
+  const [discoverFilterSheetOpen, setDiscoverFilterSheetOpen] = useState(false);
+  const [discoverStyleSheetOpen, setDiscoverStyleSheetOpen] = useState(false);
+
+  const discoverMapStyleUrl = useMemo(() => discoverPaletteToStyleUrl(discoverMapPaletteId), [discoverMapPaletteId]);
+  const discoverMapPitch = discoverMapPaletteId === "standard3d" ? DISCOVER_MAP_3D_PITCH : 0;
 
   const {
     feedItems,
@@ -69,6 +88,11 @@ export function DiscoverPage() {
     toggleActivity,
     toggleAllActivities,
   } = useDiscoverFeed();
+
+  const liveSessions = useMemo(
+    () => discoverSessions.filter((s) => sessionLikelyLive(s.scheduled_at)),
+    [discoverSessions],
+  );
 
   useEffect(() => {
     if (!user?.id) return;
@@ -100,75 +124,26 @@ export function DiscoverPage() {
       >
         {view === "carte" ? (
           <>
-            <div className="relative mt-4">
-              <DiscoverMapCard sessions={discoverSessions} onSessionMarkerClick={onPin} />
-
-              <div className="pointer-events-none absolute bottom-3 left-3 right-3">
-                <div className="rounded-xl bg-white/95 p-3 shadow-sm backdrop-blur-md">
-                  <p className="text-[13px] font-semibold text-[#0A0F1F]">
-                    {discoverLoading
-                      ? "Chargement…"
-                      : `${discoverSessions.length} séance${discoverSessions.length !== 1 ? "s" : ""} autour de toi`}
-                  </p>
-                  {discoverSessions[0]?.location_name ? (
-                    <p className="mt-0.5 text-[12px] text-[#8E8E93]">
-                      {shortLocation(discoverSessions[0].location_name)}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
+            <div
+              className={`relative mt-4 overflow-hidden rounded-2xl ring-1 ring-black/[0.06] transition-all duration-300 ease-out ${
+                discoverMapFullscreen ? "h-[calc(100vh-220px)]" : "h-[260px]"
+              }`}
+            >
+              <DiscoverMapCard
+                sessions={discoverSessions}
+                mapStyleUrl={discoverMapStyleUrl}
+                mapPitch={discoverMapPitch}
+                onSessionMarkerClick={onPin}
+                className="h-full min-h-0"
+              />
+              <DiscoverMapMaquetteToolbar
+                fullscreen={discoverMapFullscreen}
+                onToggleFullscreen={() => setDiscoverMapFullscreen((v) => !v)}
+                onOpenStyleSheet={() => setDiscoverStyleSheetOpen(true)}
+                onOpenFiltersSheet={() => setDiscoverFilterSheetOpen(true)}
+              />
             </div>
 
-            <h2 className="mb-3 mt-6 text-[22px] font-bold text-[#0A0F1F]">Près de chez toi</h2>
-
-            {discoverLoading && discoverSessions.length === 0 ? (
-              <div className="flex justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            ) : discoverSessions.length === 0 ? (
-              <p className="py-8 text-center text-[15px] text-[#8E8E93]">
-                Aucune séance autour de toi
-              </p>
-            ) : (
-              discoverSessions.slice(0, 12).map((s) => (
-                <div
-                  key={s.id}
-                  className="mb-2.5 flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                >
-                  <div
-                    className="h-11 w-11 flex-shrink-0 rounded-full"
-                    style={{
-                      background: `linear-gradient(135deg, ${toneHexForActivity(s.activity_type)}55, ${toneHexForActivity(s.activity_type)})`,
-                    }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-bold text-[#0A0F1F]">{s.title}</p>
-                    <p className="text-[13px] text-[#8E8E93]">
-                      {s.organizer.display_name || s.organizer.username} ·{" "}
-                      {format(new Date(s.scheduled_at), "HH:mm", { locale: fr })}
-                    </p>
-                    <div className="mt-1 flex items-center gap-3">
-                      <span className="flex items-center gap-1 text-[12px] text-[#8E8E93]">
-                        <MapPin className="h-3 w-3" />
-                        {typeof s.distance_km === "number" ? `${s.distance_km.toFixed(1)} km` : "—"}
-                      </span>
-                      <span className="flex items-center gap-1 text-[12px] text-[#8E8E93]">
-                        <Users className="h-3 w-3" />
-                        {s.current_participants}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="flex-shrink-0 touch-manipulation rounded-full px-3 py-1.5 text-[13px] font-semibold text-white"
-                    style={{ background: ACTION_BLUE }}
-                    onClick={() => setSelectedSession(discoverToDialog(s))}
-                  >
-                    Rejoindre
-                  </button>
-                </div>
-              ))
-            )}
           </>
         ) : null}
 
@@ -194,9 +169,35 @@ export function DiscoverPage() {
           />
         ) : null}
 
-        {view === "live" ? <DiscoverLiveMaquetteSection /> : null}
+        {view === "live" ? (
+          <DiscoverLiveMaquetteSection
+            liveSessions={liveSessions}
+            discoverLoading={discoverLoading}
+            mapStyleUrl={discoverMapStyleUrl}
+            mapPitch={discoverMapPitch}
+            fullscreen={liveMapFullscreen}
+            onToggleFullscreen={() => setLiveMapFullscreen((v) => !v)}
+            onOpenStyleSheet={() => setDiscoverStyleSheetOpen(true)}
+            onOpenFiltersSheet={() => setDiscoverFilterSheetOpen(true)}
+            onOpenSession={onPin}
+            joinSession={joinSession}
+          />
+        ) : null}
 
-        {view === "itineraires" ? <DiscoverItineraryMaquetteSection /> : null}
+        {view === "itineraires" ? (
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-16" aria-busy="true" aria-label="Chargement">
+                <div
+                  className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+                  style={{ borderColor: `${ACTION_BLUE}44`, borderTopColor: ACTION_BLUE }}
+                />
+              </div>
+            }
+          >
+            <RouteCreationEmbedded embedDiscover />
+          </Suspense>
+        ) : null}
       </DiscoverChromeShell>
 
       <SessionDetailsDialog
@@ -207,6 +208,55 @@ export function DiscoverPage() {
           void refreshFeed();
         }}
       />
+
+      <HomeMapFilterSheet
+        open={discoverFilterSheetOpen}
+        onClose={() => setDiscoverFilterSheetOpen(false)}
+        title="Filtres"
+        description="Affine ta recherche de séances"
+        titleId="discover-map-filters-sheet-title"
+        variant="tall"
+      >
+        <DiscoverFilters
+          maxDistance={maxDistance}
+          setMaxDistance={setMaxDistance}
+          selectedActivities={selectedActivities}
+          toggleActivity={toggleActivity}
+          toggleAllActivities={toggleAllActivities}
+        />
+      </HomeMapFilterSheet>
+
+      <HomeMapFilterSheet
+        open={discoverStyleSheetOpen}
+        onClose={() => setDiscoverStyleSheetOpen(false)}
+        title="Style de carte"
+        description="Choisis ton type d'affichage"
+        titleId="discover-map-style-sheet-title"
+      >
+        <HomeMapFilterGroupedList>
+          {DISCOVER_MAP_PALETTE_ROWS.map((row) => (
+            <HomeMapFilterRow
+              key={row.id}
+              label={row.label}
+              hint={row.hint}
+              selected={discoverMapPaletteId === row.id}
+              onClick={() => {
+                setDiscoverMapPaletteId(row.id);
+                setDiscoverStyleSheetOpen(false);
+              }}
+              leading={
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] text-[18px] leading-none"
+                  style={{ backgroundColor: `${row.accent}22` }}
+                  aria-hidden
+                >
+                  {row.emoji}
+                </span>
+              }
+            />
+          ))}
+        </HomeMapFilterGroupedList>
+      </HomeMapFilterSheet>
     </>
   );
 }
