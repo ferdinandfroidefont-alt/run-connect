@@ -600,12 +600,12 @@ export const CreateCoachingSessionDialog = ({
                     })}
                   </div>
 
-                  <p className="mb-3 mt-7 text-[20px] font-extrabold text-[#0A0F1F]">Schéma de séance</p>
+                  <p className="mb-3 mt-7 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">Schéma de séance</p>
                   <CoachingSchemaChart ref={schemaRef} blocks={chartBlocks} dragOver={dragging?.over} />
 
-                  <p className="mb-1 mt-7 text-[20px] font-extrabold text-[#0A0F1F]">Ajouter un bloc</p>
+                  <p className="mb-1 mt-7 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">Ajouter un bloc</p>
                   <p className="mb-3 text-[13px] text-[#8E8E93]">Glisse un bloc sur le schéma ↑</p>
-                  <div className="grid grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-4 gap-2">
                     {COACHING_BLOCK_PALETTE.map((bt) => {
                       const isBeingDragged = dragging?.type === bt.id;
                       return (
@@ -624,13 +624,13 @@ export const CreateCoachingSessionDialog = ({
                           className="select-none"
                           style={{
                             background: "white",
-                            borderRadius: 18,
+                            borderRadius: 14,
                             padding: "12px 8px 10px 8px",
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
                             gap: 6,
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                            border: "1px solid #E5E5EA",
                             cursor: "grab",
                             opacity: isBeingDragged ? 0.35 : 1,
                             transform: isBeingDragged ? "scale(0.94)" : "scale(1)",
@@ -642,7 +642,7 @@ export const CreateCoachingSessionDialog = ({
                           <span
                             style={{
                               fontSize: 12,
-                              fontWeight: 600,
+                              fontWeight: 700,
                               color: "#0A0F1F",
                               letterSpacing: "-0.01em",
                             }}

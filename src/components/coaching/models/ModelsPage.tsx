@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { parseRCC, formatParsedBlockSummary } from "@/lib/rccParser";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
@@ -110,73 +111,171 @@ export function ModelsPage({
 
   return (
     <>
-      <div className="space-y-0 pb-6">
-        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-          <p className="text-[17px] font-semibold text-foreground">Modèles</p>
-          <Button type="button" variant="secondary" size="sm" className="h-9 rounded-lg text-[12px] font-semibold" onClick={onCreateModel}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Créer un modèle
-          </Button>
-        </div>
-
-        <div className="border-b border-border bg-card px-4 py-2.5">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un modèle"
-              className="h-10 rounded-lg border-border/60 bg-background pl-9 text-[14px]"
-            />
-          </div>
-        </div>
-
-        <div className="border-b border-border bg-card px-4 py-2">
-          <ModelFilters value={filter} onChange={setFilter} />
-        </div>
-        <div className="border-b border-border bg-card px-4 py-2">
-          <ModelTabs value={activeTab} onChange={setActiveTab} />
-        </div>
-
-        <div className="flex flex-col divide-y divide-border border-b border-border bg-card">
-          {filtered.map((model) => {
-            const parsed = parseRCC(model.rccCode);
-            const segments = buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any });
-            const metrics = resolveWorkoutMetrics({
-              segments,
-            });
-            const preview = parsed.blocks[0] ? formatParsedBlockSummary(parsed.blocks[0]) : "Séance modèle";
-            return (
-              <ModelCard
-                key={model.id}
-                model={model}
-                summaryLine={[metrics.durationLabel, metrics.distanceLabel, metrics.intensityLabel].filter(Boolean).join(" • ")}
-                previewLine={preview}
-                accentColor={workoutAccentColor(segments, model.activityType as any)}
-                miniProfile={renderWorkoutMiniProfile(segments, { density: "compact" })}
-                addButtonLabel={addButtonLabel}
-                onOpen={() => setSelectedModel(model)}
-                onAdd={() => pickModel(model)}
-                onMenu={
-                  model.source === "mine"
-                    ? () => {
-                        const action = window.prompt("Action: edit / duplicate / delete", "edit");
-                        if (action === "edit") onEditModel(model);
-                        if (action === "duplicate") onDuplicateModel(model);
-                        if (action === "delete") onDeleteModel(model);
-                      }
-                    : undefined
-                }
-              />
-            );
-          })}
-          {filtered.length === 0 ? (
-            <div className="bg-secondary/20 px-4 py-10 text-center">
-              <p className="text-[14px] font-semibold text-foreground">Aucun modèle trouvé</p>
-              <p className="mt-1 text-[12px] text-muted-foreground">Affinez votre recherche ou changez de filtre.</p>
+      <div className={cn("pb-6", sessionFlow ? "space-y-3" : "space-y-0")}>
+        {sessionFlow ? (
+          <>
+            <div className="flex items-center justify-between">
+              <h2
+                className="m-0 text-[26px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
+              >
+                Modèles
+              </h2>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-full transition-transform active:scale-[0.97]"
+                style={{ background: "#E5E5EA", padding: "8px 14px 8px 10px" }}
+                onClick={onCreateModel}
+              >
+                <Plus className="h-4 w-4 shrink-0 text-[#0A0F1F]" strokeWidth={2.6} />
+                <span className="text-[14px] font-bold tracking-[-0.01em] text-[#0A0F1F]">Créer un modèle</span>
+              </button>
             </div>
-          ) : null}
-        </div>
+            <div className="-mx-1 h-px bg-[#E5E5EA]" />
+            <div
+              className="flex items-center gap-2 rounded-full border bg-white px-3.5 py-2.5"
+              style={{ borderColor: "#E5E5EA" }}
+            >
+              <Search className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.4} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher un modèle"
+                className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-medium text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+              />
+            </div>
+            <ModelFilters value={filter} onChange={setFilter} maquette />
+            <ModelTabs value={activeTab} onChange={setActiveTab} maquette />
+            <div className="flex flex-col gap-3 pt-1">
+              {filtered.map((model) => {
+                const parsed = parseRCC(model.rccCode);
+                const segments = buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any });
+                const metrics = resolveWorkoutMetrics({
+                  segments,
+                });
+                const preview = parsed.blocks[0] ? formatParsedBlockSummary(parsed.blocks[0]) : "Séance modèle";
+                return (
+                  <ModelCard
+                    key={model.id}
+                    maquette
+                    model={model}
+                    summaryLine={[metrics.durationLabel, metrics.distanceLabel, metrics.intensityLabel].filter(Boolean).join(" • ")}
+                    previewLine={preview}
+                    accentColor={workoutAccentColor(segments, model.activityType as any)}
+                    miniProfile={renderWorkoutMiniProfile(segments, { density: "compact" })}
+                    addButtonLabel={addButtonLabel}
+                    onOpen={() => setSelectedModel(model)}
+                    onAdd={() => pickModel(model)}
+                    onMenu={
+                      model.source === "mine"
+                        ? () => {
+                            const action = window.prompt("Action: edit / duplicate / delete", "edit");
+                            if (action === "edit") onEditModel(model);
+                            if (action === "duplicate") onDuplicateModel(model);
+                            if (action === "delete") onDeleteModel(model);
+                          }
+                        : undefined
+                    }
+                  />
+                );
+              })}
+            </div>
+            {filtered.length === 0 ? (
+              <div
+                className="flex flex-col items-center px-6 py-10 text-center"
+                style={{
+                  background: "white",
+                  borderRadius: 18,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div
+                  className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-[28px]"
+                  style={{ background: "#F2F2F7" }}
+                  aria-hidden
+                >
+                  📋
+                </div>
+                <p className="m-0 text-[16px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">
+                  {activeTab === "mine" ? "Aucun modèle créé" : "Aucun résultat"}
+                </p>
+                <p className="mt-1 max-w-[260px] text-[13.5px] leading-snug text-[#8E8E93]">
+                  {activeTab === "mine"
+                    ? "Crée un modèle pour réutiliser tes séances favorites."
+                    : "Essaie un autre filtre ou un autre terme de recherche."}
+                </p>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
+              <p className="text-[17px] font-semibold text-foreground">Modèles</p>
+              <Button type="button" variant="secondary" size="sm" className="h-9 rounded-lg text-[12px] font-semibold" onClick={onCreateModel}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Créer un modèle
+              </Button>
+            </div>
+
+            <div className="border-b border-border bg-card px-4 py-2.5">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Rechercher un modèle"
+                  className="h-10 rounded-lg border-border/60 bg-background pl-9 text-[14px]"
+                />
+              </div>
+            </div>
+
+            <div className="border-b border-border bg-card px-4 py-2">
+              <ModelFilters value={filter} onChange={setFilter} />
+            </div>
+            <div className="border-b border-border bg-card px-4 py-2">
+              <ModelTabs value={activeTab} onChange={setActiveTab} />
+            </div>
+
+            <div className="flex flex-col divide-y divide-border border-b border-border bg-card">
+              {filtered.map((model) => {
+                const parsed = parseRCC(model.rccCode);
+                const segments = buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any });
+                const metrics = resolveWorkoutMetrics({
+                  segments,
+                });
+                const preview = parsed.blocks[0] ? formatParsedBlockSummary(parsed.blocks[0]) : "Séance modèle";
+                return (
+                  <ModelCard
+                    key={model.id}
+                    model={model}
+                    summaryLine={[metrics.durationLabel, metrics.distanceLabel, metrics.intensityLabel].filter(Boolean).join(" • ")}
+                    previewLine={preview}
+                    accentColor={workoutAccentColor(segments, model.activityType as any)}
+                    miniProfile={renderWorkoutMiniProfile(segments, { density: "compact" })}
+                    addButtonLabel={addButtonLabel}
+                    onOpen={() => setSelectedModel(model)}
+                    onAdd={() => pickModel(model)}
+                    onMenu={
+                      model.source === "mine"
+                        ? () => {
+                            const action = window.prompt("Action: edit / duplicate / delete", "edit");
+                            if (action === "edit") onEditModel(model);
+                            if (action === "duplicate") onDuplicateModel(model);
+                            if (action === "delete") onDeleteModel(model);
+                          }
+                        : undefined
+                    }
+                  />
+                );
+              })}
+              {filtered.length === 0 ? (
+                <div className="bg-secondary/20 px-4 py-10 text-center">
+                  <p className="text-[14px] font-semibold text-foreground">Aucun modèle trouvé</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">Affinez votre recherche ou changez de filtre.</p>
+                </div>
+              ) : null}
+            </div>
+          </>
+        )}
       </div>
 
       {!sessionFlow ? (

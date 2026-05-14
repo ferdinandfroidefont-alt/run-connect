@@ -631,7 +631,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                 {!themeMounted ? (
                   <div className="mx-3 mb-3 mt-1 h-[72px] animate-pulse rounded-[12px] bg-[#E5E5EA]" />
                 ) : (
-                  <SettingsSegmented
+                  <SettingsMaquetteSegmented
                     value={(theme ?? "system") as "light" | "dark" | "system"}
                     onChange={(id) => void setTheme(id)}
                     options={THEME_MODES.map(({ id, labelKey, Icon }) => ({

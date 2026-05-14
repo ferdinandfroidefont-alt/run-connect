@@ -6,12 +6,16 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { ChevronDown, Lock, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Lock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
-import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
-import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
-import { resolveWorkoutMetrics } from "@/lib/workoutPresentation";
+import {
+  BlockPreviewBars,
+  CoachingSchemaChart,
+  COACHING_ACTION_BLUE,
+  COACHING_BLOCK_PALETTE,
+  type PaletteBlockId,
+} from "@/components/coaching/create-session/CoachingCreateSessionSchema";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,6 +146,39 @@ function simpleBlockDistanceValue(distanceM?: number) {
 
 function blockTitle(type: BlockType) {
   return BLOCK_TYPES.find((b) => b.id === type)?.label ?? "Bloc";
+}
+
+function paletteTypeForCoachingBlock(block: CoachingSessionBlock): PaletteBlockId {
+  if (block.notes?.includes(PYRAMID_NOTES_PREFIX)) return "pyramide";
+  if (
+    block.notes?.includes("[Variation]") ||
+    block.notes?.includes("[Progressif]") ||
+    block.notes?.includes("[Dégressif]")
+  ) {
+    return "variation";
+  }
+  if (block.type === "interval") return "intervalle";
+  return "continu";
+}
+
+function schemaToolFromPalette(id: PaletteBlockId): SchemaDragToolKind {
+  switch (id) {
+    case "continu":
+      return "steady";
+    case "intervalle":
+      return "interval";
+    case "pyramide":
+      return "pyramid";
+    case "variation":
+      return "variation";
+  }
+}
+
+function emojiForBlockHeader(block: CoachingSessionBlock, isPyramid: boolean, isProgressive: boolean): string {
+  if (isPyramid) return "▲";
+  if (isProgressive) return "📈";
+  if (block.type === "interval") return "⚡";
+  return "=";
 }
 
 function isProgressiveBlock(block: CoachingSessionBlock) {
@@ -594,8 +631,11 @@ export function CoachingBlockEditorPanel({
     const bounds = el.getBoundingClientRect();
     const inside = clientX >= bounds.left && clientX <= bounds.right && clientY >= bounds.top && clientY <= bounds.bottom;
     if (inside) {
-      const x = Math.max(0, Math.min(bounds.width, clientX - bounds.left));
-      const ratio = bounds.width > 0 ? x / bounds.width : 1;
+      const padL = 44;
+      const padR = 4;
+      const innerW = Math.max(0, bounds.width - padL - padR);
+      const x = Math.max(0, Math.min(innerW, clientX - bounds.left - padL));
+      const ratio = innerW > 0 ? x / innerW : 0;
       const insertIndex = Math.max(0, Math.min(blocks.length, Math.round(ratio * blocks.length)));
       const block = createQuickSchemaBlock(schemaDraggingTool);
       insertBlock(block, insertIndex);
@@ -619,8 +659,11 @@ export function CoachingBlockEditorPanel({
     const target = schemaPreviewRef.current;
     if (!target) return;
     const bounds = target.getBoundingClientRect();
-    const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
-    const ratio = bounds.width > 0 ? x / bounds.width : 0;
+    const padL = 44;
+    const padR = 4;
+    const innerW = Math.max(0, bounds.width - padL - padR);
+    const x = Math.max(0, Math.min(innerW, event.clientX - bounds.left - padL));
+    const ratio = innerW > 0 ? x / innerW : 0;
     setSchemaDragPointer({ x: event.clientX, y: event.clientY });
     setSchemaDropRatio(ratio);
   }, [schemaDraggingTool]);
@@ -641,8 +684,11 @@ export function CoachingBlockEditorPanel({
         setSchemaDropRatio(null);
         return;
       }
-      const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
-      setSchemaDropRatio(bounds.width > 0 ? x / bounds.width : 0);
+      const padL = 44;
+      const padR = 4;
+      const innerW = Math.max(0, bounds.width - padL - padR);
+      const x = Math.max(0, Math.min(innerW, event.clientX - bounds.left - padL));
+      setSchemaDropRatio(innerW > 0 ? x / innerW : 0);
     };
     const onPointerUp = (event: PointerEvent) => {
       finalizeSchemaDragAtClientPoint(event.clientX, event.clientY);
@@ -663,34 +709,12 @@ export function CoachingBlockEditorPanel({
     };
   }, [schemaDraggingTool, finalizeSchemaDragAtClientPoint]);
 
-  // ── Preview bars ───────────────────────────────────────────────────────────
-
-  const previewSegments = useMemo(
-    () => buildWorkoutSegments(blocks as Parameters<typeof buildWorkoutSegments>[0], { sport }),
-    [blocks, sport]
+  const schemaChartBlocks = useMemo(
+    () => blocks.map((b) => ({ id: b.id, type: paletteTypeForCoachingBlock(b) })),
+    [blocks]
   );
-  const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
-  const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
-    [previewSegments]
-  );
-  const sessionTimeAxisLabels = useMemo(() => {
-    const duration = Math.max(0, Math.round(previewMetrics.durationMin));
-    const end = Math.max(60, Math.ceil(Math.max(1, duration) / 15) * 15);
-    const labels: string[] = [];
-    for (let minute = 0; minute <= end; minute += 15) {
-      labels.push(`${Math.floor(minute / 60)}:${String(minute % 60).padStart(2, "0")}`);
-    }
-    return labels;
-  }, [previewMetrics.durationMin]);
-
-  const selectedSchemaPreviewIndex = useMemo(() => {
-    if (!selectedBlockId || !blocks.length || !previewBars.length) return null;
-    const selectedDraftIndex = blocks.findIndex((b) => b.id === selectedBlockId);
-    if (selectedDraftIndex < 0) return null;
-    if (blocks.length === 1) return 0;
-    return Math.round((selectedDraftIndex / (blocks.length - 1)) * Math.max(0, previewBars.length - 1));
-  }, [blocks, previewBars.length, selectedBlockId]);
+  const schemaDragOver =
+    Boolean(schemaDraggingTool) && schemaDropRatio != null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -699,208 +723,118 @@ export function CoachingBlockEditorPanel({
       {/* Schema section */}
       <div className="space-y-3">
         <div className="space-y-3">
-          <p className="px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Schéma de séance</p>
-          <div className="min-w-0 rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
-            <div className="flex min-w-0 gap-2">
-              <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-around py-0 text-[9px] font-semibold leading-none" style={{ color: "#7a7a7a" }}>
-                <span>Z6</span>
-                <span>Z5</span>
-                <span>Z4</span>
-                <span>Z3</span>
-                <span>Z2</span>
-                <span>Z1</span>
-              </div>
+          <p
+            className="m-0 text-[18px] font-extrabold tracking-[-0.01em]"
+            style={{ color: "#0A0F1F" }}
+          >
+            Schéma de séance
+          </p>
+          <div
+            ref={schemaPreviewRef}
+            onPointerMove={handleSchemaPreviewPointerMove}
+            className={cn(
+              "relative min-w-0 rounded-[20px]",
+              schemaDraggingTool ? "cursor-copy" : ""
+            )}
+            style={
+              schemaDraggingTool
+                ? { boxShadow: `0 0 0 2px ${COACHING_ACTION_BLUE}40` }
+                : undefined
+            }
+            title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
+          >
+            <CoachingSchemaChart blocks={schemaChartBlocks} dragOver={schemaDragOver} />
+            {schemaDropRatio != null ? (
               <div
-                ref={schemaPreviewRef}
-                onPointerMove={handleSchemaPreviewPointerMove}
-                onPointerDown={(event) => {
-                  if (event.target !== event.currentTarget) return;
+                aria-hidden
+                className="pointer-events-none absolute z-[5] w-0.5 rounded-full"
+                style={{
+                  left: `calc(44px + (100% - 48px) * ${schemaDropRatio})`,
+                  top: 18,
+                  bottom: 58,
+                  transform: "translateX(-50%)",
+                  background: `${COACHING_ACTION_BLUE}b3`,
                 }}
-                className={cn(
-                  "relative min-w-0 flex-1",
-                  schemaDraggingTool ? "cursor-copy rounded-md ring-2 ring-[#2563EB]/35" : ""
-                )}
-                title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
+              />
+            ) : null}
+            {schemaDropRatio != null && schemaDraggingTool ? (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute z-30 rounded-full border bg-white px-2 py-1 text-[11px] font-semibold shadow-lg"
+                style={{
+                  left: `calc(44px + (100% - 48px) * ${schemaDropRatio})`,
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  borderColor: `${COACHING_ACTION_BLUE}59`,
+                  color: COACHING_ACTION_BLUE,
+                }}
               >
-                <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
-                  {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <div
-                      key={i}
-                      className="absolute left-0 right-0"
-                      style={{ top: `${(i / 6) * 100}%`, borderTop: "1px dashed #e0e0e0" }}
-                    />
-                  ))}
-                  <div
-                    className="absolute bottom-0 left-0 right-0"
-                    style={{ borderTop: "1px solid rgba(29,29,31,0.18)" }}
-                  />
-                </div>
-                <MiniWorkoutProfile
-                  blocks={previewBars}
-                  variant="premiumCompact"
-                  barHeightScale={3}
-                  zoneBandMode
-                  interBlockGapPx={4}
-                  flatSurface
-                  selectedBlockIndex={selectedSchemaPreviewIndex}
-                  onBlockTap={({ index }) => {
-                    if (!blocks.length) return;
-                    const mappedDraftIndex =
-                      blocks.length <= 1 || previewBars.length <= 1
-                        ? 0
-                        : Math.round((index / Math.max(1, previewBars.length - 1)) * (blocks.length - 1));
-                    const block = blocks[Math.max(0, Math.min(blocks.length - 1, mappedDraftIndex))];
-                    if (block) setSelectedBlockId(block.id);
-                  }}
-                  className="relative z-[2] h-[220px] w-full bg-transparent"
-                />
-                {schemaDropRatio != null ? (
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-2.5 w-0.5 rounded-full bg-[#2563EB]/45"
-                    style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 1px)` }}
-                  />
-                ) : null}
-                {schemaDropRatio != null && schemaDraggingTool ? (
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute z-30 rounded-xl border border-[#2563EB]/35 bg-white/95 px-1.5 py-1 shadow-[0_14px_30px_-18px_rgba(37,99,235,0.65)] backdrop-blur-[2px]"
-                    style={{
-                      left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}%)`,
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  >
-                    <SchemaDragToolMini tool={schemaDraggingTool} />
-                  </div>
-                ) : null}
+                <SchemaDragToolMini tool={schemaDraggingTool} />
               </div>
-            </div>
-            <div className="mt-1.5 overflow-x-auto pl-[2.2rem]">
-              <div className="flex min-w-full items-center justify-between gap-1 text-[10px] font-medium text-muted-foreground">
-                {sessionTimeAxisLabels.map((label) => (
-                  <span key={`axis-${label}`} className="shrink-0 text-center">{label}</span>
-                ))}
-              </div>
-              <p className="mt-0.5 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Temps
-              </p>
-            </div>
+            ) : null}
           </div>
 
-          {/* Add block cards */}
-          <p className="mb-[10px] mt-5 px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Ajouter un bloc</p>
+          {/* Add block cards — aligné maquette RunConnect (11) */}
+          <p
+            className="mb-1 mt-5 text-[18px] font-extrabold tracking-[-0.01em]"
+            style={{ color: "#0A0F1F" }}
+          >
+            Ajouter un bloc
+          </p>
+          <p className="mb-3 text-[13px]" style={{ color: "#8E8E93" }}>
+            Glisse un bloc sur le schéma ↑
+          </p>
           <div className="grid grid-cols-4 gap-2">
-            {(
-              [
-                {
-                  key: "steady" as const,
-                  title: "Continu",
-                  mini: (
-                    <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
-                      <rect x="2" y="9" width="40" height="6" rx="2" fill="#0066cc"/>
-                    </svg>
-                  ),
-                },
-                {
-                  key: "interval" as const,
-                  title: "Intervalle",
-                  mini: (
-                    <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
-                      <rect x="2"  y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
-                      <rect x="11" y="14" width="3" height="6"  rx="1"   fill="#B5B5BA"/>
-                      <rect x="17" y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
-                      <rect x="26" y="14" width="3" height="6"  rx="1"   fill="#B5B5BA"/>
-                      <rect x="32" y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
-                    </svg>
-                  ),
-                },
-                {
-                  key: "pyramid" as const,
-                  title: "Pyramide",
-                  mini: (
-                    <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
-                      <rect x="2"  y="14" width="5" height="6"  rx="1"   fill="#34C759"/>
-                      <rect x="9"  y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
-                      <rect x="16" y="4"  width="5" height="16" rx="1.5" fill="#FF9500"/>
-                      <rect x="23" y="4"  width="5" height="16" rx="1.5" fill="#FF9500"/>
-                      <rect x="30" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
-                      <rect x="37" y="14" width="5" height="6"  rx="1"   fill="#34C759"/>
-                    </svg>
-                  ),
-                },
-              ] as const
-            ).map((card) => (
-              <div
-                key={card.key}
-                role="button"
-                tabIndex={0}
-                onPointerDown={(e) => handleSchemaDragStart(card.key, e)}
-                onClick={() => {
-                  if (addBlockFromCardGestureMovedRef.current) {
-                    addBlockFromCardGestureMovedRef.current = false;
-                    return;
-                  }
-                  addQuickSchemaBlock(card.key);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    addQuickSchemaBlock(card.key);
-                  }
-                }}
-                className={cn(
-                  "group flex cursor-grab flex-col items-center gap-2 rounded-[14px] border select-none touch-none transition active:cursor-grabbing py-[14px] px-2 pb-[10px]",
-                  card.key === "pyramid"
-                    ? "border-2 border-[#0066cc] bg-white"
-                    : "border-[#e0e0e0] bg-white hover:border-[#0066cc]/40"
-                )}
-              >
-                <div className="pointer-events-none flex items-center justify-center">{card.mini}</div>
-                <p className="shrink-0 text-center text-[12px] leading-none tracking-[-0.12px]" style={{ color: "#1d1d1f" }}>{card.title}</p>
-              </div>
-            ))}
-
-            {/* Variation card */}
-            <div
-              role="button"
-              tabIndex={0}
-              aria-label="Variation — glisser vers le schéma pour placer"
-              onPointerDown={(e) => handleSchemaDragStart("variation", e)}
-              onClick={() => {
-                if (addBlockFromCardGestureMovedRef.current) {
-                  addBlockFromCardGestureMovedRef.current = false;
-                  return;
-                }
-                addQuickSchemaBlock("variation");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  addQuickSchemaBlock("variation");
-                }
-              }}
-              className="group flex cursor-grab flex-col items-center gap-2 rounded-[14px] border border-[#e0e0e0] bg-white py-[14px] px-2 pb-[10px] select-none touch-none transition hover:border-[#0066cc]/40 active:cursor-grabbing"
-            >
-              <div className="pointer-events-none flex items-center justify-center">
-                <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
-                  <rect x="2"  y="16" width="5" height="4"  rx="1"   fill="#B5B5BA"/>
-                  <rect x="9"  y="12" width="5" height="8"  rx="1"   fill="#34C759"/>
-                  <rect x="16" y="6"  width="5" height="14" rx="1.3" fill="#FF9500"/>
-                  <rect x="23" y="14" width="5" height="6"  rx="1"   fill="#0066cc"/>
-                  <rect x="30" y="4"  width="5" height="16" rx="1.5" fill="#FF3B30"/>
-                  <rect x="37" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
-                </svg>
-              </div>
-              <p className="shrink-0 text-center text-[12px] leading-none tracking-[-0.12px]" style={{ color: "#1d1d1f" }}>Variation</p>
-            </div>
+            {COACHING_BLOCK_PALETTE.map((bt) => {
+              const tool = schemaToolFromPalette(bt.id);
+              const isDraggingThis = schemaDraggingTool === tool;
+              return (
+                <div
+                  key={bt.id}
+                  role="button"
+                  tabIndex={0}
+                  onPointerDown={(e) => handleSchemaDragStart(tool, e)}
+                  onClick={() => {
+                    if (addBlockFromCardGestureMovedRef.current) {
+                      addBlockFromCardGestureMovedRef.current = false;
+                      return;
+                    }
+                    addQuickSchemaBlock(tool);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      addQuickSchemaBlock(tool);
+                    }
+                  }}
+                  className="flex cursor-grab flex-col items-center rounded-[14px] border border-[#E5E5EA] bg-white py-3 pb-2.5 select-none touch-none transition active:cursor-grabbing"
+                  style={{
+                    opacity: isDraggingThis ? 0.35 : 1,
+                    transform: isDraggingThis ? "scale(0.94)" : "scale(1)",
+                  }}
+                >
+                  <BlockPreviewBars type={bt.id} />
+                  <p
+                    className="mt-1.5 shrink-0 text-center text-[12px] font-bold leading-none tracking-[-0.01em]"
+                    style={{ color: "#0A0F1F" }}
+                  >
+                    {bt.label}
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
           {/* Drag ghost label */}
           {schemaDraggingTool && schemaDragPointer ? (
             <div
-              className="pointer-events-none fixed z-[125] rounded-full border border-[#2563EB]/45 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
-              style={{ left: schemaDragPointer.x + 10, top: schemaDragPointer.y + 10 }}
+              className="pointer-events-none fixed z-[125] rounded-full border bg-white px-2.5 py-1 text-[11px] font-semibold shadow-lg"
+              style={{
+                left: schemaDragPointer.x + 10,
+                top: schemaDragPointer.y + 10,
+                borderColor: `${COACHING_ACTION_BLUE}73`,
+                color: COACHING_ACTION_BLUE,
+              }}
             >
               {schemaDragToolLabel(schemaDraggingTool)}
             </div>
@@ -922,7 +856,7 @@ export function CoachingBlockEditorPanel({
               : isProgressive
                 ? "#AF52DE"
                 : block.type === "interval"
-                  ? "#0066cc"
+                  ? COACHING_ACTION_BLUE
                   : "#34C759";
             const blockName = isPyramidBlock ? "Pyramide" : isProgressive ? "Variation" : blockTitle(block.type);
             const badge = isPyramidBlock && pyramidConfig
@@ -937,50 +871,61 @@ export function CoachingBlockEditorPanel({
                   : `${index + 1}`;
             const subtitle = isPyramidBlock && pyramidConfig ? pyramidSubtitle(pyramidConfig) : blockSummary(block);
 
+            const headerEmoji = emojiForBlockHeader(block, isPyramidBlock, isProgressive);
+
             return (
-              <div key={block.id} className="relative overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
-                {/* Left accent bar */}
-                <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 top-0 w-[3px]" style={{ background: accentHex }} />
+              <div key={block.id} className="relative overflow-hidden rounded-2xl bg-white" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                {/* Bande latérale — maquette 4px */}
+                <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 top-0 w-1" style={{ background: accentHex }} />
                 {/* Header */}
-                <button
-                  type="button"
-                  className="grid w-full items-center gap-[10px] py-3 pl-4 pr-3 text-left"
-                  style={{ gridTemplateColumns: "32px 1fr auto" }}
-                  onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ background: accentHex }}>
-                    {isPyramidBlock ? (
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><polygon points="12,5 21,20 3,20"/></svg>
-                    ) : isProgressive ? (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="4,18 9,12 13,15 20,5"/><polyline points="14,5 20,5 20,11"/></svg>
-                    ) : block.type === "interval" ? (
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M13 2 L4 13 L11 13 L11 22 L20 11 L13 11 Z"/></svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="h-4 w-4"><line x1="6" y1="9" x2="18" y2="9"/><line x1="6" y1="15" x2="18" y2="15"/></svg>
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="mb-0.5 flex items-baseline gap-[7px]">
-                      <span className="text-[16px] font-semibold tracking-[-0.3px]" style={{ color: "#1d1d1f" }}>{blockName}</span>
-                      <span className="rounded-full px-[7px] py-[2px] text-[11px] font-semibold leading-none" style={{ color: accentHex, background: accentHex + "22" }}>{badge}</span>
+                <div className="flex w-full items-center gap-3 py-3 pl-5 pr-3">
+                  <div
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-[18px] font-extrabold text-white"
+                    style={{ background: accentHex }}
+                  >
+                    {headerEmoji}
+                  </div>
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[18px] font-extrabold" style={{ color: "#0A0F1F" }}>
+                        {blockName}
+                      </span>
+                      <span
+                        className="rounded-full px-2.5 py-0.5 text-[12px] font-bold"
+                        style={{ color: accentHex, background: `${accentHex}22` }}
+                      >
+                        {badge}
+                      </span>
                     </div>
-                    <div className="truncate text-[13px]" style={{ color: "#7a7a7a" }}>{subtitle}</div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className={cn("flex h-[30px] w-[30px] items-center justify-center rounded-full transition-transform", isSelected ? "rotate-180" : "")}>
-                      <ChevronDown className="h-4 w-4" style={{ color: "#7a7a7a" }} />
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={`Supprimer ${blockName}`}
-                      onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}
-                      className="flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-red-50 hover:text-[#FF3B30]"
-                      style={{ color: "#7a7a7a" }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </button>
+                    <p className="mt-0.5 truncate text-[13px]" style={{ color: "#8E8E93" }}>
+                      {subtitle}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
+                    className="shrink-0 p-1"
+                    aria-expanded={isSelected}
+                  >
+                    {isSelected ? (
+                      <ChevronUp className="h-5 w-5 text-[#8E8E93]" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-[#8E8E93]" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Supprimer ${blockName}`}
+                    onClick={() => removeBlock(block.id)}
+                    className="shrink-0 p-1 text-[#8E8E93]"
+                  >
+                    <Trash2 className="h-5 w-5" strokeWidth={2} />
+                  </button>
+                </div>
 
                 {/* Body */}
                 {isSelected && (

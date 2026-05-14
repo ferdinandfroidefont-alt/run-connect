@@ -11,20 +11,39 @@ const FILTERS: Array<{ id: ModelSportFilter; label: string }> = [
 interface ModelFiltersProps {
   value: ModelSportFilter;
   onChange: (value: ModelSportFilter) => void;
+  /** Style inline maquette assistant création de séance */
+  maquette?: boolean;
 }
 
-export function ModelFilters({ value, onChange }: ModelFiltersProps) {
+const ACTION_BLUE = "#007AFF";
+
+export function ModelFilters({ value, onChange, maquette }: ModelFiltersProps) {
   return (
-    <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+    <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
       {FILTERS.map((filter) => (
         <button
           key={filter.id}
           type="button"
           onClick={() => onChange(filter.id)}
           className={cn(
-            "whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-semibold",
-            value === filter.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+            "flex-shrink-0 whitespace-nowrap rounded-full transition-transform active:scale-[0.96]",
+            !maquette && "px-3 py-1.5 text-[12px] font-semibold",
+            !maquette && value === filter.id && "bg-primary text-primary-foreground",
+            !maquette && value !== filter.id && "bg-secondary text-muted-foreground"
           )}
+          style={
+            maquette
+              ? {
+                  background: value === filter.id ? ACTION_BLUE : "#E5E5EA",
+                  color: value === filter.id ? "#fff" : "#0A0F1F",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  letterSpacing: "-0.01em",
+                  border: "none",
+                  padding: "8px 18px",
+                }
+              : undefined
+          }
         >
           {filter.label}
         </button>
