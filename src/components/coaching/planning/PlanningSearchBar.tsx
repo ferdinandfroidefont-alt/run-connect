@@ -7,7 +7,10 @@ interface PlanningSearchBarProps {
   /** true : pas de bandeau carte / séparateur — sur fond groupé (maquette 16). */
   bare?: boolean;
   placeholder?: string;
-  /** Maquette « Programmer la semaine » : champ dans un fond #E5E5EA arrondi xl. */
+  /**
+   * Pixel-match `PlanifierSemainePage` (RunConnect 6.jsx) ·
+   * `w-full bg-[#E5E5EA] rounded-xl px-3 py-2.5 gap-2 active:bg-[#D1D1D6]` + Search 16² #8E8E93 stroke 2.5 + ligne 15px medium #8E8E93.
+   */
   variant?: "default" | "planifierSemaine";
 }
 
@@ -24,7 +27,7 @@ export function PlanningSearchBar({ value, onChange, bare, placeholder, variant 
       <div
         className={cn(
           planifier
-            ? "flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-[#E5E5EA] px-3 py-2.5 dark:bg-muted"
+            ? "flex w-full touch-manipulation items-center gap-2 rounded-xl bg-[#E5E5EA] px-3 py-2.5 transition-colors duration-150 active:bg-[#D1D1D6]"
             : "apple-search min-h-9 w-full gap-1.5 px-2 py-0"
         )}
       >
@@ -41,13 +44,14 @@ export function PlanningSearchBar({ value, onChange, bare, placeholder, variant 
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder ?? "Rechercher un athlète ou un groupe"}
           className={cn(
-            "min-w-0 flex-1 border-0 bg-transparent outline-none",
+            "min-w-0 flex-1 border-0 bg-transparent p-0 outline-none",
             planifier
-              ? "min-h-0 py-0 text-[15px] font-medium text-[#0A0F1F] placeholder:text-[#8E8E93] dark:text-foreground dark:placeholder:text-muted-foreground"
+              ? "[font:inherit] text-[15px] font-medium text-[#0A0F1F] placeholder:font-medium placeholder:text-[#8E8E93]"
               : "min-h-9 py-1 text-[17px] leading-snug text-foreground placeholder:text-muted-foreground"
           )}
           autoCorrect="off"
           autoCapitalize="none"
+          spellCheck={false}
         />
       </div>
     </div>

@@ -3,7 +3,7 @@ import { MapPin, Users } from "lucide-react";
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
-import { sessionLikelyLive } from "@/components/feed/FeedSessionTile";
+import { sessionIsPast, sessionLikelyLive } from "@/components/feed/FeedSessionTile";
 import { ACTION_BLUE } from "@/components/discover/DiscoverChromeShell";
 
 type NearYouSportKey = "run" | "bike" | "swim" | "trail" | "walk";
@@ -46,15 +46,14 @@ function NearYouSportBadge({ activityType, size = 44 }: { activityType: string; 
   );
 }
 
-function isSessionPast(scheduledAt: string): boolean {
-  if (sessionLikelyLive(scheduledAt)) return false;
-  return new Date(scheduledAt).getTime() < Date.now();
-}
-
 function pickNearYouPreviewSessions(sessions: DiscoverSession[]): DiscoverSession[] {
-  const upcoming = sessions.filter((s) => !isSessionPast(s.scheduled_at));
-  const past = sessions.filter((s) => isSessionPast(s.scheduled_at));
+  const upcoming = sessions
+    .filter((s) => !sessionIsPast(s.scheduled_at))
+    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
   if (upcoming.length > 0) return upcoming.slice(0, 3);
+  const past = sessions
+    .filter((s) => sessionIsPast(s.scheduled_at))
+    .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
   return past.slice(0, 3);
 }
 
@@ -99,6 +98,7 @@ export function DiscoverNearYouSection({ sessions, loading, onRowPress }: Discov
         previewSessions.map((s) => {
           const organizer = s.organizer.display_name || s.organizer.username;
           const live = sessionLikelyLive(s.scheduled_at);
+          const past = sessionIsPast(s.scheduled_at);
           const distanceLabel =
             typeof s.distance_km === "number" ? `${s.distance_km.toFixed(1)} km` : "—";
           return (
@@ -129,7 +129,7 @@ export function DiscoverNearYouSection({ sessions, loading, onRowPress }: Discov
                 className="flex-shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white"
                 style={{ background: ACTION_BLUE }}
               >
-                {live ? "Suivre" : "Rejoindre"}
+                {live ? "Suivre" : past ? "Voir" : "Rejoindre"}
               </span>
             </button>
           );

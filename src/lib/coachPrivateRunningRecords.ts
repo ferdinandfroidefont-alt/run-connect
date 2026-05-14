@@ -42,8 +42,8 @@ export function normalizeRunningEventKey(label: string) {
 export function runningRecordsFromPrivateRows(rows: CoachPrivateRecordRow[] | null | undefined): Record<string, unknown> | null {
   if (!rows?.length) return null;
   const entries = rows
-    .filter((row) => row.sport_key === "running")
-    .map((row) => [normalizeRunningEventKey(row.event_label), row.record_value] as const);
+    .filter((row) => row.sport_key === "running" && typeof row.event_label === "string" && row.event_label.trim())
+    .map((row) => [normalizeRunningEventKey(row.event_label.trim()), row.record_value] as const);
 
   if (!entries.length) return null;
   return Object.fromEntries(entries);

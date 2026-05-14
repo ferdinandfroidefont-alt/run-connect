@@ -523,8 +523,9 @@ export const WeeklyTrackingView = ({
     return weekDays.map((day) => {
       const key = format(day, "yyyy-MM-dd");
       const dd = selectedAthlete.days[key];
-      const km = dd?.session.distance_km != null ? Number(dd.session.distance_km) : 0;
-      const segments = km > 0 ? sessionBlocksToZoneChartSegments(dd?.session?.session_blocks) : [];
+      const sess = dd?.session;
+      const km = sess?.distance_km != null ? Number(sess.distance_km) : 0;
+      const segments = km > 0 ? sessionBlocksToZoneChartSegments(sess?.session_blocks) : [];
       return {
         dateKey: key,
         dayOfMonth: day.getDate(),
@@ -606,7 +607,7 @@ export const WeeklyTrackingView = ({
   }, [sessionDetailData]);
   const selectedFeedback = useMemo(() => {
     const zones = selectedAthletePaces?.zones;
-    const selectedPace = feedbackDayData?.session.pace_target;
+    const selectedPace = feedbackDayData?.session?.pace_target;
     if (!zones || !selectedPace) return undefined;
     const [min, sec] = selectedPace.split(":").map(Number);
     if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
@@ -1074,16 +1075,22 @@ export const WeeklyTrackingView = ({
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               {sessionDetailData ? (
                 <>
-                  <div className="rounded-2xl border border-border/60 bg-card p-3">
-                    <p className="text-[16px] font-semibold text-foreground">{sessionDetailData.sessionTitle}</p>
-                    <p className="mt-1 text-[13px] text-muted-foreground">
-                      {format(new Date(sessionDetailData.session.scheduled_at), "EEEE d MMMM", { locale: fr })}{" "}
-                      {sessionDetailData.session.distance_km ? `• ${Math.round(Number(sessionDetailData.session.distance_km) * 10) / 10} km` : ""}
-                    </p>
-                    {sessionDetailData.session.pace_target ? (
-                      <p className="mt-1 text-[13px] text-muted-foreground">Allure cible: {sessionDetailData.session.pace_target}</p>
-                    ) : null}
-                  </div>
+                  {sessionDetailData.session ? (
+                    <div className="rounded-2xl border border-border/60 bg-card p-3">
+                      <p className="text-[16px] font-semibold text-foreground">{sessionDetailData.sessionTitle}</p>
+                      <p className="mt-1 text-[13px] text-muted-foreground">
+                        {format(new Date(sessionDetailData.session.scheduled_at), "EEEE d MMMM", { locale: fr })}{" "}
+                        {sessionDetailData.session.distance_km ? `• ${Math.round(Number(sessionDetailData.session.distance_km) * 10) / 10} km` : ""}
+                      </p>
+                      {sessionDetailData.session.pace_target ? (
+                        <p className="mt-1 text-[13px] text-muted-foreground">Allure cible: {sessionDetailData.session.pace_target}</p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-border/60 bg-card p-3 text-[13px] text-muted-foreground">
+                      Détail séance indisponible pour cette entrée.
+                    </div>
+                  )}
 
                   <div className="rounded-2xl border border-border/60 bg-card p-3">
                     <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Commentaire athlète</p>

@@ -31,7 +31,7 @@ import {
   discoverPaletteToStyleUrl,
   type DiscoverMapPaletteId,
 } from "@/lib/discoverMapStyle";
-import { sessionLikelyLive } from "@/components/feed/FeedSessionTile";
+import { sessionIsPast, sessionLikelyLive } from "@/components/feed/FeedSessionTile";
 
 const RouteCreationEmbedded = lazy(() => import("@/pages/RouteCreation"));
 
@@ -84,6 +84,7 @@ export function DiscoverPage() {
 
   const {
     sessions: discoverSessions,
+    nearYouSessions,
     loading: discoverLoading,
     refresh: refreshDiscover,
     joinSession,
@@ -157,11 +158,14 @@ export function DiscoverPage() {
 
             {!discoverMapFullscreen ? (
               <DiscoverNearYouSection
-                sessions={discoverSessions}
+                sessions={nearYouSessions}
                 loading={discoverLoading}
                 onRowPress={(s) => {
-                  if (sessionLikelyLive(s.scheduled_at)) setSelectedSession(discoverToDialog(s));
-                  else void joinSession(s);
+                  if (sessionLikelyLive(s.scheduled_at) || sessionIsPast(s.scheduled_at)) {
+                    setSelectedSession(discoverToDialog(s));
+                  } else {
+                    void joinSession(s);
+                  }
                 }}
               />
             ) : null}

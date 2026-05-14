@@ -340,7 +340,7 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
             getCurrentPosition()
               .then((position) => {
                 if (position && map.current) {
-                  map.current.jumpTo({ center: [position.lng, position.lat], zoom: 14 });
+                  map.current.jumpTo({ center: [position.lng, position.lat], zoom: 12 });
                   void ensureUserLocationMarker(position);
                 }
               })
@@ -977,7 +977,7 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
     try {
       const position = await getCurrentPosition();
       if (position) {
-        map.current?.flyTo({ center: [position.lng, position.lat], zoom: 14, duration: 600 });
+        map.current?.flyTo({ center: [position.lng, position.lat], zoom: 12, duration: 600 });
         await ensureUserLocationMarker(position);
       }
     } catch {

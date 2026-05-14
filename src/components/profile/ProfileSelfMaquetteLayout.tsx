@@ -114,6 +114,8 @@ export function ProfileSelfMaquetteLayout(props: {
   reliabilityRate: number;
   totalSessionsJoined: number;
   totalSessionsCompleted: number;
+  /** Ouvre le détail fiabilité (maquette plein écran), comme dans la maquette RunConnect */
+  onOpenReliabilityDetail: () => void;
 
   userIdForRecords: string;
   legacyRecords: {
@@ -153,6 +155,7 @@ export function ProfileSelfMaquetteLayout(props: {
     reliabilityRate,
     totalSessionsJoined,
     totalSessionsCompleted,
+    onOpenReliabilityDetail,
     userIdForRecords,
     legacyRecords,
   } = props;
@@ -650,7 +653,7 @@ export function ProfileSelfMaquetteLayout(props: {
 
           <button
             type="button"
-            onClick={() => navigate("/profile/sessions")}
+            onClick={onOpenReliabilityDetail}
             className="mt-2.5 flex w-full items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] active:bg-[#F8F8F8]"
           >
             <div

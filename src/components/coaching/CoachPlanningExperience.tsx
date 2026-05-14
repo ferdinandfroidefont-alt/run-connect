@@ -89,6 +89,7 @@ import { formatCalendarDistance, isExplicitRestDay, toCalendarSummarySport } fro
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
+import { PLANIFIER_MAQUETTE_GROUPED_BG, planifierMaquetteFontStackStyle } from "@/lib/coachingPlanifierMaquette";
 
 const ClubProfileDialog = lazy(() =>
   import("@/components/ClubProfileDialog").then((m) => ({ default: m.ClubProfileDialog }))
@@ -3274,7 +3275,11 @@ export function CoachPlanningExperience() {
 
   return (
     <>
-      <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden" data-tutorial="tutorial-coaching">
+      <div
+        className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden"
+        data-tutorial="tutorial-coaching"
+        style={weekPlannerMode ? planifierMaquetteFontStackStyle : undefined}
+      >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           contentTopOffsetPx={0}
@@ -3282,7 +3287,7 @@ export function CoachPlanningExperience() {
           scrollRef={coachingMainScrollRef}
           headerWrapperClassName={
             weekPlannerMode
-              ? "shrink-0 border-b border-[#E5E5EA] bg-white dark:border-border dark:bg-background"
+              ? "shrink-0 border-b border-[#E5E5EA] bg-[#FFFFFF]"
               : activeMenuKey === "club"
                 ? "shrink-0 border-b border-border apple-grouped-bg"
                 : activeMenuKey === "my-plan"
@@ -3293,7 +3298,7 @@ export function CoachPlanningExperience() {
           }
           header={
             weekPlannerMode ? (
-              <div className="pt-[calc(var(--safe-area-top)-4px)]">
+              <div className="px-4 pb-3 pt-[max(12px,calc(var(--safe-area-top)-4px))]">
                 <IosPageHeaderBar
                   leadingBack={{
                     onClick: clearWeekPlannerTarget,
@@ -3363,14 +3368,25 @@ export function CoachPlanningExperience() {
               />
             )
           }
-          scrollClassName={
-            weekPlannerMode ||
-            activeMenuKey === "club" ||
-            activeMenuKey === "tracking" ||
-            activeMenuKey === "my-plan" ||
-            showCoachLanding
-              ? "apple-grouped-bg"
-              : "bg-white dark:bg-background"
+          scrollClassName={cn(
+            weekPlannerMode
+              ? ""
+              : activeMenuKey === "club" ||
+                  activeMenuKey === "tracking" ||
+                  activeMenuKey === "my-plan" ||
+                  showCoachLanding
+                ? "apple-grouped-bg"
+                : "bg-white dark:bg-background"
+          )}
+          scrollProps={
+            weekPlannerMode
+              ? {
+                  style: {
+                    backgroundColor: PLANIFIER_MAQUETTE_GROUPED_BG,
+                    WebkitOverflowScrolling: "touch",
+                  },
+                }
+              : undefined
           }
           footer={null}
         >

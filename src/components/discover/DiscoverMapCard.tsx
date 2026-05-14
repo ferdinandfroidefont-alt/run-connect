@@ -190,7 +190,8 @@ export function DiscoverMapCard({
             if (userCoord) coords.push(userCoord);
 
             if (coords.length > 0) {
-              await fitMapToCoords(map, coords, 48);
+              /** Évite le zoom max 16 (trop serré quand user + pins sont proches), aligné carte accueil ~12. */
+              await fitMapToCoords(map, coords, 48, { maxZoom: 12 });
             }
             map.setPitch(mapPitch);
             if (mapPitch > 0) {

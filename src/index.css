@@ -39,8 +39,8 @@ html, body {
     /* Insets bas conservé pour la zone home indicator. */
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: 0px;
-    /* Réserve scroll / pages fixed : hauteur onglets + bandeau sous la barre (aligné sur BottomNavigation `bottom: var(--tab-bar-ground-strip)`). */
-    --bottom-nav-offset: calc(var(--nav-height) + var(--tab-bar-ground-strip));
+    /* Réserve scroll / pages : hauteur utile de la barre fixe. Ne pas additionner `--tab-bar-ground-strip` : il est déjà dans le paddingBottom du nav (sinon bande vide / flash bleu au-dessus de la tab bar). */
+    --bottom-nav-offset: var(--nav-height);
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
     --layout-bottom-inset: var(--bottom-nav-offset);
     /* Bandeau Feed replié : garder la même valeur que PEEK_HEIGHT_PX dans HomeFeedBottomSheet.tsx */

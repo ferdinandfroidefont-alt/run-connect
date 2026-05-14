@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { toast } from 'sonner';
+import { sessionIsPast } from '@/components/feed/FeedSessionTile';
 import {
   canSessionBeDiscovered,
   getSessionPriorityScore,
@@ -76,6 +77,11 @@ export const ACTIVITY_TYPES = [
   { value: "surf", label: "Surf" }
 ];
 
+/** Séances passées récentes chargées pour « Près de chez toi » quand aucune à venir. */
+const DISCOVER_PAST_LOOKBACK_DAYS = 14;
+const DISCOVER_PAST_FETCH_LIMIT = 80;
+const DISCOVER_UPCOMING_FETCH_LIMIT = 300;
+
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -91,7 +97,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 export const useDiscoverFeed = () => {
   const { user } = useAuth();
   const { position, loading: locationLoading, getCurrentPosition } = useGeolocation();
-  const [sessions, setSessions] = useState<DiscoverSession[]>([]);
+  const [rawSessions, setRawSessions] = useState<DiscoverSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [maxDistance, setMaxDistance] = useState(10);
   const [selectedActivities, setSelectedActivities] = useState<string[]>(
@@ -109,6 +115,7 @@ export const useDiscoverFeed = () => {
 
   const loadSessions = useCallback(async () => {
     if (!user || !position) {
+      setRawSessions([]);
       setLoading(false);
       return;
     }
@@ -116,17 +123,40 @@ export const useDiscoverFeed = () => {
     try {
       setLoading(true);
       
-      /* Inclut les séances encore dans la fenêtre « live » (voir sessionLikelyLive : début → +3h). */
-      const discoverHorizonStart = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-      const { data: sessionsData, error } = await supabase
-        .from('sessions')
-        .select('*')
-        .gte('scheduled_at', discoverHorizonStart)
-        .neq('organizer_id', user.id)
-        .eq('is_private', false)
-        .order('scheduled_at', { ascending: true });
+      /* Fenêtre live (début → +3h) : alignée sur sessionLikelyLive. */
+      const liveHorizonStart = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+      const pastHorizonStart = new Date(
+        Date.now() - DISCOVER_PAST_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString();
 
-      if (error) throw error;
+      const base = () =>
+        supabase
+          .from('sessions')
+          .select('*')
+          .neq('organizer_id', user.id)
+          .eq('is_private', false);
+
+      const [{ data: upcomingData, error: upcomingError }, { data: pastData, error: pastError }] =
+        await Promise.all([
+          base()
+            .gte('scheduled_at', liveHorizonStart)
+            .order('scheduled_at', { ascending: true })
+            .limit(DISCOVER_UPCOMING_FETCH_LIMIT),
+          base()
+            .gte('scheduled_at', pastHorizonStart)
+            .lt('scheduled_at', liveHorizonStart)
+            .order('scheduled_at', { ascending: false })
+            .limit(DISCOVER_PAST_FETCH_LIMIT),
+        ]);
+
+      if (upcomingError) throw upcomingError;
+      if (pastError) throw pastError;
+
+      type SessionRow = NonNullable<typeof upcomingData>[number];
+      const byId = new Map<string, SessionRow>();
+      for (const row of pastData ?? []) byId.set(row.id, row);
+      for (const row of upcomingData ?? []) byId.set(row.id, row);
+      const sessionsData = Array.from(byId.values());
 
       // Get organizer profiles
       const organizerIds = [...new Set(sessionsData?.map(s => s.organizer_id) || [])];
@@ -171,7 +201,7 @@ export const useDiscoverFeed = () => {
         })
         ;
 
-      setSessions(sortSessionsByDiscovery(filteredSessions));
+      setRawSessions(sortSessionsByDiscovery(filteredSessions));
     } catch (error) {
       console.error('Error loading discover sessions:', error);
       toast.error('Erreur lors du chargement des séances');
@@ -251,8 +281,15 @@ export const useDiscoverFeed = () => {
     }
   }, [user, loadSessions]);
 
+  const sessions = useMemo(
+    () => rawSessions.filter((s) => !sessionIsPast(s.scheduled_at)),
+    [rawSessions],
+  );
+
   return {
     sessions,
+    /** Carte / feed : à venir ou en cours. « Près de chez toi » utilise `nearYouSessions`. */
+    nearYouSessions: rawSessions,
     loading: loading || locationLoading,
     hasLocation: !!position,
     maxDistance,

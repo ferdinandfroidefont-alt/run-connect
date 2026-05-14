@@ -448,7 +448,16 @@ export function sessionBlocksToZoneChartSegments(rawBlocks: unknown): { z: numbe
   if (!Array.isArray(rawBlocks) || rawBlocks.length === 0) {
     return [{ z: 3, pct: 100 }];
   }
-  const blocks = resolveSessionBlocks(rawBlocks as SessionBlock[]);
+  const sanitized = rawBlocks.filter((b): b is SessionBlock => !!b && typeof b === 'object' && 'type' in b);
+  if (!sanitized.length) {
+    return [{ z: 3, pct: 100 }];
+  }
+  let blocks: SessionBlock[];
+  try {
+    blocks = resolveSessionBlocks(sanitized);
+  } catch {
+    return [{ z: 3, pct: 100 }];
+  }
   const zoneWeights = new Map<number, number>();
 
   for (const block of blocks) {

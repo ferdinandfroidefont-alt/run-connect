@@ -28,6 +28,12 @@ export function sessionLikelyLive(scheduledAt: string) {
   return now >= start && now <= end;
 }
 
+/** Terminée (hors fenêtre « live » début → +3h) : pour découverte / fiche au lieu de rejoindre. */
+export function sessionIsPast(scheduledAt: string): boolean {
+  if (sessionLikelyLive(scheduledAt)) return false;
+  return new Date(scheduledAt).getTime() < Date.now();
+}
+
 export function shortLocation(name: string | null | undefined) {
   if (!name?.trim()) return "";
   const cut = name.split(/[,·]/)[0]?.trim();

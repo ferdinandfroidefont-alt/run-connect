@@ -20,6 +20,7 @@ import { QRShareDialog } from "@/components/QRShareDialog";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { estimateSessionDurationMinutes } from "@/lib/estimateSessionDurationMinutes";
 import { ProfileSelfMaquetteLayout } from "@/components/profile/ProfileSelfMaquetteLayout";
+import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import type {
   ProfileMaquetteNextSession,
   ProfileMaquetteParticipantChip,
@@ -128,6 +129,9 @@ const Profile = () => {
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
+  const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
+  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
+  const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [storyHighlights, setStoryHighlights] = useState<ProfileStoryHighlight[]>([]);
   const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
   const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
@@ -214,13 +218,20 @@ const Profile = () => {
     try {
       const { data } = await supabase
         .from('user_stats')
-        .select('reliability_rate, total_sessions_joined, total_sessions_completed')
+        .select('reliability_rate, total_sessions_joined, total_sessions_completed, total_sessions_absent')
         .eq('user_id', user.id)
         .single();
       if (!data) return;
       setReliabilityRate(Math.max(0, Math.min(100, Number(data.reliability_rate) || 0)));
       setTotalSessionsJoined(data.total_sessions_joined || 0);
       setTotalSessionsCompleted(data.total_sessions_completed || 0);
+      setTotalSessionsAbsent(Number(data.total_sessions_absent) || 0);
+
+      const { count: createdCount } = await supabase
+        .from('sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('organizer_id', user.id);
+      setTotalSessionsCreated(createdCount || 0);
     } catch (error) {
       console.error('Error fetching reliability stats:', error);
     }
@@ -904,6 +915,7 @@ const Profile = () => {
         reliabilityRate={reliabilityRate}
         totalSessionsJoined={totalSessionsJoined}
         totalSessionsCompleted={totalSessionsCompleted}
+        onOpenReliabilityDetail={() => setShowReliabilityDialog(true)}
         userIdForRecords={user.id}
         legacyRecords={{
           running_records: profile.running_records,
@@ -1048,6 +1060,17 @@ const Profile = () => {
       <Suspense fallback={null}>
         <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
       </Suspense>
+
+      <ReliabilityDetailsDialog
+        open={showReliabilityDialog}
+        onOpenChange={setShowReliabilityDialog}
+        reliabilityRate={reliabilityRate}
+        totalSessionsCreated={totalSessionsCreated}
+        totalSessionsJoined={totalSessionsJoined}
+        totalSessionsCompleted={totalSessionsCompleted}
+        totalSessionsAbsent={totalSessionsAbsent}
+        reliabilitySubjectUserId={user?.id ?? null}
+      />
 
       {/* Report User Dialog */}
       <ReportUserDialog

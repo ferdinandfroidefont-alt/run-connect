@@ -68,7 +68,12 @@ export async function createEmbeddedMapboxMap(
   });
 }
 
-export async function fitMapToCoords(map: Map, coords: MapCoord[], padding = 16) {
+export async function fitMapToCoords(
+  map: Map,
+  coords: MapCoord[],
+  padding = 16,
+  options?: { maxZoom?: number },
+) {
   if (coords.length === 0) return;
   const mapboxgl = await loadMapboxGl();
   const first = coords[0]!;
@@ -77,7 +82,8 @@ export async function fitMapToCoords(map: Map, coords: MapCoord[], padding = 16)
     const p = coords[i]!;
     bounds.extend([p.lng, p.lat]);
   }
-  map.fitBounds(bounds, { padding, duration: 0, maxZoom: 16 });
+  const maxZoom = options?.maxZoom ?? 16;
+  map.fitBounds(bounds, { padding, duration: 0, maxZoom });
 }
 
 /** Ligne GeoJSON — crée/met à jour source + couche. */

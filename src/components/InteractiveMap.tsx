@@ -1763,7 +1763,7 @@ export const InteractiveMap = ({
             });
             m.easeTo({
               center: [position.lng, position.lat],
-              zoom: 16,
+              zoom: HOME_MAP_USER_ZOOM,
               padding,
               duration: 620,
               essential: true,
