@@ -26,6 +26,11 @@ type MainTopHeaderProps = {
   className?: string;
   /** Désactive la compaction au scroll et garde le header fixe/étendu. */
   disableScrollCollapse?: boolean;
+  /**
+   * Maquette StickyPage (Coaching) : une seule rangée titre + accessoire, sans barre 44px,
+   * avec gouttières px-5 pt-4 pb-3.
+   */
+  largeTitleOnly?: boolean;
 };
 
 export function MainTopHeader({
@@ -41,6 +46,7 @@ export function MainTopHeader({
   largeTitleClassName,
   className,
   disableScrollCollapse = false,
+  largeTitleOnly = false,
 }: MainTopHeaderProps) {
   // Refonte Apple NavBar large title (mockup 13/17/19) :
   // - SF Pro Display 34px / bold / -0.5px tracking (apple-navbar-large)
@@ -94,45 +100,57 @@ export function MainTopHeader({
         "main-top-header shrink-0 pt-[env(safe-area-inset-top,0px)]",
         className
       )}
-      style={{
-        backgroundColor: progress > 0.02 ? `hsl(var(--muted) / ${0.22 + progress * 0.18})` : "transparent",
-        backdropFilter: progress > 0.02 ? `blur(${22 + progress * 12}px) saturate(${1.6 + progress * 0.4})` : "none",
-        WebkitBackdropFilter: progress > 0.02 ? `blur(${22 + progress * 12}px) saturate(${1.6 + progress * 0.4})` : "none",
-      }}
+      style={
+        largeTitleOnly
+          ? undefined
+          : {
+              backgroundColor: progress > 0.02 ? `hsl(var(--muted) / ${0.22 + progress * 0.18})` : "transparent",
+              backdropFilter: progress > 0.02 ? `blur(${22 + progress * 12}px) saturate(${1.6 + progress * 0.4})` : "none",
+              WebkitBackdropFilter: progress > 0.02 ? `blur(${22 + progress * 12}px) saturate(${1.6 + progress * 0.4})` : "none",
+            }
+      }
     >
-      {/* Compact bar (trailing actions) */}
-      <div
-        className={cn(
-          "relative flex shrink-0 items-center gap-2 px-4 transition-[height] duration-150",
-          left || right ? "justify-between" : "justify-end"
-        )}
-        style={{ height: `${46 - progress * 6}px` }}
-      >
-        <div className="flex min-w-0 flex-1 items-center justify-start">{left ?? <span aria-hidden className="h-9 w-9" />}</div>
-        <h2
-          aria-hidden={progress < 0.95}
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 truncate text-center text-[17px] font-semibold leading-snug text-foreground"
-          style={{
-            opacity: progress,
-            transform: `translate(-50%, calc(-50% + ${(1 - progress) * 4}px))`,
-            width: `${58 - progress * 24}%`,
-          }}
+      {!largeTitleOnly ? (
+        <div
+          className={cn(
+            "relative flex shrink-0 items-center gap-2 px-4 transition-[height] duration-150",
+            left || right ? "justify-between" : "justify-end"
+          )}
+          style={{ height: `${46 - progress * 6}px` }}
         >
-          {title}
-        </h2>
-        <div className="flex min-w-0 shrink-0 items-center justify-end gap-4">{right ?? <span aria-hidden className="h-9 w-9" />}</div>
-      </div>
+          <div className="flex min-w-0 flex-1 items-center justify-start">{left ?? <span aria-hidden className="h-9 w-9" />}</div>
+          <h2
+            aria-hidden={progress < 0.95}
+            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 truncate text-center text-[17px] font-semibold leading-snug text-foreground"
+            style={{
+              opacity: progress,
+              transform: `translate(-50%, calc(-50% + ${(1 - progress) * 4}px))`,
+              width: `${58 - progress * 24}%`,
+            }}
+          >
+            {title}
+          </h2>
+          <div className="flex min-w-0 shrink-0 items-center justify-end gap-4">{right ?? <span aria-hidden className="h-9 w-9" />}</div>
+        </div>
+      ) : null}
 
       {/* Large title — Apple iOS Settings.app/Mail.app spec : marginTop 6 / marginBottom 6 */}
       <div
-        className="origin-top overflow-hidden px-4"
-        style={{
+        className={cn(
+          "origin-top overflow-hidden",
+          largeTitleOnly ? "px-5 pb-3 pt-4" : "px-4"
+        )}
+        style={
+          largeTitleOnly
+            ? undefined
+            : {
           opacity: 1 - progress,
           maxHeight: `${(1 - progress) * 76}px`,
           paddingTop: `${(1 - progress) * 3}px`,
           paddingBottom: `${(1 - progress) * 3}px`,
           transform: `translateY(${-6 * progress}px) scale(${1 - progress * 0.18})`,
-        }}
+            }
+        }
       >
         <div
           className={cn(
@@ -163,7 +181,10 @@ export function MainTopHeader({
         <div
           role="tablist"
           aria-label={tabsAriaLabel ?? `Navigation ${title}`}
-          className="flex min-h-0 shrink-0 flex-nowrap items-end gap-6 overflow-x-auto overscroll-x-contain border-b-[0.5px] border-[rgba(60,60,67,0.18)] dark:border-[rgba(84,84,88,0.65)] px-4 pb-1 pt-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-8 [&::-webkit-scrollbar]:hidden"
+          className={cn(
+            "flex min-h-0 shrink-0 flex-nowrap items-end gap-6 overflow-x-auto overscroll-x-contain border-b-[0.5px] border-[rgba(60,60,67,0.18)] pb-1 pt-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-8 dark:border-[rgba(84,84,88,0.65)] [&::-webkit-scrollbar]:hidden",
+            largeTitleOnly ? "px-5" : "px-4"
+          )}
         >
           {tabs.map((tab) => (
             <button

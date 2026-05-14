@@ -59,6 +59,9 @@ export function PlanningHeader({
   userInitialAccentBadge,
 }: PlanningHeaderProps) {
   const showBellAndSettings = !coachLandingBrand && !hideDrawerActions;
+  /** Même disposition que StickyPage Coaching (titre 36/40 + pastille, fond #F2F2F7). */
+  const largeTitleOnlyLayout =
+    hideDrawerActions && (title === "Planification" || title === "Mon plan");
   /** Dès qu’une action fiche club est fournie, afficher le bouton (initiale de secours si pas encore nom/photo). */
   const showClubMark = Boolean(onPressClubAvatar);
   const showOnlyClubAction = showClubMark && !showBellAndSettings;
@@ -121,6 +124,7 @@ export function PlanningHeader({
       subtitle={subtitle}
       className={surfaceClassName ?? "apple-grouped-bg"}
       disableScrollCollapse
+      largeTitleOnly={largeTitleOnlyLayout}
       largeTitleClassName={largeTitleClassName}
       tabs={tabs}
       tabsAriaLabel={`Navigation ${title}`}

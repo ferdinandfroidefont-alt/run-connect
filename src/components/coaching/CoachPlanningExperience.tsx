@@ -3303,7 +3303,7 @@ export function CoachPlanningExperience() {
                 : activeMenuKey === "my-plan"
                   ? "shrink-0 border-0 z-50 apple-grouped-bg"
                   : showCoachLanding
-                    ? "shrink-0 border-0 z-50 bg-white dark:bg-background"
+                    ? "shrink-0 border-0 z-50 apple-grouped-bg"
                     : "shrink-0 border-0 z-50 apple-grouped-bg"
           }
           header={
@@ -3374,7 +3374,7 @@ export function CoachPlanningExperience() {
                 clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
                 clubName={activeClubId ? activeClubName : undefined}
                 onPressClubAvatar={activeClubId ? openClubProfileSheet : undefined}
-                surfaceClassName={showCoachLanding ? "bg-white dark:bg-background" : undefined}
+                surfaceClassName={showCoachLanding ? "apple-grouped-bg" : undefined}
               />
             )
           }
@@ -3406,7 +3406,7 @@ export function CoachPlanningExperience() {
                 className={cn(
                   "sticky top-0 z-20 pt-2 supports-[backdrop-filter]:backdrop-blur",
                   showCoachLanding
-                    ? "border-b border-[#E5E5EA]/80 bg-white/95 supports-[backdrop-filter]:bg-white/92"
+                    ? "border-b border-[#E5E5EA]/80 apple-grouped-bg supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--muted)/0.96)]"
                     : "bg-secondary/95 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur"
                 )}
                 active={effectiveAthleteMode ? "athlete" : "coach"}
