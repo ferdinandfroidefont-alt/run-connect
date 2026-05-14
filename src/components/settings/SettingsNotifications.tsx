@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, BellRing, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, ArrowLeft, ChevronRight } from "lucide-react";
+import { Bell, BellRing, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -162,15 +161,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
         header={
-          <div className="border-b border-border bg-card">
-            <IosPageHeaderBar
-              left={
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              }
-              title="Notifications"
-            />
+          <div className="shrink-0 bg-secondary">
+            <IosPageHeaderBar leadingBack={{ onClick: onBack }} title="Notifications" />
           </div>
         }
       >

@@ -18,10 +18,9 @@ import {
 import { Users, UserCheck, X, UserMinus, UserX, ChevronRight, Clock, UserPlus, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfileNavigation } from "@/hooks/useProfileNavigation";
-import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useFollow } from "@/hooks/useFollow";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface FollowUser {
   user_id: string;
@@ -68,7 +67,7 @@ export const FollowDialog = ({
   targetUserId 
 }: FollowDialogProps) => {
   const { user } = useAuth();
-  const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
+  const navigate = useNavigate();
   const { unfollow, removeFollower, acceptFollowRequest, rejectFollowRequest, getPendingRequests, getSentPendingRequests, cancelFollowRequest, followBack, loading: followLoading } = useFollow();
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
@@ -260,6 +259,16 @@ export const FollowDialog = ({
     }
   };
 
+  const navigateToUserProfile = (targetUserId: string) => {
+    if (!targetUserId) return;
+    onOpenChange(false);
+    if (targetUserId === user?.id) {
+      navigate("/profile");
+      return;
+    }
+    navigate(`/profile/${targetUserId}`);
+  };
+
   const PendingRequestsList = () => {
     if (pendingRequests.length === 0) {
       return (
@@ -283,13 +292,13 @@ export const FollowDialog = ({
           {pendingRequests.map((request, index) => (
             <div
               key={request.id}
-              className={`flex items-center gap-3 p-3 ${
+              className={`flex cursor-pointer items-center gap-3 p-3 ${
                 index !== pendingRequests.length - 1 ? 'border-b border-border' : ''
               }`}
+              onClick={() => navigateToUserProfile(request.follower_id)}
             >
               <div 
-                className="relative cursor-pointer"
-                onClick={() => navigateToProfile(request.follower_id)}
+                className="relative"
               >
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={request.avatar_url || undefined} />
@@ -300,8 +309,7 @@ export const FollowDialog = ({
               </div>
               
               <div 
-                className="flex-1 min-w-0 cursor-pointer"
-                onClick={() => navigateToProfile(request.follower_id)}
+                className="flex-1 min-w-0"
               >
                 <p className="font-medium text-foreground truncate">
                   {request.display_name || request.username}
@@ -361,13 +369,13 @@ export const FollowDialog = ({
           {sentPendingRequests.map((request, index) => (
             <div
               key={request.id}
-              className={`flex items-center gap-3 p-3 ${
+              className={`flex cursor-pointer items-center gap-3 p-3 ${
                 index !== sentPendingRequests.length - 1 ? 'border-b border-border' : ''
               }`}
+              onClick={() => navigateToUserProfile(request.following_id)}
             >
               <div 
-                className="relative cursor-pointer"
-                onClick={() => navigateToProfile(request.following_id)}
+                className="relative"
               >
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={request.avatar_url || undefined} />
@@ -378,8 +386,7 @@ export const FollowDialog = ({
               </div>
               
               <div 
-                className="flex-1 min-w-0 cursor-pointer"
-                onClick={() => navigateToProfile(request.following_id)}
+                className="flex-1 min-w-0"
               >
                 <p className="font-medium text-foreground truncate">
                   {request.display_name || request.username}
@@ -442,7 +449,7 @@ export const FollowDialog = ({
               className={`flex items-center gap-3 p-3 hover:bg-secondary transition-all duration-200 cursor-pointer ${
                 index !== users.length - 1 ? 'border-b border-border' : ''
               }`}
-              onClick={() => navigateToProfile(userItem.user_id)}
+              onClick={() => navigateToUserProfile(userItem.user_id)}
             >
               <div className="relative">
                 <Avatar className="h-12 w-12">
@@ -695,11 +702,6 @@ export const FollowDialog = ({
         </Tabs>
       </DialogContent>
       
-      <ProfilePreviewDialog 
-        userId={selectedUserId} 
-        onClose={closeProfilePreview}
-      />
-
       <AlertDialog open={confirmDialog.open} onOpenChange={closeConfirmDialog}>
         <AlertDialogContent className="bg-background border-border">
           <AlertDialogHeader>

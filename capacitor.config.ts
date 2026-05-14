@@ -11,13 +11,13 @@ const config: CapacitorConfig = {
     },
     Geolocation: {},
     Camera: {},
-    /* Fond par défaut = coque app claire : évite une bande colorée sous le WebView quand iOS laisse voir la couche native (safe area, dvh, etc.). Le splash reste géré par LoadingScreen / Splash natif. */
+    /* Fond statut par défaut ; le splash natif + LoadingScreen sont bleus (#0066CC). */
     StatusBar: {
-      style: 'LIGHT',
-      backgroundColor: '#FFFFFF',
+      style: 'DARK',
+      backgroundColor: '#0066CC',
     },
     Keyboard: {
-      resize: 'body',
+      resize: 'native',
       resizeOnFullScreen: true,
     },
   },
@@ -46,12 +46,9 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'runconnect',
     /**
-     * Fond natif par défaut du WKWebView : blanc hors splash.
-     * Le splash reste bleu via l'écran natif + `LoadingScreen` / `AppBootFallback`,
-     * mais si iOS laisse entrevoir le fond natif (safe area, reprise app, transition),
-     * on veut voir du blanc et jamais la teinte splash.
+     * Fond WKWebView aligné sur le Launch Screen / splash (#0066CC) pour éviter un flash blanc à la transition.
      */
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0066CC',
     appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };

@@ -3,13 +3,19 @@
     "apps": [],
     "details": [
       {
-        "appIDs": ["YOUR_TEAM_ID.com.ferdi.runconnect"],
+        "appIDs": ["2388F38F5F.com.ferdi.runconnect"],
         "components": [
           { "/": "/p/*" },
+          { "/": "/u/*" },
+          { "/": "/s/*" },
+          { "/": "/open/session/*" },
           { "/": "/confirm-presence/*" },
           { "/": "/" }
         ]
       }
     ]
+  },
+  "webcredentials": {
+    "apps": ["2388F38F5F.com.ferdi.runconnect"]
   }
 }

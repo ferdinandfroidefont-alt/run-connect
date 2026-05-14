@@ -52,8 +52,9 @@ const DialogContent = React.forwardRef<
         className={cn(
           fullScreen
             ? cn(
-                "fixed inset-0 flex flex-col bg-background w-full h-full",
-                stackNested ? "z-[130]" : "z-[125]"
+                /* `!fixed` : le className appelant ne doit pas pouvoir remplacer `fixed` (ex. `relative` pour un sticky interne) sinon le voile s’affiche sans panneau. */
+                "!fixed inset-0 z-[125] flex h-full w-full flex-col bg-background",
+                stackNested && "!z-[130]"
               )
             : cn(
                 "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 bg-background duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 rounded-ios-lg max-h-[90vh] overflow-y-auto ios-surface",

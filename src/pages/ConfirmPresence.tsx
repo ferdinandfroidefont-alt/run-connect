@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
 import { ParticipantValidationView } from '@/components/ParticipantValidationView';
+import { ParticipantGpsConfirmView } from '@/components/ParticipantGpsConfirmView';
 import { cn } from '@/lib/utils';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ChevronLeft, Loader2, UserCheck, Users, MapPin } from 'lucide-react';
@@ -38,6 +39,7 @@ export default function ConfirmPresence({
 }: ConfirmPresenceProps = {}) {
   const { sessionId: sessionIdFromRoute } = useParams<{ sessionId?: string }>();
   const sessionId = forcedSessionId || sessionIdFromRoute;
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -205,6 +207,14 @@ export default function ConfirmPresence({
     setUserRole(role);
   };
 
+  const exitToSessions = useCallback(() => {
+    if (embedded) {
+      onEmbeddedBack?.();
+    } else {
+      navigate('/my-sessions');
+    }
+  }, [embedded, navigate, onEmbeddedBack]);
+
   const handleBack = () => {
     if (selectedSession) {
       setSelectedSession(null);
@@ -216,10 +226,12 @@ export default function ConfirmPresence({
       if (embedded) {
         onEmbeddedBack?.();
       } else {
-        navigate(-1);
+        navigate('/my-sessions');
       }
     }
   };
+
+  const participantConfirmMode = searchParams.get('flow') === 'gps' ? 'gps' : 'strava';
 
   return (
     <div
@@ -229,7 +241,7 @@ export default function ConfirmPresence({
           : "fixed-fill-with-bottom-nav z-0 flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-secondary"
       }
     >
-      {!embedded && (
+      {!embedded && !selectedSession && (
         <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
           <IosPageHeaderBar
             left={
@@ -245,7 +257,8 @@ export default function ConfirmPresence({
 
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-ios-4',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden',
+          selectedSession ? 'overflow-y-hidden px-0' : 'overflow-y-auto px-ios-4',
           embedded && 'pt-ios-2',
         )}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'none' }}
@@ -303,7 +316,7 @@ export default function ConfirmPresence({
           </div>
         ) : !selectedSession ? (
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
-            {embedded && (
+            {embedded && userRole !== 'creator' && userRole !== 'participant' && (
               <button
                 type="button"
                 onClick={handleBack}
@@ -351,44 +364,45 @@ export default function ConfirmPresence({
           </div>
         ) : (
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
-            {embedded && (
+            {userRole !== 'creator' && userRole !== 'participant' && (
               <button
-                type="button"
-                onClick={handleBack}
-                className="-ml-1 flex w-fit items-center gap-0.5 text-[15px] font-medium text-primary active:opacity-70"
+                onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
+                className="ios-card flex w-full min-w-0 max-w-full items-center gap-3 p-4 transition-colors active:bg-secondary"
               >
-                <ChevronLeft className="h-5 w-5 shrink-0" />
-                Retour
+                <div className="ios-list-row-icon shrink-0 bg-[#FF9500]">
+                  <MapPin className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium text-foreground">
+                    {t('confirmPresence.trackParticipants') || 'Suivre les participants sur la carte'}
+                  </p>
+                  <p className="text-[12px] text-muted-foreground">
+                    {t('confirmPresence.trackParticipantsDescription') || 'Voir en temps réel où se trouvent les autres'}
+                  </p>
+                </div>
+                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
               </button>
             )}
-            <button
-              onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
-              className="ios-card flex w-full min-w-0 max-w-full items-center gap-3 p-4 transition-colors active:bg-secondary"
-            >
-              <div className="ios-list-row-icon shrink-0 bg-[#FF9500]">
-                <MapPin className="h-[18px] w-[18px] text-white" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-[15px] font-medium text-foreground">
-                  {t('confirmPresence.trackParticipants') || 'Suivre les participants sur la carte'}
-                </p>
-                <p className="text-[12px] text-muted-foreground">
-                  {t('confirmPresence.trackParticipantsDescription') || 'Voir en temps réel où se trouvent les autres'}
-                </p>
-              </div>
-              <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
-            </button>
 
             {userRole === 'creator' ? (
               <CreatorValidationView
                 session={selectedSession}
-                onComplete={() => navigate('/')}
+                onBack={exitToSessions}
+                onComplete={exitToSessions}
+              />
+            ) : participantConfirmMode === 'gps' ? (
+              <ParticipantGpsConfirmView
+                session={selectedSession}
+                userId={user?.id || ''}
+                onBack={exitToSessions}
+                onComplete={exitToSessions}
               />
             ) : (
               <ParticipantValidationView
                 session={selectedSession}
                 userId={user?.id || ''}
-                onComplete={() => navigate('/')}
+                onBack={exitToSessions}
+                onComplete={exitToSessions}
               />
             )}
           </div>

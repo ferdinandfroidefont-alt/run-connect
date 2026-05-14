@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>RunConnect — Apple Style</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    html, body { margin: 0; padding: 0; background: var(--c-grouped-bg, #f2f2f7); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif; color: var(--c-ink, #1d1d1f); -webkit-font-smoothing: antialiased; transition: background 0.25s; }
+    html.theme-dark body { background: #000; color: #fff; }
+    * { box-sizing: border-box; }
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="apple-tokens.jsx"></script>
+  <script type="text/babel" src="apple-screens.jsx"></script>
+  <script type="text/babel">
+    function App() {
+      const W = 390, H = 844;
+      return (
+        <ThemeProvider>
+        <DesignCanvas>
+          <DCSection id="auth" title="Authentification" subtitle="Apple-style onboarding · SF Pro · Action Blue">
+            <DCArtboard id="splash" label="01 · Bienvenue" width={W} height={H}><ScreenAuthSplash/></DCArtboard>
+            <DCArtboard id="signin" label="02 · Connexion" width={W} height={H}><ScreenSignIn/></DCArtboard>
+            <DCArtboard id="create" label="03 · Création de compte" width={W} height={H}><ScreenCreate/></DCArtboard>
+          </DCSection>
+          <DCSection id="discover" title="Découvrir · Carte" subtitle="App Store editorial + carte temps réel">
+            <DCArtboard id="map" label="04 · Découvrir (hero)" width={W} height={H}><ScreenDiscover/></DCArtboard>
+            <DCArtboard id="detail" label="05 · Détail séance" width={W} height={H}><ScreenSessionDetail/></DCArtboard>
+            <DCArtboard id="live" label="06 · Suivi live" width={W} height={H}><ScreenLive/></DCArtboard>
+            <DCArtboard id="route" label="07 · Itinéraire" width={W} height={H}><ScreenRoute/></DCArtboard>
+            <DCArtboard id="feed" label="23 · Voir tout · activités" width={W} height={H}><ScreenFeed/></DCArtboard>
+          </DCSection>
+          <DCSection id="program" title="Programmer une séance" subtitle="Flux Settings · 5 étapes">
+            <DCArtboard id="s1" label="08 · 1 Lieu" width={W} height={H}><ScreenStep1/></DCArtboard>
+            <DCArtboard id="s2" label="09 · 2 Sport" width={W} height={H}><ScreenStep2/></DCArtboard>
+            <DCArtboard id="s3" label="10 · 3 Date & heure" width={W} height={H}><ScreenStep3/></DCArtboard>
+            <DCArtboard id="s4" label="11 · 4 Détails" width={W} height={H}><ScreenStep4/></DCArtboard>
+            <DCArtboard id="s5" label="12 · 5 Booster" width={W} height={H}><ScreenStep5/></DCArtboard>
+          </DCSection>
+          <DCSection id="sessions" title="Mes séances · Coaching" subtitle="Athlète : Mon plan · Coach : Planification → Programmer la semaine → Schéma → Fiche">
+            <DCArtboard id="ses-list" label="13 · Mes séances" width={W} height={H}><ScreenSessions/></DCArtboard>
+            <DCArtboard id="ath-plan" label="14 · Mon plan (Athlète)" width={W} height={H}><ScreenAthletePlan/></DCArtboard>
+            <DCArtboard id="coach-plan" label="15 · Planification (Coach)" width={W} height={H}><ScreenCoachPlan/></DCArtboard>
+            <DCArtboard id="coach-week" label="16 · Programmer la semaine" width={W} height={H}><ScreenCoachWeek/></DCArtboard>
+            <DCArtboard id="cb" label="17 · Schéma de séance" width={W} height={H}><ScreenCoachBuild/></DCArtboard>
+            <DCArtboard id="ca" label="18 · Fiche athlète" width={W} height={H}><ScreenCoachAthlete/></DCArtboard>
+            <DCArtboard id="club-admin" label="19 · Club (Admin)" width={W} height={H}><ScreenClubAdmin/></DCArtboard>
+            <DCArtboard id="club-member" label="20 · Club (Athlète)" width={W} height={H}><ScreenClubMember/></DCArtboard>
+          </DCSection>
+          <DCSection id="messages" title="Messages · Stories · Clubs">
+            <DCArtboard id="msg" label="17 · Conversations + stories" width={W} height={H}><ScreenMessages/></DCArtboard>
+            <DCArtboard id="conv" label="18 · Conversation iMessage-style" width={W} height={H}><ScreenConv/></DCArtboard>
+            <DCArtboard id="club" label="24 · Profil club" width={W} height={H}><ScreenClub/></DCArtboard>
+          </DCSection>
+          <DCSection id="profile" title="Profil · Réglages" subtitle="Settings.app aesthetic">
+            <DCArtboard id="prof" label="19 · Mon profil" width={W} height={H}><ScreenProfile/></DCArtboard>
+            <DCArtboard id="set" label="20 · Réglages" width={W} height={H}><ScreenSettings/></DCArtboard>
+            <DCArtboard id="rec" label="21 · Ajouter record" width={W} height={H}><ScreenRecord/></DCArtboard>
+            <DCArtboard id="story" label="22 · Créer une story" width={W} height={H}><ScreenStory/></DCArtboard>
+          </DCSection>
+          <DCSection id="brand" title="Marque · App Icon" subtitle="Carte + Trail + Pin signature + Action Blue">
+            <DCArtboard id="appicon" label="25 · App Icon" width={W} height={H}><ScreenAppIcon/></DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+        </ThemeProvider>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

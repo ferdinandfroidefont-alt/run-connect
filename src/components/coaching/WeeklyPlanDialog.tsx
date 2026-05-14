@@ -13,9 +13,9 @@ import { MonthlyCalendarView, type MonthSessionDot } from "./MonthlyCalendarView
 import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
-import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, FileText, Search, Clock3, MapPin, PersonStanding } from "lucide-react";
 import { useSendNotification } from "@/hooks/useSendNotification";
-import { format, startOfWeek, addWeeks, subWeeks, addDays, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { format, startOfWeek, addWeeks, subWeeks, addDays, startOfMonth, endOfMonth, addMonths, getISOWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   parseRCC,
@@ -856,6 +856,7 @@ export const WeeklyPlanDialog = ({
   };
 
   const selectedSession = selectedIndex !== null ? sessions[selectedIndex] : null;
+  const isEditingSession = selectedSession !== null && selectedIndex !== null;
 
   // Groups available for duplication (excluding current)
   const otherGroups = useMemo(() => {
@@ -873,6 +874,10 @@ export const WeeklyPlanDialog = ({
   const [showDupDropdown, setShowDupDropdown] = useState(false);
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [showAthleteOverrides, setShowAthleteOverrides] = useState(false);
+  const infiniteScrollRef = useRef<HTMLDivElement | null>(null);
+  const [weekOffsets, setWeekOffsets] = useState<number[]>([-2, -1, 0, 1, 2]);
+  const ROW_ESTIMATED_HEIGHT = 500;
+  const athleteReadonlyMode = Boolean(initialAthleteId || initialAthleteName);
 
   // Get base values from the selected session for override defaults
   const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find(b => b.type === "interval");
@@ -880,15 +885,65 @@ export const WeeklyPlanDialog = ({
   const globalBaseReps = selectedSessionIntervalBlock?.repetitions;
   const globalBaseRecovery = selectedSessionIntervalBlock?.recoveryDuration;
 
+  useEffect(() => {
+    if (!isOpen || plannerView !== "week") return;
+    setWeekOffsets([-2, -1, 0, 1, 2]);
+    const container = infiniteScrollRef.current;
+    if (!container) return;
+    requestAnimationFrame(() => {
+      container.scrollTop = ROW_ESTIMATED_HEIGHT * 2;
+    });
+  }, [isOpen, plannerView]);
+
+  const getSessionMetrics = useCallback((s: WeekSession) => {
+    if (!s.rccCode) return { duration: 0, distance: 0 };
+    const summary = computeRCCSummary(parseRCC(s.rccCode).blocks);
+    return {
+      duration: Math.max(0, Math.round(summary.totalDurationMin || 0)),
+      distance: Math.max(0, Math.round((summary.totalDistanceKm || 0) * 10) / 10),
+    };
+  }, []);
+
+  const renderLoadBars = (s: WeekSession) => {
+    const bars = 13;
+    const filled = Math.max(2, Math.min(12, (s.parsedBlocks?.length || 0) + 2));
+    return Array.from({ length: bars }).map((_, i) => {
+      const isEdge = i === 0 || i === bars - 1;
+      const active = i < filled;
+      return (
+        <span
+          key={`${s.dayIndex}-${i}`}
+          className={`h-7 w-6 rounded-[3px] ${active ? "bg-[#b8d4f4]" : "bg-[#c9c9cf]"} ${isEdge ? "h-6 w-5" : ""}`}
+        />
+      );
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0"
-          header={<CoachingFullscreenHeader title="Plan de semaine" onBack={onClose} />}
-          scrollClassName="bg-secondary pb-24"
-          footer={
+          header={
+            <CoachingFullscreenHeader
+              title={isEditingSession ? "Créer une séance" : "Plan de semaine"}
+              onBack={isEditingSession ? () => setSelectedIndex(null) : onClose}
+              rightSlot={
+                isEditingSession ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIndex(null)}
+                    className="text-[17px] font-semibold text-primary"
+                  >
+                    OK
+                  </button>
+                ) : undefined
+              }
+            />
+          }
+          scrollClassName={isEditingSession ? "bg-[#f5f5f7]" : "bg-secondary pb-24"}
+          footer={isEditingSession ? undefined : (
             <div className="shrink-0 space-y-3 border-t border-border bg-card px-5 py-4 pb-[max(1rem,var(--safe-area-bottom))]">
               {draftSaveStatus !== "idle" && (
                 <p className="text-[12px] text-muted-foreground text-center">
@@ -934,8 +989,18 @@ export const WeeklyPlanDialog = ({
                 {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
               </Button>
             </div>
-          }
+          )}
         >
+          {isEditingSession ? (
+            <WeeklyPlanSessionEditor
+              session={selectedSession}
+              onChange={(s) => updateSession(selectedIndex!, s)}
+              onDuplicate={(targetDay) => duplicateToDay(selectedIndex!, targetDay)}
+              onDelete={() => deleteSession(selectedIndex!)}
+              members={getMembersForGroup(activeGroupId)}
+            />
+          ) : (
+          <>
           {/* ── Week navigator — hero card ── */}
           <div className="mt-4 mb-3 px-4">
             <div className="ios-card overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
@@ -998,386 +1063,195 @@ export const WeeklyPlanDialog = ({
               </p>
             </div>
           ) : (
-            <>
-          {/* ── Search bar ── */}
-          <div className="px-4 mb-3">
-            <Input
-              placeholder="Rechercher un athlète ou un groupe…"
-              value={athleteSearch}
-              onChange={e => setAthleteSearch(e.target.value)}
-              className="h-11 text-[16px] rounded-xl bg-card border-border"
-            />
-
-            {/* Selected group chip */}
-            {activeGroupId !== "club" && (
-              <div className="flex flex-wrap gap-2 mt-2.5">
-                {(() => {
-                  const g = groups.find(g => g.id === activeGroupId);
-                  if (!g) return null;
-                  return (
-                    <button
-                      onClick={() => { setActiveGroupId("club"); setSelectedIndex(null); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-accent-foreground text-[13px] font-medium active:opacity-70"
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: g.color }} />
-                      {g.name}
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Selected athlete chips */}
-            {targetAthletes.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2.5">
-                {targetAthletes.map(id => {
-                  const m = members.find(m => m.user_id === id);
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setTargetAthletes(prev => prev.filter(a => a !== id))}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[13px] font-medium active:opacity-70"
-                    >
-                      {m?.display_name || "Athlète"}
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Unified search results */}
-            {athleteSearch.trim().length > 0 && (
-              <div className="bg-card rounded-xl border border-border mt-2 max-h-48 overflow-y-auto" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                {groups
-                  .filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase()))
-                  .map(g => (
-                    <button
-                      key={`group-${g.id}`}
-                      onClick={() => {
-                        setActiveGroupId(g.id);
-                        setSelectedIndex(null);
-                        setAthleteSearch("");
-                      }}
-                      className="w-full text-left px-4 py-3 text-[15px] text-foreground active:bg-muted transition-colors border-b border-border last:border-0 flex items-center gap-2.5"
-                    >
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: g.color }} />
-                      <span className="font-medium">{g.name}</span>
-                      <span className="text-[13px] text-muted-foreground ml-auto">Groupe · {g.memberIds.length}</span>
-                    </button>
-                  ))
-                }
-                {members
-                  .filter(m =>
-                    m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) &&
-                    !targetAthletes.includes(m.user_id)
-                  )
-                  .slice(0, 5)
-                  .map(m => (
-                    <button
-                      key={m.user_id}
-                      onClick={() => {
-                        setTargetAthletes(prev => [...prev, m.user_id]);
-                        setAthleteSearch("");
-                      }}
-                      className="w-full text-left px-4 py-3 text-[15px] text-foreground active:bg-muted transition-colors border-b border-border last:border-0"
-                    >
-                      {m.display_name}
-                    </button>
-                  ))
-                }
-                {groups.filter(g => g.name.toLowerCase().includes(athleteSearch.toLowerCase())).length === 0 &&
-                 members.filter(m => m.display_name.toLowerCase().includes(athleteSearch.toLowerCase()) && !targetAthletes.includes(m.user_id)).length === 0 && (
-                  <p className="px-4 py-3 text-[14px] text-muted-foreground">Aucun résultat</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* ── CALENDAR GRID + résumé charge fusionné ── */}
-          <div className="mb-3 px-4">
-            <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Calendrier</p>
-            <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-4">
-              {weekLoadSummary && (
-                <div className="mb-3 flex items-center justify-between rounded-xl bg-secondary/60 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <BarChart3 className="h-4 w-4 text-primary" />
-                    </div>
-                    <p className="text-[16px] font-bold text-foreground leading-none">
-                      {weekLoadSummary.totalKm} <span className="text-[12px] font-medium text-muted-foreground">km</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 text-[12px]">
-                    <div className="text-center">
-                      <p className="text-[14px] font-bold text-foreground">{sessions.length}</p>
-                      <p className="text-[10px] text-muted-foreground">séances</p>
-                    </div>
-                    {weekLoadSummary.qualitySessions > 0 && (
-                      <div className="text-center">
-                        <p className="text-[14px] font-bold text-orange-500">{weekLoadSummary.qualitySessions}</p>
-                        <p className="text-[10px] text-muted-foreground">qualité</p>
-                      </div>
-                    )}
-                    <Badge
-                      variant={
-                        weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
-                        weekLoadSummary.intensity === 'Intense' ? 'default' :
-                        'secondary'
-                      }
-                      className="text-[10px] px-2 py-0.5"
-                    >
-                      {weekLoadSummary.intensity}
-                    </Badge>
+            <div className="px-4 pb-4">
+              {!athleteReadonlyMode ? (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 rounded-[16px] bg-[#d7d7dd] px-4 py-3">
+                    <Search className="h-5 w-5 text-muted-foreground" />
+                    <Input
+                      value={athleteSearch}
+                      onChange={(e) => setAthleteSearch(e.target.value)}
+                      placeholder="Rechercher un athlète ou un groupe"
+                      className="h-auto border-0 bg-transparent p-0 text-[18px] shadow-none focus-visible:ring-0"
+                    />
                   </div>
                 </div>
-              )}
-              <div className="grid grid-cols-7 gap-2">
-                {DAY_LABELS.map((label, dayIndex) => {
-                  const daySessions = sessionsByDay[dayIndex] || [];
-                  const dayDate = addDays(weekStart, dayIndex);
-                  const isToday = format(dayDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
-                  return (
-                    <div key={dayIndex} className="flex flex-col items-center gap-1.5">
-                      <span className={`text-[11px] font-semibold uppercase ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                        {label}
-                      </span>
-                      <span className={`text-[13px] font-medium w-7 h-7 flex items-center justify-center rounded-full ${
-                        isToday ? "bg-primary text-primary-foreground" : "text-foreground"
-                      }`}>
-                        {format(dayDate, "d")}
-                      </span>
-                      {daySessions.map(sIdx => {
-                        const s = sessions[sIdx];
-                        const obj = (s.objective || s.activityType || "").toLowerCase();
-                        let pillTone =
-                          "border border-border/70 bg-secondary text-foreground";
-                        let pillLabel = "EF";
-                        if (obj.includes("vma") || obj.includes("interval") || obj.includes("fractionné") || obj.includes("pma")) {
-                          pillTone = "border border-destructive/30 bg-destructive/10 text-destructive";
-                          pillLabel = obj.includes("pma") ? "PMA" : "VMA";
-                        } else if (obj.includes("seuil")) {
-                          pillTone = "border border-orange-500/35 bg-orange-500/10 text-orange-700 dark:text-orange-300";
-                          pillLabel = "SEU";
-                        } else if (obj.includes("récup") || obj.includes("recup")) {
-                          pillTone = "border border-primary/25 bg-primary/8 text-primary";
-                          pillLabel = "REC";
-                        } else if (obj.includes("spé") || obj.includes("specifique")) {
-                          pillTone = "border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300";
-                          pillLabel = "SPÉ";
-                        } else if (s.objective) {
-                          pillLabel = s.objective.slice(0, 3).toUpperCase();
+              ) : null}
+
+              <div
+                ref={infiniteScrollRef}
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  if (el.scrollTop < 120) {
+                    setWeekOffsets((prev) => {
+                      const min = prev[0] ?? 0;
+                      const prepend = [min - 5, min - 4, min - 3, min - 2, min - 1];
+                      requestAnimationFrame(() => {
+                        if (infiniteScrollRef.current) {
+                          infiniteScrollRef.current.scrollTop += ROW_ESTIMATED_HEIGHT * prepend.length;
                         }
-                        const isSelected = selectedIndex === sIdx;
-                        return (
-                          <button
-                            key={sIdx}
-                            onClick={() => setSelectedIndex(sIdx)}
-                            className={`w-full rounded-lg py-1.5 text-[10px] font-semibold transition-all ${pillTone} ${
-                              isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : "active:opacity-90"
-                            }`}
-                          >
-                            {pillLabel}
-                          </button>
-                        );
-                      })}
-                      <button
-                        onClick={() => addSession(dayIndex)}
-                        className="w-full py-1.5 rounded-lg border-2 border-dashed border-border text-muted-foreground hover:bg-muted active:bg-muted transition-colors flex items-center justify-center"
+                      });
+                      return [...prepend, ...prev];
+                    });
+                  } else if (el.scrollHeight - el.scrollTop - el.clientHeight < 140) {
+                    setWeekOffsets((prev) => {
+                      const max = prev[prev.length - 1] ?? 0;
+                      return [...prev, max + 1, max + 2, max + 3, max + 4, max + 5];
+                    });
+                  }
+                }}
+                className="h-[62vh] overflow-y-auto pr-1"
+              >
+                <div className="space-y-6">
+                  {weekOffsets.map((offset) => {
+                    const wk = addWeeks(weekStart, offset);
+                    const wkStart = startOfWeek(wk, { weekStartsOn: 1 });
+                    const isActiveWeek = format(wkStart, "yyyy-MM-dd") === format(weekStart, "yyyy-MM-dd");
+                    const wkSessions = isActiveWeek ? sessions : [];
+                    const wkByDay = isActiveWeek ? sessionsByDay : {};
+
+                    return (
+                      <section
+                        key={format(wkStart, "yyyy-MM-dd")}
+                        className="rounded-[18px] bg-transparent"
+                        onClick={() => {
+                          if (!isActiveWeek) {
+                            setCurrentWeek(wkStart);
+                            setSelectedIndex(null);
+                          }
+                        }}
                       >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+                        <h3 className="text-[46px] font-bold leading-none text-foreground">
+                          Semaine {getISOWeek(wkStart)}
+                          <span className="ml-2 text-[31px] font-medium text-muted-foreground">
+                            · {format(wkStart, "d", { locale: fr })} – {format(addDays(wkStart, 6), "d MMM", { locale: fr }).toUpperCase()}
+                          </span>
+                        </h3>
+                        <p className="mb-3 mt-2 text-[31px] font-semibold text-foreground/90">
+                          {isActiveWeek && weekLoadSummary ? `${weekLoadSummary.totalKm} km` : "0 km"}
+                          <span className="ml-2 text-muted-foreground">
+                            · {isActiveWeek && weekLoadSummary ? `${Math.floor(weekLoadSummary.totalDuration / 60)}h ${weekLoadSummary.totalDuration % 60}m` : "0h"}
+                          </span>
+                          <span className="ml-2 text-muted-foreground">
+                            {` ${wkSessions.length} séance${wkSessions.length > 1 ? "s" : ""}`}
+                          </span>
+                        </p>
 
-          {/* ── Éditeur de séance ── */}
-          {selectedSession && selectedIndex !== null ? (
-            <div className="mb-3 px-4">
-              <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Éditer la séance</p>
-              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
-                <WeeklyPlanSessionEditor
-                  session={selectedSession}
-                  onChange={s => updateSession(selectedIndex, s)}
-                  onDuplicate={targetDay => duplicateToDay(selectedIndex, targetDay)}
-                  onDelete={() => deleteSession(selectedIndex)}
-                  members={getMembersForGroup(activeGroupId)}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="px-4 mb-3 py-10 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <Plus className="h-7 w-7 text-primary" />
-              </div>
-              <p className="text-[17px] font-semibold text-foreground">Ajouter une séance</p>
-              <p className="text-[14px] text-muted-foreground mt-1">Appuyez sur <strong>+</strong> dans le calendrier<br />ou utilisez le bouton bleu</p>
-            </div>
-          )}
+                        <div className="space-y-3">
+                          {DAY_LABELS.map((dayLabel, dayIndex) => {
+                            const dayDate = addDays(wkStart, dayIndex);
+                            const daySessionIndexes = (wkByDay as Record<number, number[]>)[dayIndex] || [];
+                            const daySession = daySessionIndexes.length > 0 ? wkSessions[daySessionIndexes[0]] : null;
+                            const metrics = daySession ? getSessionMetrics(daySession) : { duration: 0, distance: 0 };
 
-          {/* ── ACTIONS section ── */}
-          <div className="mb-3 px-4">
-            <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Outils</p>
-            <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
-              {/* Resume draft button */}
-              {hasDraft && (
-                <IOSListItem
-                  icon={FileText}
-                  iconBgColor="bg-purple-500"
-                  title="Reprendre le brouillon"
-                  subtitle="Un brouillon non envoyé existe"
-                  onClick={loadDraft}
-                  showSeparator
-                />
-              )}
-              <IOSListItem
-                icon={History}
-                iconBgColor="bg-amber-500"
-                title="Dupliquer semaine précédente"
-                subtitle="Charger les séances de S-1"
-                onClick={loadPreviousWeek}
-                showSeparator
-              />
-              {templates.length > 0 && (
-                <IOSListItem
-                  icon={FolderOpen}
-                  iconBgColor="bg-blue-500"
-                  title="Charger semaine type"
-                  subtitle={`${templates.length} template${templates.length > 1 ? "s" : ""} disponible${templates.length > 1 ? "s" : ""}`}
-                  onClick={() => setShowTemplateList(!showTemplateList)}
-                  showSeparator
-                />
-              )}
-              {showTemplateList && templates.map(t => (
-                <div key={t.id} className="flex items-center justify-between px-5 py-3 bg-card border-b border-border last:border-0">
-                  <button
-                    onClick={() => { loadTemplate(t); setShowTemplateList(false); }}
-                    className="text-[16px] text-primary flex-1 text-left font-medium"
-                  >
-                    {t.name} ({t.sessions.length}s)
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => deleteTemplate(t.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              {sessions.length > 0 && otherGroups.length > 0 && (
-                <>
-                  <IOSListItem
-                    icon={Copy}
-                    iconBgColor="bg-green-500"
-                    title="Dupliquer vers un groupe"
-                    subtitle={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} à copier`}
-                    onClick={() => setShowDupDropdown(!showDupDropdown)}
-                    showSeparator
-                  />
-                  {showDupDropdown && otherGroups.map(g => (
-                    <div key={g.id} className="px-5 py-3 bg-card border-b border-border last:border-0">
-                      <button
-                        onClick={() => { duplicatePlanToGroup(g.id); setShowDupDropdown(false); }}
-                        className="text-[16px] text-primary flex items-center gap-2.5 w-full text-left font-medium"
-                      >
-                        {g.id !== "club" && (
-                          <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: g.color }} />
-                        )}
-                        {g.name}
-                      </button>
-                    </div>
-                  ))}
-                </>
-              )}
-              {sessions.length > 0 && (
-                <IOSListItem
-                  icon={Save}
-                  iconBgColor="bg-orange-500"
-                  title="Sauver comme semaine type"
-                  onClick={() => setShowSaveTemplate(true)}
-                  showChevron
-                  showSeparator
-                />
-              )}
-            </div>
-          </div>
+                            return (
+                              <div key={`${offset}-${dayIndex}`} className="flex items-center gap-3">
+                                <div
+                                  className={`w-12 text-center ${format(new Date(), "yyyy-MM-dd") === format(dayDate, "yyyy-MM-dd") ? "rounded-2xl bg-[rgba(0,122,255,0.16)] py-2" : ""}`}
+                                >
+                                  <div
+                                    className={`text-[13px] font-semibold uppercase ${
+                                      format(new Date(), "yyyy-MM-dd") === format(dayDate, "yyyy-MM-dd")
+                                        ? "text-[#007AFF]"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {dayLabel}
+                                  </div>
+                                  <div
+                                    className={`text-[42px] font-bold leading-none ${
+                                      format(new Date(), "yyyy-MM-dd") === format(dayDate, "yyyy-MM-dd")
+                                        ? "text-[#007AFF]"
+                                        : "text-foreground"
+                                    }`}
+                                  >
+                                    {format(dayDate, "d")}
+                                  </div>
+                                </div>
 
-          {/* Save template input */}
-          {showSaveTemplate && (
-            <div className="mb-3 px-4">
-              <div className="ios-card overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
-                <div className="px-5 py-4 flex items-center gap-3">
-                  <Input
-                    value={templateName}
-                    onChange={e => setTemplateName(e.target.value)}
-                    placeholder="Nom de la semaine type..."
-                    className="h-11 text-[16px] flex-1 rounded-xl"
-                    autoFocus
-                    onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
-                  />
-                  <Button size="sm" className="h-11 px-4 text-[14px] rounded-xl" onClick={saveAsTemplate} disabled={!templateName.trim()}>
-                    <Save className="h-4 w-4 mr-1.5" />
-                    Sauver
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setShowSaveTemplate(false)}>
-                    <X className="h-5 w-5" />
-                  </Button>
+                                <div className="min-w-0 flex-1">
+                                  {daySession ? (
+                                    <button
+                                      onClick={(ev) => {
+                                        ev.stopPropagation();
+                                        if (isActiveWeek) setSelectedIndex(daySessionIndexes[0]);
+                                      }}
+                                      className="w-full overflow-hidden rounded-[20px] border border-border bg-card text-left shadow-sm"
+                                    >
+                                      <div className="flex items-center justify-between border-b border-border/80 px-4 py-3">
+                                        <div className="flex items-center gap-2 text-[34px] font-semibold text-foreground">
+                                          <PersonStanding className="h-5 w-5" />
+                                          Détail
+                                        </div>
+                                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                      <div className="px-4 py-4">
+                                        <div className="mb-3 flex items-end gap-1">{renderLoadBars(daySession)}</div>
+                                        <p className="text-[35px] font-semibold text-foreground">
+                                          {`${metrics.duration || 45}' ${daySession.objective || "Séance"}${daySession.rccCode ? "" : " Z2"}`}
+                                        </p>
+                                        <div className="mt-2 flex items-center gap-5 text-[28px] text-muted-foreground">
+                                          <span className="inline-flex items-center gap-1.5">
+                                            <Clock3 className="h-4 w-4" />
+                                            {`${Math.floor(metrics.duration / 60)}h ${metrics.duration % 60}m`}
+                                          </span>
+                                          <span className="inline-flex items-center gap-1.5">
+                                            <MapPin className="h-4 w-4" />
+                                            {`${metrics.distance || 0} km`}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  ) : (
+                                    <div className="rounded-[20px] border-2 border-dashed border-border px-5 py-5 text-center text-[36px] text-muted-foreground">
+                                      Repos
+                                    </div>
+                                  )}
+                                </div>
+
+                                {!athleteReadonlyMode ? (
+                                  <button
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      if (!isActiveWeek) {
+                                        setCurrentWeek(wkStart);
+                                        setSelectedIndex(null);
+                                        toast({ title: "Semaine activée", description: "Ajoute ensuite ta séance sur cette semaine." });
+                                        return;
+                                      }
+                                      addSession(dayIndex);
+                                    }}
+                                    className="h-14 w-14 shrink-0 rounded-full bg-[#007AFF] text-white shadow-[0_8px_20px_rgba(0,122,255,.35)]"
+                                  >
+                                    <Plus className="mx-auto h-7 w-7" />
+                                  </button>
+                                ) : (
+                                  <div className="h-14 w-14 shrink-0" aria-hidden />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
               </div>
+
+              {selectedSession && selectedIndex !== null && (
+                <div className="mt-4 rounded-[16px] border border-border bg-card shadow-sm">
+                  <WeeklyPlanSessionEditor
+                    session={selectedSession}
+                    onChange={(s) => updateSession(selectedIndex, s)}
+                    onDuplicate={(targetDay) => duplicateToDay(selectedIndex, targetDay)}
+                    onDelete={() => deleteSession(selectedIndex)}
+                    members={getMembersForGroup(activeGroupId)}
+                  />
+                </div>
+              )}
             </div>
           )}
-
-          {/* ── AJUSTEMENTS ATHLÈTES section ── */}
-          {selectedSession && selectedIndex !== null && sessions.length > 0 && (
-            <div className="mb-3 px-4">
-              <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Personnalisation</p>
-              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
-                <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
-                  <CollapsibleTrigger asChild>
-                    <div className="px-5 py-4 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-700 dark:text-violet-300">
-                          <Users className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-[16px] font-semibold text-foreground">
-                            Personnaliser les allures
-                          </p>
-                          <p className="text-[13px] text-muted-foreground mt-0.5">
-                            {Object.keys(selectedSession.athleteOverrides).length > 0
-                              ? `${Object.keys(selectedSession.athleteOverrides).length} athlète${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""} personnalisé${Object.keys(selectedSession.athleteOverrides).length > 1 ? "s" : ""}`
-                              : `${DAY_LABELS[selectedSession.dayIndex]} — ${selectedSession.objective || "séance"}`
-                            }
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showAthleteOverrides ? "rotate-180" : ""}`} />
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="px-5 py-4 border-t border-border">
-                      <AthleteOverrideEditor
-                        members={getMembersForGroup(activeGroupId)}
-                        overrides={selectedSession.athleteOverrides}
-                        onChange={ov => updateSession(selectedIndex, { ...selectedSession, athleteOverrides: ov })}
-                        basePace={globalBasePace}
-                        baseReps={globalBaseReps}
-                        baseRecovery={globalBaseRecovery}
-                      />
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            </div>
-          )}
-
-            </>
+          </>
           )}
 
         </IosFixedPageHeaderShell>

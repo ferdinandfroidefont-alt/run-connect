@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  RUCONNECT_SPLASH_BACKGROUND,
-  RUCONNECT_SPLASH_ICON_URL,
-  RUCONNECT_SPLASH_PRIMARY,
+  RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
+  RUCONNECT_LOADING_SCREEN_FALLBACK_URL,
+  RUCONNECT_LOADING_SCREEN_MP4_URL,
   applyRuconnectSplashNativeChrome,
   applyRuconnectSplashWebChrome,
   restoreChromeAfterRuconnectSplash,
@@ -16,7 +16,7 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-/** Durée minimale d’affichage du splash (identité plein écran). */
+/** Durée minimale d’affichage du splash (visuel plein écran). */
 const MIN_SPLASH_MS = 1200;
 /** Plafond d’attente session : doit rester > MIN_SPLASH_MS pour respecter le minimum. */
 const MAX_WAIT_SESSION_MS = 12000;
@@ -25,12 +25,27 @@ function waitMs(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+type SplashMedia = "mp4" | "jpg" | "none";
+
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [exiting, setExiting] = useState(false);
+  const [media, setMedia] = useState<SplashMedia>("mp4");
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { t } = useLanguage();
   const onCompleteRef = useRef(onLoadingComplete);
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   onCompleteRef.current = onLoadingComplete;
+
+  useEffect(() => {
+    if (media !== "mp4" || exiting) return;
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = true;
+    const p = v.play();
+    if (p !== undefined) {
+      void p.catch(() => setMedia("jpg"));
+    }
+  }, [media, exiting]);
 
   // Dépendances vides : si `t` (LanguageContext) change pendant le boot, un re-run coupait le splash
   // (cleanup → restoreChrome) et recréait l’effet — ressenti « double chargement » / barre d’état incohérente.
@@ -72,13 +87,15 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
         window.clearTimeout(completeTimerRef.current);
         completeTimerRef.current = null;
       }
+      videoRef.current?.pause();
       void restoreAfterSplash();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot unique ; voir commentaire ci-dessus
   }, []);
 
-  const splashLayerStyle: CSSProperties = { backgroundColor: RUCONNECT_SPLASH_BACKGROUND };
-  const iconStyle: CSSProperties = { width: "clamp(120px, 30vw, 140px)", height: "clamp(120px, 30vw, 140px)" };
+  const splashLayerStyle: CSSProperties = { background: RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE };
+  const mediaClassName =
+    "pointer-events-none absolute inset-0 block h-full w-full select-none object-cover object-center";
 
   return (
     <AnimatePresence>
@@ -88,70 +105,44 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           role="status"
           aria-busy="true"
           aria-live="polite"
-          className="fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
+          className="fixed inset-0 z-[100] flex min-h-[100dvh] w-full flex-col overflow-hidden"
           style={splashLayerStyle}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
         >
           <span className="sr-only">{t("loading.splashAria")}</span>
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col px-6" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative mb-8 flex items-center justify-center" style={iconStyle}>
-                  {[0, 1, 2].map((wave) => (
-                    <motion.span
-                      key={wave}
-                      className="absolute rounded-full border"
-                      style={{ borderColor: RUCONNECT_SPLASH_PRIMARY, inset: 0 }}
-                      animate={{ scale: [1, 1.8], opacity: [0.28, 0] }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: wave * 0.32,
-                      }}
-                    />
-                  ))}
-                  <img
-                    src={RUCONNECT_SPLASH_ICON_URL}
-                    alt="RunConnect"
-                    draggable={false}
-                    className="relative z-10 block h-full w-full select-none object-contain"
-                  />
-                </div>
-
-                <h1 className="text-[28px] font-bold tracking-[0.08em]" style={{ color: RUCONNECT_SPLASH_PRIMARY }}>
-                  RUNCONNECT
-                </h1>
-                <p className="mt-2 text-[12px] font-medium tracking-[0.24em] text-foreground/45">
-                  TROUVE. CONNECTE. PARTAGE.
-                </p>
-                <p className="mt-5 text-[12px] text-foreground/40">Connexion en cours...</p>
-              </motion.div>
-            </div>
-
-            <div className="pb-[max(8px,env(safe-area-inset-bottom,0px))]">
-              <div className="relative h-[3px] w-full overflow-hidden rounded-full bg-[#2563EB]/10">
-                <motion.div
-                  className="absolute inset-y-0 w-[40%] rounded-full"
-                  style={{ backgroundColor: RUCONNECT_SPLASH_PRIMARY }}
-                  animate={{ x: ["-45%", "250%"] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </div>
-            </div>
-          </div>
+          {media === "mp4" ? (
+            <video
+              ref={videoRef}
+              src={RUCONNECT_LOADING_SCREEN_MP4_URL}
+              poster={RUCONNECT_LOADING_SCREEN_FALLBACK_URL}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              controls={false}
+              className={mediaClassName}
+              aria-hidden
+              onError={() => setMedia("jpg")}
+            />
+          ) : media === "jpg" ? (
+            <img
+              src={RUCONNECT_LOADING_SCREEN_FALLBACK_URL}
+              alt=""
+              decoding="async"
+              draggable={false}
+              className={mediaClassName}
+              onError={() => setMedia("none")}
+            />
+          ) : null}
         </motion.div>
       ) : (
         <motion.div
           key="splash-exit"
           className="pointer-events-none fixed inset-0 z-[100]"
-          style={{ backgroundColor: RUCONNECT_SPLASH_BACKGROUND }}
+          style={splashLayerStyle}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
           transition={{ duration: 0.14, ease: [0.32, 0.72, 0, 1] }}

@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Gauge, RefreshCw, WifiOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -40,12 +40,10 @@ import { useUserProfile } from '@/contexts/UserProfileContext';
 import { QRShareDialog } from './QRShareDialog';
 import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
 import { cn } from '@/lib/utils';
-import { MainTopHeader } from '@/components/layout/MainTopHeader';
 import {
   createSessionPinButton,
   resolveSessionPinVariant,
 } from '@/lib/mapSessionPin';
-import { formatMapPinScheduleLine } from '@/lib/formatMapPinSchedule';
 import {
   getPersistedHomeMapPosition,
   HOME_HOT_PREFETCH_MAX_AGE_MS,
@@ -61,9 +59,10 @@ import {
   HOME_MAP_FILTER_PORTAL_SELECTOR,
 } from '@/components/map/HomeMapFilterSheet';
 import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
+import { getMapboxLowDataOptions, useNetworkQuality } from '@/lib/networkQuality';
 import type { MapCoord } from '@/lib/geoUtils';
 import { pathLengthMeters, resamplePathEvenlyMapCoords } from '@/lib/geoUtils';
-import { fetchMapboxDirectionsPath, fetchMapboxFastestDrivingDistanceMeters } from '@/lib/mapboxDirections';
+import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
@@ -74,6 +73,7 @@ import {
   persistMapStyleId,
 } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
+import { ACTIVITY_CARD_SUBTITLE } from '@/components/session-creation/types';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import {
   canSessionBeDiscovered,
@@ -81,6 +81,11 @@ import {
   getSessionVisualState,
   type SessionVisibilityVisualState,
 } from '@/lib/sessionVisibility';
+import {
+  DISCOVER_FILTER_EMOJI_BADGE_CLASS,
+  getActivityEmoji,
+  getDiscoverSportTileClass,
+} from '@/lib/discoverSessionVisual';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -181,21 +186,6 @@ const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: num
   return R * c;
 };
 
-const formatPinDistanceLabel = (distanceMeters: number): string => {
-  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return "";
-  if (distanceMeters < 1000) return `${Math.round(distanceMeters)}m`;
-  const km = distanceMeters / 1000;
-  const rounded = km >= 10 ? Math.round(km) : Math.round(km * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}km` : `${rounded.toFixed(1)}km`;
-};
-
-const updatePinMetaDistance = (pin: HTMLButtonElement, distanceLabel: string) => {
-  if (!distanceLabel) return;
-  const distEl = pin.querySelector<HTMLElement>('.rc-session-pin__meta-distance');
-  if (!distEl) return;
-  distEl.textContent = `à ${distanceLabel}`;
-  distEl.classList.remove('is-empty');
-};
 interface Filter {
   activity_types: string[];
   session_types: string[];
@@ -209,20 +199,58 @@ interface Filter {
 
 // Time slot definitions for filtering sessions by time of day
 const TIME_SLOTS = [
-  { id: "morning" as const, icon: Sunrise, label: "6h-12h", startHour: 6, endHour: 12 },
-  { id: "afternoon" as const, icon: Sun, label: "12h-18h", startHour: 12, endHour: 18 },
-  { id: "evening" as const, icon: Moon, label: "18h-23h", startHour: 18, endHour: 23 },
-  { id: "night" as const, icon: Moon, label: "23h-6h", startHour: 23, endHour: 6 },
+  { id: "morning" as const, label: "6h-12h", startHour: 6, endHour: 12 },
+  { id: "afternoon" as const, label: "12h-18h", startHour: 12, endHour: 18 },
+  { id: "evening" as const, label: "18h-23h", startHour: 18, endHour: 23 },
+  { id: "night" as const, label: "23h-6h", startHour: 23, endHour: 6 },
 ];
 
-/** Couleur d’icône sur fond blanc (état non sélectionné) — sélection = tout en bleu iOS */
-/** Icônes créneaux sur fond blanc : teintes proches des pastilles Réglages (moins saturées que avant) */
-const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening' | 'night', string> = {
-  morning: 'text-[#FF9500]',
-  afternoon: 'text-[#C9A018]',
-  evening: 'text-[#5856D6]',
-  night: 'text-[#3730A3]',
+/** Pastilles type « À la une » : fond saturé + glyphe blanc */
+const TIME_SLOT_TILE_BG: Record<'morning' | 'afternoon' | 'evening' | 'night', string> = {
+  morning: 'bg-[#FF9500]',
+  afternoon: 'bg-[#D4940A]',
+  evening: 'bg-[#5856D6]',
+  night: 'bg-[#312E81]',
 };
+
+const TIME_SLOT_SHEET_EMOJI: Record<"morning" | "afternoon" | "evening" | "night", string> = {
+  morning: "🌅",
+  afternoon: "☀️",
+  evening: "🌆",
+  night: "🌙",
+};
+
+const SESSION_TYPE_SHEET_BADGE: Record<string, { emoji: string; bg: string }> = {
+  all: { emoji: "✨", bg: "bg-[#8E8E93]" },
+  footing: { emoji: "🏃", bg: "bg-[#007AFF]" },
+  sortie_longue: { emoji: "🛣️", bg: "bg-[#34C759]" },
+  fractionne: { emoji: "⚡", bg: "bg-[#FF9500]" },
+  competition: { emoji: "🏆", bg: "bg-[#AF52DE]" },
+};
+
+const LEVEL_SHEET_BADGE_BG = [
+  "",
+  "bg-[#34C759]",
+  "bg-[#30D158]",
+  "bg-[#FFCC00]",
+  "bg-[#FF9500]",
+  "bg-[#FF3B30]",
+  "bg-[#AF52DE]",
+] as const;
+
+function homeMapClubBadgeClass(seed: string): string {
+  const options = [
+    "bg-[#007AFF]",
+    "bg-[#5856D6]",
+    "bg-[#5ac8fa]",
+    "bg-[#34C759]",
+    "bg-[#FF3B30]",
+    "bg-[#AF52DE]",
+  ] as const;
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 1009;
+  return options[h % options.length];
+}
 
 const ACTIVITY_OPTIONS: { id: string; label: string; values: string[] }[] = [
   { id: 'all', label: 'Tous sports', values: [] },
@@ -379,6 +407,12 @@ export const InteractiveMap = ({
   const sessionPolylines = useRef<unknown[]>([]);
   const userLocationMarker = useRef<Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  /** Vrai si le premier rendu Mapbox tarde (offline / 2G / hotspot saturé) — déclenche le CTA « Réessayer ». */
+  const [isSlowBoot, setIsSlowBoot] = useState(false);
+  /** Incrémenté par le bouton « Réessayer » pour forcer un re-mount complet de la carte. */
+  const [bootAttempt, setBootAttempt] = useState(0);
+  const networkQuality = useNetworkQuality();
+  const isOffline = networkQuality === 'offline';
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -470,8 +504,6 @@ export const InteractiveMap = ({
     lat: number;
     lng: number;
   } | null>(null);
-  const routeDistanceLabelCacheRef = useRef<globalThis.Map<string, string>>(new globalThis.Map());
-
   /**
    * Géoloc « fast » lancée au montage : tourne en parallèle du chargement Mapbox (une seule requête,
    * réutilisée dans la course au lieu d’un 2e appel au `load`).
@@ -550,6 +582,13 @@ export const InteractiveMap = ({
 
   const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
   const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
+  const dateFilterChipLabel = format(filters.selected_date, 'EEE d MMM', { locale: fr });
+  const clubChipSummary =
+    filters.selected_club_ids.length === 0
+      ? 'Club'
+      : filters.selected_club_ids.length === 1
+        ? clubFilters.find((c) => c.id === filters.selected_club_ids[0])?.name ?? 'Club'
+        : `${filters.selected_club_ids.length} clubs`;
 
   /** Même filtre que les marqueurs — utilisé pour les indicateurs hors écran. */
   const filteredSessionsForMap = useMemo(() => {
@@ -933,18 +972,6 @@ export const InteractiveMap = ({
         const now = new Date();
         const isPastSession = sessionDate.getTime() < now.getTime();
         const isSelected = selectedSession?.id === session.id;
-        let distanceLabel = "";
-        if (userLocation) {
-          const cacheKey = `${userLocation.lat.toFixed(4)}:${userLocation.lng.toFixed(4)}:${lat.toFixed(4)}:${lng.toFixed(4)}`;
-          const cached = routeDistanceLabelCacheRef.current.get(cacheKey);
-          if (cached !== undefined) {
-            distanceLabel = cached;
-          } else {
-            const fallbackMeters = calculateDistanceKm(userLocation.lat, userLocation.lng, lat, lng) * 1000;
-            distanceLabel = formatPinDistanceLabel(fallbackMeters);
-            routeDistanceLabelCacheRef.current.set(cacheKey, distanceLabel);
-          }
-        }
         const wrap = document.createElement('div');
         wrap.className = cn(
           'rc-session-pin',
@@ -959,42 +986,12 @@ export const InteractiveMap = ({
         wrap.style.height = '1px';
         wrap.style.overflow = 'visible';
 
-        const scheduleLine = (() => {
-          const trimmed = formatMapPinScheduleLine(session.scheduled_at).trim();
-          if (trimmed) return trimmed;
-          const d = new Date(session.scheduled_at);
-          if (!Number.isNaN(d.getTime())) {
-            const t = format(d, "HH:mm").replace(":", "h");
-            return `${format(d, "d MMM", { locale: fr })} ${t}`;
-          }
-          return "Séance";
-        })();
         const pin = createSessionPinButton({
           avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
           ariaLabel: session.title || 'Séance',
           variant: resolveSessionPinVariant(),
-          meta: {
-            scheduleLine,
-            distanceLine: distanceLabel ? `à ${distanceLabel}` : undefined,
-          },
+          activityType: session.activity_type,
         });
-
-        if (userLocation) {
-          const cacheKey = `${userLocation.lat.toFixed(4)}:${userLocation.lng.toFixed(4)}:${lat.toFixed(4)}:${lng.toFixed(4)}`;
-          void fetchMapboxFastestDrivingDistanceMeters(
-            { lat: userLocation.lat, lng: userLocation.lng },
-            { lat, lng },
-          ).then((routedDistance) => {
-            if (runId !== markersRunIdRef.current) return;
-            if (!routedDistance) return;
-            const nextLabel = formatPinDistanceLabel(routedDistance);
-            if (!nextLabel) return;
-            routeDistanceLabelCacheRef.current.set(cacheKey, nextLabel);
-            updatePinMetaDistance(pin, nextLabel);
-          }).catch(() => {
-            // Keep fallback distance label when routed distance lookup fails.
-          });
-        }
 
         wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {
@@ -1230,14 +1227,20 @@ export const InteractiveMap = ({
             : [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat];
         const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_NAVIGATION_DAY_STYLE;
 
+        const lowData = getMapboxLowDataOptions();
         const mapInstance = new mapboxgl.Map({
           container: mapContainer.current,
           style: styleUrl,
           center: mapCenterLngLat,
           zoom: HOME_MAP_BOOT_ZOOM,
           pitch: 0,
-          antialias: true,
           renderWorldCopies: false,
+          /** Options bandwidth-aware : antialias coupé, glyphes locales, cache plus large en conn lente. */
+          antialias: lowData.antialias,
+          localIdeographFontFamily: lowData.localIdeographFontFamily,
+          maxTileCacheSize: lowData.maxTileCacheSize,
+          crossSourceCollisions: lowData.crossSourceCollisions,
+          fadeDuration: lowData.fadeDuration,
         });
 
         mapInstance.on('style.load', () => {
@@ -1407,6 +1410,28 @@ export const InteractiveMap = ({
       setMapboxMap(null);
       setIsMapLoaded(false);
     };
+    // `bootAttempt` permet à `retryMapBoot` de relancer un boot propre (cleanup + new Map).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bootAttempt]);
+
+  /**
+   * Détection « boot lent » : si la carte n'a pas répondu après quelques secondes (3G/hotspot/offline),
+   * on bascule sur un overlay actionnable au lieu de laisser l'utilisateur fixer un fond gris.
+   */
+  useEffect(() => {
+    if (isMapLoaded) {
+      setIsSlowBoot(false);
+      return;
+    }
+    const slowMs = networkQuality === 'slow' || networkQuality === 'offline' ? 4000 : 9000;
+    const t = window.setTimeout(() => setIsSlowBoot(true), slowMs);
+    return () => window.clearTimeout(t);
+  }, [isMapLoaded, networkQuality, bootAttempt]);
+
+  const retryMapBoot = useCallback(() => {
+    setIsSlowBoot(false);
+    setIsMapLoaded(false);
+    setBootAttempt((n) => n + 1);
   }, []);
 
   /** Marqueur position utilisateur : stable, couleur primaire, mise à jour par setLngLat (évite clignotements). */
@@ -1824,11 +1849,47 @@ export const InteractiveMap = ({
         />
         <div
           className={cn(
-            'pointer-events-none absolute inset-0 z-[1] bg-muted/20 transition-opacity duration-200 motion-reduce:transition-none',
-            isMapLoaded ? 'opacity-0' : 'opacity-100'
+            'absolute inset-0 z-[2] flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none',
+            isMapLoaded ? 'pointer-events-none opacity-0' : 'opacity-100'
           )}
-          aria-hidden
-        />
+          role="status"
+          aria-live="polite"
+          aria-hidden={isMapLoaded}
+        >
+          {!isMapLoaded && (
+            <div className="pointer-events-auto flex max-w-[280px] flex-col items-center gap-3 px-6 text-center">
+              {isOffline ? (
+                <WifiOff className="h-7 w-7 text-amber-500" strokeWidth={1.75} aria-hidden />
+              ) : isSlowBoot ? (
+                <RefreshCw className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+              ) : (
+                <Loader2 className="h-7 w-7 animate-spin text-primary" strokeWidth={1.75} aria-hidden />
+              )}
+              <p className="text-[13px] font-medium leading-snug text-foreground/85">
+                {isOffline
+                  ? 'Pas de connexion'
+                  : isSlowBoot
+                    ? 'Connexion lente — la carte met du temps à charger'
+                    : networkQuality === 'slow'
+                      ? 'Chargement de la carte… (réseau lent)'
+                      : 'Chargement de la carte…'}
+              </p>
+              {(isSlowBoot || isOffline) && (
+                <button
+                  type="button"
+                  onClick={retryMapBoot}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground shadow-sm',
+                    'transition-transform duration-150 active:scale-[0.97]'
+                  )}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+                  Réessayer
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Immersive Mode: Minimal top bar with back button */}
@@ -1848,73 +1909,28 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Bandeau supérieur opaque + barre de recherche flottante (hors header) — masqué en mode immersif */}
+      {/* Refonte Apple Discover (mockup 04) :
+          - PAS de barre header opaque (mockup spec : "plus de barre du système en haut")
+          - Floating search pill + avatar 44×44 + NotificationCenter au top y=safe+8
+          - Filter chips row 6 catégories en dessous
+          - Suspense + handlers existants 100% préservés (NotificationCenter, settings) */}
       {!isImmersiveMode && (
         <div
           ref={homeMapTopStackRef}
           className="pointer-events-none absolute left-0 right-0 top-0 z-[30]"
         >
-          {/*
-            Une seule couche d’inset : le header intègre la safe-area.
-            (StatusBar overlay: false → bande h-[safe-area] + pt header doublait la zone système.)
-          */}
-          <header
-            className={cn(
-              "runconnect-home-top-header home-map-page-header pointer-events-auto relative shrink-0 bg-white dark:bg-black",
-              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[12px] after:bg-gradient-to-b after:from-white after:to-transparent dark:after:from-black dark:after:to-transparent",
-            )}
+          {/* Bloc flottant : padding safe-area-top + 8px */}
+          <div
+            className="pointer-events-auto box-border w-full px-3"
+            style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
           >
-            {/* Header navigation épuré : titre + actions */}
-            <div className="relative z-[1]">
-              <MainTopHeader
-                title="Accueil"
-                tabsAriaLabel={t("navigation.home")}
-                tabs={[
-                  { id: "planning", label: "Planification", active: true },
-                  { id: "tracking", label: "Suivi", active: false, onClick: () => navigate("/participants") },
-                  { id: "routes", label: "Création itinéraire", active: false, onClick: () => navigate("/route-create") },
-                ]}
-                right={
-                  <>
-                    <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
-                      <Suspense
-                        fallback={
-                          <div
-                            className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[12px] border border-[#E5E5EA] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
-                            aria-hidden
-                          />
-                        }
-                      >
-                        <NotificationCenter onSessionUpdated={loadSessions} />
-                      </Suspense>
-                    </div>
-                    <button
-                      type="button"
-                      className={cn(
-                        "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[12px] outline-none",
-                        "border border-[#E5E5EA] bg-white shadow-none dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
-                        "text-[#1A1A1A] transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80 dark:text-foreground",
-                        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      )}
-                      aria-label={t("navigation.settings")}
-                      onClick={() => setShowSettingsDialog(true)}
-                    >
-                      <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
-                    </button>
-                  </>
-                }
-              />
-            </div>
-          </header>
-
-          {/* Recherche + filtres sous les tabs : navigation clean avec espacement régulier */}
-          <div className="pointer-events-none relative z-[35] box-border w-full px-4 pb-1.5 pt-3">
-            <div className="pointer-events-auto relative z-[36] min-w-0 w-full max-w-full">
+            <div className="flex items-center gap-2">
+              {/* Search pill flottante (mockup spec : h-44, rounded-22, white blurred 92% + shadow) */}
               {/*
                 Ancêtre positionné limité à la barre de recherche + liste : sinon top-[100%] du dropdown
                 se calcule sur toute la colonne (recherche + filtres) et le panneau se mélange aux filtres.
               */}
-              <div className="relative z-[45] min-w-0 isolate">
+              <div className="relative z-[45] min-w-0 isolate flex-1">
                 <form
                   className={cn(
                     "relative z-0 home-map-search-glass flex items-center gap-2 rounded-full px-3.5",
@@ -1932,7 +1948,7 @@ export const InteractiveMap = ({
                   />
                   <Input
                     ref={searchInputRef}
-                    placeholder="Rechercher un lieu ou une séance..."
+                    placeholder="Rechercher un lieu, un ami…"
                     value={filters.search_query}
                     onChange={(e) =>
                       setFilters((prev) => ({
@@ -1945,7 +1961,7 @@ export const InteractiveMap = ({
                     autoCorrect="off"
                     spellCheck={false}
                     className={cn(
-                      "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-[#3C3C43]",
+                      "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-[#3C3C43] dark:text-foreground",
                       "shadow-none placeholder:text-[#8E8E93]",
                       "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
                       "focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -1992,32 +2008,122 @@ export const InteractiveMap = ({
                 )}
               </div>
 
-              {/* Filtres : sous le bloc recherche — z-index plus bas que le panneau suggestions */}
-              <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
+              {/* Avatar profil — redirige vers la page profil principale (tab bar). */}
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                aria-label="Mon profil"
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full overflow-hidden",
+                  "border-[0.5px] border-black/[0.06] bg-[rgba(255,255,255,0.92)]",
+                  "shadow-[0_4px_14px_rgba(0,0,0,0.06)]",
+                  "transition-transform duration-150 active:scale-[0.95]",
+                  "dark:border-[#1f1f1f] dark:bg-[rgba(28,28,30,0.86)]"
+                )}
+              >
+                <Avatar className="h-11 w-11">
+                  <AvatarImage
+                    src={userProfile?.avatar_url || undefined}
+                    alt={userProfile?.username || "Profil"}
+                    className="h-full w-full object-cover"
+                  />
+                  <AvatarFallback className="text-sm font-semibold">
+                    {(userProfile?.username || userProfile?.display_name || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </div>
+
+            {/* Filtres : carrousel (Sport / Club / Type / Date / Niveau / Horaire / Amis) */}
+            <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
-                <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
+                <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
+                  className="home-map-filter-chip snap-start shadow-none !bg-black !text-white !border-black"
+                >
+                  <span className="flex items-center gap-1">
+                    <SlidersHorizontal className="h-3 w-3 shrink-0" /> Filtres
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'activity' || filters.activity_types.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Activity className="h-3.5 w-3.5 shrink-0" /> Sport : {activeActivityLabel}
+                  <span className="flex items-center gap-1">
+                    <Activity className="h-3 w-3 shrink-0" /> Sport : {activeActivityLabel}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'club' ? null : 'club'))}
+                  className={cn(
+                    "home-map-filter-chip snap-start shadow-none",
+                    (expandedFilter === 'club' || filters.selected_club_ids.length > 0) && "home-map-filter-chip-active"
+                  )}
+                >
+                  <span className="flex min-w-0 max-w-[10rem] items-center gap-1">
+                    <Users className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{clubChipSummary}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'sessionType' ? null : 'sessionType'))}
+                  className={cn(
+                    "home-map-filter-chip snap-start shadow-none",
+                    (expandedFilter === 'sessionType' || filters.session_types.length > 0) &&
+                      "home-map-filter-chip-active"
+                  )}
+                >
+                  <span className="flex min-w-0 max-w-[10rem] items-center gap-1">
+                    <Route className="h-3 w-3 shrink-0" />
+                    <span className="truncate">Type : {activeSessionTypeLabel}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'day' ? null : 'day'))}
+                  className={cn(
+                    "home-map-filter-chip snap-start shadow-none",
+                    expandedFilter === 'day' && "home-map-filter-chip-active"
+                  )}
+                >
+                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1">
+                    <CalendarDays className="h-3 w-3 shrink-0" />
+                    <span className="truncate capitalize">{dateFilterChipLabel}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'level' ? null : 'level'))}
+                  className={cn(
+                    "home-map-filter-chip snap-start shadow-none",
+                    (expandedFilter === 'level' || filters.level != null) && "home-map-filter-chip-active"
+                  )}
+                >
+                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1">
+                    <Gauge className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      {filters.level == null ? "Niveau" : `Niv. ${filters.level}+`}
+                    </span>
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'time' || filters.time_slot) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1.5">
-                    <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1">
+                    <Clock3 className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                       {filters.time_slot
                         ? (TIME_SLOTS.find((s) => s.id === filters.time_slot)?.label ?? "Horaire")
@@ -2029,12 +2135,12 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'friends' ? null : 'friends'))}
                   className={cn(
-                    "home-map-filter-chip snap-start h-9 px-3 text-[13px] font-medium shadow-none",
+                    "home-map-filter-chip snap-start shadow-none",
                     (expandedFilter === 'friends' || filters.friends_only) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <PersonStanding className="h-3.5 w-3.5 shrink-0" /> Amis uniquement
+                  <span className="flex items-center gap-1">
+                    <PersonStanding className="h-3 w-3 shrink-0" /> Amis
                   </span>
                 </button>
                 </div>
@@ -2064,11 +2170,26 @@ export const InteractiveMap = ({
                   {ACTIVITY_OPTIONS.map((opt) => {
                     const active =
                       JSON.stringify(filters.activity_types) === JSON.stringify(opt.values);
+                    const activityKey = opt.values[0];
                     return (
                       <HomeMapFilterRow
                         key={opt.id}
                         label={opt.label}
+                        hint={opt.id === 'all' ? 'Toutes disciplines' : ACTIVITY_CARD_SUBTITLE[activityKey ?? '']}
                         selected={active}
+                        leading={
+                          <div
+                            className={cn(
+                              DISCOVER_FILTER_EMOJI_BADGE_CLASS,
+                              opt.id === "all"
+                                ? "bg-[#8E8E93]"
+                                : getDiscoverSportTileClass(activityKey ?? ""),
+                            )}
+                            aria-hidden
+                          >
+                            {opt.id === "all" ? "✨" : getActivityEmoji(activityKey ?? "")}
+                          </div>
+                        }
                         onClick={() => {
                           setFilters((prev) => ({ ...prev, activity_types: opt.values }));
                           setExpandedFilter(null);
@@ -2084,11 +2205,17 @@ export const InteractiveMap = ({
                   {SESSION_TYPE_OPTIONS.map((opt) => {
                     const active =
                       JSON.stringify(filters.session_types) === JSON.stringify(opt.values);
+                    const badge = SESSION_TYPE_SHEET_BADGE[opt.id] ?? SESSION_TYPE_SHEET_BADGE.all;
                     return (
                       <HomeMapFilterRow
                         key={opt.id}
                         label={opt.label}
                         selected={active}
+                        leading={
+                          <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, badge.bg)} aria-hidden>
+                            {badge.emoji}
+                          </div>
+                        }
                         onClick={() => {
                           setFilters((prev) => ({ ...prev, session_types: opt.values }));
                           setExpandedFilter(null);
@@ -2105,6 +2232,11 @@ export const InteractiveMap = ({
                     label="Toutes les séances"
                     hint="Affichage selon les règles de visibilité"
                     selected={!filters.friends_only}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#007AFF]")} aria-hidden>
+                        🌐
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, friends_only: false }));
                       setExpandedFilter(null);
@@ -2114,6 +2246,11 @@ export const InteractiveMap = ({
                     label="Amis uniquement"
                     hint="Séances de tes amis et les tiennes"
                     selected={filters.friends_only}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#34C759]")} aria-hidden>
+                        👥
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, friends_only: true }));
                       setExpandedFilter(null);
@@ -2126,7 +2263,6 @@ export const InteractiveMap = ({
                 <HomeMapFilterGroupedList>
                   {TIME_SLOTS.map((slot) => {
                     const active = filters.time_slot === slot.id;
-                    const Icon = slot.icon;
                     return (
                       <HomeMapFilterRow
                         key={slot.id}
@@ -2142,13 +2278,15 @@ export const InteractiveMap = ({
                         }
                         selected={active}
                         leading={
-                          <Icon
+                          <div
                             className={cn(
-                              'h-6 w-6',
-                              active ? 'text-primary' : TIME_SLOT_ICON_CLASS[slot.id]
+                              DISCOVER_FILTER_EMOJI_BADGE_CLASS,
+                              active ? "bg-primary" : TIME_SLOT_TILE_BG[slot.id],
                             )}
-                            strokeWidth={2}
-                          />
+                            aria-hidden
+                          >
+                            {TIME_SLOT_SHEET_EMOJI[slot.id]}
+                          </div>
                         }
                         onClick={() => {
                           setFilters((prev) => ({
@@ -2169,6 +2307,11 @@ export const InteractiveMap = ({
                     label="Tous les clubs"
                     hint="Aucun filtre par équipe"
                     selected={filters.selected_club_ids.length === 0}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#8E8E93]")} aria-hidden>
+                        ✨
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, selected_club_ids: [] }));
                       setExpandedFilter(null);
@@ -2182,6 +2325,14 @@ export const InteractiveMap = ({
                         label={club.name}
                         selected={active}
                         trailing={club.memberCount}
+                        leading={
+                          <div
+                            className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, homeMapClubBadgeClass(club.id))}
+                            aria-hidden
+                          >
+                            🏟️
+                          </div>
+                        }
                         onClick={() =>
                           setFilters((prev) => ({
                             ...prev,
@@ -2218,6 +2369,11 @@ export const InteractiveMap = ({
                     label="Tous niveaux"
                     hint="Pas de filtre de difficulté"
                     selected={filters.level == null}
+                    leading={
+                      <div className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, "bg-[#8E8E93]")} aria-hidden>
+                        ✨
+                      </div>
+                    }
                     onClick={() => {
                       setFilters((prev) => ({ ...prev, level: null }));
                       setExpandedFilter(null);
@@ -2228,6 +2384,14 @@ export const InteractiveMap = ({
                       key={lvl}
                       label={`Niveau ${lvl}`}
                       selected={filters.level === lvl}
+                      leading={
+                        <div
+                          className={cn(DISCOVER_FILTER_EMOJI_BADGE_CLASS, LEVEL_SHEET_BADGE_BG[lvl])}
+                          aria-hidden
+                        >
+                          <span className="text-[13px] font-semibold tabular-nums">{lvl}</span>
+                        </div>
+                      }
                       onClick={() => {
                         setFilters((prev) => ({
                           ...prev,
@@ -2240,56 +2404,80 @@ export const InteractiveMap = ({
                 </HomeMapFilterGroupedList>
               )}
             </HomeMapFilterSheet>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Contrôles carte — au-dessus du FAB et du bandeau Feed replié (--home-map-controls-stack-bottom) */}
+      {/* Contrôles carte — boutons séparés (chacun dans sa propre pastille) */}
       <div
         className={cn(
-          "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--home-feed-sheet-peek)+0.25rem+var(--home-bottom-stack-gap))]",
+          "pointer-events-none fixed z-[104] flex flex-col items-end gap-2",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--home-feed-sheet-peek)+var(--home-bottom-stack-gap)+0.25rem-0.625rem)]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
-        <div
-          className={cn(
-            "home-map-control-rail pointer-events-auto flex flex-col items-center overflow-hidden rounded-[16px] border",
-            "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
-            "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
-          )}
-        >
-          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
-            <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
-          </div>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          <button
-            type="button"
-            title="Me localiser"
-            onClick={handleLocateMe}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            <MapPin className="h-[17px] w-[17px]" strokeWidth={2} />
-          </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          <button
-            type="button"
-            title={isImmersiveMode ? "Quitter le plein écran" : "Carte plein écran"}
-            aria-label={isImmersiveMode ? "Quitter le plein écran" : "Afficher la carte en plein écran"}
-            onClick={toggleImmersiveMode}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            {isImmersiveMode ? (
-              <Minimize2 className="h-[17px] w-[17px]" strokeWidth={2} />
+        {([
+          {
+            key: 'locate',
+            title: 'Me localiser',
+            onClick: handleLocateMe,
+            icon: <MapPin className="h-[15px] w-[15px]" strokeWidth={2} />,
+          },
+          {
+            key: 'tracking',
+            title: 'Suivi en direct',
+            onClick: () => navigate('/participants'),
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                <path d="M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" />
+              </svg>
+            ),
+          },
+          {
+            key: 'route-create',
+            title: "Créer un itinéraire",
+            onClick: () => navigate('/route-create'),
+            icon: <Brush className="h-[15px] w-[15px]" strokeWidth={2} />,
+          },
+          {
+            key: 'style',
+            title: 'Style de carte',
+            isStyle: true,
+          },
+          {
+            key: 'fullscreen',
+            title: isImmersiveMode ? 'Quitter le plein écran' : 'Carte plein écran',
+            onClick: toggleImmersiveMode,
+            icon: isImmersiveMode ? (
+              <Minimize2 className="h-[15px] w-[15px]" strokeWidth={2} />
             ) : (
-              <Expand className="h-[17px] w-[17px]" strokeWidth={2} />
+              <Expand className="h-[15px] w-[15px]" strokeWidth={2} />
+            ),
+          },
+        ] as Array<any>).map((btn) => (
+          <div key={btn.key} className="map-overlay-fab-shell">
+            {btn.isStyle ? (
+              <div className="flex h-9 w-9 items-center justify-center [&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-full [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
+              </div>
+            ) : (
+              <button
+                type="button"
+                title={btn.title}
+                aria-label={btn.title}
+                onClick={btn.onClick}
+                className="map-overlay-fab-inner"
+              >
+                {btn.icon}
+              </button>
             )}
-          </button>
-        </div>
+          </div>
+        ))}
       </div>
-      
+
 
       {/* Create Session Wizard */}
       <CreateSessionWizard

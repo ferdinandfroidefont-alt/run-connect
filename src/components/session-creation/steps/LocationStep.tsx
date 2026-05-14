@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import type { Map as MapboxMap } from 'mapbox-gl';
-import { motion } from 'framer-motion';
-import { MapPin, Search, Navigation, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Search, Navigation, Crosshair, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { geocodeSearchMapbox, reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
 import { SelectedLocation } from '../types';
 import { cn } from '@/lib/utils';
+import { AppleStepHeader, AppleStepFooter } from './AppleStepChrome';
 
 interface LocationStepProps {
   map: MapboxMap | null;
@@ -24,12 +24,11 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   onNext,
   hideFooter = false,
 }) => {
-  const [locationSearch, setLocationSearch] = useState('');
+  const [locationSearch, setLocationSearch] = useState(selectedLocation?.name || '');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (locationSearch.trim()) {
@@ -43,7 +42,6 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) return;
-
     setIsSearching(true);
     try {
       const rows = await geocodeSearchMapbox(query, 5);
@@ -74,10 +72,8 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const handleUseMapCenter = async () => {
     if (!map) return;
-
     const center = map.getCenter();
     if (!center) return;
-
     setIsLocating(true);
     try {
       const lat = center.lat;
@@ -96,12 +92,10 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const handleMyLocation = () => {
     if (!navigator.geolocation) return;
-
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-
         if (map) {
           map.easeTo({
             center: [longitude, latitude],
@@ -110,15 +104,10 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             essential: true,
           });
         }
-
         try {
           const placeName = await reverseGeocodeMapbox(latitude, longitude);
           if (placeName) {
-            onLocationSelect({
-              lat: latitude,
-              lng: longitude,
-              name: placeName,
-            });
+            onLocationSelect({ lat: latitude, lng: longitude, name: placeName });
             setLocationSearch(placeName);
           } else {
             onLocationSelect({
@@ -144,12 +133,11 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      exit={{ opacity: 0, x: -12 }}
       className={hideFooter ? 'flex w-full flex-col' : 'flex h-full min-h-0 w-full flex-1 flex-col'}
     >
-      {/* Zone scroll : contenu centré verticalement entre header wizard et pied fixe */}
       <div
         className={
           hideFooter
@@ -157,130 +145,147 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             : 'min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]'
         }
       >
-        <div
-          className={
-            hideFooter
-              ? 'flex min-h-full flex-col justify-start px-0.5 py-4 sm:py-5'
-              : 'flex min-h-full flex-col justify-center px-0.5 py-10 sm:py-12'
-          }
-        >
-          <div className="mx-auto flex w-full max-w-sm flex-col items-center text-center">
-            {/* Icône — légèrement plus grande, fond discret type iOS */}
-            <div
-              className={cn(
-                'flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-[20px]',
-                'bg-muted/75 ring-1 ring-border/45 dark:bg-muted/35'
-              )}
-              aria-hidden
-            >
-              <MapPin className="h-10 w-10 text-primary" strokeWidth={1.85} />
-            </div>
+        <div className={cn('flex w-full flex-col px-1', hideFooter ? 'pt-2 pb-4' : 'pt-3 pb-8')}>
+          {!hideFooter && (
+            <AppleStepHeader
+              step={1}
+              title="Où ça se passe ?"
+              subtitle="Cherche un parc, une rue, ou pose un point sur la carte."
+            />
+          )}
 
-            {/* 16px : icône → titre */}
-            <h2 className="mt-4 text-[22px] font-semibold leading-snug tracking-tight text-foreground">
-              Où se passe la séance ?
-            </h2>
+          {/* Search field — pill shape, Apple search style */}
+          <div className="relative px-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={locationSearch}
+              onChange={(e) => setLocationSearch(e.target.value)}
+              placeholder="Cherche un parc, une rue..."
+              className="h-12 w-full rounded-full border-border/60 bg-card pl-11 pr-11 text-[17px] tracking-tight placeholder:text-muted-foreground/70"
+            />
+            {isSearching && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            )}
 
-            {/* 8–12px : titre → description */}
-            <p className="mt-2.5 text-[15px] leading-relaxed text-muted-foreground">
-              Recherchez un lieu ou sélectionnez sur la carte
-            </p>
-
-            {/* 24px : description → recherche */}
-            <div className="relative mt-6 w-full text-left">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={locationSearch}
-                onChange={(e) => setLocationSearch(e.target.value)}
-                placeholder="Rechercher un lieu..."
-                className="h-12 w-full pl-10 text-base"
-              />
-              {isSearching && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              )}
-
+            <AnimatePresence>
               {searchResults.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute z-50 mt-2 w-full overflow-hidden rounded-[18px] border border-border/60 bg-card shadow-lg"
+                >
                   {searchResults.map((result, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleSelectResult(result)}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+                      className={cn(
+                        'flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] tracking-tight transition-colors',
+                        'active:bg-secondary/80',
+                        idx < searchResults.length - 1 && 'border-b border-border/40'
+                      )}
                     >
-                      <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate text-sm">{result.formatted_address}</span>
+                      <MapPin className="h-4 w-4 shrink-0 text-primary" />
+                      <span className="truncate text-foreground">{result.formatted_address}</span>
                     </button>
                   ))}
-                </div>
+                </motion.div>
               )}
-            </div>
-
-            {/* 16px : recherche → boutons ; 32–40px après les boutons (fin du bloc principal) */}
-            <div className="mt-4 mb-8 flex w-full min-w-0 gap-3 sm:mb-10">
-              <Button
-                variant="outline"
-                onClick={handleMyLocation}
-                disabled={isLocating}
-                className={map ? 'h-12 min-w-0 flex-1' : 'h-12 w-full'}
-              >
-                <Navigation className="mr-2 h-4 w-4 shrink-0" />
-                <span className="truncate">Ma position</span>
-              </Button>
-              {map && (
-                <Button
-                  variant="outline"
-                  onClick={handleUseMapCenter}
-                  disabled={isLocating}
-                  className="h-12 min-w-0 flex-1"
-                >
-                  <MapPin className="mr-2 h-4 w-4 shrink-0" />
-                  <span className="truncate">Centre carte</span>
-                </Button>
-              )}
-            </div>
+            </AnimatePresence>
           </div>
 
-          {/* Lieu sélectionné : dans le flux scroll sous le groupe centré */}
-          {selectedLocation && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mx-auto w-full max-w-sm rounded-xl border border-primary/30 bg-primary/10 p-4"
+          {/* Quick actions — pill grammar */}
+          <div className="mt-3 flex flex-wrap gap-2 px-1">
+            <button
+              type="button"
+              onClick={handleMyLocation}
+              disabled={isLocating}
+              className={cn(
+                'inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[14px] font-medium tracking-tight text-white transition-transform',
+                'active:scale-[0.96] disabled:opacity-60'
+              )}
             >
-              <div className="flex items-start gap-3 text-left">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <MapPin className="h-5 w-5 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">Lieu sélectionné</p>
-                  <p className="truncate text-sm text-muted-foreground">{selectedLocation.name}</p>
-                </div>
-              </div>
-            </motion.div>
-          )}
+              <Navigation className="h-3.5 w-3.5" />
+              Ma position
+            </button>
+            {map && (
+              <button
+                type="button"
+                onClick={handleUseMapCenter}
+                disabled={isLocating}
+                className={cn(
+                  'inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/60 bg-card px-4 text-[14px] font-medium tracking-tight text-primary transition-transform',
+                  'active:scale-[0.96] disabled:opacity-60'
+                )}
+              >
+                <Crosshair className="h-3.5 w-3.5" />
+                Centrer la carte
+              </button>
+            )}
+          </div>
+
+          {/* Selected location card — Apple grouped cell */}
+          <div className="mt-5 px-1">
+            <AnimatePresence mode="wait">
+              {selectedLocation ? (
+                <motion.div
+                  key="selected"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="overflow-hidden rounded-[18px] border border-border/60 bg-card"
+                >
+                  <div className="flex items-center gap-3 p-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] font-medium uppercase tracking-[0.16em] text-primary">
+                        Lieu sélectionné
+                      </div>
+                      <div className="mt-0.5 truncate text-[15px] font-medium tracking-tight text-foreground">
+                        {selectedLocation.name}
+                      </div>
+                    </div>
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+                      <Check className="h-4 w-4" />
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="hint"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="rounded-[18px] border border-dashed border-border/70 bg-card/40 p-6 text-center"
+                >
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <p className="text-[15px] font-medium tracking-tight text-foreground">
+                    Aucun lieu sélectionné
+                  </p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                    Pose un point depuis la carte ou utilise la recherche ci-dessus.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
       {!hideFooter && (
-        <div
-          className={cn(
-            'relative z-10 -mx-4 shrink-0 border-t border-border/60 bg-secondary/95 px-4 pt-4',
-            'backdrop-blur-md supports-[backdrop-filter]:bg-secondary/90',
-            'pb-[max(1rem,env(safe-area-inset-bottom,1rem))]'
-          )}
-        >
-          <Button
-            onClick={onNext}
-            disabled={!selectedLocation}
-            className="h-14 w-full text-lg font-semibold"
-          >
-            Continuer
-            <ChevronRight className="ml-2 h-5 w-5" />
-          </Button>
-        </div>
+        <AppleStepFooter
+          onNext={onNext}
+          nextLabel="Continuer"
+          nextDisabled={!selectedLocation}
+          showBack={false}
+        />
       )}
     </motion.div>
   );

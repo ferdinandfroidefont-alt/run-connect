@@ -15,7 +15,6 @@ import {
 } from '@/services/sessionShareService';
 import { SessionShareArtboard } from './SessionShareArtboard';
 import { SessionSharePreviewCarousel } from './SessionSharePreviewCarousel';
-import { SessionShareActionsGrid } from './SessionShareActionsGrid';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -152,11 +151,11 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
         overlayClassName="bg-slate-950/35 backdrop-blur-[2px]"
         stackNested
       >
-        <header className="relative flex shrink-0 items-center justify-center border-b border-slate-200/85 bg-white/84 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm">
+        <header className="relative flex shrink-0 items-center justify-center border-b border-slate-200/85 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={onClose}
-            className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[16px] font-medium text-primary transition-opacity active:opacity-70"
+            className="absolute left-3 top-1/2 mt-0.5 -translate-y-1/2 flex items-center gap-0.5 text-[16px] font-medium text-primary transition-opacity active:opacity-70"
           >
             <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
             <span>Retour</span>
@@ -178,12 +177,14 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
               />
             )}
 
-            <div className="mt-6">
-              <SessionShareActionsGrid
-                busy={exporting || !payload}
-                onChannel={(c) => void handleChannel(c)}
-              />
-            </div>
+            <button
+              type="button"
+              disabled={exporting || !payload}
+              onClick={() => void handleChannel('more')}
+              className="mt-6 w-full rounded-2xl bg-[#2563eb] px-4 py-3 text-center text-[15px] font-semibold text-white shadow-[0_10px_28px_rgba(37,99,235,0.35)] transition-opacity hover:opacity-95 active:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              Partager ma séance
+            </button>
 
             {onOpenConversationShare && (
               <Button

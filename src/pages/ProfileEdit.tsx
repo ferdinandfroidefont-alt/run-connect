@@ -278,6 +278,7 @@ export default function ProfileEdit() {
       <IosFixedPageHeaderShell
         className="min-h-0 flex-1 bg-secondary"
         contentTopOffsetPx={0}
+        headerWrapperClassName="shrink-0 bg-card"
         header={
           <CoachingFullscreenHeader
             title="Modifier le profil"

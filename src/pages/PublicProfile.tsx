@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +16,7 @@ import {
   Star,
   MessageCircle,
   Users,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
@@ -637,8 +638,8 @@ const PublicProfile = () => {
           ) : null}
 
           {canViewPrivateContent && profileSports.length > 0 ? (
-            <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
-              <p className="mb-2 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="ios-card min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
+              <p className="border-b border-border/50 px-4 py-2.5 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
                 Sports
               </p>
               <ProfileSportChips sportKeys={profileSports} />
@@ -705,6 +706,13 @@ const PublicProfile = () => {
               followingCount={followingCount}
               reliabilityPercent={reliabilityRate}
               showReliabilityColumn={!!user}
+              onReliabilityClick={
+                user
+                  ? () => {
+                      navigate(`/profile/${profile.user_id}/sessions`);
+                    }
+                  : undefined
+              }
             />
           </div>
 
@@ -723,12 +731,30 @@ const PublicProfile = () => {
           />
 
           <div className="min-w-0">
-            <p className="mb-2 px-0.5 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
-              Activités récentes
-            </p>
-            <div className="ios-card min-w-0 border border-border/60 p-3 shadow-[var(--shadow-card)] sm:p-4">
-              <RecentActivities userId={profile.user_id} viewerUserId={user?.id ?? null} limit={3} />
-            </div>
+            <Link
+              to={`/profile/${profile.user_id}/sessions`}
+              className="flex w-full flex-col rounded-2xl text-left transition-colors active:opacity-90"
+              onClick={(e) => {
+                if (!profile) {
+                  e.preventDefault();
+                  return;
+                }
+                if (!user) {
+                  e.preventDefault();
+                  handleSubscribeGuest();
+                }
+              }}
+            >
+              <div className="mb-2 flex items-center gap-2 px-0.5">
+                <p className="min-w-0 flex-1 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+                  Activités récentes
+                </p>
+                {user ? <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : null}
+              </div>
+              <div className="ios-card min-w-0 border border-border/60 p-3 shadow-[var(--shadow-card)] sm:p-4">
+                <RecentActivities userId={profile.user_id} viewerUserId={user?.id ?? null} limit={3} />
+              </div>
+            </Link>
           </div>
 
           <div className="ios-card flex min-w-0 items-center gap-3 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">

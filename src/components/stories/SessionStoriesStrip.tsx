@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus } from "lucide-react";
@@ -18,6 +19,8 @@ interface SessionStoriesStripProps {
   onCreateStory: () => void;
   /** Incremente pour forcer un rechargement (ex: apres creation story). */
   refreshToken?: number;
+  /** Classes sur le conteneur horizontal (maquette 17 : fond crème, padding 20px). */
+  className?: string;
 }
 
 export function SessionStoriesStrip({
@@ -25,6 +28,7 @@ export function SessionStoriesStrip({
   onOpenStory,
   onCreateStory,
   refreshToken = 0,
+  className,
 }: SessionStoriesStripProps) {
   const [authors, setAuthors] = useState<StoryAuthor[]>([]);
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
@@ -112,26 +116,44 @@ export function SessionStoriesStrip({
   );
   const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
+  // Maquette 17 : anneau conique (non vu) = tokens --primary ; vu = bordure sémantique ; fond intérieur = grouped
+  const ringUnviewed =
+    "conic-gradient(from 200deg, hsl(var(--primary) / 1) 0%, hsl(var(--primary-on-dark) / 1) 50%, hsl(var(--primary) / 1) 100%)";
+
   return (
-    <div className="overflow-x-auto bg-white px-4 pb-1.5 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="flex min-w-max items-start gap-3">
+    <div
+      className={cn(
+        "overflow-x-auto px-5 pb-1 pt-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className
+      )}
+    >
+      <div className="flex min-w-max items-start gap-3.5">
         <button
           type="button"
           onClick={hasMyStory ? () => onOpenStory(currentUserId!) : onCreateStory}
           className="flex min-w-[70px] flex-col items-center gap-1.5"
         >
-          <div className="relative rounded-full bg-white p-[2.5px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]">
-            <Avatar className="h-[62px] w-[62px] border-2 border-[#DBEAFE]">
-              <AvatarImage src={myStoryAvatarUrl ?? ""} />
-              <AvatarFallback className="bg-[#DBEAFE] text-[#2563EB]">MOI</AvatarFallback>
-            </Avatar>
+          <div
+            className="relative h-16 w-16 rounded-full p-[2.5px]"
+            style={{ background: "hsl(var(--border))" }}
+          >
+            <div className="h-full w-full rounded-full bg-muted p-[2px]">
+              <Avatar className="h-full w-full">
+                <AvatarImage src={myStoryAvatarUrl ?? ""} />
+                <AvatarFallback className="bg-muted text-[18px] font-semibold text-foreground/70">
+                  {hasMyStory ? "MOI" : "+"}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             {!hasMyStory && (
-              <span className="absolute bottom-0.5 right-0.5 rounded-full bg-[#2563EB] p-[3px] text-white shadow-sm">
-                <Plus className="h-3 w-3" />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[2.5px] border-muted bg-primary text-primary-foreground">
+                <Plus className="h-3 w-3" strokeWidth={2.4} />
               </span>
             )}
           </div>
-          <span className="max-w-[70px] truncate text-[11px] font-medium text-[#0F172A]">Votre story</span>
+          <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-muted-foreground">
+            Toi
+          </span>
         </button>
 
         {authors
@@ -144,20 +166,21 @@ export function SessionStoriesStrip({
               className="flex min-w-[70px] flex-col items-center gap-1.5"
             >
               <div
-                className={
-                  author.viewed
-                    ? "rounded-full bg-[#E2E8F0] p-[2px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]"
-                    : "rounded-full bg-[linear-gradient(135deg,#2563EB_0%,#60A5FA_52%,#93C5FD_100%)] p-[2px] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.42)]"
-                }
+                className="h-16 w-16 rounded-full p-[2.5px]"
+                style={{
+                  background: author.viewed ? "hsl(var(--border))" : ringUnviewed,
+                }}
               >
-                <Avatar className="h-[60px] w-[60px] border-2 border-white">
-                  <AvatarImage src={author.avatar_url ?? ""} />
-                  <AvatarFallback className="bg-[#E2E8F0] text-[#334155]">
-                    {(author.username ?? "U").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="h-full w-full rounded-full bg-muted p-[2px]">
+                  <Avatar className="h-full w-full">
+                    <AvatarImage src={author.avatar_url ?? ""} />
+                    <AvatarFallback className="bg-muted text-[18px] font-semibold text-foreground">
+                      {(author.username ?? "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
               </div>
-              <span className="max-w-[70px] truncate text-[11px] font-medium text-[#0F172A]">
+              <span className="max-w-[70px] truncate text-center text-[11px] font-semibold text-foreground">
                 {author.display_name || author.username || "Membre"}
               </span>
             </button>

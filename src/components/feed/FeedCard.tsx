@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FeedActions } from './FeedActions';
 import { FeedComments } from './FeedComments';
@@ -21,6 +21,7 @@ interface FeedCardProps {
   onAddComment: (sessionId: string, content: string) => void;
   onJoinSession: (sessionId: string) => void;
   onOpenDetails?: (session: FeedSession) => void;
+  forceOpenComments?: boolean;
   index?: number;
 }
 
@@ -44,9 +45,16 @@ export const FeedCard = ({
   onAddComment,
   onJoinSession,
   onOpenDetails,
+  forceOpenComments = false,
   index = 0
 }: FeedCardProps) => {
   const [showComments, setShowComments] = useState(false);
+
+  useEffect(() => {
+    if (forceOpenComments) {
+      setShowComments(true);
+    }
+  }, [forceOpenComments]);
   const renderSocialText = (text: string) => {
     const tokens = text.split(/(\s+)/);
     return tokens.map((token, i) => {

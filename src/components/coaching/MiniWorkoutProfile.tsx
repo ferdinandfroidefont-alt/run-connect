@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { MiniProfileBlock } from "@/lib/workoutVisualization";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { zoneColor } from "@/lib/zonePalette";
 
 interface MiniWorkoutProfileProps {
   blocks?: MiniProfileBlock[];
@@ -19,12 +20,22 @@ interface MiniWorkoutProfileProps {
   selectedBlockIndex?: number | null;
   onBlockTap?: (params: { index: number; anchorX: number; anchorTop: number }) => void;
   onBackgroundTap?: () => void;
+  flatSurface?: boolean;
 }
 
 function resolveBlockHeight(height: number, variant: MiniWorkoutProfileProps["variant"]): number {
   if (variant !== "premiumCompact") return height;
   // Preserve hierarchy and keep a stronger visual delta for zone previews.
   return Math.max(5, Math.round(height * 0.74));
+}
+
+function zonePastelColor(level: number): string {
+  if (level <= 1) return zoneColor("Z1");
+  if (level === 2) return zoneColor("Z2");
+  if (level === 3) return zoneColor("Z3");
+  if (level === 4) return zoneColor("Z4");
+  if (level === 5) return zoneColor("Z5");
+  return zoneColor("Z6");
 }
 
 export function MiniWorkoutProfile({
@@ -39,6 +50,7 @@ export function MiniWorkoutProfile({
   selectedBlockIndex = null,
   onBlockTap,
   onBackgroundTap,
+  flatSurface = false,
 }: MiniWorkoutProfileProps) {
   const profile = blocks?.length
     ? blocks
@@ -47,6 +59,7 @@ export function MiniWorkoutProfile({
   const willUseZoneBands = zoneBandMode && profile.some((b) => b.zoneBandLevel != null);
   const gapPx = interBlockGapPx ?? (willUseZoneBands ? 3 : undefined);
   const useFlexGap = typeof gapPx === "number" && gapPx > 0;
+  const hasSeparators = profile.some((b) => b.separatorBefore);
   const blockGap = useFlexGap && willUseZoneBands ? 0 : variant === "premiumCompact" && !useFlexGap ? 0 : 4;
   const availableWidth = 100 - blockGap * Math.max(0, profile.length - 1);
   const totalWidth = profile.reduce((acc, block) => acc + Math.max(block.width, 0), 0);
@@ -95,6 +108,14 @@ export function MiniWorkoutProfile({
                 selectedBlockIndex === index ? "ring-2 ring-white/95 ring-offset-1 ring-offset-[#2563EB]/60" : ""
               )}
               style={{
+                marginLeft:
+                  willUseZoneBands && hasSeparators
+                    ? index === 0
+                      ? 0
+                      : block.separatorBefore
+                        ? 4
+                        : 2.5
+                    : undefined,
                 flexGrow: Math.max(block.width, 0.001),
                 flexBasis: 0,
                 minWidth: compact ? (variant === "premiumCompact" ? "1px" : "3px") : variant === "premiumCompact" ? "1px" : "4px",
@@ -106,7 +127,7 @@ export function MiniWorkoutProfile({
                       background:
                         block.shape && block.gradientStartColor && block.gradientEndColor
                           ? `linear-gradient(90deg, ${block.gradientStartColor} 0%, ${block.gradientEndColor} 100%)`
-                          : block.color,
+                          : zonePastelColor(block.zoneBandLevel!),
                       clipPath:
                         block.shape === "slopeUp"
                           ? "polygon(0% 100%, 100% 0%, 100% 100%)"
@@ -142,7 +163,9 @@ export function MiniWorkoutProfile({
       <div
         className={cn(
           "flex h-full min-h-0 w-full flex-col overflow-hidden",
-          variant === "premiumCompact"
+          flatSurface
+            ? ""
+            : variant === "premiumCompact"
             ? "rounded-[10px] border border-slate-100 bg-white"
             : "rounded-xl bg-muted/45",
           className
@@ -151,14 +174,20 @@ export function MiniWorkoutProfile({
         <div
           className={cn(
             "flex min-h-0 w-full flex-1 flex-col justify-end",
-            "pt-1.5 pb-2.5",
+            "py-0",
             variant === "premiumCompact" ? "px-0.5" : "px-2"
           )}
           onPointerDown={handleBackgroundPointerDown}
         >
           <div
             className="flex min-h-0 w-full flex-1 items-end"
-            style={useFlexGap && gapPx != null ? { gap: gapPx } : { gap: 0 }}
+            style={
+              hasSeparators
+                ? { gap: 0 }
+                : useFlexGap && gapPx != null
+                  ? { gap: gapPx }
+                  : { gap: 0 }
+            }
           >
             {barRow}
           </div>

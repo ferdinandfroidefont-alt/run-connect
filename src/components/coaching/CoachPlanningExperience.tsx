@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { addDays, addWeeks, format, getISOWeek, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Activity,
@@ -7,12 +17,13 @@ import {
   Clock3,
   Crosshair,
   ChevronRight,
-  ChevronLeft,
+  ChevronDown,
   Dumbbell,
   Flame,
   Gauge,
   GripVertical,
   Leaf,
+  Lock,
   Minus,
   MoreHorizontal,
   Plus,
@@ -55,12 +66,23 @@ import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDr
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
 import { parseRCC } from "@/lib/rccParser";
-import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
+import {
+  ClubManagementPage,
+  type ClubMemberItem,
+  type ClubGroupItem,
+  type ClubInvitationItem,
+  type ClubRole,
+  type ClubMaquetteNextEvent,
+  type ClubSettingsMaquetteVariant,
+} from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { CoachingDraftsPage, type CoachingDraftListItem } from "@/components/coaching/CoachingDraftsPage";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
-import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
+import { CoachingRolePill } from "@/components/coaching/handoff/CoachingRolePill";
+import { CoachPlanificationLanding, type CoachUpcomingSessionRow, type LandingAthleteCard } from "@/components/coaching/handoff/CoachPlanificationLanding";
+import { CoachPlanificationMonthCalendar, type PlanCalendarSession, type PlanCalendarAthlete } from "@/components/coaching/planning/CoachPlanificationMonthCalendar";
+import { Group } from "@/components/apple/Group";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
 import { formatCalendarDistance, isExplicitRestDay, toCalendarSummarySport } from "@/components/coaching/athlete-plan/planUtils";
@@ -68,10 +90,15 @@ import { useUserProfile } from "@/contexts/UserProfileContext";
 import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
 
+const ClubProfileDialog = lazy(() =>
+  import("@/components/ClubProfileDialog").then((m) => ({ default: m.ClubProfileDialog }))
+);
+
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
 type IntensityMode = "zones" | "rpe";
 type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
+type PyramidMode = "symetrique" | "croissante" | "decroissante" | "manuelle";
 
 type SchemaToolKind = "steady" | "interval" | "pyramid" | "variation" | "libre" | "repetition";
 type SchemaDragToolKind = "steady" | "interval" | "pyramid" | "variation";
@@ -151,6 +178,27 @@ type SessionBlock = {
   notes?: string;
 };
 
+type PyramidStepSource = {
+  id: string;
+  paceSecPerKm?: number;
+  distanceM?: number;
+  durationSec?: number;
+  recoveryDurationSec?: number;
+  repetitions?: number;
+  zone?: ZoneKey;
+};
+
+type PyramidConfig = {
+  mode: PyramidMode;
+  steps: PyramidStepSource[];
+};
+
+type PyramidDisplayStep = PyramidStepSource & {
+  isMirror: boolean;
+  mirrorOf?: number;
+  sourceIndex: number;
+};
+
 type TrainingSession = {
   id: string;
   dbId?: string;
@@ -163,6 +211,16 @@ type TrainingSession = {
   sent: boolean;
   blocks: SessionBlock[];
   athleteIntensity?: ReturnType<typeof buildAthleteIntensityContext>;
+  /** Statut participation de l’athlète ciblé (vue coach semaine). */
+  athleteParticipationStatus?: string | null;
+  athleteCompletedAt?: string | null;
+};
+
+type SessionPreviewState = {
+  sessionId: string;
+  blockId: string | null;
+  anchorX: number;
+  anchorTop: number;
 };
 
 type SessionDraft = Omit<TrainingSession, "id" | "sent">;
@@ -271,10 +329,28 @@ type CoachClub = { id: string; name: string };
 type AthleteEntry = {
   id: string;
   name: string;
+  avatarUrl?: string | null;
   runningRecords?: Record<string, unknown> | null;
   coachRunningRecords?: Record<string, unknown> | null;
 };
 type GroupEntry = { id: string; name: string };
+
+function initialsFromName(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const a = parts[0]?.[0] ?? "";
+    const b = parts[parts.length - 1]?.[0] ?? "";
+    return `${a}${b}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function avatarHueFromId(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  const hues = [350, 207, 199, 280, 32, 24];
+  return hues[h % hues.length];
+}
 
 const athleteIntensityFromRunningRecords = (
   runningRecords?: Record<string, unknown> | null,
@@ -282,6 +358,98 @@ const athleteIntensityFromRunningRecords = (
 ) => buildAthleteIntensityContext({ runningRecords: runningRecords ?? null, coachRunningRecords: coachRunningRecords ?? null });
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const PYRAMID_NOTES_PREFIX = "[Pyramid]";
+const PYRAMID_MODE_HINTS: Record<PyramidMode, string> = {
+  symetrique: "🔒 Chaque palier est dupliqué à l'identique en miroir. Modifier un palier source met à jour son miroir automatiquement.",
+  croissante: "Les paliers s'enchaînent du plus facile au plus difficile, sans miroir.",
+  decroissante: "Les paliers s'enchaînent du plus difficile au plus facile, sans miroir.",
+  manuelle: "Tu construis la séquence comme tu veux, aucune contrainte.",
+};
+
+function parsePyramidConfig(block: SessionBlock): PyramidConfig {
+  const fallbackZone = block.zone || "Z4";
+  const fallbackStep: PyramidStepSource = {
+    id: uid(),
+    paceSecPerKm: block.paceSecPerKm,
+    distanceM: block.distanceM,
+    durationSec: block.durationSec,
+    recoveryDurationSec: block.recoveryDurationSec,
+    repetitions: block.repetitions || 1,
+    zone: fallbackZone,
+  };
+  const fallback: PyramidConfig = {
+    mode: "symetrique",
+    steps: [fallbackStep, { ...fallbackStep, id: uid() }, { ...fallbackStep, id: uid() }],
+  };
+  const rawNotes = block.notes || "";
+  if (!rawNotes.includes(PYRAMID_NOTES_PREFIX)) return fallback;
+  const payload = rawNotes.slice(rawNotes.indexOf(PYRAMID_NOTES_PREFIX) + PYRAMID_NOTES_PREFIX.length).trim();
+  if (!payload.startsWith("{")) return fallback;
+  try {
+    const parsed = JSON.parse(payload) as Partial<PyramidConfig>;
+    const mode: PyramidMode =
+      parsed.mode === "symetrique" || parsed.mode === "croissante" || parsed.mode === "decroissante" || parsed.mode === "manuelle"
+        ? parsed.mode
+        : "symetrique";
+    const steps = Array.isArray(parsed.steps)
+      ? parsed.steps
+          .map((step) => ({
+            id: typeof step?.id === "string" && step.id ? step.id : uid(),
+            paceSecPerKm: isPositive(step?.paceSecPerKm) ? Number(step?.paceSecPerKm) : undefined,
+            distanceM: isPositive(step?.distanceM) ? Number(step?.distanceM) : undefined,
+            durationSec: isPositive(step?.durationSec) ? Number(step?.durationSec) : undefined,
+            recoveryDurationSec: isPositive(step?.recoveryDurationSec) ? Number(step?.recoveryDurationSec) : undefined,
+            repetitions: isPositive(step?.repetitions) ? Number(step?.repetitions) : 1,
+            zone:
+              typeof step?.zone === "string" &&
+              ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(step.zone.toUpperCase())
+                ? (step.zone.toUpperCase() as ZoneKey)
+                : fallbackZone,
+          }))
+          .filter((step) => step.id)
+      : [];
+    return {
+      mode,
+      steps: steps.length > 0 ? steps : fallback.steps,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function serializePyramidConfig(config: PyramidConfig) {
+  return `${PYRAMID_NOTES_PREFIX} ${JSON.stringify(config)}`;
+}
+
+function buildPyramidDisplaySteps(config: PyramidConfig): PyramidDisplayStep[] {
+  const sources = config.steps.map((step, sourceIndex) => ({
+    ...step,
+    sourceIndex,
+    isMirror: false,
+  }));
+  if (config.mode !== "symetrique" || sources.length <= 1) return sources;
+  const mirrors = sources
+    .slice(0, -1)
+    .reverse()
+    .map((source) => ({
+      ...source,
+      id: `mirror-${source.id}`,
+      isMirror: true,
+      mirrorOf: source.sourceIndex + 1,
+    }));
+  return [...sources, ...mirrors];
+}
+
+function pyramidSubtitle(config: PyramidConfig) {
+  const sourceCount = config.steps.length;
+  if (config.mode === "symetrique") {
+    const mirrors = Math.max(0, sourceCount - 1);
+    return `${sourceCount} paliers + ${mirrors} miroirs · symétrique`;
+  }
+  if (config.mode === "croissante") return `${sourceCount} paliers · croissante`;
+  if (config.mode === "decroissante") return `${sourceCount} paliers · décroissante`;
+  return `${sourceCount} paliers · manuelle`;
+}
 
 function secondsToLabel(total: number | undefined) {
   if (!total || total <= 0) return "";
@@ -601,21 +769,24 @@ function blockAccent(type: BlockType) {
 function zoneToPreviewColorClass(zone?: string) {
   const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
   switch (normalized) {
-    case "Z1":
-      return "bg-slate-400";
-    case "Z2":
-      return "bg-[#2563EB]";
-    case "Z3":
-      return "bg-green-500";
-    case "Z4":
-      return "bg-yellow-400";
-    case "Z5":
-      return "bg-orange-500";
-    case "Z6":
-      return "bg-red-500";
-    default:
-      return "bg-green-500";
+    case "Z1": return "bg-[#B5B5BA]";
+    case "Z2": return "bg-[#0066cc]";
+    case "Z3": return "bg-[#34C759]";
+    case "Z4": return "bg-[#FFCC00]";
+    case "Z5": return "bg-[#FF9500]";
+    case "Z6": return "bg-[#FF3B30]";
+    default:   return "bg-[#34C759]";
   }
+}
+function zoneHexColor(zone?: string): string {
+  const z = typeof zone === "string" ? zone.toUpperCase() : "Z3";
+  return ({ Z1: "#B5B5BA", Z2: "#0066cc", Z3: "#34C759", Z4: "#FFCC00", Z5: "#FF9500", Z6: "#FF3B30" } as Record<string, string>)[z] ?? "#34C759";
+}
+function zoneTextColor(zone?: string): string {
+  const z = typeof zone === "string" ? zone.toUpperCase() : "Z3";
+  if (z === "Z4") return "#6B5500";
+  if (z === "Z1") return "#1d1d1f";
+  return "#fff";
 }
 
 function blockGraphColor(type: BlockType, recovery = false) {
@@ -643,6 +814,15 @@ function paceStringToSecPerKm(pace?: string) {
   if (!pace) return undefined;
   const [min, sec] = pace.split(":").map(Number);
   if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
+  return min * 60 + sec;
+}
+
+function parsePaceInputToSec(value: string): number | undefined {
+  const cleaned = value.trim().replace(/"/g, "").replace(/''/g, "").replace(/'/g, ":");
+  const [mStr, sStr = "0"] = cleaned.split(":");
+  const min = Number.parseInt(mStr ?? "", 10);
+  const sec = Number.parseInt(sStr ?? "0", 10);
+  if (!Number.isFinite(min) || !Number.isFinite(sec) || min < 0 || sec < 0 || sec > 59) return undefined;
   return min * 60 + sec;
 }
 
@@ -837,6 +1017,12 @@ export function CoachPlanningExperience() {
   const { setBottomNavSuppressed } = useAppContext();
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const planningContinuousRef = useRef<HTMLDivElement | null>(null);
+  const myPlanContinuousRef = useRef<HTMLDivElement | null>(null);
+  /** Scroll principal coaching (IosFixedPageHeaderShell) pour remonter en haut au changement d’écran Mon plan ⇄ Planification. */
+  const coachingMainScrollRef = useRef<HTMLDivElement | null>(null);
+  const weekPlannerTopRef = useRef<HTMLDivElement | null>(null);
+  const didInitialTodayCenterRef = useRef<{ planning: boolean; myPlan: boolean }>({ planning: false, myPlan: false });
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
   const [memberClubIds, setMemberClubIds] = useState<string[]>([]);
@@ -851,8 +1037,11 @@ export function CoachPlanningExperience() {
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
+  const [sessionPreview, setSessionPreview] = useState<SessionPreviewState | null>(null);
   const [activeAthleteId, setActiveAthleteId] = useState<string | undefined>(undefined);
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>(undefined);
+  /** Maquette 16 · ouverture « Programmer la semaine » sans athlète (ex. FAB Créer une séance). */
+  const [coachWeekProgrammerOpen, setCoachWeekProgrammerOpen] = useState(false);
   const [coachingTab, setCoachingTab] = useState<"planning" | "create">("planning");
   const [editorTab, setEditorTab] = useState<"build" | "models">("build");
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -863,6 +1052,7 @@ export function CoachPlanningExperience() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [pendingInsertIndex, setPendingInsertIndex] = useState<number | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [expandedPyramidSteps, setExpandedPyramidSteps] = useState<Record<string, boolean>>({});
   const [schemaDraggingTool, setSchemaDraggingTool] = useState<SchemaDragToolKind | null>(null);
   const [schemaAddMoreOpen, setSchemaAddMoreOpen] = useState(false);
   const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
@@ -903,11 +1093,17 @@ export function CoachPlanningExperience() {
   const [clubGroupsAdmin, setClubGroupsAdmin] = useState<ClubGroupItem[]>([]);
   const [clubInvitations, setClubInvitations] = useState<ClubInvitationItem[]>([]);
   const [clubLocation, setClubLocation] = useState<string | null>(null);
+  const [clubDescription, setClubDescription] = useState<string | null>(null);
+  const [clubCode, setClubCode] = useState<string | null>(null);
+  const [clubCreatedBy, setClubCreatedBy] = useState<string | null>(null);
   const [clubAvatarUrl, setClubAvatarUrl] = useState<string | null>(null);
-  const [plannedSessionsCount, setPlannedSessionsCount] = useState(0);
-  const [validatedSessionsCount, setValidatedSessionsCount] = useState(0);
+  const [nextClubEvent, setNextClubEvent] = useState<ClubMaquetteNextEvent | null>(null);
   const [trackingSelectedAthleteId, setTrackingSelectedAthleteId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [clubProfileOpen, setClubProfileOpen] = useState(false);
+  const [clubProfileNotifMuted, setClubProfileNotifMuted] = useState(false);
+  const [clubConversationCreatedAt, setClubConversationCreatedAt] = useState("");
+  const [coachClubsReloadToken, setCoachClubsReloadToken] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenuKey, setActiveMenuKey] = useState<CoachMenuKey>("planning");
   const [showExitDraftDialog, setShowExitDraftDialog] = useState(false);
@@ -927,6 +1123,11 @@ export function CoachPlanningExperience() {
   }, [draft.blocks, selectedBlockId]);
 
   const effectiveAthleteMode = !isCoachMode || viewAsAthlete;
+
+  const clubPageVariant = useMemo<ClubSettingsMaquetteVariant>(() => {
+    const me = clubMembers.find((m) => m.userId === user?.id);
+    return me?.role === "athlete" ? "athlete" : "admin";
+  }, [clubMembers, user?.id]);
 
   const rotateActiveClub = () => {
     if (!clubs.length) return;
@@ -1017,13 +1218,17 @@ export function CoachPlanningExperience() {
       }));
       setIsCoachMode(isCoach);
       setClubs(nextClubs);
-      setActiveClubId((prev) => prev ?? nextClubs[0]?.id ?? null);
+      setActiveClubId((prev) => {
+        const ids = nextClubs.map((c) => c.id);
+        if (prev && ids.includes(prev)) return prev;
+        return nextClubs[0]?.id ?? null;
+      });
     };
     void loadCoachClubs();
     return () => {
       ignore = true;
     };
-  }, [user]);
+  }, [user, coachClubsReloadToken]);
 
   useEffect(() => {
     if (!activeClubId) return;
@@ -1036,7 +1241,7 @@ export function CoachPlanningExperience() {
       const memberIds = (members || []).map((m) => m.user_id);
       const [{ data: profiles }, { data: coachPrivateRecords }] = memberIds.length
         ? await Promise.all([
-            supabase.from("profiles").select("user_id, display_name, running_records").in("user_id", memberIds),
+            supabase.from("profiles").select("user_id, display_name, running_records, avatar_url").in("user_id", memberIds),
             user
               ? supabase
                   .from("coach_athlete_private_records")
@@ -1071,6 +1276,7 @@ export function CoachPlanningExperience() {
         (profiles || []).map((profile) => ({
           id: profile.user_id,
           name: profile.display_name || "Athlète",
+          avatarUrl: profile.avatar_url ?? null,
           runningRecords:
             profile.running_records && typeof profile.running_records === "object"
               ? (profile.running_records as Record<string, unknown>)
@@ -1091,10 +1297,10 @@ export function CoachPlanningExperience() {
     if (!activeClubId) return;
     let ignore = false;
     const loadClubAdmin = async () => {
-      const [{ data: clubRow }, { data: groupRows }, { data: gmRows }, { data: invitationRows }] = await Promise.all([
+      const [{ data: clubRow }, { data: groupRows }, { data: gmRows }, { data: invitationRows }, nextRes] = await Promise.all([
         supabase
           .from("conversations")
-          .select("group_name, group_avatar_url, location")
+          .select("group_name, group_avatar_url, location, group_description, club_code, created_by, created_at")
           .eq("id", activeClubId)
           .maybeSingle(),
         supabase.from("club_groups").select("id, name").eq("club_id", activeClubId).order("name", { ascending: true }),
@@ -1105,6 +1311,14 @@ export function CoachPlanningExperience() {
           .eq("club_id", activeClubId)
           .order("created_at", { ascending: false })
           .limit(20),
+        supabase
+          .from("coaching_sessions")
+          .select("title, scheduled_at, default_location_name")
+          .eq("club_id", activeClubId)
+          .gte("scheduled_at", new Date().toISOString())
+          .order("scheduled_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       const memberIds = (gmRows || []).map((m) => m.user_id);
@@ -1169,44 +1383,32 @@ export function CoachPlanningExperience() {
         };
       });
 
-      const weekEnd = addDays(weekAnchor, 7);
-      const [{ count: plannedCount }, { data: weekSessions }] = await Promise.all([
-        supabase
-          .from("coaching_sessions")
-          .select("id", { count: "exact", head: true })
-          .eq("club_id", activeClubId)
-          .gte("scheduled_at", weekAnchor.toISOString())
-          .lt("scheduled_at", weekEnd.toISOString()),
-        supabase
-          .from("coaching_sessions")
-          .select("id")
-          .eq("club_id", activeClubId)
-          .gte("scheduled_at", weekAnchor.toISOString())
-          .lt("scheduled_at", weekEnd.toISOString()),
-      ]);
-      const weekSessionIds = (weekSessions || []).map((s) => s.id);
-      const { count: validatedCount } = weekSessionIds.length
-        ? await supabase
-            .from("coaching_participations")
-            .select("id", { count: "exact", head: true })
-            .in("coaching_session_id", weekSessionIds)
-            .eq("status", "completed")
-        : { count: 0 };
-
       if (ignore) return;
       setClubMembers(memberItems);
       setClubGroupsAdmin(groupItems);
       setClubInvitations(invitationItems);
       setClubLocation(clubRow?.location || null);
+      setClubDescription(clubRow?.group_description || null);
+      setClubCode(clubRow?.club_code || null);
+      setClubCreatedBy(clubRow?.created_by || null);
       setClubAvatarUrl(clubRow?.group_avatar_url || null);
-      setPlannedSessionsCount(plannedCount || 0);
-      setValidatedSessionsCount(validatedCount || 0);
+      setClubConversationCreatedAt(clubRow?.created_at || "");
+      const nextSess = nextRes.data;
+      if (nextSess?.scheduled_at) {
+        setNextClubEvent({
+          title: nextSess.title || "Séance club",
+          detail: format(new Date(nextSess.scheduled_at), "EEE d MMM · HH:mm", { locale: fr }),
+          place: nextSess.default_location_name || undefined,
+        });
+      } else {
+        setNextClubEvent(null);
+      }
     };
     void loadClubAdmin();
     return () => {
       ignore = true;
     };
-  }, [activeClubId, weekAnchor]);
+  }, [activeClubId]);
 
   useEffect(() => {
     if (effectiveAthleteMode || !activeClubId || !user) return;
@@ -1227,7 +1429,7 @@ export function CoachPlanningExperience() {
         if (error) {
           toast.error("Impossible de charger la semaine");
         } else {
-          const mapped = (data || []).map<TrainingSession>((row) => {
+          let mapped = (data || []).map<TrainingSession>((row) => {
             const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
             const blocks = rawBlocks.map(mapStoredBlockToSessionBlock);
             const targetAthletes = Array.isArray(row.target_athletes)
@@ -1247,6 +1449,32 @@ export function CoachPlanningExperience() {
               blocks,
             };
           });
+
+          if (activeAthleteId && mapped.length > 0) {
+            const sessionIds = mapped.map((s) => s.id);
+            const { data: participationRows, error: partError } = await supabase
+              .from("coaching_participations")
+              .select("coaching_session_id, status, completed_at")
+              .eq("user_id", activeAthleteId)
+              .in("coaching_session_id", sessionIds);
+            if (!partError && participationRows?.length) {
+              const bySession = new Map(
+                participationRows.map((p: { coaching_session_id: string; status: string | null; completed_at: string | null }) => [
+                  p.coaching_session_id,
+                  p,
+                ])
+              );
+              mapped = mapped.map((s) => {
+                const p = bySession.get(s.id);
+                return {
+                  ...s,
+                  athleteParticipationStatus: p?.status ?? null,
+                  athleteCompletedAt: p?.completed_at ?? null,
+                };
+              });
+            }
+          }
+
           setSessions(mapped);
         }
         setLoading(false);
@@ -1401,6 +1629,10 @@ export function CoachPlanningExperience() {
     () => Array.from({ length: 7 }, (_, i) => addDays(weekAnchor, i)),
     [weekAnchor]
   );
+  const weekStartsContinuous = useMemo(
+    () => Array.from({ length: 13 }, (_, idx) => addWeeks(weekAnchor, idx - 6)),
+    [weekAnchor]
+  );
 
   const searchResults = useMemo(() => {
     if (!search.trim()) return { athletes: [], groups: [] };
@@ -1460,7 +1692,7 @@ export function CoachPlanningExperience() {
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(previewSegments),
+    () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
     [previewSegments]
   );
   const sessionTimeAxisLabels = useMemo(() => {
@@ -1520,6 +1752,109 @@ export function CoachPlanningExperience() {
     setEditorTab("build");
     setCoachingTab("create");
   };
+
+  const openSessionPreview = useCallback((sessionId: string) => {
+    setSessionPreview({ sessionId, blockId: null, anchorX: 0, anchorTop: 0 });
+  }, []);
+
+  const closeSessionPreview = useCallback(() => {
+    setSessionPreview(null);
+  }, []);
+
+  const previewSessionItem = useMemo(
+    () => (sessionPreview ? sessions.find((item) => item.id === sessionPreview.sessionId) : null),
+    [sessionPreview, sessions]
+  );
+
+  const previewSessionSegments = useMemo(
+    () =>
+      previewSessionItem
+        ? buildWorkoutSegments(previewSessionItem.blocks, {
+            sport: previewSessionItem.sport,
+            athleteIntensity: previewSessionItem.athleteIntensity ?? undefined,
+          })
+        : [],
+    [previewSessionItem]
+  );
+
+  const previewSessionMiniBars = useMemo(
+    () => renderWorkoutMiniProfile(previewSessionSegments, { sessionSchema: true }),
+    [previewSessionSegments]
+  );
+
+  const previewSessionMetrics = useMemo(
+    () => resolveWorkoutMetrics({ segments: previewSessionSegments }),
+    [previewSessionSegments]
+  );
+
+  const previewSessionFocusedBlock = useMemo(() => {
+    if (!previewSessionItem || !sessionPreview?.blockId) return null;
+    return previewSessionItem.blocks.find((block) => block.id === sessionPreview.blockId) ?? null;
+  }, [previewSessionItem, sessionPreview]);
+
+  const previewSessionBubbleLabel = useMemo(() => {
+    if (!previewSessionFocusedBlock) return null;
+    const pace = paceToLabel(previewSessionFocusedBlock.paceSecPerKm);
+    const duration = secondsToLabel(previewSessionFocusedBlock.durationSec);
+    const distance = metersToLabel(previewSessionFocusedBlock.distanceM);
+    return [pace, duration || distance].filter(Boolean).join(" · ");
+  }, [previewSessionFocusedBlock]);
+
+  const previewSessionSections = useMemo(() => {
+    if (!previewSessionItem) return [];
+    type DraftSection = { id: string; key: string; title: string; lines: string[]; reps: number };
+    const sections: DraftSection[] = [];
+
+    const getSectionBase = (block: SessionBlock, index: number) => {
+      if (block.type === "warmup") return { key: "warmup", title: "Échauffement" };
+      if (block.type === "cooldown") return { key: "cooldown", title: "Retour au calme" };
+      if (block.type === "recovery" && index >= previewSessionItem.blocks.length - 2) {
+        return { key: "cooldown", title: "Retour au calme" };
+      }
+      if (block.type === "interval") {
+        const reps = Math.max(1, block.repetitions || 1);
+        const shortActivation = (block.durationSec ?? 999) <= 120 && reps <= 4 && index <= 2;
+        return shortActivation
+          ? { key: "activation", title: "Activation" }
+          : { key: "main", title: "Série principale" };
+      }
+      if (block.type === "recovery") return { key: "recovery", title: "Récupération" };
+      return { key: "main", title: "Série principale" };
+    };
+
+    for (const [index, block] of previewSessionItem.blocks.entries()) {
+      const effortLine = blockTranscript(block);
+      const recoveryLine =
+        block.recoveryDurationSec || block.recoveryDistanceM
+          ? `${block.recoveryDurationSec ? secondsToLabel(block.recoveryDurationSec) : metersToLabel(block.recoveryDistanceM)} récup`
+          : null;
+      const base = getSectionBase(block, index);
+      const reps = block.type === "interval" ? Math.max(1, block.repetitions || 1) : 0;
+      const prev = sections[sections.length - 1];
+
+      if (prev && prev.key === base.key) {
+        prev.lines.push(...([effortLine, recoveryLine].filter(Boolean) as string[]));
+        prev.reps += reps;
+      } else {
+        sections.push({
+          id: block.id,
+          key: base.key,
+          title: base.title,
+          lines: [effortLine, recoveryLine].filter(Boolean) as string[],
+          reps,
+        });
+      }
+    }
+
+    return sections.map((section) => ({
+      id: section.id,
+      title:
+        (section.key === "activation" || section.key === "main") && section.reps > 0
+          ? `${section.title} ${section.reps}×`
+          : section.title,
+      lines: section.lines,
+    }));
+  }, [previewSessionItem]);
 
   const saveSession = async (): Promise<boolean> => {
     if (!draft.blocks.length || !activeClubId || !user) return false;
@@ -1616,6 +1951,8 @@ export function CoachPlanningExperience() {
         sent: false,
         assignedDate: targetDate.toISOString(),
         blocks: session.blocks.map((b) => ({ ...b, id: uid() })),
+        athleteParticipationStatus: null,
+        athleteCompletedAt: null,
       },
     ]);
   };
@@ -1978,10 +2315,19 @@ export function CoachPlanningExperience() {
   const createQuickSchemaBlock = useCallback((kind: SchemaToolKind): SessionBlock => {
     const nextOrder = draft.blocks.length + 1;
     if (kind === "pyramid") {
+      const defaultStep = {
+        id: uid(),
+        paceSecPerKm: 330,
+        distanceM: 200,
+        durationSec: 60,
+        recoveryDurationSec: 60,
+        repetitions: 1,
+        zone: "Z4" as ZoneKey,
+      };
       return {
         ...createDefaultBlock("steady", nextOrder),
-        repetitions: 5,
-        notes: "[Pyramid]",
+        repetitions: 3,
+        notes: serializePyramidConfig({ mode: "symetrique", steps: [defaultStep, { ...defaultStep, id: uid() }, { ...defaultStep, id: uid() }] }),
         zone: "Z4",
       };
     }
@@ -2109,6 +2455,29 @@ export function CoachPlanningExperience() {
       blocks: prev.blocks.map((block) => (block.id === blockId ? updater(block) : block)),
     }));
   }, []);
+
+  const updatePyramidBlock = useCallback(
+    (blockId: string, updater: (config: PyramidConfig) => PyramidConfig) => {
+      updateDraftBlock(blockId, (current) => {
+        const currentConfig = parsePyramidConfig(current);
+        const nextConfig = updater(currentConfig);
+        const safeSteps = nextConfig.steps.length
+          ? nextConfig.steps
+          : [{ id: uid(), zone: current.zone || "Z4", repetitions: 1 }];
+        return {
+          ...current,
+          notes: serializePyramidConfig({ ...nextConfig, steps: safeSteps }),
+          paceSecPerKm: safeSteps[0]?.paceSecPerKm ?? current.paceSecPerKm,
+          distanceM: safeSteps[0]?.distanceM ?? current.distanceM,
+          durationSec: safeSteps[0]?.durationSec ?? current.durationSec,
+          recoveryDurationSec: safeSteps[0]?.recoveryDurationSec ?? current.recoveryDurationSec,
+          repetitions: safeSteps.length,
+          zone: safeSteps[0]?.zone ?? current.zone ?? "Z4",
+        };
+      });
+    },
+    [updateDraftBlock]
+  );
 
   const removeDraftBlock = useCallback((blockId: string) => {
     setDraft((prev) => {
@@ -2273,29 +2642,45 @@ export function CoachPlanningExperience() {
     [draft.blocks.length, draft.title]
   );
 
-  const goToCoachSection = useCallback(
-    (key: CoachMenuKey) => {
-      setActiveMenuKey(key);
-      setDrawerOpen(false);
-      if (key === "planning" || key === "my-plan") {
-        setViewAsAthlete(key === "my-plan");
-        setCoachingTab("planning");
-        return;
-      }
-      if (key === "messages") {
-        navigate("/messages");
-        return;
-      }
-      if (key === "settings") {
-        navigate("/profile/edit");
-        return;
-      }
-      if (key === "tracking") {
-        setTrackingSelectedAthleteId(null);
-      }
+  const goToCoachSection = useCallback((key: CoachMenuKey, opts?: { trackingAthleteId?: string | null }) => {
+    if (key !== "planning") setCoachWeekProgrammerOpen(false);
+    setActiveMenuKey(key);
+    setDrawerOpen(false);
+    if (key === "planning" || key === "my-plan") {
+      setViewAsAthlete(key === "my-plan");
       setCoachingTab("planning");
+      return;
+    }
+    if (key === "messages") {
+      navigate("/messages");
+      return;
+    }
+    if (key === "settings") {
+      navigate("/profile/edit");
+      return;
+    }
+    if (key === "tracking") {
+      const athleteId = opts?.trackingAthleteId ?? null;
+      setTrackingSelectedAthleteId(athleteId);
+      setCoachingTab("planning");
+      return;
+    }
+    setCoachingTab("planning");
+  }, [navigate]);
+
+  const handleOpenPlanForAthleteFromTracking = useCallback(
+    (athleteId: string, _athleteName: string, _groupId?: string, weekDate?: Date) => {
+      setTrackingSelectedAthleteId(null);
+      setActiveGroupId(undefined);
+      setActiveAthleteId(athleteId);
+      setCoachWeekProgrammerOpen(true);
+      setActiveMenuKey("planning");
+      setCoachingTab("planning");
+      if (weekDate) {
+        setWeekAnchor(startOfWeek(weekDate, { weekStartsOn: 1 }));
+      }
     },
-    [navigate]
+    []
   );
 
   useEffect(() => {
@@ -2306,6 +2691,24 @@ export function CoachPlanningExperience() {
     goToCoachSection("club");
     navigate(location.pathname, { replace: true, state: {} });
   }, [location.state, location.pathname, user, navigate, goToCoachSection]);
+
+  useEffect(() => {
+    if (!user) return;
+    let ignore = false;
+    void (async () => {
+      const { data } = await supabase.from("profiles").select("notif_message").eq("user_id", user.id).maybeSingle();
+      if (ignore) return;
+      setClubProfileNotifMuted(data?.notif_message === false);
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [user]);
+
+  const openClubProfileSheet = useCallback(() => {
+    if (!activeClubId) return;
+    setClubProfileOpen(true);
+  }, [activeClubId]);
 
   const handleDrawerSelect = (key: CoachMenuKey) => {
     // Athlète sans rôle coach : tous les items "coach" déclenchent une popup d'invitation à créer un club.
@@ -2355,6 +2758,228 @@ export function CoachPlanningExperience() {
     });
     return Array.from(m.values());
   }, [athletePlanSessions]);
+
+  const landingWeekSessions = useMemo(() => {
+    if (effectiveAthleteMode || activeAthleteId || activeGroupId) return [];
+    return sessions;
+  }, [sessions, effectiveAthleteMode, activeAthleteId, activeGroupId]);
+
+  const landingIndicatorsByDate = useMemo(() => {
+    const map: Record<string, Array<{ color: string }>> = {};
+    const sportColor = (sport: SportType) => {
+      if (sport === "running") return "#0a84ff";
+      if (sport === "cycling") return "#ff9500";
+      if (sport === "swimming") return "#5ac8fa";
+      if (sport === "strength") return "#af52de";
+      return "#64748b";
+    };
+    landingWeekSessions.forEach((session) => {
+      const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
+      if (!map[key]) map[key] = [];
+      map[key].push({ color: sportColor(session.sport) });
+    });
+    return map;
+  }, [landingWeekSessions]);
+
+  const landingMonthLine = useMemo(() => {
+    const w = getISOWeek(weekAnchor);
+    const month = format(weekAnchor, "MMMM yyyy", { locale: fr });
+    return `SEMAINE ${w} · ${month}`.toUpperCase();
+  }, [weekAnchor]);
+
+  const landingStats = useMemo(() => {
+    const sessionsScheduled = landingWeekSessions.length;
+    const validatedCount = landingWeekSessions.filter((s) => s.sent).length;
+    const pendingCount = landingWeekSessions.filter((s) => !s.sent).length;
+    const athletesActive = athletes.length;
+    return { sessionsScheduled, validatedCount, pendingCount, athletesActive };
+  }, [landingWeekSessions, athletes.length]);
+
+  const landingAthleteCards = useMemo((): LandingAthleteCard[] => {
+    return athletes.slice(0, 16).map((a) => {
+      const mine = landingWeekSessions.filter((s) => {
+        const ids = new Set<string>();
+        if (s.athleteId) ids.add(s.athleteId);
+        (s.athleteIds || []).forEach((id) => ids.add(id));
+        return ids.has(a.id);
+      });
+      const hasDraft = mine.some((s) => !s.sent);
+      const hasAny = mine.length > 0;
+      const hue = avatarHueFromId(a.id);
+      return {
+        id: a.id,
+        name: a.name,
+        initials: initialsFromName(a.name),
+        subtitle: "Athlète",
+        avatarUrl: a.avatarUrl ?? null,
+        avatarClass: `bg-[hsl(${hue},85%,52%)]`,
+        statusDotClass: hasDraft ? "bg-[#FF9F0A]" : hasAny ? "bg-[#34C759]" : "bg-muted-foreground/35",
+      };
+    });
+  }, [athletes, landingWeekSessions]);
+
+  const upcomingCoachRows = useMemo((): CoachUpcomingSessionRow[] => {
+    const sorted = [...landingWeekSessions].sort(
+      (a, b) => new Date(a.assignedDate).getTime() - new Date(b.assignedDate).getTime()
+    );
+    return sorted.slice(0, 10).map((s) => {
+      const athleteId = s.athleteId || s.athleteIds?.[0];
+      const athlete = athleteId ? athletes.find((x) => x.id === athleteId) : undefined;
+      const name = athlete?.name || "Athlète";
+      const d = new Date(s.assignedDate);
+      const hue = avatarHueFromId(athleteId || s.id);
+      return {
+        id: s.id,
+        dayShort: format(d, "EEE", { locale: fr })
+          .replace(/\.$/, "")
+          .slice(0, 3)
+          .toUpperCase(),
+        dateNum: format(d, "d"),
+        time: format(d, "HH:mm"),
+        title: s.title,
+        athleteName: name,
+        athleteInitials: initialsFromName(name),
+        athleteAvatarClass: `bg-[hsl(${hue},85%,52%)]`,
+        status: s.sent ? "sent" : "draft",
+      };
+    });
+  }, [landingWeekSessions, athletes]);
+
+  // ── Données pour le nouveau calendrier mensuel ────────────────────────────
+  const calendarSessions = useMemo((): PlanCalendarSession[] => {
+    return sessions.map((s) => {
+      const athleteEntry = s.athleteId ? athletes.find((a) => a.id === s.athleteId) : undefined;
+      const status: PlanCalendarSession["status"] =
+        s.athleteParticipationStatus === "completed"
+          ? "validated"
+          : s.sent
+            ? "pending"
+            : "draft";
+      const d = new Date(s.assignedDate);
+      const timeStr = !Number.isNaN(d.getTime()) ? format(d, "HH:mm") : undefined;
+      return {
+        id: s.id,
+        title: s.title,
+        sport: s.sport,
+        assignedDate: s.assignedDate,
+        time: timeStr,
+        athleteName: athleteEntry?.name,
+        status,
+      };
+    });
+  }, [sessions, athletes]);
+
+  const calendarAthletes = useMemo((): PlanCalendarAthlete[] => {
+    return athletes.map((a) => {
+      const mine = sessions.filter((s) => s.athleteId === a.id);
+      const statusColor: PlanCalendarAthlete["statusColor"] = mine.some(
+        (s) => s.sent && s.athleteParticipationStatus !== "completed"
+      )
+        ? "red"
+        : mine.some((s) => !s.sent)
+          ? "orange"
+          : mine.length > 0
+            ? "green"
+            : "gray";
+      return {
+        id: a.id,
+        name: a.name,
+        avatarUrl: a.avatarUrl ?? undefined,
+        statusColor,
+      };
+    });
+  }, [athletes, sessions]);
+
+  const showCoachLanding =
+    activeMenuKey === "planning" && !effectiveAthleteMode && !activeAthleteId && !activeGroupId && !coachWeekProgrammerOpen;
+  const weekPlannerMode =
+    activeMenuKey === "planning" && !effectiveAthleteMode && (!!activeAthleteId || !!activeGroupId || coachWeekProgrammerOpen);
+
+  useLayoutEffect(() => {
+    const bump = () => {
+      coachingMainScrollRef.current && (coachingMainScrollRef.current.scrollTop = 0);
+    };
+    bump();
+    const raf = window.requestAnimationFrame(() => bump());
+    return () => window.cancelAnimationFrame(raf);
+  }, [activeMenuKey, effectiveAthleteMode]);
+
+  const scrollWeekPlannerTopIntoView = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      weekPlannerTopRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!weekPlannerMode) {
+      didInitialTodayCenterRef.current.planning = false;
+      return;
+    }
+    if (didInitialTodayCenterRef.current.planning) return;
+    const root = planningContinuousRef.current;
+    if (!root) return;
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const todayRow = root.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
+    if (!todayRow) return;
+    requestAnimationFrame(() => {
+      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
+      didInitialTodayCenterRef.current.planning = true;
+    });
+  }, [weekPlannerMode, enrichedFilteredSessions.length]);
+
+  useEffect(() => {
+    if (activeMenuKey !== "my-plan") {
+      didInitialTodayCenterRef.current.myPlan = false;
+      return;
+    }
+    if (didInitialTodayCenterRef.current.myPlan) return;
+    const root = myPlanContinuousRef.current;
+    if (!root) return;
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const todayRow = root.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
+    if (!todayRow) return;
+    requestAnimationFrame(() => {
+      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
+      didInitialTodayCenterRef.current.myPlan = true;
+    });
+  }, [activeMenuKey, athletePlanSessions.length]);
+
+  const coachingHeaderTitle = useMemo(() => {
+    if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
+    switch (activeMenuKey) {
+      case "tracking":
+        return "Planification";
+      case "dashboard":
+        return "Tableau de bord";
+      case "templates":
+        return "Modèles";
+      case "groups":
+        return "Brouillons";
+      case "club":
+        return "Club";
+      default:
+        return "Planification";
+    }
+  }, [activeMenuKey, effectiveAthleteMode, isCoachMode]);
+
+  const clearWeekPlannerTarget = useCallback(() => {
+    setActiveAthleteId(undefined);
+    setActiveGroupId(undefined);
+    setSearch("");
+    setCoachWeekProgrammerOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeAthleteId) {
+      const a = athletes.find((x) => x.id === activeAthleteId);
+      if (a?.name) setSearch(a.name);
+      return;
+    }
+    if (activeGroupId) {
+      const g = groups.find((x) => x.id === activeGroupId);
+      if (g?.name) setSearch(g.name);
+    }
+  }, [activeAthleteId, activeGroupId, athletes, groups]);
 
   const confirmAthleteSession = async (s: AthletePlanSessionModel) => {
     if (!s.participationId) {
@@ -2457,6 +3082,53 @@ export function CoachPlanningExperience() {
     setClubs((prev) => prev.map((club) => (club.id === activeClubId ? { ...club, name: nextName.trim() } : club)));
     setClubLocation(nextLocation);
     toast.success("Informations du club mises à jour");
+  };
+
+  const shareClubFromCoaching = async () => {
+    if (!clubCode) {
+      toast.error("Code du club indisponible");
+      return;
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: activeClubName || "Club",
+          text: `Rejoins ${activeClubName || "le club"} avec le code : ${clubCode}`,
+        });
+      } else {
+        await navigator.clipboard.writeText(clubCode);
+        toast.success("Code copié");
+      }
+    } catch {
+      /* annulation partage */
+    }
+  };
+
+  const deleteClubAsAdmin = async () => {
+    if (!activeClubId || !user) return;
+    if (!window.confirm(`Supprimer définitivement le club « ${activeClubName || ""} » ?`)) return;
+    try {
+      await supabase.from("group_members").delete().eq("conversation_id", activeClubId);
+      await supabase.from("messages").delete().eq("conversation_id", activeClubId);
+      const { error } = await supabase.from("conversations").delete().eq("id", activeClubId);
+      if (error) throw error;
+      toast.success("Club supprimé");
+      setClubs((prev) => prev.filter((c) => c.id !== activeClubId));
+      setActiveClubId(null);
+      setActiveMenuKey(effectiveAthleteMode ? "my-plan" : "planning");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error("Suppression impossible", msg);
+    }
+  };
+
+  const leaveClubFromCoaching = async () => {
+    if (!user || !activeClubId) return;
+    if (!window.confirm("Quitter ce club ?")) return;
+    await removeMemberFromClub(user.id);
+    setClubs((prev) => prev.filter((c) => c.id !== activeClubId));
+    setActiveClubId(null);
+    setActiveMenuKey("my-plan");
   };
 
   const createGroup = async () => {
@@ -2587,73 +3259,126 @@ export function CoachPlanningExperience() {
     }
   };
 
+  /** Mon plan / Planification : header dans le flux (pas d’ancrage fixe iOS) — autres vues gardent le pin clavier-safe. */
+  const pinCoachShellHeader =
+    weekPlannerMode || activeMenuKey === "club" || activeMenuKey === "tracking";
+
   return (
     <>
-      <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden bg-white" data-tutorial="tutorial-coaching">
+      <div className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden" data-tutorial="tutorial-coaching">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="shrink-0 border-b border-border bg-card"
+          contentTopOffsetPx={0}
+          pinHeader={pinCoachShellHeader}
+          scrollRef={coachingMainScrollRef}
+          headerWrapperClassName={
+            weekPlannerMode
+              ? "shrink-0 border-0 apple-grouped-bg"
+              : activeMenuKey === "club"
+                ? "shrink-0 border-b border-border apple-grouped-bg"
+                : activeMenuKey === "my-plan"
+                  ? "shrink-0 border-0 z-50 apple-grouped-bg"
+                  : showCoachLanding
+                    ? "shrink-0 border-0 z-50 bg-white dark:bg-background"
+                    : "shrink-0 border-0 z-50 apple-grouped-bg"
+          }
           header={
-            <PlanningHeader
-              onOpenMenu={() => setDrawerOpen(true)}
-              title="Coaching"
-              tabs={[
-                {
-                  id: "planning",
-                  label: "Planification",
-                  active: activeMenuKey === "planning",
-                  onClick: () => {
-                    setActiveMenuKey("planning");
-                    setViewAsAthlete(false);
-                    setCoachingTab("planning");
-                  },
-                },
-                {
-                  id: "tracking",
-                  label: "Suivi athlète",
-                  active: activeMenuKey === "tracking",
-                  onClick: () => {
-                    setActiveMenuKey("tracking");
-                    setTrackingSelectedAthleteId(null);
-                    setCoachingTab("planning");
-                  },
-                },
-                {
-                  id: "my-plan",
-                  label: "Mon plan",
-                  active: activeMenuKey === "my-plan",
-                  onClick: () => {
-                    setActiveMenuKey("my-plan");
-                    setViewAsAthlete(true);
-                    setCoachingTab("planning");
-                  },
-                },
-              ]}
-            />
-          }
-          scrollClassName="bg-white"
-          footer={
-            activeMenuKey === "planning" && !effectiveAthleteMode ? (
-              <div className="border-t border-border bg-card px-4 py-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="secondary" className="h-10 rounded-xl" onClick={() => copyAthleteWeek()}>
-                    Copier la semaine
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-10 rounded-xl"
-                    onClick={() => void pasteAthleteWeek()}
-                    disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
-                  >
-                    Coller la semaine
-                  </Button>
-                </div>
+            weekPlannerMode ? (
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
+                <IosPageHeaderBar
+                  leadingBack={{
+                    onClick: clearWeekPlannerTarget,
+                    label: "Planification",
+                  }}
+                  title="Programmer la semaine"
+                  right={null}
+                />
               </div>
-            ) : null
+            ) : activeMenuKey === "club" ? (
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
+                <IosPageHeaderBar
+                  leadingBack={{
+                    onClick: () => setActiveMenuKey(effectiveAthleteMode ? "my-plan" : "planning"),
+                    label: "Coaching",
+                  }}
+                  title=""
+                  titleClassName="sr-only"
+                  right={
+                    <button
+                      type="button"
+                      className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#0066cc] active:opacity-60"
+                      onClick={() => {
+                        if (clubPageVariant === "admin") void editClubInfo();
+                        else void shareClubFromCoaching();
+                      }}
+                    >
+                      {clubPageVariant === "admin" ? <span className="font-semibold">Modifier</span> : "Partager"}
+                    </button>
+                  }
+                />
+              </div>
+            ) : activeMenuKey === "tracking" ? (
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
+                <IosPageHeaderBar
+                  leadingBack={{
+                    onClick: () => setActiveMenuKey("planning"),
+                    label: "Page précédente",
+                  }}
+                  title="Suivi athlète"
+                />
+              </div>
+            ) : (
+              <PlanningHeader
+                onOpenMenu={() => setDrawerOpen(true)}
+                title={coachingHeaderTitle}
+                coachLandingBrand={false}
+                hideDrawerActions={
+                  coachingHeaderTitle === "Mon plan" || coachingHeaderTitle === "Planification"
+                }
+                clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
+                clubName={activeClubId ? activeClubName : undefined}
+                onPressClubAvatar={activeClubId ? openClubProfileSheet : undefined}
+                surfaceClassName={showCoachLanding ? "bg-white dark:bg-background" : undefined}
+              />
+            )
           }
+          scrollClassName={
+            weekPlannerMode ||
+            activeMenuKey === "club" ||
+            activeMenuKey === "tracking" ||
+            activeMenuKey === "my-plan" ||
+            showCoachLanding
+              ? "apple-grouped-bg"
+              : "bg-white dark:bg-background"
+          }
+          footer={null}
         >
-          <div className={cn("space-y-0", activeMenuKey === "planning" ? "pb-0" : "pb-6")}>
+          <div className={cn("space-y-0", activeMenuKey === "planning" || activeMenuKey === "tracking" ? "pb-0" : "pb-6")}>
+            {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") && !weekPlannerMode ? (
+              <CoachingRolePill
+                className={cn(
+                  "sticky top-0 z-20 pt-2 supports-[backdrop-filter]:backdrop-blur",
+                  showCoachLanding
+                    ? "border-b border-[#E5E5EA]/80 bg-white/95 supports-[backdrop-filter]:bg-white/92"
+                    : "bg-secondary/95 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur"
+                )}
+                active={effectiveAthleteMode ? "athlete" : "coach"}
+                onSelect={(role) => {
+                  if (role === "athlete") {
+                    setViewAsAthlete(true);
+                    setActiveMenuKey("my-plan");
+                  } else {
+                    setViewAsAthlete(false);
+                    setActiveAthleteId(undefined);
+                    setActiveGroupId(undefined);
+                    setCoachWeekProgrammerOpen(false);
+                    setActiveMenuKey("planning");
+                    setSearch("");
+                  }
+                }}
+              />
+            ) : null}
+
             {activeMenuKey === "planning" && clubs.length > 1 && (
               <div className="border-b border-border bg-card">
                 <p className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
@@ -2675,29 +3400,114 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            {activeMenuKey === "planning" && !effectiveAthleteMode && <PlanningSearchBar value={search} onChange={setSearch} />}
+            {weekPlannerMode ? (
+              <>
+                <div ref={weekPlannerTopRef} className="h-0 w-full" aria-hidden />
+                <div className="sticky top-0 z-20 bg-secondary/95 pt-1 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur">
+                <PlanningSearchBar
+                  bare
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Rechercher un athlète ou un groupe"
+                />
+                {search.trim().length > 0 && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) ? (
+                  <div className="mt-2 divide-y divide-border overflow-hidden rounded-[12px] border border-border bg-card shadow-sm">
+                    {searchResults.groups.map((group) => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
+                        onClick={() => {
+                          setActiveGroupId(group.id);
+                          setActiveAthleteId(undefined);
+                          setCoachWeekProgrammerOpen(false);
+                          setSearch("");
+                          scrollWeekPlannerTopIntoView();
+                        }}
+                      >
+                        <span className="text-[15px] font-medium text-foreground">{group.name}</span>
+                        <span className="text-[13px] text-muted-foreground">Groupe</span>
+                      </button>
+                    ))}
+                    {searchResults.athletes.map((athlete) => (
+                      <button
+                        key={athlete.id}
+                        type="button"
+                        className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
+                        onClick={() => {
+                          setActiveAthleteId(athlete.id);
+                          setActiveGroupId(undefined);
+                          setCoachWeekProgrammerOpen(false);
+                          setSearch("");
+                          scrollWeekPlannerTopIntoView();
+                        }}
+                      >
+                        <span className="text-[15px] font-medium text-foreground">{athlete.name}</span>
+                        <span className="text-[13px] text-muted-foreground">Athlète</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                </div>
+              </>
+            ) : null}
 
-            {activeMenuKey === "planning" && !effectiveAthleteMode && (activeAthlete || activeGroup) && (
-              <div className="border-b border-border bg-card px-4 py-2">
+            {weekPlannerMode && (activeAthlete || activeGroup) ? (
+              <div className="px-4 pb-[18px] pt-3">
                 {activeAthlete ? (
-                  <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
-                    <span className="text-[14px] font-medium text-foreground">Athlète sélectionné : {activeAthlete.name}</span>
+                  <div className="flex items-center gap-3 rounded-[14px] border border-[rgba(10,132,255,0.25)] bg-card py-2.5 pl-2.5 pr-2 shadow-[0_0_0_3px_rgba(10,132,255,0.08)]">
+                    {activeAthlete.avatarUrl ? (
+                      <img
+                        src={activeAthlete.avatarUrl}
+                        alt={`Photo de profil de ${activeAthlete.name}`}
+                        className="h-10 w-10 shrink-0 rounded-full object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
+                        style={{ backgroundColor: `hsl(${avatarHueFromId(activeAthlete.id)},85%,52%)` }}
+                      >
+                        {initialsFromName(activeAthlete.name)}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[16px] font-semibold tracking-[-0.03em] text-foreground">{activeAthlete.name}</p>
+                      <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Athlète</p>
+                    </div>
                     <button
                       type="button"
-                      className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
-                      onClick={() => setActiveAthleteId(undefined)}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[15px] leading-none text-muted-foreground"
+                      style={{ background: "rgba(118, 118, 128, 0.12)" }}
+                      onClick={() => {
+                        setActiveAthleteId(undefined);
+                        setSearch("");
+                        setCoachWeekProgrammerOpen(true);
+                      }}
                       aria-label="Désélectionner l'athlète"
                     >
                       ×
                     </button>
                   </div>
                 ) : activeGroup ? (
-                  <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
-                    <span className="text-[14px] font-medium text-foreground">Groupe sélectionné : {activeGroup.name}</span>
+                  <div className="flex items-center gap-3 rounded-[14px] border border-[rgba(10,132,255,0.25)] bg-card py-2.5 pl-2.5 pr-2 shadow-[0_0_0_3px_rgba(10,132,255,0.08)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground">
+                      {initialsFromName(activeGroup.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[16px] font-semibold tracking-[-0.03em] text-foreground">{activeGroup.name}</p>
+                      <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Groupe</p>
+                    </div>
                     <button
                       type="button"
-                      className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
-                      onClick={() => setActiveGroupId(undefined)}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[15px] leading-none text-muted-foreground"
+                      style={{ background: "rgba(118, 118, 128, 0.12)" }}
+                      onClick={() => {
+                        setActiveGroupId(undefined);
+                        setSearch("");
+                        setCoachWeekProgrammerOpen(true);
+                      }}
                       aria-label="Désélectionner le groupe"
                     >
                       ×
@@ -2705,142 +3515,343 @@ export function CoachPlanningExperience() {
                   </div>
                 ) : null}
               </div>
-            )}
-
-            {activeMenuKey === "planning" && !effectiveAthleteMode && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
-              <div className="divide-y divide-border border-b border-border bg-card">
-                {searchResults.groups.map((group) => (
-                  <button
-                    key={group.id}
-                    type="button"
-                    className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
-                    onClick={() => {
-                      setActiveGroupId(group.id);
-                      setActiveAthleteId(undefined);
-                    }}
-                  >
-                    <span className="text-[15px] font-medium text-foreground">{group.name}</span>
-                    <span className="text-[13px] text-muted-foreground">Groupe</span>
-                  </button>
-                ))}
-                {searchResults.athletes.map((athlete) => (
-                  <button
-                    key={athlete.id}
-                    type="button"
-                    className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
-                    onClick={() => {
-                      setActiveAthleteId(athlete.id);
-                      setActiveGroupId(undefined);
-                    }}
-                  >
-                    <span className="text-[15px] font-medium text-foreground">{athlete.name}</span>
-                    <span className="text-[13px] text-muted-foreground">Athlète</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <AthleteMyPlanView
-                loading={athletePlanLoading}
-                weekDays={weekDays}
-                weekStart={weekAnchor}
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
-                onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
-                sessions={athletePlanSessions}
-                prevWeekPlannedKm={prevWeekAthleteKm}
-                coaches={athleteCoachesBrief}
-                onConfirmSession={confirmAthleteSession}
-                onCompleteSession={completeAthleteSession}
-                onMessageCoach={(id) => void openDirectMessage(id)}
-                onPersistSessionFeedback={persistAthleteFeedback}
-                onOpenCoaches={() => document.getElementById("athlete-coaches-block")?.scrollIntoView({ behavior: "smooth" })}
-                onOpenMessages={() => navigate("/messages")}
-                onOpenPastSessions={() => setWeekAnchor(startOfWeek(subWeeks(new Date(), 3), { weekStartsOn: 1 }))}
-                onOpenCalendar={() => toast.info("Vue calendrier complet", "Cette navigation arrive bientôt.")}
-                onOpenExportApps={() => toast.info("Export entraînements", "Choisis ton app pour lancer la synchronisation.")}
-                navigateProfile={(userId) => navigate(`/profile/${userId}`)}
+              <div ref={myPlanContinuousRef} className="pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+                {weekStartsContinuous.map((weekStart) => {
+                  const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+                  const weekSessions = athletePlanSessions.filter((session) => {
+                    const d = new Date(session.assignedDate);
+                    return d >= weekStart && d < addDays(weekStart, 7);
+                  });
+                  return (
+                    <div key={weekStart.toISOString()}>
+                      <div className="px-5 pb-1.5 pt-2">
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekStart)}</p>
+                          <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
+                            · {format(weekStart, "d", { locale: fr })} - {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
+                          </p>
+                        </div>
+                        <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
+                          <span>
+                            <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
+                              {formatCalendarDistance(
+                                weekSessions.reduce((acc, item) => acc + (item.distanceKm || 0), 0)
+                              )}
+                            </b>{" "}
+                            · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{weekSessions.length}</b> séance(s)
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        {weekDaysLocal.map((day, dayIdx) => {
+                    const daySessions = athletePlanSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                    const session = daySessions[0];
+                    const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                    const normalizedSegments = session
+                      ? buildWorkoutSegments(session.blocks, { sport: session.sport })
+                      : [];
+                    const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
+                      ? session.sport === "cycling"
+                        ? "cycling"
+                        : session.sport === "swimming"
+                          ? "swimming"
+                          : session.sport === "strength"
+                            ? "strength"
+                            : session.sport === "running"
+                              ? "running"
+                              : "other"
+                      : undefined;
+                    const workoutMetrics = session
+                      ? resolveWorkoutMetrics({ segments: normalizedSegments })
+                      : null;
+                    const summary = session
+                      ? {
+                          title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                          subtitle: session.title,
+                          duration: workoutMetrics?.durationLabel,
+                          distance: workoutMetrics?.distanceLabel,
+                          intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
+                          miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
+                          isRestDay: isExplicitRestDay([{ ...session, assignedDate: session.assignedDate } as any]),
+                          sportHint,
+                        }
+                      : undefined;
+                    const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
+                    return (
+                      <div key={day.toISOString()} data-day-key={format(day, "yyyy-MM-dd")}>
+                        <DayPlanningRow
+                          dayLabel={format(day, "EEEE", { locale: fr })}
+                          dateLabel={format(day, "d")}
+                          isSelected={isSelectedDay}
+                          session={summary}
+                          isSent={session?.participationStatus === "completed"}
+                          accentColor={accentColor}
+                          emptyLabel="Repos"
+                          layoutVariant="coachWeek"
+                          isLast={dayIdx === weekDaysLocal.length - 1}
+                          athleteSessionCompleted={session?.participationStatus === "completed"}
+                          onAdd={() => undefined}
+                          onOpen={session ? () => openSessionPreview(session.id) : undefined}
+                          onEdit={undefined}
+                          onSend={undefined}
+                          onDuplicate={undefined}
+                          onDelete={undefined}
+                          onUnsend={undefined}
+                          allowSessionActions={false}
+                          hideActionSlot
+                        />
+                      </div>
+                    );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+                </div>
+            ) : activeMenuKey === "planning" && showCoachLanding ? (
+              <CoachPlanificationMonthCalendar
+                sessions={calendarSessions}
+                athletes={calendarAthletes}
+                onCreateSession={() => {
+                  setActiveAthleteId(undefined);
+                  setActiveGroupId(undefined);
+                  setSearch("");
+                  setCoachWeekProgrammerOpen(true);
+                }}
+                onOpenSession={(id) => openEditSession(id)}
+                onSelectAthlete={(id) => {
+                  goToCoachSection("tracking", { trackingAthleteId: id });
+                }}
               />
             ) : activeMenuKey === "planning" ? (
               <>
-                <WeekSelectorPremium
-                  weekStart={weekAnchor}
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
-                  onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
-                  indicatorsByDate={dayIndicatorsByDate}
-                  sessionSummaryByDate={daySessionSummaryByDate}
-                  showLegend
-                />
+                {weekPlannerMode ? (
+                  <div ref={planningContinuousRef} className="pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+                    {weekStartsContinuous.map((weekStart) => {
+                      const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+                      const weekSessions = enrichedFilteredSessions.filter((session) => {
+                        const d = new Date(session.assignedDate);
+                        return d >= weekStart && d < addDays(weekStart, 7);
+                      });
+                      return (
+                        <div key={weekStart.toISOString()}>
+                          <div className="px-5 pb-1.5 pt-2">
+                            <div className="flex items-baseline gap-2">
+                              <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekStart)}</p>
+                              <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
+                                · {format(weekStart, "d", { locale: fr })} - {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
+                              </p>
+                            </div>
+                            <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
+                              <span>
+                                <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
+                                  {formatCalendarDistance(
+                                    weekSessions.reduce((acc, session) => {
+                                      const metrics = resolveWorkoutMetrics({
+                                        segments: buildWorkoutSegments(session.blocks, {
+                                          sport: session.sport,
+                                          athleteIntensity: session.athleteIntensity ?? undefined,
+                                        }),
+                                      });
+                                      return acc + (metrics.distanceKm || 0);
+                                    }, 0)
+                                  )}
+                                </b>{" "}
+                                · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{weekSessions.length}</b> séance(s)
+                              </span>
+                            </div>
+                          </div>
 
-                <div className="flex flex-col border-t border-border">
-                  {weekDays.map((day) => {
-                const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
-                const session = daySessions[0];
-                const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-                const normalizedSegments = session
-                  ? buildWorkoutSegments(session.blocks, {
-                      sport: session.sport,
-                      athleteIntensity: session.athleteIntensity ?? undefined,
-                    })
-                  : [];
-                const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
-                  ? session.sport === "cycling"
-                    ? "cycling"
-                    : session.sport === "swimming"
-                      ? "swimming"
-                      : session.sport === "strength"
-                        ? "strength"
-                        : session.sport === "running"
-                          ? "running"
-                          : "other"
-                  : undefined;
-                const workoutMetrics = session
-                  ? resolveWorkoutMetrics({
-                      segments: normalizedSegments,
-                    })
-                  : null;
-                const summary = session
-                  ? {
-                      title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
-                      subtitle: session.title,
-                      duration: workoutMetrics?.durationLabel,
-                      distance: workoutMetrics?.distanceLabel,
-                      intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
-                      miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
-                      isRestDay: isExplicitRestDay([session]),
-                      sportHint,
-                    }
-                  : undefined;
-                const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
-                return (
-                  <DayPlanningRow
-                    key={day.toISOString()}
-                    dayLabel={format(day, "EEEE", { locale: fr })}
-                    dateLabel={format(day, "d MMM", { locale: fr })}
-                    isSelected={isSelectedDay}
-                    session={summary}
-                    isSent={session?.sent}
-                    accentColor={accentColor}
-                    onAdd={() => openCreateForDate(day)}
-                    onOpen={session ? () => openEditSession(session.id) : undefined}
-                    onEdit={session ? () => openEditSession(session.id) : undefined}
-                    onSend={
-                      session
-                        ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id))
-                        : undefined
-                    }
-                    onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
-                    onDelete={session ? () => void removeSession(session.id) : undefined}
-                    onUnsend={session ? () => void unsendSession(session.id) : undefined}
-                    allowSessionActions={!effectiveAthleteMode}
-                  />
-                );
-                  })}
-                </div>
+                          <div>
+                            {weekDaysLocal.map((day, dayIdx) => {
+                        const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                        const session = daySessions[0];
+                        const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                        const normalizedSegments = session
+                          ? buildWorkoutSegments(session.blocks, {
+                              sport: session.sport,
+                              athleteIntensity: session.athleteIntensity ?? undefined,
+                            })
+                          : [];
+                        const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
+                          ? session.sport === "cycling"
+                            ? "cycling"
+                            : session.sport === "swimming"
+                              ? "swimming"
+                              : session.sport === "strength"
+                                ? "strength"
+                                : session.sport === "running"
+                                  ? "running"
+                                  : "other"
+                          : undefined;
+                        const workoutMetrics = session
+                          ? resolveWorkoutMetrics({
+                              segments: normalizedSegments,
+                            })
+                          : null;
+                        const summary = session
+                          ? {
+                              title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                              subtitle: session.title,
+                              duration: workoutMetrics?.durationLabel,
+                              distance: workoutMetrics?.distanceLabel,
+                              intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
+                              miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
+                              isRestDay: isExplicitRestDay([session]),
+                              sportHint,
+                            }
+                          : undefined;
+                        const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
+                        return (
+                          <div key={day.toISOString()} data-day-key={format(day, "yyyy-MM-dd")}>
+                            <DayPlanningRow
+                              dayLabel={format(day, "EEEE", { locale: fr })}
+                              dateLabel={format(day, "d")}
+                              isSelected={isSelectedDay}
+                              session={summary}
+                              isSent={session?.sent}
+                              accentColor={accentColor}
+                              emptyLabel="Repos"
+                              layoutVariant="coachWeek"
+                              isLast={dayIdx === weekDaysLocal.length - 1}
+                              athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
+                              onAdd={() => openCreateForDate(day)}
+                              onOpen={session ? () => openSessionPreview(session.id) : undefined}
+                              onEdit={session ? () => openEditSession(session.id) : undefined}
+                              onSend={
+                                session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
+                              }
+                              onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
+                              onDelete={session ? () => void removeSession(session.id) : undefined}
+                              onUnsend={session ? () => void unsendSession(session.id) : undefined}
+                              allowSessionActions={!effectiveAthleteMode}
+                              hideActionSlot={false}
+                            />
+                          </div>
+                        );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <>
+                    <WeekSelectorPremium
+                      weekStart={weekAnchor}
+                      selectedDate={selectedDate}
+                      onSelectDate={setSelectedDate}
+                      onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
+                      onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
+                      indicatorsByDate={dayIndicatorsByDate}
+                      sessionSummaryByDate={daySessionSummaryByDate}
+                      showLegend
+                      variant="default"
+                    />
+
+                    <Group title="Plan de la semaine" className="mb-0">
+                      {weekDays.map((day) => {
+                        const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                        const session = daySessions[0];
+                        const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                        const normalizedSegments = session
+                          ? buildWorkoutSegments(session.blocks, {
+                              sport: session.sport,
+                              athleteIntensity: session.athleteIntensity ?? undefined,
+                            })
+                          : [];
+                        const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
+                          ? session.sport === "cycling"
+                            ? "cycling"
+                            : session.sport === "swimming"
+                              ? "swimming"
+                              : session.sport === "strength"
+                                ? "strength"
+                                : session.sport === "running"
+                                  ? "running"
+                                  : "other"
+                          : undefined;
+                        const workoutMetrics = session
+                          ? resolveWorkoutMetrics({
+                              segments: normalizedSegments,
+                            })
+                          : null;
+                        const summary = session
+                          ? {
+                              title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                              subtitle: session.title,
+                              duration: workoutMetrics?.durationLabel,
+                              distance: workoutMetrics?.distanceLabel,
+                              intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
+                              miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
+                              isRestDay: isExplicitRestDay([session]),
+                              sportHint,
+                            }
+                          : undefined;
+                        const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
+                        return (
+                          <DayPlanningRow
+                            key={day.toISOString()}
+                            dayLabel={format(day, "EEEE", { locale: fr })}
+                            dateLabel={format(day, "d MMM", { locale: fr })}
+                            isSelected={isSelectedDay}
+                            session={summary}
+                            isSent={session?.sent}
+                            accentColor={accentColor}
+                            onAdd={() => openCreateForDate(day)}
+                            onOpen={session ? () => openSessionPreview(session.id) : undefined}
+                            onEdit={session ? () => openEditSession(session.id) : undefined}
+                            onSend={
+                              session ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id)) : undefined
+                            }
+                            onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
+                            onDelete={session ? () => void removeSession(session.id) : undefined}
+                            onUnsend={session ? () => void unsendSession(session.id) : undefined}
+                            allowSessionActions={!effectiveAthleteMode}
+                            hideActionSlot={!!activeAthleteId}
+                          />
+                        );
+                      })}
+                    </Group>
+                  </>
+                )}
+
+                {weekPlannerMode && !activeAthlete && !activeGroup ? (
+                  <div className="h-[calc(5rem+env(safe-area-inset-bottom))]" aria-hidden />
+                ) : null}
+
+                {weekPlannerMode && (activeAthlete || activeGroup) ? (
+                  <div className="flex gap-2.5 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
+                    <button type="button" className="handoff-week-btn handoff-week-btn--primary" onClick={() => copyAthleteWeek()}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 text-[#0066cc]">
+                        <rect x="4" y="4" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+                        <path d="M4 11H3a1 1 0 01-1-1V3a1 1 0 011-1h7a1 1 0 011 1v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                      Copier la semaine
+                    </button>
+                    <button
+                      type="button"
+                      className="handoff-week-btn handoff-week-btn--muted"
+                      onClick={() => void pasteAthleteWeek()}
+                      disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 opacity-70">
+                        <path
+                          d="M5 3h6l2 2v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path d="M6 3V2a1 1 0 011-1h2a1 1 0 011 1v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                      Coller la semaine
+                    </button>
+                  </div>
+                ) : null}
               </>
             ) : activeMenuKey === "dashboard" ? (
               activeClubId ? (
@@ -2873,6 +3884,7 @@ export function CoachPlanningExperience() {
                   onClose={() => undefined}
                   selectedAthleteId={trackingSelectedAthleteId}
                   onSelectAthlete={setTrackingSelectedAthleteId}
+                  onOpenPlanForAthlete={handleOpenPlanForAthleteFromTracking}
                 />
               ) : (
                 <div className="border-b border-border bg-secondary/30 px-4 py-6">
@@ -2906,32 +3918,33 @@ export function CoachPlanningExperience() {
               )
             ) : activeMenuKey === "club" ? (
               <ClubManagementPage
+                variant={clubPageVariant}
                 clubName={activeClubName || "RunConnect Club"}
+                clubCreatedBy={clubCreatedBy}
+                clubDescription={clubDescription}
                 clubLocation={clubLocation}
                 clubAvatarUrl={clubAvatarUrl}
-                athletesCount={clubMembers.filter((m) => m.role === "athlete").length}
                 coachesCount={clubMembers.filter((m) => m.role === "coach" || m.role === "admin").length}
                 groupsCount={clubGroupsAdmin.length}
-                plannedSessionsCount={plannedSessionsCount}
-                validatedSessionsCount={validatedSessionsCount}
                 members={clubMembers}
-                groups={clubGroupsAdmin}
                 invitations={clubInvitations}
+                nextEvent={nextClubEvent}
+                currentUserId={user?.id}
                 onInviteAthlete={() => setInviteDialogOpen(true)}
                 onInviteCoach={() => setInviteDialogOpen(true)}
-                onCreateGroup={() => void createGroup()}
                 onEditClub={() => void editClubInfo()}
                 onViewGroups={() => setActiveMenuKey("groups")}
                 onOpenMemberProfile={(userId) => navigate(`/profile/${userId}`)}
                 onSendMessage={(userId) => void openDirectMessage(userId)}
                 onChangeRole={(userId, role) => void updateMemberRole(userId, role)}
                 onRemoveMember={(userId) => void removeMemberFromClub(userId)}
-                onOpenGroup={() => setActiveMenuKey("groups")}
-                onEditGroup={() => setActiveMenuKey("groups")}
-                onDeleteGroup={(groupId) => void deleteGroup(groupId)}
-                onAssignMembers={() => setActiveMenuKey("groups")}
                 onResendInvitation={(invitationId) => void resendInvitation(invitationId)}
                 onCancelInvitation={(invitationId) => void cancelInvitation(invitationId)}
+                onShareClubCode={() => void shareClubFromCoaching()}
+                onAdminArchive={() => toast.success("Archivage : fonction à venir")}
+                onAdminDeleteClub={() => void deleteClubAsAdmin()}
+                onAdminExport={() => toast.success("Export : fonction à venir")}
+                onLeaveClub={() => void leaveClubFromCoaching()}
               />
             ) : (
               <div className="border-b border-border bg-secondary/30 px-4 py-6">
@@ -2964,7 +3977,47 @@ export function CoachPlanningExperience() {
         userMode={effectiveAthleteMode ? "athlete" : "coach"}
         otherClubsCount={Math.max(clubs.length - 1, 0)}
         onPressClubSwitcher={rotateActiveClub}
+        onPressClubAvatar={openClubProfileSheet}
       />
+
+      <Suspense fallback={null}>
+        <ClubProfileDialog
+          isOpen={clubProfileOpen}
+          onClose={() => setClubProfileOpen(false)}
+          conversationId={activeClubId || ""}
+          groupName={activeClubName || "Club"}
+          groupDescription={clubDescription}
+          groupAvatarUrl={clubAvatarUrl}
+          isAdmin={clubCreatedBy === user?.id}
+          clubCode={clubCode || ""}
+          createdBy={clubCreatedBy || ""}
+          createdAt={clubConversationCreatedAt}
+          isClub={Boolean(clubCode)}
+          isMuted={clubProfileNotifMuted}
+          onToggleMute={() => {
+            const newMuted = !clubProfileNotifMuted;
+            setClubProfileNotifMuted(newMuted);
+            if (user) {
+              void supabase.from("profiles").update({ notif_message: !newMuted }).eq("user_id", user.id);
+            }
+          }}
+          groupsCount={clubGroupsAdmin.length}
+          dismissBackLabel="Coaching"
+          onEditClub={() => {
+            setClubProfileOpen(false);
+            void editClubInfo();
+          }}
+          onClubLeftOrDeleted={() => {
+            setClubProfileOpen(false);
+            setCoachClubsReloadToken((t) => t + 1);
+          }}
+          onOpenManageClubInCoaching={() => {
+            if (!activeClubId || !clubCode) return;
+            setClubProfileOpen(false);
+            goToCoachSection("club");
+          }}
+        />
+      </Suspense>
 
       <AlertDialog open={showCoachRequiredDialog} onOpenChange={setShowCoachRequiredDialog}>
         <AlertDialogContent>
@@ -3038,56 +4091,44 @@ export function CoachPlanningExperience() {
       />
 
       {coachingTab === "create" && (
-        <div className="coaching-create-flat fixed inset-0 z-[125] flex min-h-0 flex-col overflow-hidden bg-white">
+        <div className="coaching-create-flat fixed inset-0 z-[125] flex min-h-0 flex-col overflow-hidden">
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
             headerWrapperClassName="shrink-0 border-b border-border bg-card"
             header={
-              <div className="pt-[var(--safe-area-top)]">
+              <div className="pt-[calc(var(--safe-area-top)-4px)]">
                 <IosPageHeaderBar
-                  left={
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 text-[16px] font-medium text-primary"
-                      onClick={() => {
-                        if (hasCreateDraftWork) {
-                          setPendingDrawerKey("planning");
-                          setShowExitDraftDialog(true);
-                          return;
-                        }
-                        setCoachingTab("planning");
-                      }}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Retour
-                    </button>
-                  }
+                  leadingBack={{
+                    onClick: () => {
+                      if (hasCreateDraftWork) {
+                        setPendingDrawerKey("planning");
+                        setShowExitDraftDialog(true);
+                        return;
+                      }
+                      setCoachingTab("planning");
+                    },
+                    label: "Retour",
+                  }}
                   title="Créer une séance"
                   right={
-                    editorTab === "build" ? (
-                      <button
-                        type="button"
-                        onClick={() => void saveSession()}
-                        disabled={draft.blocks.length === 0}
-                        className={cn(
-                          "text-[16px] font-semibold",
-                          draft.blocks.length ? "text-primary" : "text-muted-foreground"
-                        )}
-                      >
-                        Enregistrer
-                      </button>
-                    ) : (
-                      <span className="inline-block w-14" aria-hidden />
-                    )
+                    <button
+                      type="button"
+                      onClick={() => setCoachingTab("planning")}
+                      className="text-[17px] font-semibold text-primary"
+                    >
+                      OK
+                    </button>
                   }
                 />
-                <div className="grid grid-cols-2 gap-2 px-4 pb-2">
+                <div className="grid grid-cols-2 gap-2 px-4 pb-1.5">
                   <button
                     type="button"
                     onClick={() => setEditorTab("build")}
                     className={cn(
-                      "rounded-xl py-2 text-center text-[13px] font-semibold transition-colors",
-                      editorTab === "build" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      "h-8 rounded-full border text-center text-[13px] font-semibold transition-colors",
+                      editorTab === "build"
+                        ? "border-[#0066cc] bg-[#0066cc] text-white"
+                        : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
                     )}
                   >
                     Construire
@@ -3096,8 +4137,10 @@ export function CoachPlanningExperience() {
                     type="button"
                     onClick={() => setEditorTab("models")}
                     className={cn(
-                      "rounded-xl py-2 text-center text-[13px] font-semibold transition-colors",
-                      editorTab === "models" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      "h-8 rounded-full border text-center text-[13px] font-semibold transition-colors",
+                      editorTab === "models"
+                        ? "border-[#0066cc] bg-[#0066cc] text-white"
+                        : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
                     )}
                   >
                     Modèles
@@ -3105,23 +4148,13 @@ export function CoachPlanningExperience() {
                 </div>
               </div>
             }
-            scrollClassName="bg-white pb-24"
+            scrollClassName="bg-[#f5f5f7] pb-24"
             footer={
               editorTab === "build" && (
-                <div className="border-t border-border bg-card px-4 py-3 pb-[max(0.9rem,var(--safe-area-bottom))]">
-                  <button
-                    type="button"
-                    className={cn(
-                      "mb-2 inline-flex h-8 w-full items-center rounded-full border border-slate-200 bg-white px-3 text-left text-[12px] font-medium text-foreground shadow-[0_10px_26px_-24px_rgba(15,23,42,0.45)]",
-                      savePulse && "animate-pulse"
-                    )}
-                    title={sessionTranscript}
-                  >
-                    <span className="truncate">{sessionTranscript}</span>
-                  </button>
+                <div className="border-t border-[#e0e0e0] bg-[#f5f5f7] px-[17px] pb-[max(1.4rem,var(--safe-area-bottom))] pt-[14px]">
                   <Button
                     onClick={() => void saveSession()}
-                    className="h-11 w-full rounded-xl text-[15px] font-semibold"
+                    className="h-[50px] w-full rounded-full bg-[#0066cc] text-[17px] font-semibold text-white"
                     disabled={draft.blocks.length === 0}
                   >
                     Enregistrer la séance
@@ -3131,57 +4164,52 @@ export function CoachPlanningExperience() {
             }
           >
             {editorTab === "build" ? (
-              <div className="space-y-3 px-4 pb-6">
-                <div
-                  className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
-                >
-                  <div className="space-y-3 px-4 py-3">
-                    <Input
-                      value={draft.title}
-                      onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="Nom de la séance"
-                      className="h-11 rounded-2xl border-border bg-white text-[15px] dark:bg-card"
-                    />
-
-                    <div className="grid grid-cols-4 gap-2">
-                      {SPORTS.map((sport) => (
+              <div className="space-y-4 px-4 pb-6">
+                <input
+                  value={draft.title}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Nom de la séance"
+                  className="w-full bg-transparent font-display text-[42px] font-semibold tracking-[-0.8px] text-[#1d1d1f] placeholder:text-[#7a7a7a] focus:outline-none"
+                />
+                <div className="py-3">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-4 gap-[10px]">
+                      {[
+                        { id: "running", emoji: "🏃", bg: "#007AFF" },
+                        { id: "cycling", emoji: "🚴", bg: "#FF3B30" },
+                        { id: "swimming", emoji: "🏊", bg: "#5AC8FA" },
+                        { id: "strength", emoji: "💪", bg: "#FF9500" },
+                      ].map((sport) => (
                         <button
                           key={sport.id}
                           type="button"
-                          onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id }))}
-                          className={cn(
-                            "flex h-14 items-center justify-center rounded-2xl border transition-all",
-                            draft.sport === sport.id
-                              ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
-                              : "border-border/80 bg-white text-foreground dark:bg-card"
-                          )}
-                          title={sport.label}
-                          aria-label={sport.label}
+                          onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id as typeof prev.sport }))}
+                          aria-label={sport.id}
+                          className="relative aspect-square rounded-[14px] text-[36px] leading-none flex items-center justify-center transition-transform active:scale-95"
+                          style={{ backgroundColor: sport.bg }}
                         >
-                          <span className="text-[24px] leading-none" aria-hidden="true">
-                            {sport.emoji}
-                          </span>
+                          {draft.sport === sport.id && (
+                            <span className="pointer-events-none absolute inset-0 rounded-[14px] shadow-[0_0_0_2px_#f5f5f7,0_0_0_4px_#0066cc]" />
+                          )}
+                          {sport.emoji}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div
-                  className="-mx-4 overflow-hidden border-b border-border/70 bg-white sm:mx-0"
-                >
-                  <div className="space-y-3 px-4 py-3">
-                    <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
-                    <div className="min-w-0">
-                      <div className="rounded-[16px] border border-border/65 bg-background px-2 py-2">
+                <div className="space-y-3">
+                  <div className="space-y-3">
+                    <p className="px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Schéma de séance</p>
+                    <div className="min-w-0 rounded-[18px] border border-border/65 bg-white px-2 py-2 shadow-[0_14px_30px_-22px_rgba(15,23,42,0.22)]">
                         <div className="flex min-w-0 gap-2">
-                          <div className="flex h-[72px] shrink-0 flex-col justify-between py-0.5 text-[10px] font-semibold">
-                            <span className="text-[#BF5AF2]">Z6</span>
-                            <span className="text-[#FF453A]">Z5</span>
-                            <span className="text-[#FF9F0A]">Z4</span>
-                            <span className="text-[#FFD60A]">Z3</span>
-                            <span className="text-[#30D158]">Z2</span>
-                            <span className="text-[#4FA3FF]">Z1</span>
+                          <div className="flex min-h-[220px] h-[220px] shrink-0 flex-col justify-around py-0 text-[9px] font-semibold leading-none" style={{ color: "#7a7a7a" }}>
+                            <span>Z6</span>
+                            <span>Z5</span>
+                            <span>Z4</span>
+                            <span>Z3</span>
+                            <span>Z2</span>
+                            <span>Z1</span>
                           </div>
                           <div
                             ref={schemaPreviewRef}
@@ -3195,20 +4223,29 @@ export function CoachPlanningExperience() {
                             )}
                             title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                           >
-                            <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col-reverse rounded-[10px] overflow-hidden">
-                              <div className="flex-1 bg-[#4FA3FF]/[0.06]" />
-                              <div className="flex-1 bg-[#30D158]/[0.06]" />
-                              <div className="flex-1 bg-[#FFD60A]/[0.06]" />
-                              <div className="flex-1 bg-[#FF9F0A]/[0.06]" />
-                              <div className="flex-1 bg-[#FF453A]/[0.06]" />
-                              <div className="flex-1 bg-[#BF5AF2]/[0.06]" />
+                            <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
+                              {[0, 1, 2, 3, 4, 5].map((i) => (
+                                <div
+                                  key={i}
+                                  className="absolute left-0 right-0"
+                                  style={{
+                                    top: `${(i / 6) * 100}%`,
+                                    borderTop: "1px dashed #e0e0e0",
+                                  }}
+                                />
+                              ))}
+                              <div
+                                className="absolute bottom-0 left-0 right-0"
+                                style={{ borderTop: "1px solid rgba(29,29,31,0.18)" }}
+                              />
                             </div>
                             <MiniWorkoutProfile
                               blocks={previewBars}
                               variant="premiumCompact"
                               barHeightScale={3}
                               zoneBandMode
-                              interBlockGapPx={3}
+                              interBlockGapPx={4}
+                              flatSurface
                               selectedBlockIndex={selectedSchemaPreviewIndex}
                               onBlockTap={({ index }) => {
                                 if (!draft.blocks.length) return;
@@ -3219,7 +4256,7 @@ export function CoachPlanningExperience() {
                                 const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
                                 if (block) setSelectedBlockId(block.id);
                               }}
-                              className="relative z-[2] h-[72px] w-full border-l border-b border-border/70 bg-white/70"
+                              className="relative z-[2] h-[220px] w-full bg-transparent"
                             />
                             {schemaDropRatio != null ? (
                               <div
@@ -3255,10 +4292,9 @@ export function CoachPlanningExperience() {
                             Temps
                           </p>
                         </div>
-                      </div>
                     </div>
 
-                    <p className="mb-2 mt-5 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
+                    <p className="mb-[10px] mt-5 px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Ajouter un bloc</p>
                     <div className="grid grid-cols-4 gap-2">
                       {(
                         [
@@ -3266,8 +4302,8 @@ export function CoachPlanningExperience() {
                             key: "steady" as const,
                             title: "Continu",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="12" width="72" height="12" rx="4" fill="#10B981" fillOpacity="0.92" />
+                              <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                                <rect x="2" y="9" width="40" height="6" rx="2" fill="#0066cc"/>
                               </svg>
                             ),
                           },
@@ -3275,11 +4311,12 @@ export function CoachPlanningExperience() {
                             key: "interval" as const,
                             title: "Intervalle",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="6" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
-                                <rect x="26" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
-                                <rect x="46" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
-                                <rect x="66" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
+                              <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                                <rect x="2"  y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="11" y="14" width="3" height="6"  rx="1"   fill="#B5B5BA"/>
+                                <rect x="17" y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="26" y="14" width="3" height="6"  rx="1"   fill="#B5B5BA"/>
+                                <rect x="32" y="4"  width="6" height="16" rx="1.5" fill="#FF9500"/>
                               </svg>
                             ),
                           },
@@ -3287,12 +4324,13 @@ export function CoachPlanningExperience() {
                             key: "pyramid" as const,
                             title: "Pyramide",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
-                                <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
-                                <rect x="36" y="4" width="12" height="26" rx="2" fill="#EF4444" fillOpacity="0.95" />
-                                <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
-                                <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
+                              <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                                <rect x="2"  y="14" width="5" height="6"  rx="1"   fill="#34C759"/>
+                                <rect x="9"  y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
+                                <rect x="16" y="4"  width="5" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="23" y="4"  width="5" height="16" rx="1.5" fill="#FF9500"/>
+                                <rect x="30" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
+                                <rect x="37" y="14" width="5" height="6"  rx="1"   fill="#34C759"/>
                               </svg>
                             ),
                           },
@@ -3317,16 +4355,16 @@ export function CoachPlanningExperience() {
                             }
                           }}
                           className={cn(
-                            "group flex cursor-grab flex-col overflow-hidden rounded-2xl border select-none touch-none transition active:cursor-grabbing",
+                            "group flex cursor-grab flex-col items-center gap-2 rounded-[14px] border select-none touch-none transition active:cursor-grabbing py-[14px] px-2 pb-[10px]",
                             card.key === "pyramid"
-                              ? "border-2 border-[#007AFF] bg-[#E8F0FF]"
-                              : "border-slate-200/90 bg-[#F2F2F7] hover:border-[#2563EB]/45"
+                              ? "border-2 border-[#0066cc] bg-white"
+                              : "border-[#e0e0e0] bg-white hover:border-[#0066cc]/40"
                           )}
                         >
-                          <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
+                          <div className="pointer-events-none flex items-center justify-center">
                             {card.mini}
                           </div>
-                          <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">{card.title}</p>
+                          <p className="shrink-0 text-center text-[12px] leading-none tracking-[-0.12px]" style={{ color: "#1d1d1f" }}>{card.title}</p>
                         </div>
                       ))}
 
@@ -3348,22 +4386,19 @@ export function CoachPlanningExperience() {
                             addQuickSchemaBlock("variation");
                           }
                         }}
-                        className="group flex cursor-grab flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-[#F2F2F7] select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing"
+                        className="group flex cursor-grab flex-col items-center gap-2 rounded-[14px] border border-[#e0e0e0] bg-white py-[14px] px-2 pb-[10px] select-none touch-none transition hover:border-[#0066cc]/40 active:cursor-grabbing"
                       >
-                        <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
-                          <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                            <defs>
-                              <linearGradient id="variationZoneGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#9CA3AF" />
-                                <stop offset="33%" stopColor="#2563EB" />
-                                <stop offset="66%" stopColor="#22C55E" />
-                                <stop offset="100%" stopColor="#FACC15" />
-                              </linearGradient>
-                            </defs>
-                            <polygon points="8,30 76,4 76,30" fill="url(#variationZoneGradient)" fillOpacity="0.95" />
+                        <div className="pointer-events-none flex items-center justify-center">
+                          <svg viewBox="0 0 44 22" className="w-[44px] h-[22px]" fill="none" aria-hidden>
+                            <rect x="2"  y="16" width="5" height="4"  rx="1"   fill="#B5B5BA"/>
+                            <rect x="9"  y="12" width="5" height="8"  rx="1"   fill="#34C759"/>
+                            <rect x="16" y="6"  width="5" height="14" rx="1.3" fill="#FF9500"/>
+                            <rect x="23" y="14" width="5" height="6"  rx="1"   fill="#0066cc"/>
+                            <rect x="30" y="4"  width="5" height="16" rx="1.5" fill="#FF3B30"/>
+                            <rect x="37" y="10" width="5" height="10" rx="1.2" fill="#FFCC00"/>
                           </svg>
                         </div>
-                        <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">
+                        <p className="shrink-0 text-center text-[12px] leading-none tracking-[-0.12px]" style={{ color: "#1d1d1f" }}>
                           Variation
                         </p>
                       </div>
@@ -3381,626 +4416,384 @@ export function CoachPlanningExperience() {
                 </div>
 
                   {draft.blocks.length > 0 ? (
-                    <div className="mt-3 -mx-4 space-y-2 sm:mx-0">
+                    <div className="mt-4 space-y-3">
                       {draft.blocks.map((block, index) => {
-                        const label = blockDisplayLabel(block);
-                        const isDragged = draggedBlockId === block.id;
-                        const isDropTarget = dragOverBlockId === block.id;
+                        const isPyramidBlock = Boolean(block.notes?.includes(PYRAMID_NOTES_PREFIX));
+                        const isProgressive = isProgressiveBlock(block);
+                        const pyramidConfig = isPyramidBlock ? parsePyramidConfig(block) : null;
+                        const pyramidSteps = pyramidConfig ? buildPyramidDisplaySteps(pyramidConfig) : [];
                         const isSelected = selectedBlockId === block.id;
-                        const typeMeta = blockTypeMeta(block.type);
-                        const accents = blockAccent(block.type);
-                        const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
+                        const accentHex = isPyramidBlock ? "#FF9500" : isProgressive ? "#AF52DE" : block.type === "interval" ? "#0066cc" : "#34C759";
+                        const blockName = isPyramidBlock ? "Pyramide" : isProgressive ? "Variation" : blockTitle(block.type);
+                        const badge = isPyramidBlock && pyramidConfig
+                          ? (() => { const mc = pyramidSteps.filter(s => s.isMirror).length; return mc > 0 ? `${pyramidConfig.steps.length} + ${mc} miroirs` : `${pyramidConfig.steps.length} paliers`; })()
+                          : isProgressive
+                          ? `${block.paceStartSecPerKm ? compactPaceLabel(block.paceStartSecPerKm) : "?'??"} → ${block.paceEndSecPerKm ? compactPaceLabel(block.paceEndSecPerKm) : "?'??"}`
+                          : block.type === "interval" ? `${block.blockRepetitions ?? 1} × ${block.repetitions ?? 1}` : `${index + 1}`;
+                        const subtitle = isPyramidBlock && pyramidConfig ? pyramidSubtitle(pyramidConfig) : blockSummary(block);
 
                         return (
-                          <div key={block.id} className="relative">
-                            <div
-                              data-block-id={block.id}
-                              className={cn(
-                                "relative rounded-none border-x-0 border-border/80 bg-white pl-12 pr-3 py-3 transition-all",
-                                isDropTarget || isSelected ? "border-[#2563EB]/60 bg-[#2563EB]/[0.04]" : "",
-                                isDragged && "opacity-70"
-                              )}
-                              onClick={() => setSelectedBlockId(block.id)}
-                              onPointerMove={handleBlockReorderPointerMove}
-                              onPointerUp={finishBlockReorder}
-                              onPointerCancel={finishBlockReorder}
+                          <div key={block.id} className="relative overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
+                            {/* Left accent bar */}
+                            <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 top-0 w-[3px]" style={{ background: accentHex }} />
+                            {/* Header */}
+                            <button
+                              type="button"
+                              className="grid w-full items-center gap-[10px] py-3 pl-4 pr-3 text-left"
+                              style={{ gridTemplateColumns: "32px 1fr auto" }}
+                              onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
                             >
-                              <button
-                                type="button"
-                                aria-label={`Déplacer ${label}`}
-                                className={cn(
-                                  "absolute inset-y-2 left-2 inline-flex w-8 items-center justify-center rounded-xl border border-white/60 text-white touch-none shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
-                                  accents.iconWrap
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ background: accentHex }}>
+                                {isPyramidBlock ? (
+                                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><polygon points="12,5 21,20 3,20"/></svg>
+                                ) : isProgressive ? (
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="4,18 9,12 13,15 20,5"/><polyline points="14,5 20,5 20,11"/></svg>
+                                ) : block.type === "interval" ? (
+                                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M13 2 L4 13 L11 13 L11 22 L20 11 L13 11 Z"/></svg>
+                                ) : (
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="h-4 w-4"><line x1="6" y1="9" x2="18" y2="9"/><line x1="6" y1="15" x2="18" y2="15"/></svg>
                                 )}
-                                onPointerDown={() => startBlockReorderPress(block.id)}
-                                onPointerUp={finishBlockReorder}
-                                onPointerCancel={finishBlockReorder}
-                              >
-                                <GripVertical className={cn("h-5 w-5", accents.iconColor)} />
-                              </button>
-                              <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-100", accents.tint)} />
-                              {index < draft.blocks.length - 1 ? (
-                                <div
-                                  aria-hidden
-                                  className="pointer-events-none absolute bottom-0 left-[52px] right-0 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_8%,rgba(0,0,0,0.08)_92%,rgba(0,0,0,0))]"
-                                />
-                              ) : null}
-
-                              <div className="relative mb-3 flex items-center gap-2">
-                                <span
-                                  className={cn(
-                                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/60 text-white shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
-                                    accents.iconWrap
-                                  )}
-                                  aria-hidden
-                                >
-                                  <typeMeta.icon className={cn("h-4 w-4", accents.iconColor)} />
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-[14px] font-bold uppercase tracking-[0.06em] text-foreground">
-                                      {label}
-                                    </p>
-                                    {block.type === "interval" ? (
-                                      <span className="rounded-full bg-[#2563EB]/12 px-2 py-0.5 text-[11px] font-semibold text-[#2563EB]">
-                                        x{intervalRepetitions}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  <p className="text-[12px] text-muted-foreground">
-                                    {index + 1}. {blockSummary(block)}
-                                  </p>
+                              </span>
+                              <div className="min-w-0">
+                                <div className="mb-0.5 flex items-baseline gap-[7px]">
+                                  <span className="text-[16px] font-semibold tracking-[-0.3px]" style={{ color: "#1d1d1f" }}>{blockName}</span>
+                                  <span className="rounded-full px-[7px] py-[2px] text-[11px] font-semibold leading-none" style={{ color: accentHex, background: accentHex + "22" }}>{badge}</span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    aria-label={`Ajouter un bloc après ${label}`}
-                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-primary"
-                                    onClick={() => openInsertBlockPicker(index + 1)}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    aria-label={`Supprimer ${label}`}
-                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-red-500"
-                                    onClick={() => removeDraftBlock(block.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
+                                <div className="truncate text-[13px]" style={{ color: "#7a7a7a" }}>{subtitle}</div>
                               </div>
-
+                              <div className="flex items-center gap-1">
+                                <span className={cn("flex h-[30px] w-[30px] items-center justify-center rounded-full transition-transform", isSelected ? "rotate-180" : "")}>
+                                  <ChevronDown className="h-4 w-4" style={{ color: "#7a7a7a" }} />
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Supprimer ${blockName}`}
+                                  onClick={(e) => { e.stopPropagation(); removeDraftBlock(block.id); }}
+                                  className="flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-red-50 hover:text-[#FF3B30]"
+                                  style={{ color: "#7a7a7a" }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </button>
+                            {/* Body */}
+                            {isSelected && (
+                              <div className="border-t border-[#f0f0f0] px-4 pb-4 pt-[14px]">
                               {block.type === "interval" ? (
-                                <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Blocs"
-                                      value={`${block.blockRepetitions ?? 1}`}
-                                      placeholder="1"
-                                      onClick={() =>
-                                        openWheel(
-                                          "Blocs",
-                                          Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.blockRepetitions ?? 1),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, blockRepetitions: Number(next) }))
-                                        )
-                                      }
-                                    />
-                                    <CoachingMetricPill
-                                      label="Répétitions"
-                                      value={`${block.repetitions ?? 1}`}
-                                      placeholder="1"
-                                      onClick={() =>
-                                        openWheel(
-                                          "Répétitions",
-                                          Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.repetitions ?? 1),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, repetitions: Number(next) }))
-                                        )
-                                      }
-                                    />
-                                    <CoachingMetricPill
-                                      label="RPE"
-                                      value={block.rpe ? `${block.rpe}/10` : ""}
-                                      placeholder="8"
-                                      onClick={() =>
-                                        openWheel(
-                                          "RPE",
-                                          Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.rpe ?? 8),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, rpe: Number(next) }))
-                                        )
-                                      }
-                                    />
+                                <div className="space-y-[10px]">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Blocs</p>
+                                      <button type="button" onClick={() => openWheel("Blocs", Array.from({length:20},(_,i)=>({value:String(i+1),label:String(i+1)})), String(block.blockRepetitions??1), (n)=>updateDraftBlock(block.id,(c)=>({...c,blockRepetitions:Number(n)})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:"#1d1d1f"}}>{block.blockRepetitions??1}</button>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Répétitions</p>
+                                      <button type="button" onClick={() => openWheel("Répétitions", Array.from({length:20},(_,i)=>({value:String(i+1),label:String(i+1)})), String(block.repetitions??1), (n)=>updateDraftBlock(block.id,(c)=>({...c,repetitions:Number(n)})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:"#1d1d1f"}}>{block.repetitions??1}</button>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>RPE</p>
+                                      <button type="button" onClick={() => openWheel("RPE", Array.from({length:10},(_,i)=>({value:String(i+1),label:String(i+1)})), String(block.rpe??8), (n)=>updateDraftBlock(block.id,(c)=>({...c,rpe:Number(n)})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.rpe?"#1d1d1f":"#7a7a7a"}}>{block.rpe??"—"}</button>
+                                    </div>
                                   </div>
-
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Distance"
-                                      value={simpleBlockDistanceValue(block.distanceM)}
-                                      placeholder="250"
-                                      onClick={() => {
-                                        const meters = block.distanceM || 0;
-                                        const wholeKm = Math.floor(meters / 1000);
-                                        const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                        setWheelAValue(String(wholeKm));
-                                        setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                        setWheelUnit("km");
-                                        openWheelColumns(
-                                          "Distance du bloc",
-                                          [
-                                            { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                            { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                          ],
-                                          () => {
-                                            const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
-                                                : { ...current, distanceM: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Temps"
-                                      value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                      placeholder="45"
-                                      onClick={() => {
-                                        const total = block.durationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Durée du bloc",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
-                                                : { ...current, durationSec: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Allure"
-                                      value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
-                                      placeholder="4'30"
-                                      onClick={() => {
-                                        const pace = block.paceSecPerKm || 270;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure du bloc",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
-                                                : { ...current, paceSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Distance</p>
+                                      <button type="button" onClick={() => { const m=block.distanceM||0,wk=Math.floor(m/1000),rm=Math.max(0,m-wk*1000); setWheelAValue(String(wk)); setWheelBValue(String(Math.round(rm/25)*25)); setWheelUnit("km"); openWheelColumns("Distance du bloc",[{items:DISTANCE_KM_WHOLE_OPTIONS,value:String(wk),onChange:setWheelAValue,suffix:"km"},{items:DISTANCE_METERS_25_OPTIONS,value:String(Math.round(rm/25)*25),onChange:setWheelBValue,suffix:"m"}],()=>{const n=(Number.parseInt(wheelARef.current,10)||0)*1000+(Number.parseInt(wheelBRef.current,10)||0); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,distanceM:n},"distance"):{...c,distanceM:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.distanceM?"#1d1d1f":"#7a7a7a"}}>{simpleBlockDistanceValue(block.distanceM)||"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Temps</p>
+                                      <button type="button" onClick={() => { const t=block.durationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Durée du bloc",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,durationSec:n},"duration"):{...c,durationSec:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.durationSec?"#1d1d1f":"#7a7a7a"}}>{block.durationSec?secondsToLabel(block.durationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure</p>
+                                      <button type="button" onClick={() => { const p=block.paceSecPerKm||270; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure du bloc",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,paceSecPerKm:n},"pace"):{...c,paceSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceSecPerKm?compactPaceLabel(block.paceSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
                                   </div>
-
                                   <div className="grid grid-cols-2 gap-2">
-                                    <CoachingMetricPill
-                                      label="Récup effort"
-                                      value={block.blockRecoveryDurationSec ? secondsToLabel(block.blockRecoveryDurationSec) : ""}
-                                      placeholder="60"
-                                      onClick={() => {
-                                        const total = block.blockRecoveryDurationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Récupération entre blocs",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) => ({ ...current, blockRecoveryDurationSec: next }));
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Récup série"
-                                      value={block.recoveryDurationSec ? secondsToLabel(block.recoveryDurationSec) : ""}
-                                      placeholder="30"
-                                      onClick={() => {
-                                        const total = block.recoveryDurationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Récupération entre répétitions",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) => ({ ...current, recoveryDurationSec: next }));
-                                          }
-                                        );
-                                      }}
-                                    />
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Récup effort</p>
+                                      <button type="button" onClick={() => { const t=block.blockRecoveryDurationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Récupération entre blocs",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>({...c,blockRecoveryDurationSec:n}));});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.blockRecoveryDurationSec?"#1d1d1f":"#7a7a7a"}}>{block.blockRecoveryDurationSec?secondsToLabel(block.blockRecoveryDurationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Récup série</p>
+                                      <button type="button" onClick={() => { const t=block.recoveryDurationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Récupération entre répétitions",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>({...c,recoveryDurationSec:n}));});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.recoveryDurationSec?"#1d1d1f":"#7a7a7a"}}>{block.recoveryDurationSec?secondsToLabel(block.recoveryDurationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>&nbsp;</span>
+                                    </div>
                                   </div>
-
                                 </div>
-                              ) : block.notes?.includes("[Pyramid]") ? (
-                                <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Allure"
-                                      value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
-                                      placeholder="5'30"
-                                      onClick={() => {
-                                        const pace = block.paceSecPerKm || 330;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure du bloc",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
-                                                : { ...current, paceSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Distance"
-                                      value={simpleBlockDistanceValue(block.distanceM)}
-                                      placeholder="5"
-                                      onClick={() => {
-                                        const meters = block.distanceM || 0;
-                                        const wholeKm = Math.floor(meters / 1000);
-                                        const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                        setWheelAValue(String(wholeKm));
-                                        setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                        setWheelUnit("km");
-                                        openWheelColumns(
-                                          "Distance du bloc",
-                                          [
-                                            { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                            { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                          ],
-                                          () => {
-                                            const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
-                                                : { ...current, distanceM: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Temps"
-                                      value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                      placeholder="30"
-                                      onClick={() => {
-                                        const total = block.durationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Durée du bloc",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
-                                                : { ...current, durationSec: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
+                              ) : isPyramidBlock && pyramidConfig ? (
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-4 gap-[6px]">
+                                    {([
+                                      { mode: "symetrique" as const, label: "Symétrique", svgBars: [[0,6,3],[1,3,6],[2,0,12],[3,3,6],[4,6,3]] },
+                                      { mode: "croissante" as const, label: "Croiss.", svgBars: [[0,6,3],[1,3,6],[2,0,12]] },
+                                      { mode: "decroissante" as const, label: "Décroiss.", svgBars: [[0,0,12],[1,3,6],[2,6,3]] },
+                                      { mode: "manuelle" as const, label: "Manuelle", svgBars: [[0,3,6],[1,0,12],[2,6,3],[3,2,9]] },
+                                    ]).map((modeCard) => {
+                                      const isActive = pyramidConfig.mode === modeCard.mode;
+                                      return (
+                                        <button key={`${block.id}-${modeCard.mode}`} type="button"
+                                          className={cn("flex flex-col items-center gap-1 rounded-[11px] border pb-[6px] pt-2 transition-all", isActive ? "border-2 border-[#FF9500] bg-[rgba(255,149,0,0.08)]" : "border-[#e0e0e0] bg-[#f5f5f7]")}
+                                          onClick={() => updatePyramidBlock(block.id, (cfg) => ({ ...cfg, mode: modeCard.mode }))}>
+                                          <svg viewBox="0 0 22 14" className="h-[14px] w-[22px]" aria-hidden>
+                                            {modeCard.svgBars.map(([xi, yi, hi]) => (
+                                              <rect key={xi} x={xi * 5 + 1} y={yi} width="3" height={hi} rx="0.5" fill={isActive ? "#FF9500" : "#7a7a7a"} />
+                                            ))}
+                                          </svg>
+                                          <span className="text-[11px] leading-none tracking-[-0.1px]" style={{ color: isActive ? "#FF9500" : "#1d1d1f", fontWeight: isActive ? 600 : 500 }}>{modeCard.label}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="flex items-start gap-2 rounded-[11px] border px-3 py-[10px]" style={{ background: "rgba(255,149,0,0.06)", borderColor: "rgba(255,149,0,0.25)" }}>
+                                    <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF9500]" />
+                                    <p className="text-[12.5px] leading-[1.4] tracking-[-0.1px]" style={{ color: "#333" }}>{PYRAMID_MODE_HINTS[pyramidConfig.mode]}</p>
                                   </div>
 
-                                  <div className="grid grid-cols-1 gap-2">
-                                    <CoachingMetricPill
-                                      label="Paliers"
-                                      value={`${block.repetitions ?? 5}`}
-                                      placeholder="5"
-                                      onClick={() =>
-                                        openWheel(
-                                          "Paliers",
-                                          Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.repetitions ?? 5),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, repetitions: Number(next) }))
-                                        )
-                                      }
-                                    />
+                                  <div className="flex flex-col gap-[6px]">
+                                    {pyramidSteps.map((step, stepIndex) => {
+                                      const stepNumber = stepIndex + 1;
+                                      const stepKey = `${block.id}:${step.id}`;
+                                      const isOpen = Boolean(expandedPyramidSteps[stepKey]);
+                                      const zone = step.zone || "Z4";
+                                      const isMirror = step.isMirror;
+                                      const sourcePalier = (step.mirrorOf ?? 0) || step.sourceIndex + 1;
+                                      return (
+                                        <div
+                                          key={stepKey}
+                                          className={cn(
+                                            "overflow-hidden rounded-[11px] border",
+                                            isMirror ? "border-[rgba(255,149,0,0.35)] bg-[rgba(255,149,0,0.04)]" : "border-[#e0e0e0] bg-[#f5f5f7]"
+                                          )}
+                                        >
+                                          <button
+                                            type="button"
+                                            className="grid w-full items-center gap-[9px] px-3 py-[10px] text-left"
+                                            style={{ gridTemplateColumns: "22px auto 1fr 18px" }}
+                                            onClick={() =>
+                                              setExpandedPyramidSteps((prev) => ({
+                                                ...prev,
+                                                [stepKey]: !prev[stepKey],
+                                              }))
+                                            }
+                                          >
+                                            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-[#e0e0e0] bg-white text-[11px] font-semibold" style={{ color: "#333" }}>
+                                              {stepNumber}
+                                            </span>
+                                            <span className="inline-flex h-5 items-center rounded-[6px] px-[7px] text-[11px] font-bold" style={{ background: zoneHexColor(zone), color: zoneTextColor(zone) }}>
+                                              {zone}
+                                            </span>
+                                            <div className="min-w-0 truncate text-[13px]" style={{ color: "#333" }}>
+                                              <strong style={{ color: "#1d1d1f" }}>{step.distanceM ? metersToLabel(step.distanceM) : "—"}</strong>
+                                              {" · "}{step.paceSecPerKm ? compactPaceLabel(step.paceSecPerKm) : "—"}
+                                              {" · récup "}{step.recoveryDurationSec ? secondsToLabel(step.recoveryDurationSec) : "—"}
+                                              {isMirror && (
+                                                <span className="ml-[7px] text-[10px] font-bold uppercase tracking-[0.3px]" style={{ color: "#FF9500" }}>🔒 Miroir P{sourcePalier}</span>
+                                              )}
+                                            </div>
+                                            <span className={cn("flex h-[18px] w-[18px] items-center justify-center transition-transform", isOpen ? "rotate-180" : "")}>
+                                              <ChevronDown className="h-3 w-3" style={{ color: "#7a7a7a" }} />
+                                            </span>
+                                          </button>
+                                          {isOpen ? (
+                                            <div className="border-t border-[#f0f0f0] px-3 pb-3 pt-2">
+                                              {isMirror ? (
+                                                <div className="mb-2 rounded-[8px] px-2.5 py-2 text-[11px]" style={{ background: "rgba(255,149,0,0.1)", color: "#C2410C" }}>
+                                                  🔒 Ce palier est le miroir verrouillé du Palier {sourcePalier}. Modifie le palier source pour changer ses valeurs.
+                                                </div>
+                                              ) : null}
+                                              <div className="grid grid-cols-3 gap-2">
+                                                {[
+                                                  { key: "paceSecPerKm", label: "Allure", value: step.paceSecPerKm ? compactPaceLabel(step.paceSecPerKm) : "" },
+                                                  { key: "distanceM", label: "Distance", value: step.distanceM ? String(step.distanceM) : "" },
+                                                  { key: "durationSec", label: "Temps", value: step.durationSec ? String(step.durationSec) : "" },
+                                                ].map((field) => (
+                                                  <label key={`${stepKey}-${field.key}`}>
+                                                    <span className="mb-1.5 block pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "#7a7a7a" }}>{field.label}</span>
+                                                    <input
+                                                      value={field.value}
+                                                      disabled={isMirror}
+                                                      placeholder="—"
+                                                      onChange={(event) => {
+                                                        if (isMirror) return;
+                                                        updatePyramidBlock(block.id, (cfg) => {
+                                                          const steps = [...cfg.steps];
+                                                          const source = steps[step.sourceIndex];
+                                                          if (!source) return cfg;
+                                                          const raw = event.target.value;
+                                                          const nextValue =
+                                                            field.key === "paceSecPerKm"
+                                                              ? parsePaceInputToSec(raw)
+                                                              : (() => {
+                                                                  const numeric = Number.parseInt(raw.replace(/[^\d]/g, ""), 10);
+                                                                  return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+                                                                })();
+                                                          if (field.key === "paceSecPerKm") source.paceSecPerKm = nextValue;
+                                                          if (field.key === "distanceM") source.distanceM = nextValue;
+                                                          if (field.key === "durationSec") source.durationSec = nextValue;
+                                                          return { ...cfg, steps };
+                                                        });
+                                                      }}
+                                                      className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium outline-none focus:border-2 focus:border-[#0066cc]"
+                                                      style={{ color: isMirror ? "#7a7a7a" : "#1d1d1f", cursor: isMirror ? "not-allowed" : undefined }}
+                                                    />
+                                                  </label>
+                                                ))}
+                                              </div>
+                                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                                {[
+                                                  { key: "recoveryDurationSec", label: "Récup", value: step.recoveryDurationSec ? String(step.recoveryDurationSec) : "" },
+                                                  { key: "repetitions", label: "Répétitions", value: String(step.repetitions ?? 1) },
+                                                ].map((field) => (
+                                                  <label key={`${stepKey}-${field.key}`}>
+                                                    <span className="mb-1.5 block pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "#7a7a7a" }}>{field.label}</span>
+                                                    <input
+                                                      value={field.value}
+                                                      disabled={isMirror}
+                                                      onChange={(event) => {
+                                                        if (isMirror) return;
+                                                        const numeric = Number.parseInt(event.target.value.replace(/[^\d]/g, ""), 10);
+                                                        updatePyramidBlock(block.id, (cfg) => {
+                                                          const steps = [...cfg.steps];
+                                                          const source = steps[step.sourceIndex];
+                                                          if (!source) return cfg;
+                                                          const nextValue = Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+                                                          if (field.key === "recoveryDurationSec") source.recoveryDurationSec = nextValue;
+                                                          if (field.key === "repetitions") source.repetitions = nextValue ?? 1;
+                                                          return { ...cfg, steps };
+                                                        });
+                                                      }}
+                                                      className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium outline-none focus:border-2 focus:border-[#0066cc]"
+                                                      style={{ color: isMirror ? "#7a7a7a" : "#1d1d1f", cursor: isMirror ? "not-allowed" : undefined }}
+                                                    />
+                                                  </label>
+                                                ))}
+                                              </div>
+                                              <div className="mt-2">
+                                                <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "#7a7a7a" }}>Zone</p>
+                                                <div className="flex gap-1">
+                                                  {(PREVIEW_ZONE_ORDER as readonly ZoneKey[]).map((zoneKey) => (
+                                                    <button
+                                                      key={`${stepKey}-${zoneKey}`}
+                                                      type="button"
+                                                      disabled={isMirror}
+                                                      className={cn("flex-1 rounded-md py-1 text-[10px] font-bold transition-transform", step.zone === zoneKey ? "scale-[1.04] ring-1 ring-black/20" : "", isMirror ? "cursor-not-allowed opacity-70" : "")}
+                                                      style={{ background: zoneHexColor(zoneKey), color: zoneTextColor(zoneKey) }}
+                                                      onClick={() =>
+                                                        updatePyramidBlock(block.id, (cfg) => {
+                                                          const steps = [...cfg.steps];
+                                                          const source = steps[step.sourceIndex];
+                                                          if (!source) return cfg;
+                                                          source.zone = zoneKey;
+                                                          return { ...cfg, steps };
+                                                        })
+                                                      }
+                                                    >
+                                                      {zoneKey}
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                              {!isMirror ? (
+                                                <div className="mt-2 flex justify-end">
+                                                  <button
+                                                    type="button"
+                                                    className="rounded-full bg-red-50 px-3 py-1 text-[11px] font-bold text-red-500"
+                                                    onClick={() =>
+                                                      updatePyramidBlock(block.id, (cfg) => ({
+                                                        ...cfg,
+                                                        steps: cfg.steps.filter((_, sourceIdx) => sourceIdx !== step.sourceIndex),
+                                                      }))
+                                                    }
+                                                  >
+                                                    Supprimer
+                                                  </button>
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
+
+                                  <button
+                                    type="button"
+                                    className="mt-2 h-[40px] w-full rounded-[11px] border-[1.5px] border-dashed border-[#e0e0e0] bg-transparent text-[14px] font-semibold tracking-[-0.2px] text-[#0066cc]"
+                                    onClick={() => {
+                                      const newStepId = uid();
+                                      updatePyramidBlock(block.id, (cfg) => ({
+                                        ...cfg,
+                                        steps: [...cfg.steps, { id: newStepId, zone: "Z4", repetitions: 1 }],
+                                      }));
+                                      setExpandedPyramidSteps((prev) => ({
+                                        ...prev,
+                                        [`${block.id}:${newStepId}`]: true,
+                                      }));
+                                    }}
+                                  >
+                                    + Ajouter un palier
+                                  </button>
                                 </div>
                               ) : isProgressiveBlock(block) ? (
-                                <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Allure début"
-                                      value={block.paceStartSecPerKm ? compactPaceLabel(block.paceStartSecPerKm) : ""}
-                                      placeholder="5'30"
-                                      onClick={() => {
-                                        const pace = block.paceStartSecPerKm || block.paceSecPerKm || 330;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure de début",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, paceStartSecPerKm: next }, "paceStart")
-                                                : { ...current, paceStartSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Allure finale"
-                                      value={block.paceEndSecPerKm ? compactPaceLabel(block.paceEndSecPerKm) : ""}
-                                      placeholder="4'45"
-                                      onClick={() => {
-                                        const pace = block.paceEndSecPerKm || block.paceSecPerKm || 285;
-                                        setWheelAValue(String(Math.floor(pace / 60)));
-                                        setWheelBValue(String(pace % 60));
-                                        setWheelUnit("min/km");
-                                        openWheelColumns(
-                                          "Allure finale",
-                                          [
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                          ],
-                                          () => {
-                                            const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, paceEndSecPerKm: next }, "paceEnd")
-                                                : { ...current, paceEndSecPerKm: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="RPE"
-                                      value={block.rpe ? `${block.rpe}/10` : ""}
-                                      placeholder="7"
-                                      onClick={() =>
-                                        openWheel(
-                                          "RPE",
-                                          Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                          String(block.rpe ?? 7),
-                                          (next) => updateDraftBlock(block.id, (current) => ({ ...current, rpe: Number(next), intensityMode: "rpe" }))
-                                        )
-                                      }
-                                    />
+                                <div className="space-y-[10px]">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure début</p>
+                                      <button type="button" onClick={() => { const p=block.paceStartSecPerKm||block.paceSecPerKm||330; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure de début",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,paceStartSecPerKm:n},"paceStart"):{...c,paceStartSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceStartSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceStartSecPerKm?compactPaceLabel(block.paceStartSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure finale</p>
+                                      <button type="button" onClick={() => { const p=block.paceEndSecPerKm||block.paceSecPerKm||285; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure finale",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,paceEndSecPerKm:n},"paceEnd"):{...c,paceEndSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceEndSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceEndSecPerKm?compactPaceLabel(block.paceEndSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>RPE</p>
+                                      <button type="button" onClick={() => openWheel("RPE",Array.from({length:10},(_,i)=>({value:String(i+1),label:String(i+1)})),String(block.rpe??7),(n)=>updateDraftBlock(block.id,(c)=>({...c,rpe:Number(n),intensityMode:"rpe"})))} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.rpe?"#1d1d1f":"#7a7a7a"}}>{block.rpe??"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>&nbsp;</span>
+                                    </div>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    <CoachingMetricPill
-                                      label="Distance"
-                                      value={simpleBlockDistanceValue(block.distanceM)}
-                                      placeholder="5"
-                                      onClick={() => {
-                                        const meters = block.distanceM || 0;
-                                        const wholeKm = Math.floor(meters / 1000);
-                                        const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                        setWheelAValue(String(wholeKm));
-                                        setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                        setWheelUnit("km");
-                                        openWheelColumns(
-                                          "Distance du bloc",
-                                          [
-                                            { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                            { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                          ],
-                                          () => {
-                                            const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, distanceM: next }, "distance")
-                                                : { ...current, distanceM: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
-                                    <CoachingMetricPill
-                                      label="Temps"
-                                      value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                      placeholder="30"
-                                      onClick={() => {
-                                        const total = block.durationSec || 0;
-                                        const nextA = String(Math.floor(total / 3600));
-                                        const nextB = String(Math.floor((total % 3600) / 60));
-                                        const nextC = String(total % 60);
-                                        setWheelAValue(nextA);
-                                        setWheelBValue(nextB);
-                                        setWheelCValue(nextC);
-                                        openWheelColumns(
-                                          "Durée du bloc",
-                                          [
-                                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                          ],
-                                          () => {
-                                            const next =
-                                              Number.parseInt(wheelARef.current, 10) * 3600 +
-                                              Number.parseInt(wheelBRef.current, 10) * 60 +
-                                              Number.parseInt(wheelCRef.current, 10);
-                                            updateDraftBlock(block.id, (current) =>
-                                              draft.sport === "running"
-                                                ? deriveProgressiveRunningVolume({ ...current, durationSec: next }, "duration")
-                                                : { ...current, durationSec: next }
-                                            );
-                                          }
-                                        );
-                                      }}
-                                    />
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Distance</p>
+                                      <button type="button" onClick={() => { const m=block.distanceM||0,wk=Math.floor(m/1000),rm=Math.max(0,m-wk*1000); setWheelAValue(String(wk)); setWheelBValue(String(Math.round(rm/25)*25)); setWheelUnit("km"); openWheelColumns("Distance du bloc",[{items:DISTANCE_KM_WHOLE_OPTIONS,value:String(wk),onChange:setWheelAValue,suffix:"km"},{items:DISTANCE_METERS_25_OPTIONS,value:String(Math.round(rm/25)*25),onChange:setWheelBValue,suffix:"m"}],()=>{const n=(Number.parseInt(wheelARef.current,10)||0)*1000+(Number.parseInt(wheelBRef.current,10)||0); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,distanceM:n},"distance"):{...c,distanceM:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.distanceM?"#1d1d1f":"#7a7a7a"}}>{simpleBlockDistanceValue(block.distanceM)||"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Temps</p>
+                                      <button type="button" onClick={() => { const t=block.durationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Durée du bloc",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveProgressiveRunningVolume({...c,durationSec:n},"duration"):{...c,durationSec:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.durationSec?"#1d1d1f":"#7a7a7a"}}>{block.durationSec?secondsToLabel(block.durationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="grid grid-cols-3 gap-1.5">
-                                  <CoachingMetricPill
-                                    label="Allure"
-                                    value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
-                                    placeholder="5'30"
-                                    onClick={() => {
-                                      const pace = block.paceSecPerKm || 330;
-                                      setWheelAValue(String(Math.floor(pace / 60)));
-                                      setWheelBValue(String(pace % 60));
-                                      setWheelUnit("min/km");
-                                      openWheelColumns(
-                                        "Allure du bloc",
-                                        [
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                        ],
-                                        () => {
-                                          const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                          updateDraftBlock(block.id, (current) =>
-                                            draft.sport === "running"
-                                              ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
-                                              : { ...current, paceSecPerKm: next }
-                                          );
-                                        }
-                                      );
-                                    }}
-                                  />
-                                  <CoachingMetricPill
-                                    label="Distance"
-                                    value={simpleBlockDistanceValue(block.distanceM)}
-                                    placeholder="5"
-                                    onClick={() => {
-                                      const meters = block.distanceM || 0;
-                                      const wholeKm = Math.floor(meters / 1000);
-                                      const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                      setWheelAValue(String(wholeKm));
-                                      setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                      setWheelUnit("km");
-                                      openWheelColumns(
-                                        "Distance du bloc",
-                                        [
-                                          { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                          { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                        ],
-                                        () => {
-                                          const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                          updateDraftBlock(block.id, (current) =>
-                                            draft.sport === "running"
-                                              ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
-                                              : { ...current, distanceM: next }
-                                          );
-                                        }
-                                      );
-                                    }}
-                                  />
-                                  <CoachingMetricPill
-                                    label="Temps"
-                                    value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
-                                    placeholder="30"
-                                    onClick={() => {
-                                      const total = block.durationSec || 0;
-                                      const nextA = String(Math.floor(total / 3600));
-                                      const nextB = String(Math.floor((total % 3600) / 60));
-                                      const nextC = String(total % 60);
-                                      setWheelAValue(nextA);
-                                      setWheelBValue(nextB);
-                                      setWheelCValue(nextC);
-                                      openWheelColumns(
-                                        "Durée du bloc",
-                                        [
-                                          { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                        ],
-                                        () => {
-                                          const next =
-                                            Number.parseInt(wheelARef.current, 10) * 3600 +
-                                            Number.parseInt(wheelBRef.current, 10) * 60 +
-                                            Number.parseInt(wheelCRef.current, 10);
-                                          updateDraftBlock(block.id, (current) =>
-                                            draft.sport === "running"
-                                              ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
-                                              : { ...current, durationSec: next }
-                                          );
-                                        }
-                                      );
-                                    }}
-                                  />
+                                <div className="space-y-[10px]">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Allure</p>
+                                      <button type="button" onClick={() => { const p=block.paceSecPerKm||330; setWheelAValue(String(Math.floor(p/60))); setWheelBValue(String(p%60)); setWheelUnit("min/km"); openWheelColumns("Allure du bloc",[{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(Math.floor(p/60)),onChange:setWheelAValue,suffix:"'"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:String(p%60),onChange:setWheelBValue,suffix:"''"}],()=>{const n=Number.parseInt(wheelARef.current,10)*60+Number.parseInt(wheelBRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,paceSecPerKm:n},"pace"):{...c,paceSecPerKm:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.paceSecPerKm?"#1d1d1f":"#7a7a7a"}}>{block.paceSecPerKm?compactPaceLabel(block.paceSecPerKm):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>/km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Distance</p>
+                                      <button type="button" onClick={() => { const m=block.distanceM||0,wk=Math.floor(m/1000),rm=Math.max(0,m-wk*1000); setWheelAValue(String(wk)); setWheelBValue(String(Math.round(rm/25)*25)); setWheelUnit("km"); openWheelColumns("Distance du bloc",[{items:DISTANCE_KM_WHOLE_OPTIONS,value:String(wk),onChange:setWheelAValue,suffix:"km"},{items:DISTANCE_METERS_25_OPTIONS,value:String(Math.round(rm/25)*25),onChange:setWheelBValue,suffix:"m"}],()=>{const n=(Number.parseInt(wheelARef.current,10)||0)*1000+(Number.parseInt(wheelBRef.current,10)||0); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,distanceM:n},"distance"):{...c,distanceM:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.distanceM?"#1d1d1f":"#7a7a7a"}}>{simpleBlockDistanceValue(block.distanceM)||"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>km</span>
+                                    </div>
+                                    <div>
+                                      <p className="mb-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{color:"#7a7a7a"}}>Temps</p>
+                                      <button type="button" onClick={() => { const t=block.durationSec||0,nA=String(Math.floor(t/3600)),nB=String(Math.floor((t%3600)/60)),nC=String(t%60); setWheelAValue(nA); setWheelBValue(nB); setWheelCValue(nC); openWheelColumns("Durée du bloc",[{items:Array.from({length:11},(_,i)=>({value:String(i),label:String(i)})),value:nA,onChange:setWheelAValue,suffix:"h"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nB,onChange:setWheelBValue,suffix:"m"},{items:Array.from({length:60},(_,i)=>({value:String(i),label:String(i).padStart(2,"0")})),value:nC,onChange:setWheelCValue,suffix:"s"}],()=>{const n=Number.parseInt(wheelARef.current,10)*3600+Number.parseInt(wheelBRef.current,10)*60+Number.parseInt(wheelCRef.current,10); updateDraftBlock(block.id,(c)=>draft.sport==="running"?deriveRunningVolume({...c,durationSec:n},"duration"):{...c,durationSec:n});});}} className="h-[38px] w-full rounded-[11px] border border-[#e0e0e0] bg-white text-center text-[15px] font-medium" style={{color:block.durationSec?"#1d1d1f":"#7a7a7a"}}>{block.durationSec?secondsToLabel(block.durationSec):"—"}</button>
+                                      <span className="mt-1 block text-center text-[11px]" style={{color:"#7a7a7a"}}>min</span>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
-
-                            </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -4116,11 +4909,20 @@ export function CoachPlanningExperience() {
                       return;
                     }
                     if (entry.id === "pyramid") {
+                      const defaultStep = {
+                        id: uid(),
+                        paceSecPerKm: 330,
+                        distanceM: 200,
+                        durationSec: 60,
+                        recoveryDurationSec: 60,
+                        repetitions: 1,
+                        zone: "Z4" as ZoneKey,
+                      };
                       insertDraftBlock(
                         {
                           ...createDefaultBlock("steady", nextOrder),
-                          repetitions: 5,
-                          notes: "[Pyramid]",
+                          repetitions: 3,
+                          notes: serializePyramidConfig({ mode: "symetrique", steps: [defaultStep, { ...defaultStep, id: uid() }, { ...defaultStep, id: uid() }] }),
                           zone: "Z4",
                         },
                         pendingInsertIndex
@@ -4574,6 +5376,100 @@ export function CoachPlanningExperience() {
               </div>
             ) : null}
           </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={!!sessionPreview} onOpenChange={(open) => (!open ? closeSessionPreview() : undefined)}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="flex h-[88dvh] flex-col overflow-hidden rounded-t-[24px] border-border bg-[#e7e8ed] p-0"
+        >
+          {previewSessionItem ? (
+            <>
+              <div className="px-5 pb-2 pt-3">
+                <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-[#c9cad2]" />
+                <button
+                  type="button"
+                  className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground"
+                  onClick={closeSessionPreview}
+                  aria-label="Fermer"
+                >
+                  <Plus className="h-5 w-5 rotate-45" />
+                </button>
+                <h3 className="text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground">{previewSessionItem.title}</h3>
+                <div className="mt-2 flex items-center gap-5 text-[21px] font-semibold text-foreground">
+                  {previewSessionMetrics.durationLabel ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock3 className="h-4 w-4 text-muted-foreground" />
+                      {previewSessionMetrics.durationLabel}
+                    </span>
+                  ) : null}
+                  {previewSessionMetrics.distanceLabel ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Ruler className="h-4 w-4 text-muted-foreground" />
+                      {previewSessionMetrics.distanceLabel}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-5 pb-[max(1rem,var(--safe-area-bottom))] [-webkit-overflow-scrolling:touch]">
+                <div className="rounded-[24px] bg-card p-4">
+                  <div className="relative mb-5 rounded-[12px] bg-white p-2">
+                    {previewSessionBubbleLabel && sessionPreview ? (
+                      <div
+                        className="absolute z-10 -translate-x-1/2 rounded-[12px] bg-[#1c1d21] px-3 py-1.5 text-[12px] font-semibold text-white shadow-md"
+                        style={{ left: `${Math.max(12, Math.min(sessionPreview.anchorX, 280))}px`, top: `${Math.max(-6, sessionPreview.anchorTop - 36)}px` }}
+                      >
+                        {previewSessionBubbleLabel}
+                      </div>
+                    ) : null}
+                    <MiniWorkoutProfile
+                      blocks={previewSessionMiniBars}
+                      variant="premiumCompact"
+                      zoneBandMode
+                      flatSurface
+                      className="h-20 w-full rounded-none border-0 bg-transparent px-0 py-0"
+                      selectedBlockIndex={
+                        !sessionPreview?.blockId || !previewSessionItem.blocks.length || !previewSessionMiniBars.length
+                          ? null
+                          : Math.round(
+                              (Math.max(0, previewSessionItem.blocks.findIndex((b) => b.id === sessionPreview.blockId)) /
+                                Math.max(1, previewSessionItem.blocks.length - 1)) *
+                                Math.max(1, previewSessionMiniBars.length - 1)
+                            )
+                      }
+                      onBlockTap={({ index, anchorX, anchorTop }) => {
+                        if (!previewSessionItem.blocks.length || !previewSessionMiniBars.length) return;
+                        const mapped = Math.round((index / Math.max(1, previewSessionMiniBars.length - 1)) * (previewSessionItem.blocks.length - 1));
+                        const targetBlock = previewSessionItem.blocks[Math.max(0, Math.min(mapped, previewSessionItem.blocks.length - 1))];
+                        if (!targetBlock) return;
+                        setSessionPreview((prev) =>
+                          prev ? { ...prev, blockId: targetBlock.id, anchorX, anchorTop } : prev
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    {previewSessionSections.map((section) => (
+                      <div key={section.id}>
+                        <h4 className="text-[22px] font-bold tracking-[-0.01em] text-foreground">{section.title}</h4>
+                        <div className="mt-1.5 space-y-0.5">
+                          {section.lines.map((line, idx) => (
+                            <p key={`${section.id}-${idx}`} className="text-[17px] text-foreground">
+                              - {line}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
         </SheetContent>
       </Sheet>
 

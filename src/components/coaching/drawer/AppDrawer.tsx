@@ -35,6 +35,8 @@ interface AppDrawerProps {
   userMode?: "coach" | "athlete";
   otherClubsCount?: number;
   onPressClubSwitcher?: () => void;
+  /** Clic sur la photo du club → écran paramètres club (maquettes 19–20). */
+  onPressClubAvatar?: () => void;
 }
 
 type DrawerItemDef = {
@@ -55,34 +57,49 @@ function DrawerHeader({
   clubAvatarUrl,
   otherClubsCount = 0,
   onPressClubSwitcher,
+  onPressClubAvatar,
 }: {
   coachName?: string;
   clubName?: string;
   clubAvatarUrl?: string | null;
   otherClubsCount?: number;
   onPressClubSwitcher?: () => void;
+  onPressClubAvatar?: () => void;
 }) {
   const fallbackInitial = (clubName || "Club").slice(0, 1).toUpperCase();
   const otherClubLabel = `${otherClubsCount} autre club${otherClubsCount > 1 ? "s" : ""}`;
   return (
     <div className="border-b border-border/60 px-4 pb-4 pt-[max(1rem,var(--safe-area-top))]">
-      <button type="button" onClick={onPressClubSwitcher} className="flex w-full items-center gap-3 text-left">
-        <div className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary">
+      <div className="flex w-full items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (onPressClubAvatar) onPressClubAvatar();
+            else onPressClubSwitcher?.();
+          }}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary touch-manipulation active:opacity-80"
+          aria-label="Paramètres du club"
+        >
           {clubAvatarUrl ? (
             <img src={clubAvatarUrl} alt={clubName || "Club"} className="h-full w-full object-cover" />
           ) : (
             fallbackInitial
           )}
-        </div>
-        <div className="min-w-0">
+        </button>
+        <button
+          type="button"
+          onClick={onPressClubSwitcher}
+          disabled={!onPressClubSwitcher}
+          className="min-w-0 flex-1 touch-manipulation text-left disabled:pointer-events-none disabled:opacity-50"
+        >
           <p className="truncate text-[16px] font-semibold text-foreground">{coachName || "Coach RunConnect"}</p>
           <p className="flex items-center gap-1 truncate text-[12px] text-muted-foreground">
             <span className="truncate">{clubName || "Espace coaching"}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0" />
             <span className="shrink-0">{otherClubLabel}</span>
           </p>
-        </div>
-      </button>
+        </button>
+      </div>
     </div>
   );
 }
@@ -146,6 +163,7 @@ export function AppDrawer({
   userMode = "coach",
   otherClubsCount = 0,
   onPressClubSwitcher,
+  onPressClubAvatar,
 }: AppDrawerProps) {
   const isAthleteMode = userMode === "athlete";
   const sections = useMemo<DrawerSectionDef[]>(
@@ -202,6 +220,7 @@ export function AppDrawer({
           clubAvatarUrl={clubAvatarUrl}
           otherClubsCount={otherClubsCount}
           onPressClubSwitcher={onPressClubSwitcher}
+          onPressClubAvatar={onPressClubAvatar}
         />
         <div className="no-scrollbar space-y-5 overflow-y-auto px-3 pb-[max(1rem,var(--safe-area-bottom))] pt-3">
           {sections.map((section) => (

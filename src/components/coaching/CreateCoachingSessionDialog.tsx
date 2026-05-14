@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserCheck, Send, BookOpen, Save, MapPin } from "lucide-react";
+import { Users, UserCheck, Send, BookOpen, Save, MapPin, Waves, BarChart3, Triangle, Activity } from "lucide-react";
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { RCCEditor } from "./RCCEditor";
@@ -32,7 +32,6 @@ import {
 } from "@/lib/sessionBlockRpe";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { getActivityConfig } from "@/lib/activityIcons";
 
 interface CreateCoachingSessionDialogProps {
   isOpen: boolean;
@@ -282,15 +281,18 @@ export const CreateCoachingSessionDialog = ({
     ? format(preselectedDate, "EEE d MMM", { locale: fr })
     : format(new Date(), "EEE d MMM", { locale: fr });
   const selectedActivity = ACTIVITY_TYPES.find((type) => type.value === activityType) ?? ACTIVITY_TYPES[0];
-
-  const SportWhiteIcon = ({ activity }: { activity: string }) => {
-    const Icon = getActivityConfig(activity).icon;
-    return (
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white shadow-sm">
-        <Icon className="h-4 w-4 text-[#5B7CFF]" strokeWidth={2.2} />
-      </span>
-    );
-  };
+  const mockupPalette = {
+    actionBlue: "#007AFF",
+    z1: "#B5B5BA",
+    z2: "#0066cc",
+    z3: "#34C759",
+    z4: "#FFCC00",
+    z5: "#FF9500",
+    z6: "#FF3B30",
+    separator: "rgba(60,60,67,0.18)",
+  } as const;
+  const schemaBars = parsedBlocks.slice(0, 6);
+  const activeTile = parsedBlocks.length > 0 ? "pyramide" : "continu";
 
   return (
     <>
@@ -301,7 +303,7 @@ export const CreateCoachingSessionDialog = ({
             headerWrapperClassName="shrink-0"
             header={
               <CoachingFullscreenHeader
-                title="Nouvelle séance"
+                title="Créer une séance"
                 onBack={onClose}
                 rightSlot={
                   <span className="max-w-[min(120px,32vw)] truncate text-right text-xs capitalize text-muted-foreground">
@@ -313,11 +315,16 @@ export const CreateCoachingSessionDialog = ({
             scrollClassName="bg-secondary px-4 py-4"
             footer={
               <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
-                <Button onClick={handleSubmit} disabled={loading || !canSubmit} className="h-11 w-full rounded-xl">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={loading || !canSubmit}
+                  className="h-12 w-full rounded-[14px]"
+                  style={{ backgroundColor: mockupPalette.actionBlue }}
+                >
                   {loading ? "Envoi..." : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Envoyer la séance
+                      Enregistrer la séance
                     </>
                   )}
                 </Button>
@@ -325,66 +332,227 @@ export const CreateCoachingSessionDialog = ({
             }
           >
             <div className="space-y-4">
-              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="min-w-0 space-y-1.5">
-                    <Label className="text-xs">Sport</Label>
-                    <Select value={activityType} onValueChange={setActivityType}>
-                      <SelectTrigger className="h-11 rounded-xl border-border bg-card">
-                        <SelectValue>
-                          <span className="flex items-center gap-2">
-                            <SportWhiteIcon activity={selectedActivity.value} />
-                            <span>{selectedActivity.label.replace(/^[^\s]+\s+/, "")}</span>
-                          </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACTIVITY_TYPES.map(t => (
-                          <SelectItem key={t.value} value={t.value}>
-                            <span className="flex items-center gap-2">
-                              <SportWhiteIcon activity={t.value} />
-                              <span>{t.label.replace(/^[^\s]+\s+/, "")}</span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="min-w-0 space-y-1.5">
-                    <Label className="text-xs">Objectif *</Label>
-                    <Input
-                      placeholder="VMA, Seuil, Footing..."
-                      value={objective}
-                      onChange={e => setObjective(e.target.value)}
-                      className="h-11 rounded-xl border-border bg-card"
-                    />
-                  </div>
-                </div>
-                <Button
+              <div className="grid grid-cols-2 gap-2 rounded-full border border-[#d8d8dd] bg-white p-1">
+                <button type="button" className="h-10 rounded-full bg-[#0066cc] text-[15px] font-semibold text-white">
+                  Construire
+                </button>
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={() => setShowTemplates(true)}
-                  className="h-10 w-full rounded-xl border-dashed text-xs"
+                  className="h-10 rounded-full text-[15px] font-semibold text-[#1d1d1f]"
                 >
-                  <BookOpen className="mr-1 h-3.5 w-3.5" />
-                  Templates
-                </Button>
+                  Modèles
+                </button>
               </div>
 
-              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <RCCEditor
-                  value={rccCode}
-                  onChange={setRccCode}
-                  onParsedChange={handleParsedChange}
+              <div className="px-1">
+                <Input
+                  value={objective}
+                  onChange={e => setObjective(e.target.value)}
+                  placeholder="Nom de la séance"
+                  className="h-auto border-0 bg-transparent px-0 py-0 font-display text-[44px] font-semibold leading-[1.05] tracking-[-0.7px] text-[#1d1d1f] placeholder:text-[#7a7a7a] shadow-none focus-visible:ring-0"
                 />
-                {parsedBlocks.length > 0 && (
-                  <RCCBlocksPreview
-                    blocks={parsedBlocks}
-                    blockRpe={blockRpe}
-                    onBlockRpeChange={setBlockRpe}
+                <p className="mt-1 text-[14px] text-[#7a7a7a]">
+                  {parsedBlocks.length > 0
+                    ? `${parsedBlocks.length} blocs · ~${Math.max(20, parsedBlocks.length * 8)} min`
+                    : "Ajoute des blocs pour estimer la durée"}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: "course", emoji: "🏃", bg: "#007AFF" },
+                  { id: "velo", emoji: "🚴", bg: "#FF3B30" },
+                  { id: "natation", emoji: "🏊", bg: "#5AC8FA" },
+                  { id: "musculation", emoji: "💪", bg: "#FF9500" },
+                ].map((sport) => (
+                  <button
+                    key={sport.id}
+                    type="button"
+                    onClick={() => setActivityType(sport.id)}
+                    className="relative flex aspect-square items-center justify-center rounded-[14px] text-[33px]"
+                    style={{ backgroundColor: sport.bg }}
+                  >
+                    {activityType === sport.id ? (
+                      <span className="pointer-events-none absolute inset-0 rounded-[14px] ring-2 ring-white ring-offset-2 ring-offset-[#0066cc]" />
+                    ) : null}
+                    <span aria-hidden>{sport.emoji}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2 px-1">
+                <p className="text-[26px] font-semibold tracking-[-0.4px] text-[#1d1d1f]">Schéma de séance</p>
+                <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-3">
+                  <svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" className="w-full">
+                    <line x1="40" y1="20" x2="360" y2="20" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="50" x2="360" y2="50" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="80" x2="360" y2="80" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="110" x2="360" y2="110" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="140" x2="360" y2="140" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="170" x2="360" y2="170" stroke="#e0e0e0" strokeDasharray="2 3" />
+                    <line x1="40" y1="200" x2="360" y2="200" stroke="#1d1d1f" strokeOpacity="0.18" />
+                    <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fontWeight="600" fill="#7a7a7a">
+                      <text x="32" y="38" textAnchor="end">Z6</text>
+                      <text x="32" y="68" textAnchor="end">Z5</text>
+                      <text x="32" y="98" textAnchor="end">Z4</text>
+                      <text x="32" y="128" textAnchor="end">Z3</text>
+                      <text x="32" y="158" textAnchor="end">Z2</text>
+                      <text x="32" y="188" textAnchor="end">Z1</text>
+                    </g>
+                    <rect x="40" y="170" width="144" height="30" fill="#B5B5BA" rx="3" />
+                    <rect x="184" y="50" width="37" height="150" fill="#FF9500" rx="3" />
+                    <rect x="221" y="170" width="6" height="30" fill="#B5B5BA" rx="2" />
+                    <rect x="227" y="50" width="37" height="150" fill="#FF9500" rx="3" />
+                    <rect x="264" y="170" width="59" height="30" fill="#B5B5BA" rx="3" />
+                    <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fill="#7a7a7a">
+                      <text x="40" y="216" textAnchor="middle">0:00</text>
+                      <text x="120" y="216" textAnchor="middle">0:15</text>
+                      <text x="200" y="216" textAnchor="middle">0:30</text>
+                      <text x="280" y="216" textAnchor="middle">0:45</text>
+                      <text x="360" y="216" textAnchor="end">1:00</text>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+
+              <div className="space-y-3 px-1">
+                <p className="text-[14px] font-semibold text-[#333]">Blocs</p>
+
+                {[
+                  {
+                    id: "continu",
+                    label: "Continu",
+                    badge: "1",
+                    subtitle: "Z1 · 5 km · 27 min",
+                    accent: "#34C759",
+                    icon: <Waves className="h-4 w-4" />,
+                    insert: "5km>5'30",
+                    fields: [
+                      ["Allure", "5'30", "/km"],
+                      ["Distance", "5", "km"],
+                      ["Temps", "27", "min"],
+                    ],
+                  },
+                  {
+                    id: "intervalle",
+                    label: "Intervalle",
+                    badge: "2 × 2",
+                    subtitle: "Z5 · 2 km @ 3'30 · récup 1 min",
+                    accent: "#0066cc",
+                    icon: <BarChart3 className="h-4 w-4" />,
+                    insert: "2x(2km>3'30 r1')",
+                    fields: [
+                      ["Blocs", "1", ""],
+                      ["Répétitions", "2", ""],
+                      ["RPE", "8", ""],
+                      ["Distance", "2", "km"],
+                      ["Temps", "7", "min"],
+                      ["Allure", "3'30", "/km"],
+                    ],
+                  },
+                  {
+                    id: "pyramide",
+                    label: "Pyramide",
+                    badge: "3 + 2 miroirs",
+                    subtitle: "Symétrique · 5 paliers",
+                    accent: "#FF9500",
+                    icon: <Triangle className="h-4 w-4" />,
+                    insert: "200>5'30, 400>5'00, 600>4'40, 400>5'00, 200>5'30",
+                    fields: [
+                      ["Palier 1", "200m", "5'30"],
+                      ["Palier 2", "400m", "5'00"],
+                      ["Palier 3", "600m", "4'40"],
+                    ],
+                  },
+                  {
+                    id: "variation",
+                    label: "Variation",
+                    badge: "7'00 → 4'30",
+                    subtitle: "Z2 · 5 km · 30 min",
+                    accent: "#0066cc",
+                    icon: <Activity className="h-4 w-4" />,
+                    insert: "5km de 7'00 à 4'30",
+                    fields: [
+                      ["Allure début", "7'00", "/km"],
+                      ["Allure finale", "4'30", "/km"],
+                      ["RPE", "7", ""],
+                      ["Distance", "5", "km"],
+                      ["Temps", "30", "min"],
+                    ],
+                  },
+                ].map((block) => (
+                  <div key={block.id} className="overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
+                    <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderLeft: `3px solid ${block.accent}` }}>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: block.accent }}>
+                          {block.icon}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[16px] font-semibold">{block.label}</span>
+                            <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: block.accent, backgroundColor: `${block.accent}22` }}>
+                              {block.badge}
+                            </span>
+                          </div>
+                          <p className="truncate text-[13px] text-[#7a7a7a]">{block.subtitle}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRccCode((prev) => (prev.trim() ? `${prev}, ${block.insert}` : block.insert))}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-white"
+                        style={{ backgroundColor: block.accent }}
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                    <div className="border-t border-[#f0f0f0] px-4 py-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        {block.fields.map(([label, value, unit], idx) => (
+                          <div key={`${block.id}-${idx}`}>
+                            <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.35px] text-[#7a7a7a]">{label}</p>
+                            <input
+                              readOnly
+                              value={value}
+                              className="h-9 w-full rounded-[11px] border border-[#e0e0e0] bg-white px-2 text-center text-[14px] font-medium text-[#1d1d1f]"
+                            />
+                            <p className="mt-1 text-center text-[10px] text-[#7a7a7a]">{unit || "\u00A0"}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                className="ios-card space-y-4 overflow-hidden border p-0 shadow-[var(--shadow-card)]"
+                style={{ borderColor: mockupPalette.actionBlue, boxShadow: "0 8px 22px -14px rgba(0,122,255,0.45)" }}
+              >
+                <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ backgroundColor: "rgba(0,122,255,0.06)", borderBottom: `0.5px solid ${mockupPalette.separator}` }}>
+                  <div>
+                    <p className="text-sm font-semibold">Éditeur du bloc actif</p>
+                    <p className="text-xs text-muted-foreground">RCC + aperçu du bloc</p>
+                  </div>
+                  <span className="rounded-lg px-2 py-1 text-xs font-semibold text-white" style={{ backgroundColor: mockupPalette.actionBlue }}>
+                    Actif
+                  </span>
+                </div>
+                <div className="px-4 pb-4 pt-3">
+                  <RCCEditor
+                    value={rccCode}
+                    onChange={setRccCode}
+                    onParsedChange={handleParsedChange}
                   />
-                )}
+                  {parsedBlocks.length > 0 && (
+                    <RCCBlocksPreview
+                      blocks={parsedBlocks}
+                      blockRpe={blockRpe}
+                      onBlockRpeChange={setBlockRpe}
+                    />
+                  )}
+                </div>
               </div>
 
               <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
@@ -410,6 +578,16 @@ export const CreateCoachingSessionDialog = ({
                     className="rounded-xl border-border bg-card"
                   />
                 </div>
+              </div>
+
+              <div className="ios-card space-y-1.5 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <Label className="text-xs">Nom du bloc *</Label>
+                <Input
+                  placeholder="Pyramide seuil, 10x400..."
+                  value={objective}
+                  onChange={e => setObjective(e.target.value)}
+                  className="h-11 rounded-[14px] border-border bg-card"
+                />
               </div>
 
               <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">

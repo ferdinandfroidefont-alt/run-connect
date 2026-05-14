@@ -24,11 +24,13 @@
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<key>UIStatusBarHidden</key>
+	<true/>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -44,10 +46,28 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<true/>
+	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>RunConnect utilise votre position pour enregistrer le parcours, afficher la carte et suivre les sorties de groupe en temps réel.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Même en arrière-plan, RunConnect utilise le GPS pour le suivi des courses de groupe en direct, afin que les participants voient la progression tant qu’une sortie est active.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RunConnect utilise la caméra pour les stories et pour votre photo de profil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RunConnect accède à vos photos pour les stories et pour choisir une image de profil.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>RunConnect peut enregistrer des images dans votre photothèque lorsque vous exportez ou enregistrez du contenu.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>RunConnect utilise le microphone pour les messages vocaux.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>RunConnect accède à vos contacts pour vous aider à inviter des amis sur vos sorties.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>RunConnect utilise les données de mouvement pour le podomètre et l’activité pendant la course.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>location</string>
+		<string>fetch</string>
 	</array>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>

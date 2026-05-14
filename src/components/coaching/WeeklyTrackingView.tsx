@@ -9,12 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   ChevronLeft,
-  ChevronRight,
   Search,
   ChevronRight as ChevronRightIcon,
   Bell,
   Loader2,
-  CalendarDays,
   Check,
   Clock3,
   Minus,
@@ -22,29 +20,35 @@ import {
   Plus,
   Trash2,
   X,
-  BarChart3,
-  CircleHelp,
 } from "lucide-react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  subWeeks,
+  eachDayOfInterval,
+  isSameDay,
+  isBefore,
+  startOfDay,
+  parseISO,
+} from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import type { WeekSession } from "@/components/coaching/WeeklyPlanSessionEditor";
 import { parseAthleteBlockRpeFelt } from "@/lib/sessionBlockRpe";
 import { useNavigate } from "react-router-dom";
 import { getOrCreateDirectConversation } from "@/lib/coachingMessaging";
-import { AthleteHeader } from "@/components/coaching/tracking/AthleteHeader";
-import { AthleteSessionCard } from "@/components/coaching/tracking/AthleteSessionCard";
 import { SessionFeedback } from "@/components/coaching/tracking/SessionFeedback";
+import {
+  CoachAthleteFichePanel,
+  type WeekFicheCell,
+} from "@/components/coaching/tracking/CoachAthleteFichePanel";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { buildAthleteIntensityContext, computeAthletePaces, zoneToFeedback } from "@/lib/athleteWorkoutContext";
 import { getZoneFromPace } from "@/lib/athleteIntensity";
-import {
-  mergeRunningRecords,
-  normalizeRunningEventKey,
-  runningRecordsFromPrivateRows,
-  type CoachPrivateRecordRow,
-} from "@/lib/coachPrivateRunningRecords";
+import { mergeRunningRecords, runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
 import { parseAthleteRecords } from "@/lib/athleteIntensity";
 
 const PREVIEW_ZONE_ORDER = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"] as const;
@@ -136,17 +140,6 @@ const GROUP_COLORS = [
 const normalizeSearchValue = (value: string) =>
   value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").replace(/^@/, "").trim();
 
-const getObjectiveColor = (objective: string | null): string => {
-  if (!objective) return "bg-muted text-muted-foreground";
-  const o = objective.toLowerCase();
-  if (o.includes("vma") || o.includes("interval")) return "bg-red-500/15 text-red-600";
-  if (o.includes("seuil") || o.includes("tempo")) return "bg-orange-500/15 text-orange-600";
-  if (o.includes("recup") || o.includes("récup")) return "bg-emerald-500/15 text-emerald-600";
-  if (o.includes("endurance") || o.includes("footing") || o.includes("ef") || o.includes("sortie longue")) return "bg-green-500/15 text-green-600";
-  if (o.includes("spe") || o.includes("spé")) return "bg-violet-500/15 text-violet-600";
-  return "bg-primary/10 text-primary";
-};
-
 type UiDayStatus = "done" | "missed" | "pending" | "none";
 
 const toUiStatus = (status?: string): UiDayStatus => {
@@ -196,7 +189,27 @@ const DAY_STATUS_META: Record<UiDayStatus, { label: string; bgClass: string; Ico
   none: { label: "Aucune", bgClass: "bg-slate-400", Icon: Minus },
 };
 
-export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
+function mapDayToFicheCell(day: Date, dayData: DayData | undefined): WeekFicheCell {
+  const today = isSameDay(day, new Date());
+  if (!dayData) return "rest";
+  if (dayData.status === "completed") return "ok";
+  if (dayData.status === "missed") return "miss";
+  if (dayData.status === "pending") {
+    if (today) return "today";
+    const sessionDay = startOfDay(new Date(dayData.session.scheduled_at));
+    const todayStart = startOfDay(new Date());
+    if (isBefore(sessionDay, todayStart)) return "miss";
+    return "planned";
+  }
+  return "rest";
+}
+
+export const WeeklyTrackingView = ({
+  clubId,
+  selectedAthleteId,
+  onSelectAthlete,
+  onOpenPlanForAthlete,
+}: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { selectedUserId, navigateToProfile, closeProfilePreview } = useProfileNavigation();
@@ -215,6 +228,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   const [athleteProfileDialogOpen, setAthleteProfileDialogOpen] = useState(false);
   const [recordsDraft, setRecordsDraft] = useState<Array<{ id?: string; event_label: string; record_value: string; note: string }>>([]);
   const [savingRecords, setSavingRecords] = useState(false);
+  const [nudgingAthlete, setNudgingAthlete] = useState(false);
 
   const openConversationWithAthlete = useCallback(
     async (athleteId: string) => {
@@ -546,13 +560,49 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     });
   }, [selectedAthletePaces]);
 
-  const coachRecordSummary = useMemo(() => {
-    if (!selectedAthlete?.coachPrivateRows?.length) return [];
-    return selectedAthlete.coachPrivateRows
-      .filter((row) => row.sport_key === "running")
-      .slice(0, 3)
-      .map((row) => `${normalizeRunningEventKey(row.event_label).toUpperCase()} ${row.record_value}`);
-  }, [selectedAthlete]);
+  const weekFicheCells = useMemo((): WeekFicheCell[] => {
+    if (!selectedAthlete) return [];
+    return weekDays.map((day) => {
+      const key = format(day, "yyyy-MM-dd");
+      return mapDayToFicheCell(day, selectedAthlete.days[key]);
+    });
+  }, [selectedAthlete, weekDays]);
+
+  const ficheRecordRows = useMemo(() => {
+    if (!selectedAthlete) return [];
+    const parsed = parseAthleteRecords(selectedMergedRunningRecords).sort((a, b) => a.distanceM - b.distanceM);
+    const zonesMap = selectedAthletePaces?.zones;
+    return parsed.slice(0, 3).map((r) => {
+      let meta: string | undefined;
+      if (zonesMap && r.paceSecPerKm) {
+        const z = getZoneFromPace(r.paceSecPerKm, zonesMap);
+        if (z) meta = `${z} · ${formatPaceFromSeconds(r.paceSecPerKm)}`;
+      }
+      return {
+        label: formatRecordDistanceLabel(r.distanceKm, r.distanceM),
+        value: formatDurationFromSeconds(r.timeSec),
+        meta,
+      };
+    });
+  }, [selectedAthlete, selectedMergedRunningRecords, selectedAthletePaces?.zones]);
+
+  const selectedDayIndex = useMemo(() => {
+    if (!selectedDayKey) return 0;
+    const idx = weekDays.findIndex((d) => format(d, "yyyy-MM-dd") === selectedDayKey);
+    return idx >= 0 ? idx : 0;
+  }, [selectedDayKey, weekDays]);
+
+  const ficheZoneRows = useMemo(
+    () =>
+      selectedAthleteZoneCards.map((z) => ({
+        zone: z.zone,
+        minPace: z.minPace,
+        maxPace: z.maxPace,
+        dotClass: zoneToPreviewColorClass(z.zone),
+      })),
+    [selectedAthleteZoneCards]
+  );
+
   const selectedDayData = selectedAthlete && selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
   const sessionDetailData = selectedAthlete && sessionDetailDayKey ? selectedAthlete.days[sessionDetailDayKey] : undefined;
   const selectedFeedback = useMemo(() => {
@@ -565,6 +615,36 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     const zone = getZoneFromPace(pace, zones);
     return zone ? zoneToFeedback(zone) : undefined;
   }, [selectedAthletePaces, selectedDayData]);
+
+  const athleteHasLateSessions = useMemo(() => {
+    if (!selectedAthlete) return false;
+    const now = new Date();
+    return Object.entries(selectedAthlete.days).some(
+      ([dayKey, d]) => new Date(dayKey) < now && d.status !== "completed"
+    );
+  }, [selectedAthlete]);
+
+  const handleNudgeThisAthlete = useCallback(async () => {
+    if (!selectedAthlete || !user) return;
+    if (!athleteHasLateSessions) {
+      toast.info("Rappel", { description: "Aucune séance en retard à relancer pour cet athlète." });
+      return;
+    }
+    setNudgingAthlete(true);
+    try {
+      await sendPushNotification(
+        selectedAthlete.userId,
+        "⏰ Rappel de votre coach",
+        "N'oubliez pas de valider vos séances !",
+        "coaching_reminder"
+      );
+      toast.success("Relance envoyée");
+    } catch {
+      toast.error("Impossible d'envoyer la relance");
+    } finally {
+      setNudgingAthlete(false);
+    }
+  }, [athleteHasLateSessions, selectedAthlete, sendPushNotification, user]);
 
   const saveCoachPrivateRecords = useCallback(async () => {
     if (!user || !selectedAthlete) return;
@@ -629,6 +709,20 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     setSelectedDayKey(firstWithSession ? format(firstWithSession, "yyyy-MM-dd") : format(weekStart, "yyyy-MM-dd"));
   }, [selectedAthlete, selectedDayKey, weekDays, weekStart]);
 
+  useEffect(() => {
+    if (!recordsDialogOpen || !selectedAthlete) return;
+    const runningRows = (selectedAthlete.coachPrivateRows || []).filter((row) => row.sport_key === "running");
+    setRecordsDraft(
+      runningRows.length
+        ? runningRows.map((row) => ({
+            id: row.id,
+            event_label: row.event_label,
+            record_value: row.record_value,
+            note: row.note ?? "",
+          }))
+        : [{ event_label: "", record_value: "", note: "" }]
+    );
+  }, [recordsDialogOpen, selectedAthlete]);
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
   const totalAthletes = athletes.length;
@@ -636,6 +730,36 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
 
   // ==================== MODE LISTE ====================
   if (!selectedAthlete) {
+    if (selectedAthleteId && loading) {
+      return (
+        <div className="apple-grouped-bg min-h-[50vh] px-5 pb-8 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <div className="mb-6 flex justify-between">
+            <div className="h-9 w-28 animate-pulse rounded-lg bg-muted/80" />
+            <div className="h-9 w-9 animate-pulse rounded-full bg-muted/80" />
+          </div>
+          <div className="flex gap-3.5">
+            <div className="h-16 w-16 shrink-0 animate-pulse rounded-full bg-muted/80" />
+            <div className="min-w-0 flex-1 space-y-2 pt-1">
+              <div className="h-7 w-[60%] max-w-[200px] animate-pulse rounded-md bg-muted/80" />
+              <div className="h-4 w-full animate-pulse rounded-md bg-muted/60" />
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <div className="h-11 flex-1 animate-pulse rounded-[12px] bg-muted/80" />
+            <div className="h-11 flex-1 animate-pulse rounded-[12px] bg-muted/80" />
+            <div className="h-11 w-[88px] shrink-0 animate-pulse rounded-[12px] bg-muted/60" />
+          </div>
+          <div className="mt-8 h-4 w-32 animate-pulse rounded bg-muted/70" />
+          <div className="mt-3 grid grid-cols-7 gap-1">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="aspect-square animate-pulse rounded-[10px] bg-muted/70" />
+            ))}
+          </div>
+          <div className="mt-8 h-4 w-40 animate-pulse rounded bg-muted/70" />
+          <div className="mt-2 h-28 animate-pulse rounded-[16px] bg-muted/60" />
+        </div>
+      );
+    }
     return (
       <div className="space-y-0">
         <div className="border-b border-border bg-card px-4 py-3">
@@ -883,144 +1007,68 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         .join(" • ") || "Séance planifiée"
     : "";
 
+  const ficheSubtitleParts = [
+    selectedAthlete.groupName ?? null,
+    selectedAthlete.username ? `@${selectedAthlete.username}` : null,
+    selectedAthlete.totalCount > 0 ? `${pct}% réalisé cette semaine` : null,
+  ].filter(Boolean);
+  const ficheSubtitle = ficheSubtitleParts.join(" · ") || "Membre du club";
+
+  const sessionStatusLabelForFiche = selectedDayData
+    ? `${DAY_STATUS_META[selectedStatus].label}${selectedAvgRpe != null ? ` · RPE ${selectedAvgRpe}/10` : ""}`
+    : undefined;
+
   return (
-    <div className="mx-auto w-full max-w-[1180px] space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
-      <AthleteHeader
+    <div className="mx-auto w-full max-w-[1180px] space-y-0">
+      <CoachAthleteFichePanel
+        userId={selectedAthlete.userId}
         displayName={selectedAthlete.displayName}
         avatarUrl={selectedAthlete.avatarUrl}
-        username={selectedAthlete.username}
-        groupName={selectedAthlete.groupName}
-        status={pct >= 70 ? "active" : "late"}
-        coachRecordsSummary={coachRecordSummary}
+        subtitle={ficheSubtitle}
         onMessage={() => void openConversationWithAthlete(selectedAthlete.userId)}
         onViewProfile={() => navigateToProfile(selectedAthlete.userId)}
-      />
-
-      <div className="border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
-            aria-label="Semaine précédente"
-          >
-            <ChevronLeft className="h-4 w-4 text-primary" />
-          </button>
-          <p className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-foreground">
-            {weekLabel}
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          </p>
-          <button
-            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
-            aria-label="Semaine suivante"
-          >
-            <ChevronRight className="h-4 w-4 text-primary" />
-          </button>
-        </div>
-        <div className="mt-3 grid grid-cols-7 gap-1.5">
-          {weekDays.map((day) => {
-            const dayKey = format(day, "yyyy-MM-dd");
-            const dayData = selectedAthlete.days[dayKey];
-            const isSelected = dayKey === selectedDayKey;
-            const uiStatus: UiDayStatus = dayData ? toUiStatus(dayData.status) : "none";
-            const statusMeta = DAY_STATUS_META[uiStatus];
-            return (
-              <button
-                key={dayKey}
-                type="button"
-                onClick={() => setSelectedDayKey(dayKey)}
-                className={`flex flex-col items-center rounded-lg px-1.5 py-2 transition-all ${isSelected ? "bg-[#2563EB]" : "bg-secondary"}`}
-              >
-                <p className={`text-[16px] font-semibold leading-none ${isSelected ? "text-white" : "text-foreground"}`}>{format(day, "d", { locale: fr })}</p>
-                <p className={`mt-1 text-[11px] font-medium leading-none ${isSelected ? "text-white/90" : "text-muted-foreground"}`}>
-                  {format(day, "EEE", { locale: fr }).slice(0, 1).toUpperCase()}
-                </p>
-                <div className="mt-1.5 flex min-h-[34px] flex-col items-center justify-center">
-                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${statusMeta.bgClass}`}>
-                    <statusMeta.Icon className="h-3 w-3 text-white" />
-                  </span>
-                  <p className={`mt-0.5 text-[10px] font-medium leading-none ${isSelected ? "text-white" : "text-foreground"}`}>
-                    {statusMeta.label}
-                  </p>
-                </div>
-              </button>
+        onNudgeAthlete={() => void handleNudgeThisAthlete()}
+        nudgeLoading={nudgingAthlete}
+        nudgeDisabled={!athleteHasLateSessions}
+        weekLabel={weekLabel}
+        onPreviousWeek={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+        onNextWeek={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+        weekCells={weekFicheCells}
+        weekDayLabels={weekDays.map((d) => format(d, "EEE", { locale: fr }).slice(0, 1).toUpperCase())}
+        selectedDayIndex={selectedDayIndex}
+        onSelectDayIndex={(index) => {
+          const day = weekDays[index];
+          if (day) setSelectedDayKey(format(day, "yyyy-MM-dd"));
+        }}
+        recordRows={ficheRecordRows}
+        recordsFooter="Records profil + notes privées coach pour le calcul des zones."
+        onManageRecords={() => setRecordsDialogOpen(true)}
+        zones={ficheZoneRows}
+        onSendSession={() => {
+          if (onOpenPlanForAthlete) {
+            onOpenPlanForAthlete(
+              selectedAthlete.userId,
+              selectedAthlete.displayName,
+              selectedAthlete.groupId ?? undefined,
+              weekStart
             );
-          })}
-        </div>
-      </div>
-
-      <div className="border-b border-border bg-card px-4 pb-3 pt-2">
-        <div className="flex flex-col divide-y divide-border border-t border-border">
-          {selectedDayData ? (
-            <AthleteSessionCard
-              key={`${selectedDayData.sessionId}-${selectedDayKey}`}
-              dayLabel={format(new Date(selectedDayData.session.scheduled_at), "EEE", { locale: fr }).toUpperCase()}
-              dayNumber={format(new Date(selectedDayData.session.scheduled_at), "d", { locale: fr })}
-              title={selectedDayData.sessionTitle}
-              details={selectedDetails}
-              status={selectedStatus === "none" ? "pending" : selectedStatus}
-              rpeLabel={selectedAvgRpe != null ? `RPE ${selectedAvgRpe}/10` : undefined}
-              objective={selectedDayData.session.objective}
-              onOpen={() => selectedDayKey && openSessionDetail(selectedDayKey)}
-            />
-          ) : (
-            <div className="bg-secondary/20 px-3 py-6 text-center">
-              <p className="text-[13px] text-muted-foreground">Aucune séance sur ce jour.</p>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="border-b border-border bg-card px-4 py-3">
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setAthleteProfileDialogOpen(true)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              setAthleteProfileDialogOpen(true);
-            }
-          }}
-          className="flex min-h-[92px] w-full items-center gap-3 rounded-2xl border bg-white px-4 py-4 text-left transition-colors active:bg-slate-50"
-          style={{ borderColor: "#E5E7EB", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <BarChart3 className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-medium text-muted-foreground">Profil athlète</p>
-            <p className="truncate text-[20px] font-semibold leading-tight text-foreground">{profileCardHeadline}</p>
-            <p className="truncate text-[12px] text-muted-foreground">
-              {selectedAthleteZoneCards.length > 0
-                ? "Zones calculées automatiquement"
-                : "Ajoute un record pour générer tes zones"}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                setAthleteProfileDialogOpen(true);
-              }}
-              className="rounded-full px-1 text-[14px] font-semibold text-[#2563EB]"
-            >
-              Voir zones
-            </button>
-            <button
-              type="button"
-              aria-label="Informations profil athlète"
-              onClick={(event) => {
-                event.stopPropagation();
-                setAthleteProfileDialogOpen(true);
-              }}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 text-muted-foreground"
-            >
-              <CircleHelp className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+            return;
+          }
+          toast.info("Planification", { description: "Ouvre la planification depuis l’onglet Coaching pour envoyer une séance." });
+        }}
+        sessionTitle={
+          selectedDayData
+            ? selectedDayData.sessionTitle
+            : selectedDayKey
+              ? `Aucune séance · ${format(new Date(selectedDayKey), "EEEE d MMMM", { locale: fr })}`
+              : undefined
+        }
+        sessionDetail={selectedDayData ? selectedDetails : undefined}
+        sessionStatusLabel={sessionStatusLabelForFiche}
+        onOpenSessionDetail={
+          selectedDayData && selectedDayKey ? () => openSessionDetail(selectedDayKey) : undefined
+        }
+      />
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
 
       <Dialog open={sessionDetailOpen} onOpenChange={setSessionDetailOpen}>

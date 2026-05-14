@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,12 +10,15 @@ import {
   MoreHorizontal,
   ChevronLeft,
   Share2,
-  MessageCircle,
   ExternalLink,
   Eye,
   Pin,
   UserX,
   Trash2,
+  Pause,
+  Play,
+  Flag,
+  MessageCircle,
 } from "lucide-react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -83,14 +85,15 @@ interface SessionStoryDialogProps {
   stackNested?: boolean;
 }
 
-const IMAGE_DURATION_MS = 5500;
-const LONG_PRESS_MS = 380;
+const IMAGE_DURATION_MS = 6000;
 const SWIPE_CLOSE_PX = 110;
 const SWIPE_INSIGHTS_PX = 90;
 const SWIPE_NAV_PX = 70;
-const TAP_EDGE = 0.32;
-/** Laisse la zone des boutons bas hors du layer de gestes (tap / pause). */
-const GESTURE_BOTTOM_CLEAR = "calc(5.75rem + env(safe-area-inset-bottom, 0px))";
+const ACTION_PANEL_CLOSE_SWIPE_PX = 70;
+/** Réserve la bottom bar (reply / actions) pour les tap zones gauche-droite. */
+const TAP_ZONE_BOTTOM_OFFSET = "calc(5.75rem + env(safe-area-inset-bottom, 0px))";
+/** Offset pour le sous-titre séance au-dessus de la bottom bar. */
+const META_ABOVE_BOTTOM_OFFSET = "calc(6.25rem + env(safe-area-inset-bottom, 0px))";
 
 export function SessionStoryDialog({
   open,
@@ -111,7 +114,8 @@ export function SessionStoryDialog({
     avatar_url: string | null;
   } | null>(null);
   const [storyProgress, setStoryProgress] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+  const [replyFocused, setReplyFocused] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [likedByMe, setLikedByMe] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -128,14 +132,16 @@ export function SessionStoryDialog({
   const [likers, setLikers] = useState<LikeRow[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pressRef = useRef<{ t: number; x: number; y: number; longFired: boolean } | null>(null);
+  const replyInputRef = useRef<HTMLInputElement>(null);
+  const likeBtnRef = useRef<HTMLButtonElement>(null);
   const swipeRef = useRef<{ x0: number; y0: number } | null>(null);
+  const actionPanelSwipeRef = useRef<{ y0: number; startScrollTop: number } | null>(null);
   const progressRaf = useRef<number | null>(null);
 
   const current = stories[index];
   const isOwnStory = !!current && current.author_id === viewerUserId;
   const resolvedMediaUrl = useStoryMediaUrl(current?.media?.media_url ?? null);
+  const isPaused = userPaused || replyFocused || !!actionMode;
 
   const goNext = useCallback(() => {
     setIndex((i) => {
@@ -372,10 +378,6 @@ export function SessionStoryDialog({
   useEffect(() => {
     if (open && actionMode === "hide" && isOwnStory) void loadFollowersForHide();
   }, [open, actionMode, isOwnStory, loadFollowersForHide]);
-
-  useEffect(() => {
-    if (actionMode) setIsPaused(true);
-  }, [actionMode]);
 
   const isLinearVideo = current?.media?.media_type === "video";
   const isBoomerang = current?.media?.media_type === "boomerang";
@@ -622,41 +624,33 @@ export function SessionStoryDialog({
 
   const closeActionPanel = () => {
     setActionMode(null);
-    setIsPaused(false);
+    setUserPaused(false);
   };
 
-  const onPointerDownCapture = (e: React.PointerEvent) => {
-    if (actionMode) return;
-    pressRef.current = { t: Date.now(), x: e.clientX, y: e.clientY, longFired: false };
-    longPressTimer.current = setTimeout(() => {
-      setIsPaused(true);
-      if (pressRef.current) pressRef.current.longFired = true;
-    }, LONG_PRESS_MS);
+  const bumpLikePop = () => {
+    const el = likeBtnRef.current;
+    if (!el) return;
+    el.classList.remove("rc-story-like-pop");
+    void el.offsetWidth;
+    el.classList.add("rc-story-like-pop");
   };
 
-  const endPress = (e: React.PointerEvent) => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    const p = pressRef.current;
-    pressRef.current = null;
-    if (!p || actionMode) return;
-    if (p.longFired) {
-      setIsPaused(false);
-      return;
-    }
-    const dt = Date.now() - p.t;
-    const dx = e.clientX - p.x;
-    const dy = e.clientY - p.y;
-    if (dt > 450 || Math.abs(dx) > 20 || Math.abs(dy) > 20) return;
-    const w = typeof window !== "undefined" ? window.innerWidth : 400;
-    if (e.clientX < w * TAP_EDGE) {
-      triggerTapHaptic();
-      goPrev();
-    } else if (e.clientX > w * (1 - TAP_EDGE)) {
-      triggerTapHaptic();
-      goNext();
+  const onActionPanelTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    actionPanelSwipeRef.current = {
+      y0: e.touches[0].clientY,
+      startScrollTop: target.scrollTop,
+    };
+  };
+
+  const onActionPanelTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const swipe = actionPanelSwipeRef.current;
+    actionPanelSwipeRef.current = null;
+    if (!swipe) return;
+    const deltaY = e.changedTouches[0].clientY - swipe.y0;
+    // Ferme seulement si l'utilisateur tire vers le bas depuis le haut du sheet.
+    if (swipe.startScrollTop <= 0 && deltaY > ACTION_PANEL_CLOSE_SWIPE_PX) {
+      closeActionPanel();
     }
   };
 
@@ -711,6 +705,10 @@ export function SessionStoryDialog({
       .replace(" jours", " j")
       .replace(" jour", " j");
   }, [current?.created_at]);
+  const headerMetaLine = useMemo(() => {
+    if (!relativeStoryTime) return "";
+    return `il y a ${relativeStoryTime}`;
+  }, [relativeStoryTime]);
   const likersByUserId = useMemo(() => new Map(likers.map((l) => [l.user_id, l])), [likers]);
   const insightRows = useMemo(() => {
     const rows = viewers.map((v) => {
@@ -733,7 +731,8 @@ export function SessionStoryDialog({
   useEffect(() => {
     if (!open) {
       setActionMode(null);
-      setIsPaused(false);
+      setUserPaused(false);
+      setReplyFocused(false);
     }
   }, [open]);
 
@@ -747,112 +746,139 @@ export function SessionStoryDialog({
     return parts.join(" · ");
   }, [current?.session]);
 
-  const portalZ = "z-[220]";
   const displayUrl = resolvedMediaUrl ?? current?.media?.media_url ?? null;
 
-  const actionsPortal =
-    open &&
+  /** Panneau d’actions : doit rester *dans* le `DialogContent` Radix. Avec `modal`, Radix met `pointer-events: none` sur `body` : un portal sur `document.body` hérite du `none` et ne reçoit aucun clic/touch. */
+  const actionsOverlay =
+    !!current &&
     actionMode &&
-    typeof document !== "undefined" &&
-    createPortal(
-      <div className={cn("fixed inset-0", portalZ)} role="presentation">
+    open && (
+      <div className="pointer-events-auto absolute inset-0 z-[200]" role="presentation">
         <button
           type="button"
-          className="absolute inset-0 bg-black/55"
+          className="absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out"
           aria-label="Fermer"
           onClick={closeActionPanel}
         />
         <div
+          role="dialog"
+          aria-label="Options story"
           className={cn(
-            "absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-card p-4 text-foreground shadow-xl",
-            "pb-[max(env(safe-area-inset-bottom),16px)]"
+            "absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-[20px]",
+            "border-t border-white/10 bg-[rgb(20_20_22)]/[0.92] pb-[max(env(safe-area-inset-bottom),12px)] pt-2 text-white shadow-xl backdrop-blur-[40px] backdrop-saturate-[180%]",
+            "[transition:transform_400ms_cubic-bezier(0.32,0.72,0,1)]"
           )}
           onClick={(e) => e.stopPropagation()}
+          onTouchStart={onActionPanelTouchStart}
+          onTouchEnd={onActionPanelTouchEnd}
         >
           {actionMode === "menu" && (
             <>
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
-              <p className="mb-3 text-center text-sm font-semibold">Options</p>
-              <div className="flex flex-col gap-1">
-                {isOwnStory && (
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
-                    onClick={() => {
-                      void Promise.all([loadViewers(), loadLikers()]);
-                      setActionMode("insights");
-                    }}
-                  >
-                    <Eye className="h-5 w-5 text-muted-foreground" />
-                    Voir les vues
-                  </button>
-                )}
-                {isOwnStory && (
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
-                    onClick={() => setActionMode("highlight")}
-                  >
-                    <Pin className="h-5 w-5 text-muted-foreground" />
-                    Ajouter aux éléments à la une
-                  </button>
-                )}
-                {isOwnStory && (
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
-                    onClick={() => setActionMode("hide")}
-                  >
-                    <UserX className="h-5 w-5 text-muted-foreground" />
-                    Masquer pour quelqu&apos;un
-                  </button>
-                )}
-                {isOwnStory && (
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] text-destructive active:bg-destructive/10"
-                    onClick={openDeletePage}
-                  >
-                    <Trash2 className="h-5 w-5" />
-                    Supprimer la story…
-                  </button>
-                )}
-                {onOpenFeed && current?.session_id && (
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
-                    onClick={() => {
-                      closeActionPanel();
-                      onOpenFeed(current.session_id!);
-                    }}
-                  >
-                    <ExternalLink className="h-5 w-5 text-muted-foreground" />
-                    Voir dans le feed
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
-                  onClick={() => void shareStory()}
-                >
-                  <Share2 className="h-5 w-5 text-muted-foreground" />
-                  Partager
-                </button>
-                {!isOwnStory && viewerUserId && (
-                  <div className="mt-2 border-t border-border pt-3">
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Répondre</p>
-                    <div className="flex gap-2">
-                      <Input
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Message…"
-                        className="flex-1"
-                      />
-                      <Button size="icon" variant="secondary" onClick={() => void sendReplyAsMessage()} disabled={!replyText.trim()}>
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+              <button
+                type="button"
+                className="mx-auto mb-3 block h-1 w-9 cursor-pointer rounded-full bg-white/30"
+                aria-label="Fermer les options"
+                onClick={closeActionPanel}
+              />
+              <div className="flex flex-col pb-1">
+                {isOwnStory ? (
+                  <>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal transition-colors active:bg-white/[0.06]"
+                      onClick={() => {
+                        void Promise.all([loadViewers(), loadLikers()]);
+                        setActionMode("insights");
+                      }}
+                    >
+                      <Eye className="h-[22px] w-[22px] shrink-0 text-white/85" strokeWidth={2} />
+                      Voir les vues
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal transition-colors active:bg-white/[0.06]"
+                      onClick={() => void shareStory()}
+                    >
+                      <Share2 className="h-[22px] w-[22px] shrink-0 text-white/85" strokeWidth={2} />
+                      Partager
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal transition-colors active:bg-white/[0.06]"
+                      onClick={() => setActionMode("highlight")}
+                    >
+                      <Pin className="h-[22px] w-[22px] shrink-0 text-white/85" strokeWidth={2} />
+                      Enregistrer à la une
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal transition-colors active:bg-white/[0.06]"
+                      onClick={() => setActionMode("hide")}
+                    >
+                      <UserX className="h-[22px] w-[22px] shrink-0 text-white/85" strokeWidth={2} />
+                      Masquer pour quelqu&apos;un
+                    </button>
+                    {onOpenFeed && current?.session_id ? (
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal transition-colors active:bg-white/[0.06]"
+                        onClick={() => {
+                          closeActionPanel();
+                          onOpenFeed(current.session_id!);
+                        }}
+                      >
+                        <ExternalLink className="h-[22px] w-[22px] shrink-0 text-white/85" strokeWidth={2} />
+                        Voir dans le feed
+                      </button>
+                    ) : null}
+                    <div className="my-1 h-px bg-white/10" />
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal text-[#ff453a] transition-colors active:bg-white/[0.06]"
+                      onClick={openDeletePage}
+                    >
+                      <Trash2 className="h-[22px] w-[22px] shrink-0 text-[#ff453a]" strokeWidth={2} />
+                      Supprimer la story…
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {viewerUserId ? (
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal transition-colors active:bg-white/[0.06]"
+                        onClick={() => {
+                          closeActionPanel();
+                          window.setTimeout(() => replyInputRef.current?.focus(), 0);
+                        }}
+                      >
+                        <MessageCircle className="h-[22px] w-[22px] shrink-0 text-white/85" strokeWidth={2} />
+                        Répondre
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal transition-colors active:bg-white/[0.06]"
+                      onClick={() => void shareStory()}
+                    >
+                      <Share2 className="h-[22px] w-[22px] shrink-0 text-white/85" strokeWidth={2} />
+                      Partager
+                    </button>
+                    <div className="my-1 h-px bg-white/10" />
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 px-[22px] py-3.5 text-left text-base font-normal text-[#ff453a] transition-colors active:bg-white/[0.06]"
+                      onClick={() => {
+                        toast({
+                          title: "Signalement",
+                          description: "Cette option sera disponible prochainement.",
+                        });
+                      }}
+                    >
+                      <Flag className="h-[22px] w-[22px] shrink-0 text-[#ff453a]" strokeWidth={2} />
+                      Signaler
+                    </button>
+                  </>
                 )}
               </div>
             </>
@@ -862,36 +888,40 @@ export function SessionStoryDialog({
             <>
               <button
                 type="button"
-                className="mb-3 flex items-center gap-2 text-[15px] font-medium text-primary"
+                className="mb-3 flex items-center gap-2 px-4 text-[15px] font-medium text-[hsl(var(--primary-on-dark))]"
                 onClick={() => setActionMode("menu")}
               >
                 <ChevronLeft className="h-5 w-5" />
                 Retour
               </button>
+              <div className="px-4 pb-4">
               <p className="mb-1 text-lg font-semibold">Vues ({viewers.length})</p>
-              <p className="mb-3 text-sm text-muted-foreground">
+              <p className="mb-3 text-sm text-white/65">
                 Les personnes qui ont aimé apparaissent en premier ({likers.length} j&apos;aime).
               </p>
               <div className="max-h-[55vh] space-y-2 overflow-y-auto">
                 {insightRows.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucune vue pour le moment.</p>
+                  <p className="text-sm text-white/55">Aucune vue pour le moment.</p>
                 ) : (
                   insightRows.map((v) => (
-                    <div key={`${v.viewer_id}-${v.created_at}`} className="flex items-center gap-2 rounded-lg border border-border/60 p-2">
+                    <div key={`${v.viewer_id}-${v.created_at}`} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] p-2">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={v.profile?.avatar_url ?? ""} />
                         <AvatarFallback>{(v.profile?.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{v.profile?.display_name || v.profile?.username || "Membre"}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-white/55">
                           {format(new Date(v.created_at), "d MMM yyyy · HH:mm", { locale: fr })}
                         </p>
                       </div>
-                      {v.liked ? <Heart className="h-4 w-4 shrink-0 fill-red-500 text-red-500" aria-hidden /> : null}
+                      {v.liked ? (
+                        <Heart className="h-4 w-4 shrink-0 fill-[hsl(var(--primary-on-dark))] text-[hsl(var(--primary-on-dark))]" aria-hidden />
+                      ) : null}
                     </div>
                   ))
                 )}
+              </div>
               </div>
             </>
           )}
@@ -900,18 +930,25 @@ export function SessionStoryDialog({
             <>
               <button
                 type="button"
-                className="mb-3 flex items-center gap-2 text-[15px] font-medium text-primary"
+                className="mb-3 flex items-center gap-2 px-4 text-[15px] font-medium text-[hsl(var(--primary-on-dark))]"
                 onClick={() => setActionMode("menu")}
               >
                 <ChevronLeft className="h-5 w-5" />
                 Retour
               </button>
+              <div className="px-4 pb-4">
               <p className="mb-2 text-lg font-semibold">Élément à la une</p>
-              <p className="mb-3 text-sm text-muted-foreground">Titre affiché sur ton profil (section à la une).</p>
-              <Input value={highlightTitle} onChange={(e) => setHighlightTitle(e.target.value)} placeholder="Titre" className="mb-3" />
-              <Button className="w-full" disabled={highlightSaving} onClick={() => void addToHighlights()}>
+              <p className="mb-3 text-sm text-white/65">Titre affiché sur ton profil (section à la une).</p>
+              <Input
+                value={highlightTitle}
+                onChange={(e) => setHighlightTitle(e.target.value)}
+                placeholder="Titre"
+                className="mb-3 border-white/15 bg-white/[0.08] text-white placeholder:text-white/45"
+              />
+              <Button className="w-full bg-[hsl(var(--primary-on-dark))] text-white hover:bg-[hsl(var(--primary-on-dark))]/90" disabled={highlightSaving} onClick={() => void addToHighlights()}>
                 {highlightSaving ? "Ajout…" : "Ajouter"}
               </Button>
+              </div>
             </>
           )}
 
@@ -919,20 +956,21 @@ export function SessionStoryDialog({
             <>
               <button
                 type="button"
-                className="mb-3 flex items-center gap-2 text-[15px] font-medium text-primary"
+                className="mb-3 flex items-center gap-2 px-4 text-[15px] font-medium text-[hsl(var(--primary-on-dark))]"
                 onClick={() => setActionMode("menu")}
               >
                 <ChevronLeft className="h-5 w-5" />
                 Retour
               </button>
+              <div className="px-4 pb-4">
               <p className="mb-2 text-lg font-semibold">Masquer pour…</p>
-              <p className="mb-3 text-sm text-muted-foreground">
+              <p className="mb-3 text-sm text-white/65">
                 Les personnes cochées ne verront plus cette story (abonnés uniquement).
               </p>
               {followersLoading ? (
-                <p className="text-sm text-muted-foreground">Chargement…</p>
+                <p className="text-sm text-white/55">Chargement…</p>
               ) : followers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucun abonné pour masquer la story.</p>
+                <p className="text-sm text-white/55">Aucun abonné pour masquer la story.</p>
               ) : (
                 <div className="mb-4 max-h-[45vh] space-y-1 overflow-y-auto">
                   {followers.map((f) => {
@@ -940,7 +978,7 @@ export function SessionStoryDialog({
                     return (
                       <label
                         key={f.user_id}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 p-2"
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-2"
                       >
                         <input
                           type="checkbox"
@@ -953,7 +991,7 @@ export function SessionStoryDialog({
                               return next;
                             });
                           }}
-                          className="h-4 w-4 rounded"
+                          className="h-4 w-4 rounded border-white/25 bg-transparent"
                         />
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={f.avatar_url ?? ""} />
@@ -965,18 +1003,28 @@ export function SessionStoryDialog({
                   })}
                 </div>
               )}
-              <Button className="w-full" disabled={hideSaving || followersLoading} onClick={() => void saveHideFrom()}>
+              <Button className="w-full bg-[hsl(var(--primary-on-dark))] text-white hover:bg-[hsl(var(--primary-on-dark))]/90" disabled={hideSaving || followersLoading} onClick={() => void saveHideFrom()}>
                 {hideSaving ? "Enregistrement…" : "Enregistrer"}
               </Button>
+              </div>
             </>
           )}
         </div>
-      </div>,
-      document.body
+      </div>
     );
 
   return (
     <>
+      <style>{`
+        @keyframes rc-story-like-pop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.3); }
+          100% { transform: scale(1); }
+        }
+        .rc-story-like-pop {
+          animation: rc-story-like-pop 0.4s ease;
+        }
+      `}</style>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           stackNested={stackNested}
@@ -989,7 +1037,7 @@ export function SessionStoryDialog({
             stackNested && "!z-[130]"
           )}
           aria-describedby={undefined}
-          /* Le menu ⋯ est en portal sur document.body : sans ça, Radix traite les clics comme « outside » et ferme la story avant l’action. */
+          /* Empêche la fermeture de la story par un « outside » tant que le panneau ⋯ est ouvert (le voile est dans le content). */
           onPointerDownOutside={(e) => {
             if (actionMode) e.preventDefault();
           }}
@@ -1011,12 +1059,11 @@ export function SessionStoryDialog({
             <div className="flex flex-1 items-center justify-center p-6 text-sm text-white/60">Aucune story active.</div>
           ) : (
             <>
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-28 bg-gradient-to-b from-black/58 via-black/22 to-transparent" />
-              <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex gap-1 px-3 pt-[calc(env(safe-area-inset-top,0px)+6px)]">
+              <div className="pointer-events-none absolute left-[14px] right-[14px] top-[max(env(safe-area-inset-top),14px)] z-[40] flex gap-1">
                 {stories.map((story, i) => (
-                  <div key={story.id} className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/25">
+                  <div key={story.id} className="h-[2.5px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-white/[0.28]">
                     <div
-                      className="h-full rounded-full bg-white transition-[width] duration-75 ease-linear"
+                      className="h-full rounded-[2px] bg-white transition-[width] duration-75 ease-linear"
                       style={{
                         width: i < index ? "100%" : i > index ? "0%" : `${storyProgress}%`,
                       }}
@@ -1025,10 +1072,10 @@ export function SessionStoryDialog({
                 ))}
               </div>
 
-              <div className="absolute left-0 right-0 top-0 z-30 flex items-center gap-2.5 px-3 pt-[calc(env(safe-area-inset-top,0px)+18px)]">
+              <div className="absolute left-[14px] right-[14px] top-[calc(max(env(safe-area-inset-top),14px)+18px)] z-[40] flex items-center gap-2.5 font-sans">
                 <button
                   type="button"
-                  className="pointer-events-auto rounded-full"
+                  className="shrink-0 rounded-full active:bg-white/15"
                   aria-label="Ouvrir le profil"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1038,7 +1085,7 @@ export function SessionStoryDialog({
                     }
                   }}
                 >
-                  <Avatar className="h-9 w-9 shrink-0 border border-white/25">
+                  <Avatar className="h-9 w-9 shrink-0 border-[1.5px] border-white/90">
                     <AvatarImage src={authorProfile?.avatar_url ?? ""} className="object-cover" />
                     <AvatarFallback className="bg-white/10 text-xs text-white">
                       {(authorProfile?.username ?? "U").charAt(0).toUpperCase()}
@@ -1046,125 +1093,233 @@ export function SessionStoryDialog({
                   </Avatar>
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-semibold leading-tight">{displayName}</p>
-                  <p className="truncate text-[11px] text-white/70">
-                    {(relativeStoryTime || format(new Date(current.created_at), "HH:mm", { locale: fr }))} · {index + 1}/{stories.length}
+                  <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.4)]">
+                    {displayName}
                   </p>
+                  <p className="mt-px truncate text-xs leading-snug text-white/[0.85] [text-shadow:0_1px_3px_rgba(0,0,0,0.4)]">
+                    {headerMetaLine || format(new Date(current.created_at), "HH:mm", { locale: fr })}
+                    <span className="text-white/55"> · </span>
+                    <span className="tabular-nums text-white/70">
+                      {index + 1}/{stories.length}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors active:bg-white/[0.15]"
+                    aria-label={userPaused ? "Reprendre" : "Pause"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUserPaused((p) => !p);
+                    }}
+                  >
+                    {userPaused ? (
+                      <Play className="h-[22px] w-[22px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" fill="currentColor" strokeWidth={0} />
+                    ) : (
+                      <Pause className="h-[22px] w-[22px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors active:bg-white/[0.15]"
+                    aria-label="Options"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionMode("menu");
+                    }}
+                  >
+                    <MoreHorizontal className="h-[22px] w-[22px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+                  </button>
                 </div>
               </div>
 
               <div
-                className="relative min-h-0 flex-1 bg-black"
+                className="relative min-h-0 flex-1 bg-black font-sans"
                 onTouchStart={onTouchStartSwipe}
                 onTouchEnd={onTouchEndSwipe}
               >
                 <div
-                  className="absolute inset-x-0 top-0 z-10"
-                  style={{ bottom: GESTURE_BOTTOM_CLEAR }}
-                  onPointerDown={onPointerDownCapture}
-                  onPointerUp={endPress}
-                  onPointerCancel={() => {
-                    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-                    longPressTimer.current = null;
-                    if (pressRef.current?.longFired) setIsPaused(false);
-                    pressRef.current = null;
-                  }}
-                />
-
-                {current.media && displayUrl ? (
-                  current.media.media_type === "image" ? (
-                    <img
-                      src={displayUrl}
-                      alt=""
-                      draggable={false}
-                      className={cn(
-                        "pointer-events-none absolute inset-0 h-full w-full select-none object-cover transition-opacity duration-200",
-                        isTransitioning ? "opacity-70" : "opacity-100"
-                      )}
-                    />
+                  className={cn(
+                    "absolute inset-0 overflow-hidden transition-[transform,filter] duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
+                    actionMode ? "scale-[0.98] brightness-[0.7]" : "scale-100 brightness-[1]"
+                  )}
+                >
+                  {current.media && displayUrl ? (
+                    current.media.media_type === "image" ? (
+                      <img
+                        src={displayUrl}
+                        alt=""
+                        draggable={false}
+                        className={cn(
+                          "pointer-events-none absolute inset-0 h-full w-full select-none object-cover transition-opacity duration-200",
+                          isTransitioning ? "opacity-70" : "opacity-100"
+                        )}
+                      />
+                    ) : (
+                      <video
+                        ref={videoRef}
+                        key={`${current.id}-${displayUrl}`}
+                        src={displayUrl}
+                        className={cn(
+                          "pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-200",
+                          isTransitioning ? "opacity-70" : "opacity-100"
+                        )}
+                        playsInline
+                        muted
+                        autoPlay
+                        loop={isBoomerang}
+                        preload="auto"
+                      />
+                    )
+                  ) : current.media && !displayUrl ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
+                      <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
+                    </div>
                   ) : (
-                    <video
-                      ref={videoRef}
-                      key={`${current.id}-${displayUrl}`}
-                      src={displayUrl}
-                      className={cn(
-                        "pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-200",
-                        isTransitioning ? "opacity-70" : "opacity-100"
-                      )}
-                      playsInline
-                      muted
-                      autoPlay
-                      loop={isBoomerang}
-                      preload="auto"
-                    />
-                  )
-                ) : current.media && !displayUrl ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
-                    <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
-                  </div>
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 px-6 text-center">
-                    <p className="text-sm font-medium text-white/80">{current.session?.title ?? "Story sans média"}</p>
-                    <p className="mt-2 text-xs text-white/45">Aucune image ou vidéo sur cette story.</p>
-                    {metaLine ? <p className="mt-2 text-xs text-white/35">{metaLine}</p> : null}
-                  </div>
-                )}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 px-6 text-center">
+                      <p className="text-sm font-medium text-white/80">{current.session?.title ?? "Story sans média"}</p>
+                      <p className="mt-2 text-xs text-white/45">Aucune image ou vidéo sur cette story.</p>
+                      {metaLine ? <p className="mt-2 text-xs text-white/35">{metaLine}</p> : null}
+                    </div>
+                  )}
+                  <div
+                    className="pointer-events-none absolute inset-0 z-[2]"
+                    style={{
+                      background:
+                        "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.7) 100%)",
+                    }}
+                  />
+                </div>
+
+                <div
+                  className="absolute inset-x-0 top-0 z-[15] flex"
+                  style={{ bottom: TAP_ZONE_BOTTOM_OFFSET }}
+                  aria-hidden={!!actionMode}
+                >
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="h-full min-h-0 flex-1 cursor-default bg-transparent"
+                    aria-label="Story précédente"
+                    disabled={!!actionMode}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (actionMode) return;
+                      triggerTapHaptic();
+                      goPrev();
+                    }}
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="h-full min-h-0 flex-1 cursor-default bg-transparent"
+                    aria-label="Story suivante"
+                    disabled={!!actionMode}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (actionMode) return;
+                      triggerTapHaptic();
+                      goNext();
+                    }}
+                  />
+                </div>
 
                 {current.media && displayUrl && metaLine ? (
-                  <div className="pointer-events-none absolute bottom-28 left-0 right-0 z-20 px-4 text-center">
+                  <div
+                    className="pointer-events-none absolute left-0 right-0 z-[20] px-4 text-center"
+                    style={{ bottom: META_ABOVE_BOTTOM_OFFSET }}
+                  >
                     <p className="line-clamp-2 text-[12px] text-white/70 drop-shadow-md">{metaLine}</p>
                   </div>
                 ) : null}
               </div>
 
-              <div
-                className="pointer-events-auto absolute bottom-0 left-0 right-0 z-40 flex items-end justify-between gap-3 bg-gradient-to-t from-black/55 to-transparent px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-10"
-              >
+              <div className="pointer-events-auto absolute bottom-0 left-0 right-0 z-[40] flex items-center gap-2.5 px-[14px] pb-[max(env(safe-area-inset-bottom),16px)] pt-4 font-sans">
                 {isOwnStory ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void Promise.all([loadViewers(), loadLikers()]);
-                      setActionMode("insights");
-                    }}
-                    className="flex h-12 min-w-[3.25rem] items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 backdrop-blur-sm transition-transform active:scale-95"
-                    aria-label={`J'aime reçus, ${likesCount}`}
-                  >
-                    <Heart className="h-6 w-6 text-white" strokeWidth={1.75} />
-                    <span className="text-[15px] font-semibold tabular-nums text-white">{likesCount}</span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2 rounded-[22px] border border-white/[0.18] bg-white/[0.12] px-4 text-[14px] font-medium text-white backdrop-blur-xl transition-transform active:scale-[0.98]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void Promise.all([loadViewers(), loadLikers()]);
+                        setActionMode("insights");
+                      }}
+                    >
+                      <Eye className="h-[22px] w-[22px] shrink-0" strokeWidth={2} />
+                      <span className="truncate">Statistiques</span>
+                      <span className="text-white/35">·</span>
+                      <Heart className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+                      <span className="tabular-nums">{likesCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.12] text-white backdrop-blur-xl transition-transform active:scale-[0.92]"
+                      aria-label="Partager"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void shareStory();
+                      }}
+                    >
+                      <Share2 className="h-[22px] w-[22px]" strokeWidth={2} />
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void toggleLike();
-                    }}
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-transform active:scale-95"
-                    aria-label={likedByMe ? "Retirer le j'aime" : "J'aime"}
-                  >
-                    <Heart className={cn("h-7 w-7", likedByMe ? "fill-red-500 text-red-500" : "text-white")} />
-                  </button>
+                  <>
+                    <input
+                      ref={replyInputRef}
+                      type="text"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onFocus={() => setReplyFocused(true)}
+                      onBlur={() => setReplyFocused(false)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void sendReplyAsMessage();
+                        }
+                      }}
+                      placeholder={`Répondre à ${displayName}…`}
+                      disabled={!viewerUserId || viewerUserId === current.author_id}
+                      className="h-11 min-w-0 flex-1 rounded-[22px] border border-white/[0.18] bg-white/[0.12] px-[18px] text-[14px] text-white outline-none placeholder:text-white/60 backdrop-blur-xl disabled:opacity-45"
+                    />
+                    <button
+                      ref={likeBtnRef}
+                      type="button"
+                      disabled={!viewerUserId || viewerUserId === current.author_id}
+                      className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.12] text-white backdrop-blur-xl transition-colors active:scale-[0.92]",
+                        likedByMe && "border-transparent bg-[hsl(var(--primary-on-dark))] text-white"
+                      )}
+                      aria-label={likedByMe ? "Retirer le j'aime" : "J'aime"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        bumpLikePop();
+                        void toggleLike();
+                      }}
+                    >
+                      <Heart className={cn("h-[22px] w-[22px]", likedByMe && "fill-current")} strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.12] text-white backdrop-blur-xl transition-transform active:scale-[0.92]"
+                      aria-label="Partager"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void shareStory();
+                      }}
+                    >
+                      <Share2 className="h-[22px] w-[22px]" strokeWidth={2} />
+                    </button>
+                  </>
                 )}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActionMode("menu");
-                  }}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-transform active:scale-95"
-                  aria-label="Plus d'actions"
-                >
-                  <MoreHorizontal className="h-6 w-6 text-white" />
-                </button>
               </div>
             </>
           )}
+          {actionsOverlay}
         </DialogContent>
       </Dialog>
-
-      {actionsPortal}
     </>
   );
 }

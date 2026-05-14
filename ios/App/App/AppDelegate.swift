@@ -51,6 +51,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         } else {
             print("[PUSH][IOS] Missing GoogleService-Info.plist — add from Firebase Console (bundle com.ferdi.runconnect)")
         }
+
         return true
     }
 

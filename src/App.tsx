@@ -19,6 +19,7 @@ import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import {
   finalizeSupabaseOAuthFromDeepLink,
   isAuthCallbackDeepLink,
+  parseOAuthCallbackUrl,
 } from "@/lib/oauthMobile";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
@@ -28,7 +29,9 @@ import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Feed = lazy(() => import("./pages/Feed"));
-const ProfileRoutePage = lazy(() => import("./pages/ProfileRoutePage"));
+const DiscoverLivePage = lazy(() => import("./pages/DiscoverLivePage"));
+const DiscoverItinerariesPage = lazy(() => import("./pages/DiscoverItinerariesPage"));
+const Profile = lazy(() => import("./pages/Profile"));
 const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
 const ProfileSportRecordsEdit = lazy(() => import("./pages/ProfileSportRecordsEdit"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
@@ -56,9 +59,11 @@ const Drafts = lazy(() => import("./pages/Drafts"));
 const OpenSessionLink = lazy(() => import("./pages/OpenSessionLink"));
 const ShortSessionLinkRedirect = lazy(() => import("./pages/ShortSessionLinkRedirect"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
+const ProfileSessions = lazy(() => import("./pages/ProfileSessions"));
 const Referral = lazy(() => import("./pages/Referral"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 const Participants = lazy(() => import("./pages/Participants"));
+const CoachPlanification = lazy(() => import("./pages/CoachPlanification"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
@@ -88,6 +93,12 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function replaceBrowserRoute(route: string): void {
+  if (`${window.location.pathname}${window.location.search}${window.location.hash}` === route) return;
+  window.history.replaceState({}, "", route);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
 
 const App = () => {
   /** Toujours afficher le splash au lancement de l'app (minimum géré dans LoadingScreen). */
@@ -142,6 +153,7 @@ const App = () => {
         import("./pages/StoryCreate"),
         import("./pages/Drafts"),
         import("./pages/OpenSessionLink"),
+        import("./pages/ProfileSessions"),
         import("./pages/StoryDeleteConfirm"),
         import("./pages/Participants"),
       ]);
@@ -206,6 +218,21 @@ const App = () => {
           }
 
           try {
+            const fallbackToAuthCallback = (rawUrl: string, source: string) => {
+              const parsed = parseOAuthCallbackUrl(rawUrl);
+              const params = new URLSearchParams();
+              if (parsed.code) params.set("code", parsed.code);
+              if (parsed.error) params.set("error", parsed.error);
+              if (parsed.errorDescription) params.set("error_description", parsed.errorDescription);
+              const suffix = params.toString();
+              const target = `/auth/callback${suffix ? `?${suffix}` : ""}`;
+              console.warn(`[OAuth/App] fallback -> /auth/callback (${source})`, {
+                hasCode: !!parsed.code,
+                hasError: !!parsed.error,
+              });
+              replaceBrowserRoute(target);
+            };
+
             try {
               await Browser.close();
             } catch {
@@ -215,6 +242,16 @@ const App = () => {
             const result = await finalizeSupabaseOAuthFromDeepLink(supabase, url);
             if (!result.ok) {
               console.warn('[OAuth/App] finalize failed', result.reason);
+              if (result.reason === "duplicate") {
+                return;
+              }
+              if (result.reason === "oauth_error") {
+                // Erreur renvoyée par Apple/Supabase (ex: Unable to exchange external code).
+                // On redirige directement vers /auth pour éviter l'écran bleu du Layout.
+                replaceBrowserRoute("/auth");
+                return;
+              }
+              fallbackToAuthCallback(url, `finalize-failed:${result.reason ?? "unknown"}`);
               return;
             }
 
@@ -234,7 +271,7 @@ const App = () => {
               const path = window.location.pathname;
               if (path === '/auth' || path === '/auth/') {
                 console.warn('[OAuth/App] Auth toujours actif après 800 ms — fallback /auth/callback');
-                window.location.replace(`${window.location.origin}/auth/callback`);
+                fallbackToAuthCallback(url, "still-on-auth-after-800ms");
               }
             }, 800);
           } catch (err) {
@@ -274,6 +311,21 @@ const App = () => {
         if (!incomingUrl) return;
 
         if (isAuthCallbackDeepLink(incomingUrl)) {
+          const fallbackToAuthCallback = (rawUrl: string, source: string) => {
+            const parsed = parseOAuthCallbackUrl(rawUrl);
+            const params = new URLSearchParams();
+            if (parsed.code) params.set("code", parsed.code);
+            if (parsed.error) params.set("error", parsed.error);
+            if (parsed.errorDescription) params.set("error_description", parsed.errorDescription);
+            const suffix = params.toString();
+            const target = `/auth/callback${suffix ? `?${suffix}` : ""}`;
+            console.warn(`[OAuth/App] cold-start fallback -> /auth/callback (${source})`, {
+              hasCode: !!parsed.code,
+              hasError: !!parsed.error,
+            });
+            replaceBrowserRoute(target);
+          };
+
           console.log('[OAuth/App] cold start auth callback');
           try {
             await Browser.close();
@@ -291,8 +343,18 @@ const App = () => {
             console.log('[OAuth/App] cold start session OK → /auth/callback (stabilise la session)');
             const path = window.location.pathname;
             if (path !== '/auth/callback' && path !== '/auth/callback/') {
-              window.location.replace(`${window.location.origin}/auth/callback`);
+              replaceBrowserRoute('/auth/callback');
             }
+          } else {
+            console.warn('[OAuth/App] cold start finalize failed', result.reason);
+            if (result.reason === "duplicate") {
+              return;
+            }
+            if (result.reason === "oauth_error") {
+              replaceBrowserRoute("/auth");
+              return;
+            }
+            fallbackToAuthCallback(incomingUrl, `finalize-failed:${result.reason ?? "unknown"}`);
           }
           return;
         }
@@ -343,18 +405,23 @@ const App = () => {
                   <Route path="/onboarding" element={<PageTransition><PageSuspense><Onboarding /></PageSuspense></PageTransition>} />
                   <Route path="/" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/discover/live" element={<Layout><PageTransition><PageSuspense><DiscoverLivePage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/my-sessions/confirm/:sessionId" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/coaching" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/coaching/planification" element={<Layout><PageTransition><PageSuspense><CoachPlanification /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/leaderboard" element={<Navigate to="/route-create" replace />} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
+                  <Route path="/profile/sessions" element={<Layout><PageTransition><PageSuspense><ProfileSessions /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile/:userId/sessions" element={<Layout><PageTransition><PageSuspense><ProfileSessions /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/referral" element={<Layout><PageTransition><PageSuspense><Referral /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileRoutePage /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
+                  <Route path="/itinerary/hub" element={<Layout><PageTransition><PageSuspense><DiscoverItinerariesPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary" element={<Navigate to="/route-create" replace />} />
                   <Route path="/itinerary/my-routes" element={<Layout><PageTransition><PageSuspense><ItineraryMyRoutes /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/route/:routeId" element={<Layout><PageTransition><PageSuspense><ItineraryRouteDetail /></PageSuspense></PageTransition></Layout>} />

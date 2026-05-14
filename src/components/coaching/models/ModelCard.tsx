@@ -10,12 +10,23 @@ interface ModelCardProps {
   previewLine: string;
   accentColor: string;
   miniProfile?: MiniProfileBlock[];
+  addButtonLabel?: string;
   onOpen: () => void;
   onAdd: () => void;
   onMenu?: () => void;
 }
 
-export function ModelCard({ model, summaryLine, previewLine, accentColor, miniProfile, onOpen, onAdd, onMenu }: ModelCardProps) {
+export function ModelCard({
+  model,
+  summaryLine,
+  previewLine,
+  accentColor,
+  miniProfile,
+  addButtonLabel = "Ajouter au planning",
+  onOpen,
+  onAdd,
+  onMenu,
+}: ModelCardProps) {
   return (
     <div className="overflow-hidden bg-card">
       <div className="flex">
@@ -32,7 +43,7 @@ export function ModelCard({ model, summaryLine, previewLine, accentColor, miniPr
           <div className="mt-3 flex items-center gap-2">
             <Button type="button" className="h-9 flex-1 rounded-lg text-[13px] font-semibold" onClick={onAdd}>
               <Plus className="mr-1.5 h-4 w-4" />
-              Ajouter au planning
+              {addButtonLabel}
             </Button>
             {onMenu ? (
               <Button type="button" variant="secondary" size="icon" className="h-9 w-9 rounded-lg" onClick={onMenu}>

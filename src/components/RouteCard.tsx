@@ -1,11 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Mountain,
-  TrendingUp,
-  Route as RouteIcon,
-  ChevronRight,
-} from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
@@ -20,6 +14,8 @@ const ROUTE_CARD_POINTS_SRC = 'route-card-preview-points';
 const ROUTE_CARD_POINTS_START = 'route-card-preview-start';
 const ROUTE_CARD_POINTS_END = 'route-card-preview-end';
 
+const ACCENT_PALETTE = ['#0066CC', '#34c759', '#ff9500', '#5ac8fa', '#af52de'] as const;
+
 interface RouteCardProps {
   route: {
     id: string;
@@ -27,12 +23,17 @@ interface RouteCardProps {
     description: string | null;
     total_distance: number | null;
     total_elevation_gain: number | null;
+    max_elevation: number | null;
     created_at: string;
     coordinates: any;
   };
+  /** Index dans la liste (couleur d’accent façon maquette 07b). */
+  listIndex?: number;
+  /** Sous-titre sous le nom (ex. « Modifié il y a 2j »). */
+  subtitle?: string;
 }
 
-export const RouteCard = ({ route }: RouteCardProps) => {
+export const RouteCard = ({ route, listIndex = 0, subtitle }: RouteCardProps) => {
   const smoothPathFromPoints = (points: Array<{ x: number; y: number }>) => {
     if (points.length < 2) return '';
     let d = `M ${points[0]!.x.toFixed(2)} ${points[0]!.y.toFixed(2)}`;
@@ -49,16 +50,13 @@ export const RouteCard = ({ route }: RouteCardProps) => {
   };
 
   const navigate = useNavigate();
-  const { formatMeters } = useDistanceUnits();
+  const { formatKm } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const userLocationMarkerRef = useRef<Marker | null>(null);
   const { position } = useGeolocation();
 
-  const formatElevation = (meters: number | null) => {
-    if (!meters) return '—';
-    return `${Math.round(meters)} m`;
-  };
+  const accent = ACCENT_PALETTE[listIndex % ACCENT_PALETTE.length]!;
 
   const elevations = useMemo(() => {
     if (!Array.isArray(route.coordinates)) return [] as number[];
@@ -71,36 +69,35 @@ export const RouteCard = ({ route }: RouteCardProps) => {
       .filter((v) => Number.isFinite(v));
   }, [route.coordinates]);
 
-  const terrainLabel = useMemo(() => {
-    const distKm = Math.max((route.total_distance ?? 0) / 1000, 0.1);
-    const gainPerKm = (route.total_elevation_gain ?? 0) / distKm;
-    if (gainPerKm >= 80) return 'Montagne';
-    if (gainPerKm >= 35) return 'Vallonné';
-    return 'Plutôt plat';
-  }, [route.total_distance, route.total_elevation_gain]);
-
   const elevationPath = useMemo(() => {
-    const width = 76;
-    const height = 34;
+    const width = 64;
+    const height = 32;
     if (elevations.length < 2) return `M0 ${height / 2} L${width} ${height / 2}`;
     const min = Math.min(...elevations);
     const max = Math.max(...elevations);
     const range = Math.max(1, max - min);
-    const pts = elevations
-      .map((e, i) => {
-        const x = (i / (elevations.length - 1)) * width;
-        const y = height - ((e - min) / range) * height;
-        return { x, y };
-      });
+    const pts = elevations.map((e, i) => {
+      const x = (i / (elevations.length - 1)) * width;
+      const y = height - ((e - min) / range) * height;
+      return { x, y };
+    });
     return smoothPathFromPoints(pts);
   }, [elevations]);
 
   const elevationFillPath = useMemo(() => {
-    const width = 76;
-    const height = 34;
+    const width = 64;
+    const height = 32;
     if (!elevationPath) return '';
     return `${elevationPath} L ${width} ${height} L 0 ${height} Z`;
   }, [elevationPath]);
+
+  const kmLabel = useMemo(() => {
+    const km = Math.max(0, (route.total_distance ?? 0) / 1000);
+    return formatKm(km);
+  }, [route.total_distance, formatKm]);
+
+  const dPlusLabel = Math.round(route.total_elevation_gain ?? 0);
+  const peakM = route.max_elevation != null ? Math.round(route.max_elevation) : null;
 
   useEffect(() => {
     if (!mapContainer.current || !route.coordinates?.length || !getMapboxAccessToken()) return;
@@ -135,19 +132,31 @@ export const RouteCard = ({ route }: RouteCardProps) => {
       mapInstanceRef.current = m;
 
       const applyRoute = () => {
-        m.setPaintProperty('background', 'background-color', '#eef2f7');
-        m.setPaintProperty('background', 'background-opacity', 1);
+        try {
+          m.setPaintProperty('background', 'background-color', '#e8efe5');
+          m.setPaintProperty('background', 'background-opacity', 1);
+        } catch {
+          // style sans couche background
+        }
         setOrUpdateLineLayer(m, ROUTE_CARD_LINE_SRC, ROUTE_CARD_LINE_LAYER, path, {
-          color: '#2d6bff',
-          width: 4.4,
+          color: accent,
+          width: 2.6,
         });
         const start = path[0]!;
         const end = path[path.length - 1]!;
         const pointsData = {
           type: 'FeatureCollection',
           features: [
-            { type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: [start.lng, start.lat] } },
-            { type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: [end.lng, end.lat] } },
+            {
+              type: 'Feature',
+              properties: { kind: 'start' },
+              geometry: { type: 'Point', coordinates: [start.lng, start.lat] },
+            },
+            {
+              type: 'Feature',
+              properties: { kind: 'end' },
+              geometry: { type: 'Point', coordinates: [end.lng, end.lat] },
+            },
           ],
         } as any;
         if (m.getSource(ROUTE_CARD_POINTS_SRC)) {
@@ -160,10 +169,10 @@ export const RouteCard = ({ route }: RouteCardProps) => {
             source: ROUTE_CARD_POINTS_SRC,
             filter: ['==', ['get', 'kind'], 'start'],
             paint: {
-              'circle-radius': 3.6,
-              'circle-color': '#ffffff',
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#2d6bff',
+              'circle-radius': 3,
+              'circle-color': accent,
+              'circle-stroke-width': 1.5,
+              'circle-stroke-color': '#ffffff',
             },
           } as any);
           m.addLayer({
@@ -172,14 +181,14 @@ export const RouteCard = ({ route }: RouteCardProps) => {
             source: ROUTE_CARD_POINTS_SRC,
             filter: ['==', ['get', 'kind'], 'end'],
             paint: {
-              'circle-radius': 3.8,
-              'circle-color': '#2d6bff',
-              'circle-stroke-width': 1.6,
+              'circle-radius': 3,
+              'circle-color': accent,
+              'circle-stroke-width': 1.5,
               'circle-stroke-color': '#ffffff',
             },
           } as any);
         }
-        void fitMapToCoords(m, path, 6);
+        void fitMapToCoords(m, path, 8);
       };
       if (m.isStyleLoaded()) applyRoute();
       else m.once('load', applyRoute);
@@ -192,7 +201,7 @@ export const RouteCard = ({ route }: RouteCardProps) => {
       mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
     };
-  }, [route.coordinates]);
+  }, [route.coordinates, accent]);
 
   useEffect(() => {
     const m = mapInstanceRef.current;
@@ -219,48 +228,59 @@ export const RouteCard = ({ route }: RouteCardProps) => {
     <button
       type="button"
       onClick={() => navigate(`/itinerary/route/${route.id}`)}
-      className="ios-list-row w-full border border-white dark:border-white/10 text-left"
+      className="flex w-full min-w-0 items-stretch gap-3 rounded-[18px] bg-card p-3 text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] active:opacity-90 dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)] [-webkit-tap-highlight-color:transparent]"
       aria-label={`Voir le détail de ${route.name}`}
     >
-      <div className="flex items-center gap-2.5">
-        <div className="h-[72px] w-[96px] shrink-0 overflow-hidden rounded-xl border border-border/50 bg-secondary shadow-sm">
-          {hasCoordinates ? (
-            <div ref={mapContainer} className="pointer-events-none h-full w-full saturate-75" />
-          ) : null}
-        </div>
+      <div className="relative h-[78px] w-[78px] shrink-0 overflow-hidden rounded-xl bg-[#e8efe5]">
+        {hasCoordinates ? (
+          <div ref={mapContainer} className="pointer-events-none h-full w-full" />
+        ) : null}
+      </div>
 
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[15px] font-semibold leading-tight text-foreground">{route.name}</h3>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1 font-semibold text-foreground/95">
-              <RouteIcon className="h-3.5 w-3.5" />
-              {formatMeters(route.total_distance)}
-            </span>
-            <span className="inline-flex items-center gap-1 font-semibold text-foreground/95">
-              <Mountain className="h-3.5 w-3.5" />
-              D+ {formatElevation(route.total_elevation_gain)}
-            </span>
-          </div>
-          <div className="mt-1 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-            {terrainLabel}
-          </div>
+      <div className="flex min-h-[78px] min-w-0 flex-1 flex-col justify-between">
+        <div className="min-w-0">
+          <h3 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-foreground">{route.name}</h3>
+          {subtitle ? <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{subtitle}</p> : null}
         </div>
+        <div className="mt-2 flex items-baseline gap-2.5">
+          <span className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
+            {kmLabel}
+            <span className="ml-0.5 text-[10px] font-medium text-muted-foreground"> km</span>
+          </span>
+          <div className="h-3 w-px shrink-0 bg-border" aria-hidden />
+          <span className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
+            {dPlusLabel}
+            <span className="ml-0.5 text-[10px] font-medium text-muted-foreground"> m</span>
+          </span>
+        </div>
+      </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          <div className="h-[52px] w-[76px] rounded-xl border border-border/50 bg-secondary/70 px-1.5 py-1">
-            <svg viewBox="0 0 76 34" className="h-full w-full" preserveAspectRatio="none" aria-hidden>
-              <defs>
-                <linearGradient id={`routeCardFill-${route.id}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.05" />
-                </linearGradient>
-              </defs>
-              <path d={elevationFillPath} fill={`url(#routeCardFill-${route.id})`} />
-              <path d={elevationPath} fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+      <div className="flex w-16 shrink-0 flex-col items-end justify-between">
+        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">D+</div>
+        <svg viewBox="0 0 64 32" className="h-8 w-16" preserveAspectRatio="none" aria-hidden>
+          <defs>
+            <linearGradient id={`routeCardFill-${route.id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={elevationFillPath} fill={`url(#routeCardFill-${route.id})`} />
+          <path
+            d={elevationPath}
+            fill="none"
+            stroke={accent}
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        {peakM != null ? (
+          <div className="text-[11px] font-semibold tabular-nums" style={{ color: accent }}>
+            ↗{peakM}m
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-        </div>
+        ) : (
+          <div className="text-[11px] font-semibold tabular-nums text-muted-foreground">—</div>
+        )}
       </div>
     </button>
   );

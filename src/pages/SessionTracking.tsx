@@ -6,7 +6,6 @@ import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { ArrowLeft, Navigation, Radio, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { haversineMeters, formatDistanceLabel } from '@/lib/geo';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
@@ -15,21 +14,11 @@ import { cn } from '@/lib/utils';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import type { MapCoord } from '@/lib/geoUtils';
+import { createSessionPinButton, resolveSessionPinVariant } from '@/lib/mapSessionPin';
 
 const ROUTE_COLOR = '#FF6B35';
 const ROUTE_SRC = 'session-tracking-route';
 const ROUTE_LAYER = 'session-tracking-route-layer';
-
-function elFromIconDataUrl(url: string, w: number, h: number): HTMLDivElement {
-  const el = document.createElement('div');
-  el.style.width = `${w}px`;
-  el.style.height = `${h}px`;
-  el.style.backgroundImage = `url(${url})`;
-  el.style.backgroundSize = 'contain';
-  el.style.backgroundRepeat = 'no-repeat';
-  el.style.backgroundPosition = 'center';
-  return el;
-}
 
 export default function SessionTracking() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -114,103 +103,34 @@ export default function SessionTracking() {
     })();
   }, [mapReady, routeCoordinates, session]);
 
-  const createBlueDotIcon = useCallback(() => {
-    const size = 60;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
-    const gradient = ctx.createRadialGradient(size / 2, size / 2, 5, size / 2, size / 2, size / 2);
-    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.55)');
-    gradient.addColorStop(0.5, 'rgba(16, 185, 129, 0.25)');
-    gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.fillStyle = '#10b981';
-    ctx.shadowColor = 'rgba(16, 185, 129, 0.8)';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, 9, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 3;
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, 9, 0, 2 * Math.PI);
-    ctx.stroke();
-    return canvas.toDataURL('image/png');
-  }, []);
+  const createTrackingPinElement = useCallback((opts: {
+    avatarUrl: string | null;
+    ariaLabel: string;
+    pinColor: string;
+    onClick?: () => void;
+  }): HTMLDivElement => {
+    const wrap = document.createElement('div');
+    wrap.className = 'rc-session-pin';
+    wrap.style.position = 'relative';
+    wrap.style.width = '1px';
+    wrap.style.height = '1px';
+    wrap.style.overflow = 'visible';
+    if (opts.onClick) wrap.style.cursor = 'pointer';
 
-  const createPhotoMarkerIcon = useCallback(async (avatarUrl: string | null, ringColor: string): Promise<string> => {
-    const size = 52;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
-    const radius = size / 2;
-    const borderWidth = 3;
-    const innerRadius = radius - borderWidth;
-
-    ctx.shadowColor = 'rgba(0,0,0,0.25)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetY = 2;
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius - 1, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-
-    if (avatarUrl) {
-      try {
-        const base64 = await imageUrlToBase64(avatarUrl);
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject();
-          img.src = base64;
-        });
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(radius, radius, innerRadius, 0, 2 * Math.PI);
-        ctx.clip();
-        ctx.drawImage(img, borderWidth, borderWidth, size - borderWidth * 2, size - borderWidth * 2);
-        ctx.restore();
-      } catch {
-        ctx.fillStyle = '#e8e8ed';
-        ctx.beginPath();
-        ctx.arc(radius, radius, innerRadius, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillStyle = '#888';
-        ctx.font = `${size * 0.35}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('?', radius, radius);
-      }
-    } else {
-      ctx.fillStyle = '#e8e8ed';
-      ctx.beginPath();
-      ctx.arc(radius, radius, innerRadius, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.fillStyle = '#888';
-      ctx.font = `${size * 0.35}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('?', radius, radius);
+    const pin = createSessionPinButton({
+      avatarUrl: opts.avatarUrl || '/placeholder.svg',
+      ariaLabel: opts.ariaLabel,
+      variant: resolveSessionPinVariant(),
+      colorOverride: opts.pinColor,
+    });
+    wrap.appendChild(pin);
+    if (opts.onClick) {
+      wrap.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        opts.onClick?.();
+      });
     }
-
-    ctx.strokeStyle = ringColor;
-    ctx.lineWidth = borderWidth;
-    ctx.beginPath();
-    ctx.arc(radius, radius, innerRadius, 0, 2 * Math.PI);
-    ctx.stroke();
-
-    return canvas.toDataURL('image/png');
+    return wrap;
   }, []);
 
   useEffect(() => {
@@ -222,20 +142,18 @@ export default function SessionTracking() {
     const avatarUrl = prof?.avatar_url ?? null;
 
     const run = async () => {
-      const w = avatarUrl ? 52 : 60;
-      const h = avatarUrl ? 52 : 60;
-      const iconUrl = avatarUrl ? await createPhotoMarkerIcon(avatarUrl, '#10b981') : createBlueDotIcon();
       if (cancelled) return;
 
       if (userMarkerRef.current) {
         userMarkerRef.current.setLngLat([userPosition.lng, userPosition.lat]);
-        userMarkerRef.current.getElement().style.backgroundImage = `url(${iconUrl})`;
-        userMarkerRef.current.getElement().style.width = `${w}px`;
-        userMarkerRef.current.getElement().style.height = `${h}px`;
       } else {
         const mapboxgl = await loadMapboxGl();
         if (cancelled) return;
-        const el = elFromIconDataUrl(iconUrl, w, h);
+        const el = createTrackingPinElement({
+          avatarUrl,
+          ariaLabel: 'Ma position',
+          pinColor: '#10b981',
+        });
         userMarkerRef.current = new mapboxgl.Marker({ element: el })
           .setLngLat([userPosition.lng, userPosition.lat])
           .addTo(map);
@@ -246,7 +164,7 @@ export default function SessionTracking() {
     return () => {
       cancelled = true;
     };
-  }, [userPosition, mapReady, user, participantProfiles, createPhotoMarkerIcon, createBlueDotIcon]);
+  }, [userPosition, mapReady, user, participantProfiles, createTrackingPinElement]);
 
   useEffect(() => {
     if (!mapboxMapRef.current || !mapReady) return;
@@ -267,15 +185,15 @@ export default function SessionTracking() {
 
         const profile = participantProfiles.get(uid);
         const avatarUrl = profile?.avatar_url || pos.avatar_url;
-        const iconUrl = await createPhotoMarkerIcon(avatarUrl, '#3b82f6');
-        if (cancelled) return;
-
         const mapboxgl = await loadMapboxGl();
         if (cancelled) return;
-        const el = elFromIconDataUrl(iconUrl, 52, 52);
+        const el = createTrackingPinElement({
+          avatarUrl,
+          ariaLabel: profile?.display_name || profile?.username || 'Participant',
+          pinColor: '#0066cc',
+          onClick: () => setPreviewUserId(uid),
+        });
         const marker = new mapboxgl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]).addTo(map);
-        el.style.cursor = 'pointer';
-        el.addEventListener('click', () => setPreviewUserId(uid));
         participantMarkersRef.current.set(uid, marker);
       }
 
@@ -291,7 +209,7 @@ export default function SessionTracking() {
     return () => {
       cancelled = true;
     };
-  }, [participantPositions, mapReady, user, participantProfiles, createPhotoMarkerIcon]);
+  }, [participantPositions, mapReady, user, participantProfiles, createTrackingPinElement]);
 
   useEffect(() => {
     return () => {
@@ -368,7 +286,7 @@ export default function SessionTracking() {
           <div className="flex items-center px-4 py-3 border-b border-border/40">
             <Button variant="ghost" size="sm" onClick={handleBack} className="px-0 font-normal text-[17px]">
               <ArrowLeft className="h-5 w-5 mr-1" />
-              Retour
+              Page précédente
             </Button>
           </div>
         </div>
@@ -387,7 +305,7 @@ export default function SessionTracking() {
           <div className="flex items-center px-4 py-3 border-b border-border/40">
             <Button variant="ghost" size="sm" onClick={handleBack} className="px-0 font-normal text-[17px]">
               <ArrowLeft className="h-5 w-5 mr-1" />
-              Retour
+              Page précédente
             </Button>
           </div>
         </div>
@@ -414,7 +332,7 @@ export default function SessionTracking() {
             className="px-0 font-normal text-[17px] text-primary h-10"
           >
             <ArrowLeft className="h-5 w-5 mr-1" />
-            Retour
+            Page précédente
           </Button>
           <div className="flex-1 min-w-0 text-center px-2">
             <span className="text-[15px] font-semibold text-foreground truncate block">

@@ -8,6 +8,7 @@ import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from '@/lib/authFlags';
+import { DiscoverPage } from "@/pages/DiscoverPage";
 
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog }))
@@ -65,11 +66,11 @@ const Index = () => {
   }
 
   return (
-    <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col">
-      {/* Calque plein espace : un seul enfant flux pour un cadrage flex correct ; clics vers la carte. */}
-      <div className="min-h-0 flex-1 select-none" aria-hidden />
+    <div className="flex min-h-0 w-full flex-1 flex-col">
+      {/* Page Découvrir — remplace le duo carte + bottom-sheet */}
+      <DiscoverPage />
 
-      {/* Onboarding pour les nouveaux utilisateurs */}
+      {/* Onboarding pour les nouveaux utilisateurs — portals, overlay automatique */}
       <Suspense fallback={null}>
         <OnboardingDialog 
           isOpen={needsOnboarding} 
@@ -82,7 +83,7 @@ const Index = () => {
         <Suspense fallback={null}>
           <ProfileSetupDialog
             open={needsProfileSetup}
-            onOpenChange={() => {}} // Empêche la fermeture manuelle
+            onOpenChange={() => {}}
             userId={user.id}
             email={user.email || ''}
             onRequestSignIn={async () => {
@@ -105,8 +106,6 @@ const Index = () => {
           />
         </Suspense>
       )}
-      
-      
 
       {/* Tutoriel interactif pour nouveaux utilisateurs */}
       {shouldShowTutorial && !needsOnboarding && !needsProfileSetup && (

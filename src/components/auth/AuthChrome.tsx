@@ -59,16 +59,17 @@ export function AuthBrandMark({
   title: string;
   subtitle: string;
 }) {
+  // Refonte Apple : icône carrée 22% radius + display 28px/600 + sous-titre 15 muted.
   return (
-    <div className="relative z-10 mb-10 flex flex-col items-center">
+    <div className="relative z-10 mb-10 flex flex-col items-center text-center">
       <img
         src={appIcon}
         alt="RunConnect"
-        className="mb-5 h-[88px] w-[88px] overflow-hidden rounded-[22px] object-cover"
+        className="mb-4 h-[88px] w-[88px] overflow-hidden rounded-[22px] object-cover"
         style={{ boxShadow: brandShadow }}
       />
-      <h1 className="text-[28px] font-bold tracking-tight text-primary">{title}</h1>
-      <p className="mt-1.5 text-[15px] font-medium text-muted-foreground">{subtitle}</p>
+      <h1 className="font-display text-[28px] font-semibold tracking-[-0.5px] text-foreground leading-[1.1]">{title}</h1>
+      <p className="mt-1.5 text-[15px] font-normal text-muted-foreground tracking-[-0.2px]">{subtitle}</p>
     </div>
   );
 }

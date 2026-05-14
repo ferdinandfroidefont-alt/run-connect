@@ -83,11 +83,11 @@ export function SessionSharePreviewCarousel({
         opts={{ align: 'center', loop: false, skipSnaps: false, dragFree: false }}
         setApi={setApi}
       >
-        <CarouselContent className="-ml-2">
+        <CarouselContent className="-ml-0">
           {TEMPLATE_META.map((meta) => {
             const { scale, boxW, boxH } = previewScale(meta.id);
             return (
-              <CarouselItem key={meta.id} className="pl-2 basis-[80%] sm:basis-[70%] md:basis-[55%]">
+              <CarouselItem key={meta.id} className="basis-full pl-0">
                 <div className="flex flex-col items-center">
                   <p className="mb-2.5 text-center text-[12px] font-semibold tracking-tight text-muted-foreground">{meta.label}</p>
                   <div

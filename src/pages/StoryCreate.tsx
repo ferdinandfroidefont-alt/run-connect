@@ -4,6 +4,9 @@ import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,11 +30,10 @@ import { buildSessionSharePayload } from "@/lib/sessionSharePayload";
 import { getSessionPublicUrl } from "@/lib/appLinks";
 import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { generateSessionShareImage } from "@/services/sessionShareService";
-import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import {
   ArrowLeft, Camera, Image, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
-  AlignLeft, AlignCenter, AlignRight, Trash2, Search
+  AlignLeft, AlignCenter, AlignRight, Trash2, Search, X, ChevronRight, ArrowDown
 } from "lucide-react";
 
 type CaptureMode = "photo" | "video" | "boomerang";
@@ -61,6 +63,9 @@ type TextStyleMode = "plain" | "bubble" | "outline" | "band";
 type TextFontMode = "modern" | "clean" | "signature";
 type StoryEditorMode = "idle" | "text" | "music" | "sticker" | "draw";
 type MusicSheetTab = "forYou" | "popular" | "original";
+type ShareAudience = "friends" | "public";
+type ShareFriend = { user_id: string; display_name: string; username: string; avatar_url: string | null };
+type ShareConversation = { id: string; group_name: string };
 
 type ScheduledSession = {
   id: string;
@@ -165,16 +170,12 @@ export default function StoryCreate() {
   const { isPreviewMode } = useAppPreview();
   const { toast } = useToast();
   const { takePicture, checkPermissions, requestPermissions } = useCamera();
-  const profileHeaderTabs = [
-    { id: "profile", label: "Profil", active: false, onClick: () => navigate("/profile") },
-    { id: "records", label: "Record", active: false, onClick: () => navigate("/profile/records") },
-    { id: "story", label: "Créer une story", active: true },
-  ];
 
   // Flow
-  const [step, setStep] = useState<StoryStep>("entry");
+  const [step, setStep] = useState<StoryStep>("capture");
   const [sourceMode, setSourceMode] = useState<"camera" | "gallery">("camera");
   const [captureMode, setCaptureMode] = useState<CaptureMode>("photo");
+  const [flashActive, setFlashActive] = useState(true);
 
   // Media
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -279,12 +280,25 @@ export default function StoryCreate() {
   // Share
   const [sharing, setSharing] = useState(false);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [shareAudience, setShareAudience] = useState<ShareAudience>("friends");
+  const [shareFriends, setShareFriends] = useState<ShareFriend[]>([]);
+  const [shareClubs, setShareClubs] = useState<ShareConversation[]>([]);
+  const [shareGroups, setShareGroups] = useState<ShareConversation[]>([]);
+  const [shareDataLoading, setShareDataLoading] = useState(false);
+  const [selectedClubIds, setSelectedClubIds] = useState<string[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [hideStoryOpen, setHideStoryOpen] = useState(false);
+  const [hideSearchQuery, setHideSearchQuery] = useState("");
+  const [hiddenFriendIds, setHiddenFriendIds] = useState<string[]>([]);
+  const [autoHighlightStory, setAutoHighlightStory] = useState(false);
+  const [allowReplies, setAllowReplies] = useState(true);
   const [hasDraft, setHasDraft] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [pendingExitTarget, setPendingExitTarget] = useState<"back" | "feed" | "entry" | null>(null);
   const autoRestoreDoneRef = useRef(false);
   const autoSessionShareDoneRef = useRef(false);
   const [resumedFromDraft, setResumedFromDraft] = useState(false);
+  const cameraPermissionRequestedRef = useRef(false);
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
   const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
@@ -441,7 +455,7 @@ export default function StoryCreate() {
 
   const resetEditorState = useCallback(() => {
     setMediaFile(null);
-    setStep("entry");
+    setStep("capture");
     setTextOverlay("");
     setSelectedMusic(null);
     setPendingMusic(null);
@@ -606,11 +620,11 @@ export default function StoryCreate() {
       if (draft.mediaDataUrl && draft.mediaType) {
         const restoredFile = dataUrlToFile(draft.mediaDataUrl, draft.mediaName || "story-draft", draft.mediaType);
         setMediaFile(restoredFile);
-        setStep(restoredFile ? "edit" : "entry");
+        setStep(restoredFile ? "edit" : "capture");
         setResumedFromDraft(!!restoredFile);
       } else {
         setMediaFile(null);
-        setStep("entry");
+        setStep("capture");
         setResumedFromDraft(false);
       }
       toast({ title: "Brouillon repris", description: "Ton brouillon a été restauré." });
@@ -711,27 +725,224 @@ export default function StoryCreate() {
     </AlertDialog>
   );
 
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+
+    const loadShareSheetData = async () => {
+      setShareDataLoading(true);
+      try {
+        const [followingRes, followersRes, membershipsRes] = await Promise.all([
+          supabase.from("user_follows").select("following_id").eq("follower_id", user.id).eq("status", "accepted"),
+          supabase.from("user_follows").select("follower_id").eq("following_id", user.id).eq("status", "accepted"),
+          supabase.from("group_members").select("conversation_id").eq("user_id", user.id),
+        ]);
+
+        const followingIds = (followingRes.data ?? []).map((row: { following_id: string }) => row.following_id);
+        const followerIds = (followersRes.data ?? []).map((row: { follower_id: string }) => row.follower_id);
+        const mutualFriendIds = followingIds.filter((id) => followerIds.includes(id));
+        const conversationIds = (membershipsRes.data ?? []).map((row: { conversation_id: string }) => row.conversation_id);
+
+        const [profilesRes, conversationsRes] = await Promise.all([
+          mutualFriendIds.length
+            ? supabase
+                .from("profiles")
+                .select("user_id, display_name, username, avatar_url")
+                .in("user_id", mutualFriendIds)
+            : Promise.resolve({ data: [], error: null } as any),
+          conversationIds.length
+            ? supabase
+                .from("conversations")
+                .select("id, group_name, is_group, club_code")
+                .in("id", conversationIds)
+                .eq("is_group", true)
+            : Promise.resolve({ data: [], error: null } as any),
+        ]);
+
+        if (!mounted) return;
+
+        const friends = ((profilesRes.data ?? []) as any[]).map((profile) => ({
+          user_id: profile.user_id ?? "",
+          display_name: profile.display_name || profile.username || "Utilisateur",
+          username: profile.username || "",
+          avatar_url: profile.avatar_url ?? null,
+        }));
+
+        const convs = (conversationsRes.data ?? []) as Array<{ id: string; group_name: string | null; club_code: string | null }>;
+        const clubs = convs
+          .filter((conv) => !!conv.club_code)
+          .map((conv) => ({ id: conv.id, group_name: conv.group_name || "Club" }));
+        const groups = convs
+          .filter((conv) => !conv.club_code)
+          .map((conv) => ({ id: conv.id, group_name: conv.group_name || "Groupe" }));
+
+        setShareFriends(friends);
+        setShareClubs(clubs);
+        setShareGroups(groups);
+      } finally {
+        if (mounted) setShareDataLoading(false);
+      }
+    };
+
+    void loadShareSheetData();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
+  const hideCandidates = useMemo(() => {
+    const q = hideSearchQuery.toLowerCase();
+    return shareFriends.filter(
+      (friend) => friend.display_name.toLowerCase().includes(q) || friend.username.toLowerCase().includes(q)
+    );
+  }, [hideSearchQuery, shareFriends]);
+
+  const toggleId = useCallback((prev: string[], id: string) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]), []);
+
+  const shareChips = [
+    {
+      id: "friends",
+      title: "Tes amis",
+      subtitle: "342",
+      active: shareAudience === "friends",
+      onClick: () => setShareAudience("friends"),
+      className: "bg-sky-500 text-white",
+    },
+    {
+      id: "public",
+      title: "Public",
+      subtitle: "Tout le monde",
+      active: shareAudience === "public",
+      onClick: () => setShareAudience("public"),
+      className: "bg-fuchsia-500 text-white",
+    },
+    {
+      id: "club",
+      title: "Club",
+      subtitle: selectedClubIds.length > 1 ? `${selectedClubIds.length} clubs` : selectedClubIds.length === 1 ? "1 club" : "Aucun",
+      active: selectedClubIds.length > 0,
+      onClick: () => {
+        if (!shareClubs.length) return;
+        setSelectedClubIds((prev) => toggleId(prev, shareClubs[(prev.length ?? 0) % shareClubs.length].id));
+      },
+      className: "bg-green-500 text-white",
+    },
+    {
+      id: "group",
+      title: "Groupe",
+      subtitle: selectedGroupIds.length > 1 ? `${selectedGroupIds.length} groupes` : selectedGroupIds.length === 1 ? "1 groupe" : "Aucun",
+      active: selectedGroupIds.length > 0,
+      onClick: () => {
+        if (!shareGroups.length) return;
+        setSelectedGroupIds((prev) => toggleId(prev, shareGroups[(prev.length ?? 0) % shareGroups.length].id));
+      },
+      className: "bg-amber-500 text-black",
+    },
+  ] as const;
+
   const publishConfirmDialog = (
-    <AlertDialog open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Publier la story ?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Ta story sera visible immédiatement par tes abonnés.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              void onShare();
-            }}
+    <Sheet open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="z-[120] rounded-t-[22px] border-0 bg-[#f5f7fb] px-3 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-2 text-zinc-900 shadow-2xl dark:bg-[#17191f] dark:text-zinc-100"
+        overlayClassName="z-[119] bg-black/40 dark:bg-black/55"
+      >
+        <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+        <p className="mb-3 px-1 text-[29px] font-bold leading-none">Partager avec…</p>
+
+        <div className="mb-3 flex items-start gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {shareChips.map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={chip.onClick}
+              className={cn(
+                "min-w-[72px] rounded-2xl px-2 py-2 text-center transition",
+                chip.className,
+                chip.active ? "ring-2 ring-white/95 shadow-sm" : "opacity-85"
+              )}
+            >
+              <p className="text-[12px] font-semibold leading-tight">{chip.title}</p>
+              <p className="mt-0.5 text-[10px] opacity-90">{chip.subtitle}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={() => setHideStoryOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between px-3 py-3 text-left text-[17px] hover:bg-zinc-50 dark:hover:bg-zinc-800"
           >
-            Publier
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            <span>Masquer</span>
+            <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+              {hiddenFriendIds.length > 0 ? `${hiddenFriendIds.length} ami(s)` : "Personne"}
+            </span>
+          </button>
+          {hideStoryOpen && (
+            <div className="border-t border-zinc-200 px-2 py-2 dark:border-zinc-800">
+              <div className="mb-2 flex items-center gap-2 rounded-xl bg-zinc-100 px-2.5 dark:bg-zinc-800">
+                <Search className="h-4 w-4 text-zinc-500" />
+                <input
+                  value={hideSearchQuery}
+                  onChange={(e) => setHideSearchQuery(e.target.value)}
+                  placeholder="Rechercher un ami"
+                  className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-zinc-500"
+                />
+              </div>
+              <div className="max-h-36 space-y-1 overflow-auto pr-1">
+                {hideCandidates.map((friend) => (
+                  <button
+                    key={friend.user_id}
+                    type="button"
+                    onClick={() => setHiddenFriendIds((prev) => toggleId(prev, friend.user_id))}
+                    className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={friend.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">{friend.display_name.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1 truncate text-sm">{friend.display_name}</span>
+                    {hiddenFriendIds.includes(friend.user_id) ? <Check className="h-4 w-4 text-blue-500" /> : null}
+                  </button>
+                ))}
+                {!shareDataLoading && hideCandidates.length === 0 ? (
+                  <p className="px-2 py-3 text-center text-xs text-zinc-500">Aucun ami trouvé</p>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
+            <span className="text-[16px]">Basculer en story à la une automatiquement</span>
+            <Switch checked={autoHighlightStory} onCheckedChange={setAutoHighlightStory} />
+          </div>
+          <div className="flex items-center justify-between border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
+            <span className="text-[16px]">Autoriser les réponses</span>
+            <Switch checked={allowReplies} onCheckedChange={setAllowReplies} />
+          </div>
+        </div>
+
+        <div className="mt-2 px-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+          {shareDataLoading
+            ? "Chargement des amis, clubs et groupes…"
+            : `${shareFriends.length} amis · ${shareClubs.length} club(s) · ${shareGroups.length} groupe(s)`}
+        </div>
+
+        <Button
+          type="button"
+          disabled={sharing || !mediaFile}
+          onClick={() => {
+            void onShare();
+          }}
+          className="mt-2 h-11 w-full rounded-2xl bg-[#0a84ff] text-base font-semibold text-white hover:bg-[#0976e6]"
+        >
+          {sharing ? "Envoi…" : "Publier la story"}
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </SheetContent>
+    </Sheet>
   );
 
   useEffect(() => {
@@ -898,6 +1109,22 @@ export default function StoryCreate() {
       setRecordSec(0);
     };
   }, [step, sourceMode, captureMode, facingMode]);
+
+  useEffect(() => {
+    if (step !== "capture") return;
+    if (cameraPermissionRequestedRef.current) return;
+    cameraPermissionRequestedRef.current = true;
+    void (async () => {
+      try {
+        const permission = await checkPermissions();
+        if (permission.camera !== "granted") {
+          await requestPermissions();
+        }
+      } catch {
+        // ignore permission failures: UI stays black fallback
+      }
+    })();
+  }, [checkPermissions, requestPermissions, step]);
 
   // Recording timer
   useEffect(() => {
@@ -1102,23 +1329,6 @@ export default function StoryCreate() {
     if (captureMode === "boomerang") {
       setTimeout(() => { if (rec.state !== "inactive") { rec.stop(); setIsRecording(false); } }, 1800);
     }
-  };
-
-  const onTakePhoto = async () => {
-    setSourceMode("camera");
-    setCaptureMode("photo");
-
-    // On mobile native, open system camera app directly for best quality.
-    if (Capacitor.isNativePlatform()) {
-      const file = await takePicture({ facing: "environment" });
-      if (file) {
-        setMediaFile(file);
-        setStep("edit");
-      }
-      return;
-    }
-
-    setStep("capture");
   };
 
   const onPickGallery = () => {
@@ -2151,130 +2361,33 @@ export default function StoryCreate() {
   ]);
 
   // ═══════════════════════════════════════
-  // STEP 0: ENTRY CHOICE
+  // STEP 0/1: CAPTURE (full-screen modal camera)
   // ═══════════════════════════════════════
-  if (step === "entry") {
-    return (
-      <>
-      <div className="relative flex min-h-0 flex-1 flex-col bg-background">
-        <MainTopHeader
-          title="Mon profil"
-          tabs={profileHeaderTabs}
-          tabsAriaLabel="Navigation du profil"
-        />
-        <div className="flex min-h-0 flex-1 items-center justify-center px-5">
-          <div className="w-full max-w-sm space-y-3">
-            <button
-              type="button"
-              onClick={() => void onTakePhoto()}
-              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-            >
-              <Camera className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Prendre une photo</p>
-                <p className="text-xs text-muted-foreground">Partager depuis la caméra</p>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSourceMode("gallery");
-                onPickGallery();
-              }}
-              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-            >
-              <Image className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Choisir dans la galerie</p>
-                <p className="text-xs text-muted-foreground">Image ou vidéo existante</p>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowSessionPicker((v) => !v)}
-              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-            >
-              <CalendarPlus className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">Partager une séance programmée</p>
-                <p className="text-xs text-muted-foreground">Carte, pin et itinéraire</p>
-              </div>
-            </button>
-            {hasDraft && (
-              <button
-                type="button"
-                onClick={() => navigate("/drafts/stories")}
-                className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-              >
-                <RefreshCw className="h-5 w-5 text-primary" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">Reprendre un brouillon</p>
-                  <p className="text-xs text-muted-foreground">Voir tous les brouillons</p>
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-        {showSessionPicker && (
-          <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Sélectionne une séance</p>
-              <button type="button" className="text-xs text-muted-foreground" onClick={() => setShowSessionPicker(false)}>
-                Fermer
-              </button>
-            </div>
-            <div className="max-h-56 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
-              {sessions.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Aucune séance disponible</p>
-              ) : (
-                sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={async () => {
-                      const generated = await createSessionStoryImage(s);
-                      if (!generated) {
-                        toast({ title: "Erreur", description: "Impossible de préparer la story de séance", variant: "destructive" });
-                        return;
-                      }
-                      setSelectedSession(s);
-                      setMediaFile(generated);
-                      setShowSessionPicker(false);
-                      setStep("edit");
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-secondary"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-                      <CalendarPlus className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{s.title}</p>
-                      <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-      {exitDraftDialog}
-      </>
-    );
-  }
+  if (step === "entry" || step === "capture") {
+    const cameraModeLabel = facingMode === "user" ? "Caméra · avant" : "Caméra · arrière";
+    const lastSession = sessions[0] ?? null;
+    const sessionMeta = lastSession?.scheduled_at
+      ? `${lastSession.title || "Séance"} · ${new Date(lastSession.scheduled_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+      : "14,2 km · 1:18 · il y a 3h";
+    const activeTab = sourceMode === "gallery" ? "GALERIE" : captureMode === "video" ? "VIDÉO" : "PHOTO";
+    const modeTabs: Array<"SÉANCE" | "GALERIE" | "PHOTO" | "VIDÉO"> = ["SÉANCE", "GALERIE", "PHOTO", "VIDÉO"];
 
-  // ═══════════════════════════════════════
-  // STEP 1: CAPTURE (Camera / Gallery)
-  // ═══════════════════════════════════════
-  if (step === "capture") {
+    const onModeTabPress = (tab: "SÉANCE" | "GALERIE" | "PHOTO" | "VIDÉO") => {
+      if (tab === "SÉANCE") {
+        setShowSessionPicker(true);
+        return;
+      }
+      if (tab === "GALERIE") {
+        setSourceMode("gallery");
+        onPickGallery();
+        return;
+      }
+      setSourceMode("camera");
+      setCaptureMode(tab === "VIDÉO" ? "video" : "photo");
+    };
+
     return (
       <div className="relative flex min-h-0 flex-1 flex-col bg-black">
-        <MainTopHeader
-          title="Mon profil"
-          tabs={profileHeaderTabs}
-          tabsAriaLabel="Navigation du profil"
-        />
-
         {/* Camera viewfinder */}
         {sourceMode === "camera" ? (
           <div className="relative flex-1">
@@ -2295,69 +2408,91 @@ export default function StoryCreate() {
             )}
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center">
-            <button
-              type="button"
-              onClick={onPickGallery}
-              className="flex flex-col items-center gap-3 text-white/70"
-            >
-              <div className="rounded-2xl border-2 border-dashed border-white/30 p-10">
-                <Image className="h-12 w-12" />
-              </div>
-              <span className="text-sm font-medium">Choisir depuis la galerie</span>
-            </button>
-          </div>
+          <div className="flex flex-1 items-center justify-center bg-black" />
         )}
 
-        {/* Bottom controls */}
-        <div className="absolute inset-x-0 bottom-0 z-10 pb-[max(24px,env(safe-area-inset-bottom,24px))]">
-          {/* Mode selector (style bandeau type Stories) */}
-          <div className="mb-6 flex flex-col items-center gap-1">
-            <div className="flex items-center justify-center gap-6">
-              {(["photo", "video", "boomerang"] as CaptureMode[]).map((mode) => (
+        <div className="pointer-events-none absolute inset-0 z-20">
+          {/* top controls */}
+          <div className="pointer-events-auto flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top,12px))]">
+            <button
+              type="button"
+              onClick={() => requestExitWithDraftPrompt("back")}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+              aria-label="Fermer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFlashActive((v) => !v)}
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm",
+                  flashActive ? "text-orange-400" : "text-white/90",
+                )}
+                aria-label="Flash"
+              >
+                <Zap className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+                aria-label="Changer de caméra"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* center camera indicator */}
+          <div className="pointer-events-auto absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 text-center">
+            <button
+              type="button"
+              onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+            >
+              <Camera className="h-6 w-6" />
+            </button>
+            <p className="mt-2 text-xs font-semibold text-white/90">{cameraModeLabel}</p>
+          </div>
+
+          {/* Bottom controls */}
+          <div className="pointer-events-auto absolute inset-x-0 bottom-0 px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))]">
+            {/* mode tabs */}
+            <div className="mb-6 flex items-center justify-center gap-6">
+              {modeTabs.map((tab) => (
                 <button
-                  key={mode}
+                  key={tab}
                   type="button"
-                  onClick={() => setCaptureMode(mode)}
-                  className={`text-xs font-bold uppercase tracking-wider ${
-                    captureMode === mode ? "text-white" : "text-white/50"
-                  }`}
+                  onClick={() => onModeTabPress(tab)}
+                  className={cn(
+                    "relative pb-3 text-xs font-bold uppercase tracking-[0.18em]",
+                    activeTab === tab ? "text-white" : "text-white/55",
+                  )}
                 >
-                  {mode === "photo" ? "PHOTO" : mode === "video" ? "VIDEO" : "BOOMERANG"}
+                  {tab}
+                  {activeTab === tab && <span className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" />}
                 </button>
               ))}
             </div>
-            {sourceMode === "camera" && (
-              <p className="text-[11px] font-medium text-white/45">
-                {facingMode === "user" ? "Selfie" : "Caméra arrière"}
-              </p>
-            )}
-          </div>
 
-          {/* Capture + gallery toggle */}
-          <div className="flex items-center justify-center gap-8">
-            {/* Gallery toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                if (sourceMode === "gallery") {
-                  setSourceMode("camera");
-                } else {
-                  setSourceMode("gallery");
-                  onPickGallery();
-                }
-              }}
-              className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white/30 bg-white/10 backdrop-blur-sm"
-            >
-              <Image className="h-5 w-5 text-white" />
-            </button>
+            {/* shutter row */}
+            <div className="mb-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={onPickGallery}
+                className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/90 text-white"
+                aria-label="Ouvrir la galerie"
+              >
+                <Image className="h-6 w-6" />
+              </button>
 
-            {/* Shutter button */}
-            {sourceMode === "camera" && (
               <button
                 type="button"
                 onClick={() => void onCapture()}
                 className="relative flex h-[76px] w-[76px] items-center justify-center"
+                aria-label="Capturer"
               >
                 <div className="absolute inset-0 rounded-full border-[3px] border-white" />
                 <div className={`h-[62px] w-[62px] rounded-full transition-all ${
@@ -2368,25 +2503,84 @@ export default function StoryCreate() {
                       : "bg-destructive"
                 }`} />
               </button>
-            )}
 
-            {/* Inverser la caméra (comme Snapchat / Instagram) */}
-            {sourceMode === "camera" ? (
               <button
                 type="button"
-                onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
-                className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white/30 bg-white/10 backdrop-blur-sm text-white transition-transform active:scale-95"
-                aria-label={
-                  facingMode === "user" ? "Passer à la caméra arrière" : "Passer à la caméra avant (selfie)"
-                }
+                onClick={() => setShowSessionPicker(true)}
+                className="flex h-14 w-14 items-center justify-center rounded-2xl bg-black/35 text-orange-400 backdrop-blur-sm"
+                aria-label="Partager une séance"
               >
-                <RefreshCw className="h-5 w-5" />
+                <span className="text-2xl leading-none">🏃</span>
               </button>
-            ) : (
-              <div className="h-12 w-12" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSessionPicker(true)}
+              className="mb-1 flex w-full items-center gap-3 rounded-2xl bg-zinc-900/75 px-3 py-3 text-left backdrop-blur-sm"
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/85 text-white">
+                <span className="text-base leading-none">🏃</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">Story-fier ma dernière séance</p>
+                <p className="truncate text-xs text-white/70">{sessionMeta}</p>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-white/70" />
+            </button>
+            {hasDraft && (
+              <button
+                type="button"
+                onClick={() => navigate("/drafts/stories")}
+                className="mx-auto mt-2 block text-xs text-white/65 underline underline-offset-2"
+              >
+                Reprendre un brouillon
+              </button>
             )}
           </div>
         </div>
+        {showSessionPicker && (
+          <div className="absolute inset-x-0 bottom-0 z-30 rounded-t-3xl bg-zinc-950/96 px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4 backdrop-blur-md">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">Sélectionne une séance</p>
+              <button type="button" className="text-xs text-white/65" onClick={() => setShowSessionPicker(false)}>
+                Fermer
+              </button>
+            </div>
+            <div className="max-h-56 space-y-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-2">
+              {sessions.length === 0 ? (
+                <p className="px-3 py-4 text-center text-sm text-white/65">Aucune séance disponible</p>
+              ) : (
+                sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={async () => {
+                      const generated = await createSessionStoryImage(s);
+                      if (!generated) {
+                        toast({ title: "Erreur", description: "Impossible de préparer la story de séance", variant: "destructive" });
+                        return;
+                      }
+                      setSelectedSession(s);
+                      setMediaFile(generated);
+                      setShowSessionPicker(false);
+                      setStep("edit");
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-white transition-colors hover:bg-white/10"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                      <CalendarPlus className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{s.title}</p>
+                      <p className="truncate text-xs text-white/65">{s.location_name}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       {exitDraftDialog}
       </div>
     );
@@ -2399,28 +2593,33 @@ export default function StoryCreate() {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-black">
-      <MainTopHeader
-        title="Mon profil"
-        tabs={profileHeaderTabs}
-        tabsAriaLabel="Navigation du profil"
-        right={
-          <Button
-            type="button"
-            size="sm"
-            disabled={sharing || (editorMode === "idle" && !mediaFile)}
-            onClick={() => {
-              if (editorMode !== "idle") {
-                closeEditorMode();
-                return;
-              }
-              setPublishConfirmOpen(true);
-            }}
-            className="h-9 rounded-full px-4 text-xs font-semibold"
-          >
-            {sharing ? "Envoi…" : "Publier"}
-          </Button>
-        }
-      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top,12px))]">
+        <button
+          type="button"
+          onClick={() => requestExitWithDraftPrompt("back")}
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm"
+          aria-label="Retour à la caméra"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={sharing}
+          onClick={async () => {
+            try {
+              await saveDraft();
+              toast({ title: "Brouillon enregistré", description: "Ta story a été sauvegardée en brouillon." });
+            } catch {
+              toast({ title: "Erreur", description: "Impossible d'enregistrer le brouillon.", variant: "destructive" });
+            }
+          }}
+          className="pointer-events-auto h-9 rounded-full bg-black/50 px-4 text-xs font-semibold text-white backdrop-blur-sm hover:bg-black/60"
+        >
+          <ArrowDown className="mr-1.5 h-3.5 w-3.5" />
+          Sauvegarder
+        </Button>
+      </div>
       {/* Preview fullscreen */}
       <div
         className="relative flex-1 overflow-hidden"
@@ -2728,27 +2927,40 @@ export default function StoryCreate() {
               className="pointer-events-auto relative px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-20"
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <label htmlFor="story-caption-input" className="sr-only">
-                Légende de la story
-              </label>
-              <Input
-                id="story-caption-input"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Ajouter une légende…"
-                autoComplete="off"
-                autoCorrect="off"
-                className="h-auto min-h-[44px] border-0 bg-transparent px-2.5 py-2.5 text-[16px] text-white shadow-none placeholder:text-white/55 focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
-                style={{
-                  textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.45)",
-                }}
-              />
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="story-caption-input" className="sr-only">
+                    Légende de la story
+                  </label>
+                  <Input
+                    id="story-caption-input"
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Ajouter une légende…"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    className="h-auto min-h-[44px] border-0 bg-transparent px-2.5 py-2.5 text-[16px] text-white shadow-none placeholder:text-white/55 focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
+                    style={{
+                      textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.45)",
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={sharing || !mediaFile}
+                  onClick={() => setPublishConfirmOpen(true)}
+                  className="h-9 rounded-full bg-blue-500 px-4 text-xs font-semibold text-white hover:bg-blue-600"
+                >
+                  {sharing ? "Envoi…" : "Suivant"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Outils à droite : intégration type éditeur natif */}
-        <div className="absolute right-[max(12px,env(safe-area-inset-right,0px))] top-[max(12px,env(safe-area-inset-top,0px))] z-20 flex flex-col gap-2.5">
+        {/* Outils à droite — même pastilles que la carte accueil (map-overlay-fab), sous la barre Sauvegarder */}
+        <div className="absolute right-[max(12px,env(safe-area-inset-right,0px))] top-[calc(max(12px,env(safe-area-inset-top,12px))+3.25rem)] z-20 flex flex-col gap-2">
           {[
             {
               id: "text",
@@ -2862,19 +3074,23 @@ export default function StoryCreate() {
               },
             },
           ].map((tool) => (
-            <button
+            <div
               key={tool.id}
-              type="button"
-              onClick={tool.onClick}
               className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-2xl border border-white/18 bg-black/38 text-white shadow-[0_6px_28px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition-all duration-200 ease-out active:scale-[0.93]",
-                tool.active && "border-primary/35 bg-primary text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.38)]",
+                "map-overlay-fab-shell",
+                tool.active && "ring-2 ring-primary ring-offset-2 ring-offset-black",
               )}
-              aria-label={tool.label}
-              title={tool.label}
             >
-              <tool.icon className="h-5 w-5" />
-            </button>
+              <button
+                type="button"
+                onClick={tool.onClick}
+                className="map-overlay-fab-inner"
+                aria-label={tool.label}
+                title={tool.label}
+              >
+                <tool.icon className="h-[15px] w-[15px]" strokeWidth={2} aria-hidden />
+              </button>
+            </div>
           ))}
         </div>
       </div>

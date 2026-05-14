@@ -2,21 +2,21 @@ import { lazy, Suspense, useState, useEffect } from "react";
 import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Settings,
   Bell,
   Link2,
   Shield,
   HelpCircle,
-  ChevronRight,
   Loader2,
   ArrowLeft,
   Search,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
@@ -27,7 +27,9 @@ import {
   type TutorialReplayId,
 } from "@/lib/tutorials/registry";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+import { Group, Cell } from "@/components/apple";
+import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
+import { cn } from "@/lib/utils";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -64,6 +66,8 @@ interface SettingsDialogProps {
   initialSearch?: string;
   /** Ouvre directement une sous-page (ex. confidentialité depuis le profil). */
   initialPage?: SettingsDialogPage;
+  /** Au-dessus d’un autre plein écran (ex. ProfileDialog) : z-index + voile empilés. */
+  stackNested?: boolean;
 }
 
 const settingsCategories = [
@@ -72,7 +76,7 @@ const settingsCategories = [
     title: 'Général',
     description: 'Langue, thème, distances, mot de passe',
     icon: Settings,
-    color: 'bg-[#8E8E93]',
+    iconBg: '#8E8E93',
     searchItems: ['Langue', 'Thème', 'Mode sombre', 'Mode clair', 'Système', 'Apparence', 'Unités de distance', 'Kilomètres', 'Miles', 'Mot de passe', 'Carte', 'Appui long'],
   },
   {
@@ -80,7 +84,7 @@ const settingsCategories = [
     title: 'Notifications',
     description: 'Push, alertes, préférences',
     icon: Bell,
-    color: 'bg-[#FF3B30]',
+    iconBg: '#FF3B30',
     searchItems: ['Push', 'Alertes', 'Messages', 'Sessions', 'Amis', 'Invitation club', 'Présence confirmée', 'Demande de suivi', 'Coaching'],
   },
   {
@@ -88,7 +92,7 @@ const settingsCategories = [
     title: 'Connexions',
     description: 'Strava, Instagram, partage',
     icon: Link2,
-    color: 'bg-[#007AFF]',
+    iconBg: '#007AFF',
     searchItems: ['Strava', 'Instagram', 'Synchronisation', 'Import activités', 'Réseau social', 'Partage'],
   },
   {
@@ -96,7 +100,7 @@ const settingsCategories = [
     title: 'Confidentialité',
     description: 'RGPD, sécurité, données',
     icon: Shield,
-    color: 'bg-[#34C759]',
+    iconBg: '#34C759',
     searchItems: ['RGPD', 'Sécurité', 'Données', 'Profil privé', 'Visibilité', 'Bloquer', 'Signaler', 'Supprimer compte', 'Export données'],
   },
   {
@@ -104,7 +108,7 @@ const settingsCategories = [
     title: 'Aide & Support',
     description: 'Contact, tutoriels, documents, compte',
     icon: HelpCircle,
-    color: 'bg-[#FF9500]',
+    iconBg: '#FF9500',
     searchItems: ['Contact', 'Tutoriel', 'Guide', 'FAQ', 'Bug', 'Signaler problème', 'Feedback', 'Version', 'À propos', 'Mentions légales', 'Conditions', 'Déconnexion', 'Supprimer compte'],
   },
 ];
@@ -118,9 +122,17 @@ function getMatchingItems(items: string[], query: string): string[] {
 
 const SETTINGS_BOTTOM_NAV_SUPPRESSOR_ID = "settings-dialog";
 
-export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
+export const SettingsDialog = ({
+  open,
+  onOpenChange,
+  initialSearch,
+  initialPage,
+  stackNested = false,
+}: SettingsDialogProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { userProfile } = useUserProfile();
   const { setBottomNavSuppressed } = useAppContext();
   const [currentPage, setCurrentPage] = useState<SettingsDialogPage>("hub");
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
@@ -254,7 +266,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0">
+        <DialogContent stackNested={stackNested} className="max-w-md max-h-[80vh] p-0">
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
@@ -268,7 +280,12 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         hideCloseButton
-        className="fixed inset-0 left-0 right-0 top-0 z-[125] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[125] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
+        stackNested={stackNested}
+        className={cn(
+          "fixed inset-0 left-0 right-0 top-0 mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border",
+          /* Avec stackNested, l’overlay est z-[130] : le contenu doit rester au même plan ou au-dessus (sinon le voile capte tous les touches). */
+          stackNested ? "z-[130] sm:z-[130]" : "z-[125] sm:z-[125]"
+        )}
       >
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
@@ -286,28 +303,36 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
                 contentScroll
                 scrollClassName="min-h-0 bg-secondary"
                 header={
-                  <div className="min-w-0 max-w-full border-b border-border bg-card/95">
-                    <IosPageHeaderBar
-                      left={
-                        <button
-                          type="button"
-                          onClick={() => handleOpenChange(false)}
-                          className="flex min-w-0 max-w-full items-center gap-1 text-primary"
-                        >
-                          <ArrowLeft className="h-5 w-5 shrink-0" />
-                          <span className="truncate text-[17px]">Retour</span>
-                        </button>
-                      }
-                      title="Paramètres"
-                    />
-                    <div className="min-w-0 px-4 pb-2.5 ios-shell:px-2.5">
-                      <div className="relative min-w-0 max-w-full">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
+                  // Refonte Apple Settings.app (mockup 20) :
+                  // - bar 44h avec "Retour" bleu à gauche
+                  // - large title 34px bold
+                  // - SearchBar iOS pill (apple-search)
+                  <div className="min-w-0 max-w-full bg-secondary">
+                    <div className="flex h-11 items-center justify-between px-4 pt-[var(--safe-area-top)]">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenChange(false)}
+                        className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
+                      >
+                        <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
+                        <span>Retour</span>
+                      </button>
+                      <div className="min-w-[60px]" />
+                    </div>
+                    <div className="px-4 pt-1 pb-3">
+                      <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
+                        Réglages
+                      </h1>
+                    </div>
+                    <div className="px-4 pb-3">
+                      <div className="apple-search">
+                        <Search className="h-3.5 w-3.5 shrink-0" />
+                        <input
+                          type="search"
                           placeholder="Rechercher"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full min-w-0 max-w-full bg-background pl-10"
+                          className="min-w-0 flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground focus:outline-none"
                         />
                       </div>
                     </div>
@@ -316,43 +341,58 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
               >
               <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
                 <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
-                  {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
-                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-                    <div className="ios-card w-full min-w-0 overflow-hidden">
-                    {filteredCategories.map((category, index) => (
-                      <div key={category.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCurrentPage(category.id);
-                          }}
-                          className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary ios-shell:px-2.5"
-                        >
-                          {/* iOS colored icon square */}
-                          <div className={`ios-list-row-icon ${category.color}`}>
-                            <category.icon className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="min-w-0 flex-1 text-left">
-                            <span className="truncate text-[17px]">{category.title}</span>
-                            {searchQuery.trim() && (() => {
-                              const matches = getMatchingItems(category.searchItems, searchQuery);
-                              if (matches.length === 0) return null;
-                              return (
-                                <p className="truncate text-[13px] text-muted-foreground">
-                                  {matches.join(', ')}
-                                </p>
-                              );
-                            })()}
-                          </div>
-                          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-                        </button>
-                        {/* Separator - iOS style (inset) */}
-                        {index < filteredCategories.length - 1 && (
-                          <div className="ios-list-row-inset-sep" />
-                        )}
-                      </div>
-                    ))}
+                  {userProfile ? (
+                    <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleOpenChange(false);
+                          navigate("/profile");
+                        }}
+                        className="flex w-full min-w-0 items-center gap-3.5 rounded-[14px] border border-border/60 bg-card p-4 text-left shadow-[var(--shadow-card)] transition-colors active:bg-muted/40"
+                      >
+                        <Avatar className="h-[60px] w-[60px] shrink-0">
+                          <AvatarImage src={userProfile.avatar_url || undefined} alt="" />
+                          <AvatarFallback className="bg-primary text-lg font-semibold text-primary-foreground">
+                            {(userProfile.display_name?.[0] || userProfile.username?.[0] || user?.email?.[0] || "?").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display truncate text-[19px] font-semibold leading-tight tracking-[-0.4px] text-foreground">
+                            {userProfile.display_name || userProfile.username || "Compte"}
+                          </p>
+                          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                            Compte
+                            {userProfile.is_premium ? " · Premium" : ""}
+                          </p>
+                        </div>
+                        <ChevronGlyph className="apple-cell-chevron shrink-0" />
+                      </button>
                     </div>
+                  ) : null}
+
+                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+                    <Group inset={false} className="mb-0 shadow-[var(--shadow-card)]">
+                      {filteredCategories.map((category, index) => {
+                        const matches = searchQuery.trim()
+                          ? getMatchingItems(category.searchItems, searchQuery)
+                          : [];
+                        const subtitle = matches.length > 0 ? matches.join(", ") : undefined;
+                        return (
+                          <Cell
+                            key={category.id}
+                            icon={
+                              <category.icon className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />
+                            }
+                            iconBg={category.iconBg}
+                            title={category.title}
+                            subtitle={subtitle}
+                            last={index === filteredCategories.length - 1}
+                            onClick={() => setCurrentPage(category.id)}
+                          />
+                        );
+                      })}
+                    </Group>
                   </div>
 
                   {filteredCategories.length === 0 && (

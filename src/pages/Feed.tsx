@@ -1,16 +1,12 @@
-import { useNavigate } from "react-router-dom";
-import { HomeFeedSheetContent } from "@/components/home/HomeFeedSheetContent";
+import { FeedActivitiesMaquette } from "@/components/feed/FeedActivitiesMaquette";
+import { DiscoverChromeShell } from "@/components/discover/DiscoverChromeShell";
 
 export default function Feed() {
-  const navigate = useNavigate();
-
   return (
-    <div className="feed-flat flex h-full min-h-0 flex-col overflow-hidden bg-white">
-      <HomeFeedSheetContent
-        sheetSnap={2}
-        onBrandClick={() => navigate("/", { replace: true })}
-        scrollClassName="pb-ios-4"
-      />
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <DiscoverChromeShell activeChip="feed">
+        <FeedActivitiesMaquette embeddedInDiscoverChrome />
+      </DiscoverChromeShell>
     </div>
   );
 }

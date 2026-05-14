@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Route, ChevronRight, Check, X, Mountain, Ruler, Sparkles } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { EmojiBadge } from '@/components/apple';
 
 interface RouteData {
   id: string;
@@ -17,12 +18,15 @@ interface RouteSelectorProps {
   selectedRouteId: string | null;
   onRouteSelect: (route: RouteData | null) => void;
   onAutoFill?: (data: { distance_km: string; elevation_gain: string }) => void;
+  /** Intègre le sélecteur dans un bloc continu (pas de carte/bord externe dédiée). */
+  embedded?: boolean;
 }
 
 export const RouteSelector: React.FC<RouteSelectorProps> = ({
   selectedRouteId,
   onRouteSelect,
   onAutoFill,
+  embedded = false,
 }) => {
   const { user } = useAuth();
   const [routes, setRoutes] = useState<RouteData[]>([]);
@@ -72,14 +76,18 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
     onRouteSelect(null);
   };
 
+  const outerCard = cn(
+    embedded ? 'rounded-none border-0 bg-transparent p-0' : 'rounded-xl border border-border bg-card p-4',
+  );
+
   if (loading) {
     return (
-      <div className="rounded-xl bg-card border border-border p-4">
+      <div className={outerCard}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-secondary animate-pulse" />
+          <div className="h-8 w-8 shrink-0 animate-pulse rounded-[7px] bg-secondary" />
           <div className="flex-1 space-y-2">
-            <div className="h-4 bg-secondary rounded animate-pulse w-24" />
-            <div className="h-3 bg-secondary rounded animate-pulse w-32" />
+            <div className="h-4 w-24 animate-pulse rounded bg-secondary" />
+            <div className="h-3 w-32 animate-pulse rounded bg-secondary" />
           </div>
         </div>
       </div>
@@ -88,14 +96,12 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
 
   if (routes.length === 0) {
     return (
-      <div className="rounded-xl bg-card border border-border p-4">
+      <div className={outerCard}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-            <Route className="w-5 h-5 text-muted-foreground" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground">Aucun itinéraire</p>
-            <p className="text-xs text-muted-foreground/70">Créez un itinéraire sur la carte</p>
+          <EmojiBadge emoji="🗺️" className="bg-[#8E8E93]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-medium text-muted-foreground">Aucun itinéraire</p>
+            <p className="text-[13px] text-muted-foreground/80">Créez un itinéraire sur la carte</p>
           </div>
         </div>
       </div>
@@ -103,44 +109,35 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
   }
 
   return (
-    <div className="space-y-2">
-      <span className="text-sm font-medium text-foreground flex items-center gap-2">
-        <Route className="w-4 h-4 text-primary" />
-        Itinéraire (optionnel)
-      </span>
-
-      {/* Selected Route or Selector */}
+    <div className={cn(!embedded && 'space-y-2')}>
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "rounded-xl bg-card border border-border p-3 cursor-pointer transition-all",
-          isExpanded && "ring-2 ring-primary/30"
+          embedded
+            ? 'min-h-[48px] cursor-pointer px-4 py-3 transition-all active:bg-secondary/55'
+            : 'cursor-pointer p-2.5 transition-all active:bg-secondary/50',
+          embedded
+            ? 'rounded-lg bg-secondary/35 ring-inset ring-1 ring-border/40 hover:bg-secondary/45'
+            : 'rounded-xl border border-border/70 bg-card hover:bg-muted/40',
+          isExpanded && embedded && 'bg-secondary/55 ring-primary/35',
+          isExpanded && !embedded && 'ring-2 ring-primary/30'
         )}
       >
         {selectedRoute ? (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Route className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{selectedRoute.name}</p>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <EmojiBadge emoji="🗺️" className="bg-[#0A66D0]" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[17px] font-normal tracking-[-0.4px] text-foreground">
+                {selectedRoute.name}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-muted-foreground">
                 {selectedRoute.total_distance && (
-                  <span className="flex items-center gap-1">
-                    <Ruler className="w-3 h-3" />
-                    {(selectedRoute.total_distance / 1000).toFixed(1)} km
-                  </span>
+                  <span>{(selectedRoute.total_distance / 1000).toFixed(1)} km</span>
                 )}
                 {selectedRoute.total_elevation_gain && (
-                  <span className="flex items-center gap-1">
-                    <Mountain className="w-3 h-3" />
-                    D+ {selectedRoute.total_elevation_gain}m
-                  </span>
+                  <span>D+ {selectedRoute.total_elevation_gain} m</span>
                 )}
-                <span className="flex items-center gap-1 text-primary">
-                  <Sparkles className="w-3 h-3" />
-                  Auto
-                </span>
+                <span className="text-primary">✨ Auto</span>
               </div>
             </div>
             <button
@@ -152,15 +149,15 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">Choisir un itinéraire</p>
-              <p className="text-xs text-muted-foreground">Auto-remplir distance et D+</p>
+            <EmojiBadge emoji="📍" className="bg-[#5E5CE6]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[17px] font-normal tracking-[-0.4px] text-foreground">
+                Choisir un itinéraire
+              </p>
+              <p className="text-[13px] text-muted-foreground">Auto-remplir distance et D+</p>
             </div>
             <ChevronRight className={cn(
-              "w-5 h-5 text-muted-foreground transition-transform",
+              "w-4 h-4 text-muted-foreground transition-transform",
               isExpanded && "rotate-90"
             )} />
           </div>
@@ -176,32 +173,35 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="space-y-1 pt-1 max-h-48 overflow-y-auto">
+            <div className="max-h-48 space-y-0 overflow-y-auto pt-1">
               {routes.map((route) => (
                 <button
                   key={route.id}
                   type="button"
                   onClick={() => handleSelect(route)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left",
-                    selectedRouteId === route.id
-                      ? "bg-primary/10 border border-primary/30"
-                      : "bg-secondary hover:bg-secondary/80"
+                    'w-full text-left transition-colors',
+                    embedded
+                      ? 'flex items-center gap-3 border-border/55 border-t px-2 py-2.5 first:border-t-0 first:pt-0 hover:bg-secondary/40'
+                      : 'flex items-center gap-3 rounded-lg p-2.5',
+                    !embedded &&
+                      (selectedRouteId === route.id
+                        ? 'border border-primary/30 bg-primary/10 hover:bg-primary/15'
+                        : 'bg-secondary hover:bg-secondary/80'),
+                    embedded &&
+                      (selectedRouteId === route.id
+                        ? 'bg-primary/12'
+                        : 'bg-transparent')
                   )}
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center",
-                    selectedRouteId === route.id ? "bg-primary text-primary-foreground" : "bg-card"
-                  )}>
-                    {selectedRouteId === route.id ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Route className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{route.name}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {selectedRouteId === route.id ? (
+                    <EmojiBadge emoji="✓" className="bg-primary text-primary-foreground" />
+                  ) : (
+                    <EmojiBadge emoji="🗺️" className="bg-[#8E8E93]" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-medium">{route.name}</p>
+                    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
                       {route.total_distance && (
                         <span>{(route.total_distance / 1000).toFixed(1)} km</span>
                       )}

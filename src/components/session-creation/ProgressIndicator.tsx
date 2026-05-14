@@ -1,25 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Bike, Calendar, FileText, Check, ClipboardList, FileCheck } from 'lucide-react';
 import { WizardStep } from './types';
 import { cn } from '@/lib/utils';
-
-const STEP_ICONS: Record<WizardStep, React.ElementType> = {
-  location: MapPin,
-  activity: Bike,
-  datetime: Calendar,
-  details: FileText,
-  confirm: Check,
-  essentials: ClipboardList,
-  finalize: FileCheck,
-};
 
 const STEP_LABELS: Record<WizardStep, string> = {
   location: 'Lieu',
   activity: 'Sport',
   datetime: 'Date',
   details: 'Détails',
-  confirm: 'Confirmer',
+  confirm: 'Booster',
   essentials: 'Plan',
   finalize: 'Publier',
 };
@@ -30,50 +19,41 @@ interface ProgressIndicatorProps {
   steps: WizardStep[];
 }
 
-export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentStep, progress, steps }) => {
+/**
+ * Indicateur Apple : pastilles segmentées (rythme du wizard) + libellé serré
+ * de l'étape en cours. Bleu Apple #0066CC pour les segments validés/actif.
+ */
+export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
+  currentStep,
+  steps,
+}) => {
   const currentIndex = Math.max(0, steps.indexOf(currentStep));
+  const total = steps.length;
 
   return (
-    <div className="w-full px-4 py-1">
-      <div className="relative mb-4 h-1 overflow-hidden rounded-full bg-muted">
-        <motion.div
-          className="absolute left-0 top-0 h-full rounded-full bg-primary"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        />
+    <div className="w-full px-4 pb-3 pt-1">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">
+          Étape {currentIndex + 1} / {total}
+        </span>
+        <span className="truncate text-[13px] font-semibold tracking-tight text-foreground">
+          {STEP_LABELS[currentStep]}
+        </span>
       </div>
-
-      <div className="flex items-center justify-between">
+      <div className="mt-2 flex items-center gap-1.5">
         {steps.map((step, index) => {
-          const Icon = STEP_ICONS[step];
-          const isCompleted = index < currentIndex;
-          const isCurrent = index === currentIndex;
-
+          const reached = index <= currentIndex;
           return (
-            <div key={step} className="flex flex-col items-center gap-1">
-              <motion.div
-                className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300',
-                  isCompleted && 'bg-primary text-primary-foreground',
-                  isCurrent && 'border-2 border-primary bg-primary/20 text-primary',
-                  !isCompleted && !isCurrent && 'bg-muted text-muted-foreground'
-                )}
-                initial={{ scale: 0.8 }}
-                animate={{ scale: isCurrent ? 1.1 : 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
-              </motion.div>
-              <span
-                className={cn(
-                  'text-xs font-medium transition-colors max-w-[4.5rem] text-center leading-tight',
-                  isCurrent ? 'text-primary' : 'text-muted-foreground'
-                )}
-              >
-                {STEP_LABELS[step]}
-              </span>
-            </div>
+            <motion.div
+              key={step}
+              className={cn(
+                'h-1 flex-1 rounded-full transition-colors',
+                reached ? 'bg-primary' : 'bg-muted'
+              )}
+              initial={false}
+              animate={{ opacity: reached ? 1 : 0.55 }}
+              transition={{ duration: 0.25 }}
+            />
           );
         })}
       </div>

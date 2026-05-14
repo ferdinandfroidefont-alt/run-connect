@@ -8,14 +8,12 @@ import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, BadgeCheck, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock, Share2, ShieldBan, Info, X } from "lucide-react";
+import { UserPlus, UserMinus, BadgeCheck, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Lock, Share2, ShieldBan, Info } from "lucide-react";
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { PersonalRecords } from "@/components/PersonalRecords";
-import { RecentActivities } from "@/components/profile/RecentActivities";
 import { getCountryLabel } from "@/lib/countryLabels";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
 import { FollowDialog } from "./FollowDialog";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -74,7 +72,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [followDialogTab, setFollowDialogTab] = useState<'followers' | 'following'>('followers');
   const [showRecordsSheet, setShowRecordsSheet] = useState(false);
-  const [showActivitiesSheet, setShowActivitiesSheet] = useState(false);
   const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
   const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0 });
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
@@ -413,6 +410,29 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const countryLabel = profile ? getCountryLabel(profile.country) : null;
   const ageLine = profile?.age ? `${profile.age} ans` : null;
   const metaParts = [countryLabel, ageLine].filter(Boolean);
+  const statsCards = [
+    {
+      key: "created",
+      title: "Séances créées",
+      emoji: "🏃",
+      bg: "#007AFF",
+      value: statsLoading ? "…" : String(stats.sessionsCreated),
+    },
+    {
+      key: "routes",
+      title: "Itinéraires créés",
+      emoji: "🗺️",
+      bg: "#34C759",
+      value: statsLoading ? "…" : String(stats.routesCreated),
+    },
+    {
+      key: "joined",
+      title: "Séances rejointes",
+      emoji: "🤝",
+      bg: "#FF9500",
+      value: statsLoading ? "…" : String(stats.sessionsJoined),
+    },
+  ] as const;
 
   return (
     <>
@@ -620,40 +640,36 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
 
                     {/* Activity Stats */}
-                    <div className="min-w-0 border-b border-border/60 bg-card">
-                      <IOSListGroup flush className="!mb-0">
-                        <IOSListItem
-                          icon={CalendarDays}
-                          iconBgColor="bg-primary"
-                          title="Séances créées"
-                          value={statsLoading ? '…' : String(stats.sessionsCreated)}
-                          showChevron={false}
-                        />
-                        <IOSListItem
-                          icon={Route}
-                          iconBgColor="bg-emerald-500"
-                          title="Itinéraires créés"
-                          value={statsLoading ? '…' : String(stats.routesCreated)}
-                          showChevron={false}
-                        />
-                        <IOSListItem
-                          icon={MapPin}
-                          iconBgColor="bg-orange-500"
-                          title="Séances rejointes"
-                          value={statsLoading ? '…' : String(stats.sessionsJoined)}
-                          showChevron={false}
-                          showSeparator={false}
-                        />
-                      </IOSListGroup>
+                    <div className="min-w-0 border-b border-border/60 bg-card px-4 py-3">
+                      <div className="space-y-2.5">
+                        {statsCards.map((card) => (
+                          <div
+                            key={card.key}
+                            className="flex min-w-0 items-center gap-3 rounded-[14px] border border-border/60 bg-white px-4 py-3.5"
+                          >
+                            <span
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
+                              style={{ backgroundColor: card.bg }}
+                              aria-hidden
+                            >
+                              {card.emoji}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-[17px] text-foreground">
+                              {card.title}
+                            </span>
+                            <span className="shrink-0 text-[17px] font-semibold text-foreground">
+                              {card.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Records & Recent */}
-                    <div className="min-w-0 border-b border-border/60 bg-card">
-                      <IOSListGroup flush className="!mb-0">
-                        <IOSListItem
-                          icon={Trophy}
-                          iconBgColor="bg-yellow-500"
-                          title="Records sport"
+                    <div className="min-w-0 border-b border-border/60 bg-card px-4 py-3">
+                      <div className="space-y-2.5">
+                        <button
+                          type="button"
                           onClick={() => {
                             if (isOwnProfile) {
                               navigate("/profile/records");
@@ -662,15 +678,43 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                               setShowRecordsSheet(true);
                             }
                           }}
-                        />
-                        <IOSListItem
-                          icon={CalendarDays}
-                          iconBgColor="bg-blue-500"
-                          title="Séances récentes"
-                          onClick={() => setShowActivitiesSheet(true)}
-                          showSeparator={false}
-                        />
-                      </IOSListGroup>
+                          className="flex w-full min-w-0 items-center gap-3 rounded-[14px] border border-border/60 bg-white px-4 py-3.5 text-left transition-colors active:bg-secondary/60"
+                        >
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
+                            style={{ backgroundColor: "#FFCC00" }}
+                            aria-hidden
+                          >
+                            🏅
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[17px] text-foreground">Records sport</span>
+                          <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground/50" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!userId) return;
+                            if (isOwnProfile) {
+                              navigate("/profile/sessions");
+                            } else {
+                              navigate(`/profile/${userId}/sessions`);
+                            }
+                            onClose();
+                          }}
+                          className="flex w-full min-w-0 items-center gap-3 rounded-[14px] border border-border/60 bg-white px-4 py-3.5 text-left transition-colors active:bg-secondary/60"
+                        >
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
+                            style={{ backgroundColor: "#0A84FF" }}
+                            aria-hidden
+                          >
+                            📅
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[17px] text-foreground">Séances récentes</span>
+                          <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground/50" />
+                        </button>
+                      </div>
                     </div>
                   </>
                 ) : !isOwnProfile ? (
@@ -817,22 +861,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               }}
               />
             )}
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-
-      {/* Recent Activities Sheet */}
-      <Sheet open={showActivitiesSheet} onOpenChange={setShowActivitiesSheet}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
-          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
-            <SheetTitle className="text-[17px]">Séances récentes</SheetTitle>
-          </SheetHeader>
-          <ScrollArea className="h-full pb-8">
-            <div className="p-4">
-              {userId && (
-                <RecentActivities userId={userId} viewerUserId={user?.id ?? null} limit={20} />
-              )}
-            </div>
           </ScrollArea>
         </SheetContent>
       </Sheet>

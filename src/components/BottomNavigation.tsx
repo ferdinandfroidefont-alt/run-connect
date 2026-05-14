@@ -1,12 +1,19 @@
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  Compass,
+  MessageCircle,
+  Plus,
+} from "lucide-react";
+import { useTheme } from "next-themes";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, GraduationCap, User } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { FloatingCreateSessionButton } from "@/components/FloatingCreateSessionButton";
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,16 +25,37 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+/** Maquette RunConnect.jsx ACTION_BLUE (#007AFF) ; gris inactif NavButton #8E8E93 (inline pour éviter ReferenceError si bundle désaligné). */
+const LIGHT_ACTION_BLUE = "#007AFF";
+
+/**
+ * Même base que StickyPage / DiscoverChromeShell (#F2F2F7) : la maquette applique un verre
+ * légèrement translucide sur la tab bar pour qu’elle se confonde avec le fond des pages.
+ * @see RunConnect (4).jsx — `<nav style={{ background: "rgba(242, 242, 247, 0.92)", … }}>`
+ */
+const TAB_BAR_LIGHT: CSSProperties = {
+  background: "rgba(242, 242, 247, 0.92)",
+  backdropFilter: "blur(20px) saturate(180%)",
+  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+  borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+};
+
+/** Alignée sur les conteneurs Messages / listes (« dark:bg-secondary »). */
+const TAB_BAR_DARK: CSSProperties = {
+  background: "hsl(var(--secondary))",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+  borderTop: "1px solid rgba(84, 84, 88, 0.65)",
+};
+
 type NavItem = {
   path: string;
-  icon: ComponentType<Record<string, unknown>>;
+  icon: LucideIcon;
   label: string;
   tutorialId?: string;
   isActive: (pathname: string) => boolean;
   showUnreadBadge?: boolean;
 };
-
-const ITEM_GAP_PX = 12;
 
 type BottomNavigationProps = {
   /** Route profil : tab bar masquée visuellement (overlay plein écran) sans démontage. */
@@ -39,28 +67,38 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { resolvedTheme } = useTheme();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [showNoClubDialog, setShowNoClubDialog] = useState(false);
-  const { hideBottomNav } = useAppContext();
+  const { hideBottomNav, openCreateSession } = useAppContext();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pathname = location.pathname;
-  const isHome = pathname === "/";
+  const isDark = resolvedTheme === "dark";
+  const activeBlue = isDark ? "#0A84FF" : LIGHT_ACTION_BLUE;
+  const inactiveGray = isDark ? "rgba(235, 235, 245, 0.55)" : "#8E8E93";
+  const tabBarSurface = isDark ? TAB_BAR_DARK : TAB_BAR_LIGHT;
 
-  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages */
+  /** Icônes Lucide identiques à la maquette (Compass, CalendarDays, Clock, MessageCircle). */
   const navItems = useMemo<NavItem[]>(
     () => [
-      { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
+      {
+        path: "/",
+        icon: Compass,
+        label: t("navigation.home"),
+        isActive: (p) =>
+          p === "/" || p === "/feed" || p === "/discover/live" || p === "/itinerary/hub",
+      },
       {
         path: "/my-sessions",
-        icon: Calendar,
+        icon: CalendarDays,
         label: t("navigation.mySessions"),
         tutorialId: "nav-sessions",
         isActive: (p) => p === "/my-sessions" || p.startsWith("/my-sessions/"),
       },
       {
         path: "/coaching",
-        icon: GraduationCap,
+        icon: Clock,
         label: t("navigation.coaching"),
         isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
       },
@@ -71,12 +109,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         tutorialId: "nav-messages",
         isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
         showUnreadBadge: true,
-      },
-      {
-        path: "/profile",
-        icon: User,
-        label: "Profil",
-        isActive: (p) => p === "/profile" || p.startsWith("/profile/"),
       },
     ],
     [t]
@@ -135,7 +167,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
     };
   }, [user, fetchUnreadCount]);
 
-  /** Toujours montée : masquage visuel uniquement (pas d’animation / pas de translate). */
   const tabBarHidden = hideBottomNav || isProfileRoute;
 
   const handleNavClick = async (path: string) => {
@@ -150,7 +181,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         .eq("user_id", user.id)
         .limit(1);
 
-      // Fallback to current behavior if membership check fails.
       if (error) {
         navigate(path);
         return;
@@ -164,82 +194,103 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
     navigate(path);
   };
 
-  return (
-    <nav
-      className={cn(
-        "fixed inset-x-0 z-[120] w-full border-t border-border bg-background overflow-visible",
-        "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
-        tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
-        "[transition:none] motion-reduce:transition-none"
-      )}
-      role="navigation"
-      aria-label="Navigation principale"
-      aria-hidden={tabBarHidden}
-      style={{
-        paddingBottom: "var(--tab-bar-ground-strip)",
-        bottom: 0,
-        transition: "none",
-      }}
-    >
-      {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
-      {isHome && <FloatingCreateSessionButton />}
-      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-0.5 pb-0">
-        <div
-          className="mx-auto flex max-w-full items-stretch justify-center"
-          style={{
-            gap: ITEM_GAP_PX,
-            paddingLeft: "0.5rem",
-            paddingRight: "0.5rem",
-          }}
-        >
-          {navItems.map((item) => {
-            const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
-            const isActive = item.isActive(pathname);
-            const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
+  const handlePlusClick = () => {
+    if (pathname !== "/") {
+      navigate("/");
+      window.setTimeout(() => openCreateSession(), 100);
+    } else {
+      openCreateSession();
+    }
+  };
 
-            return (
-              <button
-                key={item.path}
-                type="button"
-                onClick={() => handleNavClick(item.path)}
-                data-tutorial={tutorialId}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 rounded-xl",
-                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]"
-                )}
-              >
-                <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
-                  <Icon
-                    size={26}
-                    className={cn(
-                      "transition-colors duration-300 ease-ios",
-                      isActive ? "text-primary" : "text-muted-foreground dark:text-tab-icon-inactive"
-                    )}
-                    strokeWidth={isActive ? 2.4 : 1.65}
-                    aria-hidden
-                  />
-                  {showBadge && (
-                    <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-background bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow-sm">
-                      {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "w-full truncate text-center text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
-                    isActive
-                      ? "font-semibold text-primary"
-                      : "font-medium text-muted-foreground dark:text-tab-icon-inactive"
-                  )}
-                >
-                  {label}
-                </span>
-              </button>
-            );
-          })}
+  const leftItems = navItems.slice(0, 2);
+  const rightItems = navItems.slice(2);
+
+  const renderNavButton = (item: NavItem) => {
+    const Icon = item.icon;
+    const { label, tutorialId, showUnreadBadge } = item;
+    const active = item.isActive(pathname);
+    const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
+
+    /** NavButton maquette : flex flex-col gap-0.5 flex-1 py-1 ; pas active:scale sur les tabs. */
+    const color = active ? activeBlue : inactiveGray;
+
+    return (
+      <button
+        key={item.path}
+        type="button"
+        onClick={() => handleNavClick(item.path)}
+        data-tutorial={tutorialId}
+        aria-current={active ? "page" : undefined}
+        className="flex min-w-0 flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 py-1"
+      >
+        <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+          <Icon
+            aria-hidden
+            className="h-6 w-6 shrink-0"
+            color={color}
+            strokeWidth={active ? 2.4 : 2}
+          />
+          {showBadge && (
+            <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[11px] font-bold text-white">
+              {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+            </span>
+          )}
+        </span>
+        <span className="w-full px-px text-center text-[10px] font-medium leading-none" style={{ color }}>
+          {label}
+        </span>
+      </button>
+    );
+  };
+
+  /** Colonne FAB — maquette : bleu #007AFF ; sombre : #0A84FF (système iOS). */
+  const fabBlue = isDark ? "#0A84FF" : LIGHT_ACTION_BLUE;
+
+  return (
+    <Fragment>
+      <nav
+        className={cn(
+          "fixed inset-x-0 z-[120] flex w-full min-h-[var(--nav-height)] shrink-0 items-stretch justify-around overflow-visible",
+          tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
+          "[transition:none] motion-reduce:transition-none"
+        )}
+        role="navigation"
+        aria-label="Navigation principale"
+        aria-hidden={tabBarHidden}
+        style={{
+          ...tabBarSurface,
+          bottom: 0,
+          paddingTop: 8,
+          paddingBottom: "calc(8px + var(--tab-bar-ground-strip))",
+          transition: "none",
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "SF Pro Display", ui-sans-serif, system-ui, sans-serif',
+        }}
+      >
+        {leftItems.map(renderNavButton)}
+
+        <div className="relative flex flex-1 items-center justify-center">
+          <button
+            type="button"
+            onClick={handlePlusClick}
+            aria-label={t("navigation.scheduleSession")}
+            className="-mt-5 flex h-14 w-14 shrink-0 touch-manipulation items-center justify-center rounded-full shadow-lg transition-transform active:scale-95"
+            style={{
+              background: fabBlue,
+              boxShadow: isDark
+                ? "0 4px 12px rgba(10, 132, 255, 0.45)"
+                : "0 4px 12px rgba(0, 122, 255, 0.35)",
+            }}
+            data-tutorial="create-session"
+          >
+            <Plus className="h-7 w-7 text-white" strokeWidth={3} aria-hidden />
+          </button>
         </div>
-      </div>
+
+        {rightItems.map(renderNavButton)}
+      </nav>
+
       <AlertDialog open={showNoClubDialog} onOpenChange={setShowNoClubDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -269,6 +320,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </nav>
+    </Fragment>
   );
 };

@@ -1,9 +1,13 @@
 import { useRef } from 'react';
 import { MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { ActivityIcon } from '@/lib/activityIcons';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import { cn } from '@/lib/utils';
+import {
+  DISCOVER_FILTER_EMOJI_BADGE_COMPACT_CLASS,
+  getActivityEmoji,
+  getDiscoverSportTileClass,
+} from '@/lib/discoverSessionVisual';
 
 interface DiscoverFiltersProps {
   maxDistance: number;
@@ -23,7 +27,7 @@ export const DiscoverFilters = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="shrink-0 bg-card border-b border-border">
+    <div className="shrink-0 overflow-hidden rounded-[18px] border border-border bg-card">
       {/* Activity Filter Pills */}
       <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center justify-between mb-3">
@@ -50,13 +54,21 @@ export const DiscoverFilters = ({
                 key={activity.value}
                 onClick={() => toggleActivity(activity.value)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all",
+                  "flex items-center gap-2 rounded-full border px-3 py-2 text-[13px] font-semibold whitespace-nowrap transition-all",
                   selectedActivities.includes(activity.value)
-                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                    : "bg-primary/8 text-primary"
+                    ? "border-[#0066cc] bg-[rgba(0,102,204,0.1)] text-[#1d1d1f]"
+                    : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
                 )}
               >
-                <ActivityIcon activityType={activity.value} size="sm" />
+                <span
+                  className={cn(
+                    DISCOVER_FILTER_EMOJI_BADGE_COMPACT_CLASS,
+                    getDiscoverSportTileClass(activity.value)
+                  )}
+                  aria-hidden
+                >
+                  {getActivityEmoji(activity.value)}
+                </span>
                 <span>{activity.label}</span>
               </button>
             ))}

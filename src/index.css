@@ -36,8 +36,9 @@ html, body {
     /* Bande sous la tab bar (home indicator / marge bas écran) — remonte la nav d’autant. */
     --tab-bar-ground-strip: 6px;
     /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
+    /* Insets bas conservé pour la zone home indicator. */
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-top: 0px;
     /* Réserve scroll / pages fixed : hauteur onglets + bandeau sous la barre (aligné sur BottomNavigation `bottom: var(--tab-bar-ground-strip)`). */
     --bottom-nav-offset: calc(var(--nav-height) + var(--tab-bar-ground-strip));
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
@@ -53,26 +54,28 @@ html, body {
     --ios-motion-duration-slow: 320ms;
     --ios-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* iOS System Colors - Pure Light Mode */
-    --background: 0 0% 100%;              /* #F5F5F5 - iOS light */
-    --foreground: 221 39% 11%;             /* #000000 - Pure black */
+    /* Fond principal : blanc iOS */
+    --background: 0 0% 100%;
+    --foreground: 221 39% 11%;
 
-    --card: 0 0% 100%;                   /* Pure white cards */
+    --card: 0 0% 100%;
     --card-foreground: 215 28% 17%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 221 39% 11%;
 
-    /* RunConnect primary blue */
-    --primary: 212 100% 50%;           /* #007AFF */
+    /* Apple Action Blue (refonte handoff) — #0066CC light, #0A84FF dark */
+    --primary: 212 100% 40%;
     --primary-foreground: 0 0% 100%;
+    --primary-on-dark: 211 100% 52%;
+    --primary-focus: 211 100% 47%;
 
     --secondary: 240 5% 96%;
     --secondary-foreground: 240 6% 12%;
 
-    /* iOS Muted Grays */
-    --muted: 218 11% 65%;               /* #F2F2F7 */
-    --muted-foreground: 220 9% 46%;    /* #8E8E93 */
+    /* Grouped background iOS (#F2F2F7) — même teinte que apple-grouped-bg / maquettes */
+    --muted: 240 9% 97%;
+    --muted-foreground: 240 4% 46%;
 
     /* Accent complementary */
     --accent: 142 70% 45%;              /* green accent */
@@ -140,28 +143,32 @@ html, body {
     --transition-map: transform, opacity, box-shadow;
   }
 
-  /* ─── Mode sombre profond (ChatGPT / GitHub) : couches #000 / #0A0A0A / #111 / #1F1F1F ─── */
+  /* ─── Mode sombre aligné palette iOS / handoff (canvas #000, cell #1C1C1E, séparateurs 84,84,88) ─── */
   .dark {
     color-scheme: dark;
 
     --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    /* Texte proche « label » iOS (pas un blanc #fff qui crase sur OLED) */
+    --foreground: 240 4% 96%;
 
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 100%;
+    /* Surfaces élevées type Settings.app (systemGray6 dark ≈ #1C1C1E) */
+    --card: 240 2% 11%;
+    --card-foreground: 240 4% 96%;
 
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 240 2% 11%;
+    --popover-foreground: 240 4% 96%;
 
-    --primary: 211 100% 55%;
+    --primary: 211 100% 52%;
     --primary-foreground: 0 0% 100%;
+    --primary-on-dark: 211 100% 52%;
+    --primary-focus: 211 100% 60%;
 
-    /* Surfaces inactives (chips, filtres, boutons secondaires) */
-    --secondary: 0 0% 6.7%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondaires / blocs désactivés (systemGray5 « pleine » ~#2C2C2E) */
+    --secondary: 240 2% 17%;
+    --secondary-foreground: 240 4% 96%;
 
-    --muted: 0 0% 6.7%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 240 2% 14%;
+    --muted-foreground: 240 4% 64%;
 
     --accent: 142 50% 46%;
     --accent-foreground: 0 0% 100%;
@@ -171,8 +178,8 @@ html, body {
 
     --success: 142 55% 48%;
 
-    --border: 0 0% 12.2%;
-    --input: 0 0% 6.7%;
+    --border: 240 2% 26%;
+    --input: 240 2% 17%;
     --ring: 211 100% 55%;
 
     --sidebar-background: 0 0% 0%;
@@ -445,6 +452,10 @@ html, body {
   }
 
   /* Coaching create session: flat white editor with soft separators */
+  .coaching-create-flat {
+    background: #ffffff;
+  }
+
   .coaching-create-flat .ios-card,
   .coaching-create-flat .ios-inset-group {
     @apply bg-white border-0 rounded-none;
@@ -453,6 +464,49 @@ html, body {
 
   .coaching-create-flat .ios-list-row {
     @apply bg-white border-0 rounded-none;
+    box-shadow: none;
+  }
+
+  /* Mode sombre : les feuilles « flat » ne doivent pas rester blanches — surcouche thématique */
+  .dark .coaching-flat {
+    background: hsl(var(--background));
+  }
+
+  .dark .coaching-flat .ios-card,
+  .dark .coaching-flat .ios-inset-group,
+  .dark .coaching-flat .ios-list-row {
+    @apply bg-card;
+    box-shadow: none;
+  }
+
+  .dark .coaching-flat .ios-list-stack > *::after {
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.12) 8%,
+      rgba(255, 255, 255, 0.12) 92%,
+      rgba(255, 255, 255, 0)
+    );
+  }
+
+  .dark .feed-flat {
+    background: hsl(var(--background));
+  }
+
+  .dark .feed-flat .ios-card,
+  .dark .feed-flat .ios-inset-group {
+    @apply bg-card;
+    box-shadow: none;
+  }
+
+  .dark .coaching-create-flat {
+    background: hsl(var(--background));
+  }
+
+  .dark .coaching-create-flat .ios-card,
+  .dark .coaching-create-flat .ios-inset-group,
+  .dark .coaching-create-flat .ios-list-row {
+    @apply bg-card;
     box-shadow: none;
   }
 
@@ -472,41 +526,128 @@ html, body {
   }
 
   /**
+   * Pastilles rondes sur carte (InteractiveMap, création d’itinéraire) : bordure + ombre type iOS.
+   */
+  .map-overlay-fab-btn {
+    @apply pointer-events-auto flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center text-foreground outline-none transition-all duration-150;
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    box-shadow:
+      0 8px 32px -12px rgba(0, 0, 0, 0.22),
+      0 2px 8px -4px rgba(0, 0, 0, 0.08);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .map-overlay-fab-btn svg {
+    height: 15px;
+    width: 15px;
+  }
+
+  .dark .map-overlay-fab-btn {
+    border-color: #1f1f1f;
+    background: #0a0a0a;
+    box-shadow: 0 12px 40px -16px rgba(0, 0, 0, 0.65);
+  }
+
+  .map-overlay-fab-btn:active:not(:disabled) {
+    @apply scale-[0.92] bg-muted/50;
+  }
+
+  .dark .map-overlay-fab-btn:active:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .map-overlay-fab-btn:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  .map-overlay-fab-btn:disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+
+  /** Coquille seule (ex. MapStyleSelector) : pas de feedback actif sur le conteneur. */
+  .map-overlay-fab-shell {
+    @apply pointer-events-auto flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden;
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    box-shadow:
+      0 8px 32px -12px rgba(0, 0, 0, 0.22),
+      0 2px 8px -4px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark .map-overlay-fab-shell {
+    border-color: #1f1f1f;
+    background: #0a0a0a;
+    box-shadow: 0 12px 40px -16px rgba(0, 0, 0, 0.65);
+  }
+
+  /** Bouton transparent à l’intérieur de `map-overlay-fab-shell` (carte accueil). */
+  .map-overlay-fab-inner {
+    @apply flex h-9 w-9 cursor-pointer items-center justify-center text-foreground outline-none transition-all duration-150;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .map-overlay-fab-inner:active {
+    @apply scale-[0.92] bg-muted/50;
+  }
+
+  .dark .map-overlay-fab-inner:active {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .map-overlay-fab-inner:focus-visible {
+    @apply rounded-full ring-2 ring-ring ring-offset-0;
+  }
+
+  /** Pastilles stats (distance / D+) sur carte — même famille visuelle. */
+  .map-stat-chip {
+    @apply pointer-events-auto rounded-xl border border-black/[0.08] bg-white px-3 py-2;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .map-stat-chip {
+    @apply border-[#1f1f1f] bg-[#0a0a0a];
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  /**
    * Carte accueil — champ recherche façon maquette Accueil : pilule gris système, sans flou.
    */
   .home-map-search-glass {
     box-sizing: border-box;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    background: #f2f2f7;
-    border: 1px solid transparent;
+    height: 50px;
+    min-height: 50px;
+    max-height: 50px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    box-shadow: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
   .home-map-search-glass:focus-within {
-    border-color: rgba(0, 0, 0, 0.08);
-    background: #ebebf0;
-    box-shadow: none;
+    border-color: rgba(0, 0, 0, 0.14);
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
   .dark .home-map-search-glass {
-    background: #111111;
-    border: 1px solid #1f1f1f;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 
   .dark .home-map-search-glass:focus-within {
-    border-color: #2a2a2a;
-    background: #141414;
+    border-color: hsl(var(--border));
+    background: hsl(var(--secondary));
   }
 
   .home-map-filter-chip {
-    @apply flex h-9 shrink-0 items-center justify-center gap-1.5 px-3.5 text-[13px] font-bold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.98] motion-reduce:transition-none;
+    @apply flex h-7 shrink-0 items-center justify-center gap-1 px-2.5 text-[12px] font-semibold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.98] motion-reduce:transition-none;
     border-radius: 9999px;
     color: #1c1c1e;
     background: #ffffff;
@@ -646,6 +787,278 @@ html, body {
     letter-spacing: -0.022em;
   }
 
+  /* ─────────────────────────────────────────────
+     Apple refonte (handoff) — primitives partagées
+     - Pill button signature (Action Blue)
+     - Cell / Group iOS Settings.app
+     - SearchBar iOS (#f2f2f7)
+     - NavBar large title
+     - SocialButton (Apple/Google sign-in)
+     ───────────────────────────────────────────── */
+
+  /* Surface "grouped" iOS : --muted clair (#F2F2F7) / canvas sombre */
+  .apple-grouped-bg { background: hsl(var(--muted)); }
+  .dark .apple-grouped-bg { background: hsl(var(--background)); }
+
+  /* Cellule type Settings / list row — suit --card (blanc / #1C1C1E dark) */
+  .apple-cell-bg { background: hsl(var(--card)); }
+
+  /* PillButton — bouton Action Blue plein-pill (rounded-pill = 9999) */
+  .apple-pill {
+    @apply inline-flex h-[36px] items-center justify-center rounded-full px-[18px] text-[15px] font-normal tracking-[-0.3px] transition-transform duration-150 active:scale-[0.96];
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .apple-pill-large {
+    @apply h-[50px] px-7 text-[17px];
+  }
+  .apple-pill-secondary {
+    background: transparent;
+    border: 1px solid hsl(var(--primary));
+    color: hsl(var(--primary));
+  }
+  .apple-pill-dark {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+  .apple-pill:focus-visible {
+    outline: 2px solid hsl(var(--primary-focus));
+    outline-offset: 2px;
+  }
+  .apple-pill[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Groupe iOS inset-grouped (Section title + cellules + footer) */
+  .apple-group {
+    @apply mb-6 px-4;
+  }
+  .apple-group-title {
+    @apply px-4 pb-1.5 text-[13px] uppercase tracking-[0.3px] text-muted-foreground;
+  }
+  .apple-group-footer {
+    @apply mt-1.5 px-4 text-[13px] leading-snug text-muted-foreground;
+  }
+  .apple-group-stack {
+    @apply overflow-hidden rounded-[10px];
+    background: hsl(var(--card));
+  }
+
+  /* Cellule iOS Settings.app (icône carrée + titre + accessoire) */
+  .apple-cell {
+    @apply flex min-h-[44px] items-center gap-3 px-4 py-[11px];
+    border-bottom: 0.5px solid rgba(60, 60, 67, 0.12);
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
+  .dark .apple-cell {
+    border-bottom-color: rgba(84, 84, 88, 0.4);
+  }
+  .apple-cell-last { border-bottom: none; }
+  .apple-cell-icon {
+    /* Même géométrie que les badges sport (ActivityStep) + Cell paramètres (icônes blanches via le node `icon`). */
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[15px] leading-none;
+    background: hsl(var(--primary));
+  }
+  .apple-cell-title {
+    @apply min-w-0 flex-1 truncate text-[17px] tracking-[-0.4px] text-foreground;
+    line-height: 1.2;
+  }
+  .apple-cell-subtitle {
+    @apply mt-0.5 text-[13px] leading-snug text-muted-foreground;
+  }
+  .apple-cell-value {
+    @apply text-[17px] tracking-[-0.3px] text-muted-foreground;
+  }
+  .apple-cell-chevron {
+    @apply h-3 w-3 shrink-0 text-muted-foreground/60;
+  }
+
+  /* SearchBar iOS pill (#f2f2f7 fill, h36) */
+  .apple-search {
+    @apply flex h-9 items-center gap-1.5 rounded-[10px] px-2 text-[17px] text-muted-foreground;
+    background: rgba(118, 118, 128, 0.12);
+  }
+  .dark .apple-search {
+    background: rgba(118, 118, 128, 0.24);
+  }
+
+  /* Coaching maquettes 14–17 : mêmes contrôles que apple-screens.jsx / apple-tokens PillBtn & FAB */
+  .handoff-ios-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 400;
+    color: hsl(var(--primary));
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-ios-link:active {
+    opacity: 0.65;
+  }
+  .handoff-role-track {
+    display: flex;
+    border-radius: 9px;
+    padding: 2px;
+    background: rgba(118, 118, 128, 0.12);
+  }
+  .dark .handoff-role-track {
+    background: rgba(118, 118, 128, 0.24);
+  }
+  .handoff-role-thumb {
+    flex: 1;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-role-thumb-active {
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+  .handoff-role-thumb-idle {
+    background: transparent;
+    color: hsl(var(--foreground));
+  }
+  .handoff-coaching-fab {
+    display: flex;
+    height: 42px;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 12px;
+    background: hsl(var(--primary));
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.25px;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 6px 16px -4px rgba(0, 102, 204, 0.4);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-coaching-fab:active {
+    opacity: 0.92;
+  }
+  .handoff-coaching-fab:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .handoff-week-nav {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    font-size: 18px;
+    font-weight: 400;
+    color: #0066cc;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-week-btn {
+    flex: 1;
+    display: flex;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 12px;
+    background: hsl(var(--card));
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .handoff-week-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .handoff-week-btn--primary {
+    color: #0066cc;
+  }
+  .handoff-week-btn--muted {
+    color: rgba(60, 60, 67, 0.4);
+  }
+  .dark .handoff-week-btn--muted {
+    color: rgba(235, 235, 245, 0.4);
+  }
+
+  /* Tab bar Apple — fond gris translucide + blur (maquette RunConnect.jsx) */
+  .apple-tabbar {
+    background: rgba(242, 242, 247, 0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+  .dark .apple-tabbar {
+    background: rgba(28, 28, 30, 0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top-color: rgba(84, 84, 88, 0.65);
+  }
+
+  /* NavBar large title (Settings.app style) */
+  .apple-navbar-large {
+    @apply px-4 pt-1 text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, sans-serif;
+  }
+  .apple-navbar-title {
+    @apply text-[17px] font-semibold tracking-[-0.4px] text-foreground;
+  }
+
+  /* Bouton social Apple/Google (50px, rounded-12) */
+  .apple-social-btn {
+    @apply flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] text-[17px] font-medium tracking-[-0.4px] transition-transform duration-150 active:scale-[0.98];
+    -webkit-tap-highlight-color: transparent;
+  }
+  .apple-social-btn-apple {
+    background: #000;
+    color: #fff;
+  }
+  .apple-social-btn-google {
+    background: #fff;
+    color: hsl(var(--foreground));
+    border: 0.5px solid rgba(60, 60, 67, 0.18);
+  }
+  .dark .apple-social-btn-google {
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border-color: rgba(84, 84, 88, 0.4);
+  }
+  .apple-social-btn-email {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* Field row iOS (label gauche + value droite) */
+  .apple-field-row {
+    @apply flex min-h-[44px] items-center px-4 py-[11px];
+    border-bottom: 0.5px solid rgba(60, 60, 67, 0.12);
+  }
+  .dark .apple-field-row {
+    border-bottom-color: rgba(84, 84, 88, 0.4);
+  }
+  .apple-field-row-last { border-bottom: none; }
+  .apple-field-label {
+    @apply w-[136px] shrink-0 whitespace-nowrap text-[17px] tracking-[-0.4px] text-foreground;
+  }
+  .apple-field-value {
+    @apply flex-1 bg-transparent text-[17px] tracking-[-0.4px] text-foreground placeholder:text-muted-foreground;
+    outline: none;
+  }
 }
 
 /* Shimmer animation for skeleton loaders */
@@ -729,8 +1142,12 @@ html, body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Évite le double safe-area : le parent applique déjà env(safe-area-inset-top) (ex. CoachingFullscreenHeader avec pt-[...var(--safe-area-top)]). */
+/* Évite le double safe-area : l’enveloppe épinglée applique déjà env(safe-area-inset-top). */
 [data-ios-pinned-header] > header {
+  padding-top: 0 !important;
+}
+
+[data-ios-pinned-header] .main-top-header {
   padding-top: 0 !important;
 }
 
@@ -1030,6 +1447,13 @@ html, body {
   margin: 0;
   cursor: pointer;
   background: transparent;
+  transition: transform 200ms ease-out;
+  transform-origin: 50% 100%;
+}
+
+.rc-session-pin__shape:active {
+  transform: translate(-50%, -100%) scale(0.95);
+  transition-duration: 90ms;
 }
 
 .rc-session-pin-pop .rc-session-pin__shape {
@@ -1044,12 +1468,23 @@ html, body {
   filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.45));
 }
 
-/* Boîtier visuel carte (pastille + photo + pointe), largeur inchangée pour l’ancre map */
+/* Pin Apple-style v3: dimensions/proportions exactes de la maquette (64x78). */
 .rc-session-pin__marker-visual {
   position: relative;
   flex-shrink: 0;
-  width: 58px;
+  width: 64px;
   height: 78px;
+  filter: drop-shadow(3px 5px 30px rgba(0, 0, 0, 0.22));
+}
+
+.rc-session-pin__shell {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
 }
 
 .rc-session-pin__meta {
@@ -1109,148 +1544,87 @@ html, body {
   display: none;
 }
 
-/* Ombre au sol (profondeur, lisible sur fond clair) */
+/* Ombre au sol — masquée : le drop-shadow porté par .rc-session-pin__marker-visual
+ * suffit maintenant (mockup AvatarPin → drop-shadow unique sur la silhouette du pin).
+ * On garde l'élément DOM pour compat ascendante. */
 .rc-session-pin__ground {
-  position: absolute;
-  left: 50%;
-  bottom: 2px;
-  z-index: 0;
-  width: 32px;
-  height: 10px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.14);
-  filter: blur(5px);
-  pointer-events: none;
+  display: none;
 }
 
+/* Legacy circle no longer used (shape comes from SVG path). */
 .rc-session-pin__circle {
+  display: none;
+}
+
+/* Refonte handoff App RunConnect IOS — toutes les variantes adoptent le pin Apple
+ * (mockup AvatarPin) : disque coloré plat à l'intérieur du shell blanc.
+ * Ombre globale portée par .rc-session-pin__marker-visual (drop-shadow). */
+.rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__circle,
+.rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__circle,
+.rc-session-pin__shape[data-rc-pin-variant="premium"] .rc-session-pin__circle {
+  display: none;
+}
+
+/* Legacy tip no longer used (shape comes from SVG path). */
+.rc-session-pin__tip {
+  display: none;
+}
+
+/* Photo inset: 56x56, top 4, white rim 2px (maquette). */
+.rc-session-pin__avatar-ring {
   position: absolute;
   left: 50%;
-  top: 3px;
-  z-index: 1;
+  top: 4px;
+  z-index: 2;
+  box-sizing: border-box;
   width: 56px;
   height: 56px;
   transform: translateX(-50%);
   border-radius: 999px;
-  box-sizing: border-box;
-  pointer-events: none;
-}
-
-/* 1 — Minimal : plat, propre, très lisible */
-.rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__circle {
-  background: hsl(var(--primary));
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.28) inset,
-    0 8px 20px rgba(15, 23, 42, 0.12);
-}
-
-.rc-session-pin__shape[data-rc-pin-variant="minimal"] .rc-session-pin__tip {
-  background: hsl(var(--primary));
-  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.12));
-}
-
-/* 2 — Depth : léger relief + dégradé discret */
-.rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__circle {
-  background: linear-gradient(
-    165deg,
-    hsl(var(--primary) / 1) 0%,
-    hsl(217 91% 48%) 55%,
-    hsl(221 83% 42%) 100%
-  );
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.38) inset,
-    0 -1px 0 rgba(15, 23, 42, 0.08) inset,
-    0 10px 24px rgba(15, 23, 42, 0.16);
-}
-
-.rc-session-pin__shape[data-rc-pin-variant="depth"] .rc-session-pin__tip {
-  background: linear-gradient(180deg, hsl(217 91% 49%) 0%, hsl(221 83% 41%) 100%);
-  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.14));
-}
-
-/* 3 — Premium : profondeur + reflet très léger (style social map) */
-.rc-session-pin__shape[data-rc-pin-variant="premium"] .rc-session-pin__circle {
-  background: linear-gradient(
-    155deg,
-    hsl(212 100% 56%) 0%,
-    hsl(var(--primary) / 1) 38%,
-    hsl(221 83% 40%) 100%
-  );
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.48) inset,
-    0 -1px 0 rgba(15, 23, 42, 0.1) inset,
-    0 12px 30px rgba(15, 23, 42, 0.2);
-}
-
-.rc-session-pin__shape[data-rc-pin-variant="premium"] .rc-session-pin__tip {
-  background: linear-gradient(180deg, hsl(217 91% 48%) 0%, hsl(224 76% 38%) 100%);
-  filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.16));
-}
-
-/* Pointe compacte, centrée sous le disque */
-.rc-session-pin__tip {
-  position: absolute;
-  left: 50%;
-  top: 54px;
-  z-index: 1;
-  width: 18px;
-  height: 14px;
-  transform: translateX(-50%);
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
-  pointer-events: none;
-}
-
-/* Anneau blanc + photo : pas de déformation */
-.rc-session-pin__avatar-ring {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  z-index: 2;
-  box-sizing: border-box;
-  width: 46px;
-  height: 46px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  border: 2.5px solid rgba(255, 255, 255, 0.96);
+  border: 0;
+  padding: 2px;
   overflow: hidden;
-  background: hsl(var(--muted));
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.16);
+  background: #ffffff;
+  box-shadow: none;
 }
 
 .rc-session-pin__avatar {
   width: 100%;
   height: 100%;
+  border-radius: 999px;
   object-fit: cover;
 }
 
+/* Badge "+N" en bas-droite — mockup AvatarPin (count) : pastille noire 22h bord blanc 2px. */
 .rc-session-pin__cluster-badge {
   position: absolute;
-  right: -3px;
-  top: -2px;
-  min-width: 18px;
-  height: 18px;
+  right: -2px;
+  bottom: 18px;
+  min-width: 22px;
+  height: 22px;
   border-radius: 999px;
-  padding: 0 5px;
-  background: #111827;
+  padding: 0 6px;
+  background: #1d1d1f;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 18px;
+  line-height: 22px;
   text-align: center;
-  z-index: 2;
+  border: 2px solid #ffffff;
+  box-sizing: content-box;
+  z-index: 3;
 }
 
 .rc-session-pin__stack {
   position: absolute;
-  left: 4px;
-  bottom: 3px;
+  left: 6px;
+  bottom: 4px;
   display: flex;
 }
 
 .rc-session-pin__stack-avatar {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 999px;
   border: 1.5px solid #fff;
   object-fit: cover;

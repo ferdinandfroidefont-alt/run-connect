@@ -7,17 +7,18 @@ interface SessionStatusActionProps {
   onSentClick?: () => void;
 }
 
+/** CTA droite des lignes jour : + 30×30 bleu iOS ; envoyé 24×24 vert système (maquette DayPlanRow). */
 export function SessionStatusAction({ mode, onAdd, onSentClick }: SessionStatusActionProps) {
   if (mode === "sent") {
     return (
       <button
         type="button"
         onClick={onSentClick}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-transform active:scale-95"
-        style={{ backgroundColor: "hsl(var(--chart-2))", color: "hsl(var(--primary-foreground))" }}
-        aria-label="Annuler l'envoi"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white transition-transform active:scale-95"
+        style={{ backgroundColor: "#34C759" }}
+        aria-label="Séance envoyée"
       >
-        <Check className="h-4.5 w-4.5" />
+        <Check className="h-3 w-3" strokeWidth={2.8} />
       </button>
     );
   }
@@ -27,13 +28,12 @@ export function SessionStatusAction({ mode, onAdd, onSentClick }: SessionStatusA
       type="button"
       onClick={onAdd}
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#2563EB] text-white",
-        "transition-transform active:scale-95"
+        "inline-flex h-[30px] w-[30px] items-center justify-center rounded-full text-[18px] font-light leading-none text-white transition-transform active:scale-95",
       )}
+      style={{ backgroundColor: "#0066cc" }}
       aria-label="Ajouter une séance"
     >
-      <Plus className="h-4.5 w-4.5" />
+      <Plus className="h-[18px] w-[18px] stroke-[2.2px]" stroke="currentColor" />
     </button>
   );
 }
-

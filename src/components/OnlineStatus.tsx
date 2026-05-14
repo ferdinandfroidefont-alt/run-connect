@@ -6,9 +6,16 @@ interface OnlineStatusProps {
   userId: string;
   showOnlineStatus?: boolean;
   className?: string;
+  /** badge = pastille sur l’avatar (défaut) · subtitle = ligne « ● En ligne » type maquette Messages */
+  display?: "badge" | "subtitle";
 }
 
-export const OnlineStatus = ({ userId, showOnlineStatus = true, className = "" }: OnlineStatusProps) => {
+export const OnlineStatus = ({
+  userId,
+  showOnlineStatus = true,
+  className = "",
+  display = "badge",
+}: OnlineStatusProps) => {
   const [isOnline, setIsOnline] = useState(false);
   const { user } = useAuth();
 
@@ -59,7 +66,13 @@ export const OnlineStatus = ({ userId, showOnlineStatus = true, className = "" }
           table: 'profiles',
           filter: `user_id=eq.${userId}`
         },
-        (payload: any) => {
+        (payload: {
+          new: {
+            show_online_status?: boolean;
+            last_seen?: string | null;
+            is_online?: boolean;
+          };
+        }) => {
           if (!mounted || !payload.new?.show_online_status) return;
           
           const lastSeen = new Date(payload.new.last_seen || 0);
@@ -81,11 +94,10 @@ export const OnlineStatus = ({ userId, showOnlineStatus = true, className = "" }
     if (!user || user.id !== userId) return;
 
     let mounted = true;
-    let intervalId: NodeJS.Timeout;
 
     const updateOnlineStatus = async (isOnline: boolean) => {
       if (!mounted) return;
-      
+
       try {
         await supabase
           .from('profiles')
@@ -103,7 +115,7 @@ export const OnlineStatus = ({ userId, showOnlineStatus = true, className = "" }
     updateOnlineStatus(true);
 
     // Update last_seen every 30 seconds while active
-    intervalId = setInterval(() => {
+    const intervalId = setInterval(() => {
       updateOnlineStatus(true);
     }, 30000);
 
@@ -135,12 +147,21 @@ export const OnlineStatus = ({ userId, showOnlineStatus = true, className = "" }
 
   if (!showOnlineStatus || userId === user?.id) return null;
 
+  if (display === "subtitle") {
+    if (!isOnline) return null;
+    return (
+      <div className={`text-[11px] font-semibold leading-none text-[#1FB386] ${className}`}>
+        ● En ligne
+      </div>
+    );
+  }
+
   return (
-    <div 
+    <div
       className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-background ${
-        isOnline ? 'bg-green-500' : 'bg-red-500'
+        isOnline ? "bg-green-500" : "bg-red-500"
       } ${className}`}
-      title={isOnline ? 'En ligne' : 'Hors ligne'}
+      title={isOnline ? "En ligne" : "Hors ligne"}
     />
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useNavigate, Link, useSearchParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
@@ -11,28 +11,37 @@ import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
-import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { Loader2, Lock, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { Browser } from '@capacitor/browser';
 import { getIosSupabaseOAuthBridgeRedirectTo } from "@/lib/oauthMobile";
-import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
+import { TurnstileWidget, TurnstileWidgetRef } from "@/components/TurnstileWidget";
 import {
-  AuthAmbientBackground,
-  AuthBrandMark,
   AuthFlowProgress,
   AuthLegalFooter,
   authCardShadowStyle,
 } from "@/components/auth/AuthChrome";
-import { AuthLandingOnboarding } from "@/components/auth/AuthLandingOnboarding";
+import { AuthLandingAppleGallery } from "@/components/auth/AuthLandingAppleGallery";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
-
-import { Checkbox } from "@/components/ui/checkbox";
+import { RUCONNECT_ONBOARDING_ARRIVAL_BG_URL } from "@/lib/ruconnectSplashChrome";
+import appIcon from "@/assets/app-icon.png";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
 const AUTH_FORM_VIEWS = new Set<AuthView>(['email-signin-form', 'email-signup', 'otp', 'reset']);
+
+function authErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return String(err);
+}
+
+/** Erreur Supabase liée à la vérification (clé côté API : `captcha`). */
+function isSecurityVerificationError(message: string): boolean {
+  return /captcha/i.test(message);
+}
 
 /** UUID factice pour le dialogue profil en parcours arrivée (aucune écriture DB). */
 const ARRIVAL_PREVIEW_FAKE_USER_ID = "00000000-0000-4000-8000-000000000001";
@@ -66,9 +75,9 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [acceptSignupTerms, setAcceptSignupTerms] = useState(false);
-  const captchaRef = useRef<CaptchaWidgetRef>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetRef>(null);
   const { toast } = useToast();
 
   const waitForSessionAndNavigateHome = async (opts?: { timeoutMs?: number; source?: string }) => {
@@ -201,7 +210,13 @@ const Auth = () => {
     }
 
     const urlParams = new URLSearchParams(window.location.search);
-    const isReset = urlParams.get('reset') === 'true' || urlParams.get('type') === 'recovery' || urlParams.has('code');
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const isRecoveryFlow = urlParams.get('reset') === 'true' || urlParams.get('type') === 'recovery';
+    const hasOAuthCallbackParams =
+      urlParams.has("code") ||
+      hashParams.has("code") ||
+      hashParams.has("access_token") ||
+      hashParams.has("refresh_token");
     
     const error = urlParams.get('error');
     const errorCode = urlParams.get('error_code');
@@ -215,7 +230,12 @@ const Auth = () => {
       return;
     }
     
-    if (isReset) {
+    if (hasOAuthCallbackParams && !isRecoveryFlow) {
+      navigate(`/auth/callback${window.location.search}${window.location.hash}`, { replace: true });
+      return;
+    }
+
+    if (isRecoveryFlow) {
       setView('reset');
       return;
     }
@@ -498,8 +518,8 @@ const Auth = () => {
       window.setTimeout(() => {
         setOtpBackView(view === "email-signup" ? "email-signup" : "email-signin-form");
         setView("otp");
-        setCaptchaToken(null);
-        captchaRef.current?.resetCaptcha();
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
         toast({
           title: "Aperçu — code e-mail",
           description: "Aucun e-mail envoyé. Saisissez six chiffres (ex. 123456) pour la suite.",
@@ -516,13 +536,13 @@ const Auth = () => {
           password: password.trim(),
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            captchaToken: captchaToken || undefined
+            captchaToken: turnstileToken || undefined,
           }
         });
         if (error) throw error;
-        
-        setCaptchaToken(null);
-        captchaRef.current?.resetCaptcha();
+
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
 
         const referralCode = sessionStorage.getItem('referralCode');
         if (referralCode && signUpData.user && signUpData.session?.access_token) {
@@ -552,13 +572,14 @@ const Auth = () => {
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             shouldCreateUser: true,
-            captchaToken: captchaToken || undefined
+            captchaToken: turnstileToken || undefined,
           }
         });
         if (error) throw error;
-        
-        setCaptchaToken(null);
-        captchaRef.current?.resetCaptcha();
+
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
+
         setOtpBackView("email-signin-form");
         setView("otp");
         toast({
@@ -566,8 +587,19 @@ const Auth = () => {
           description: "Vérifiez votre email pour le code à 6 chiffres."
         });
       }
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -676,16 +708,25 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithPassword({
         email: emailToUse.trim(),
         password: password,
-        options: { captchaToken: captchaToken || undefined }
+        options: { captchaToken: turnstileToken || undefined },
       });
 
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
-      
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+
       if (error) throw error;
       await waitForSessionAndNavigateHome({ timeoutMs: 7000, source: 'password-signin' });
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -750,12 +791,13 @@ const Auth = () => {
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           shouldCreateUser: true,
-          captchaToken: captchaToken || undefined
+          captchaToken: turnstileToken || undefined,
         }
       });
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
-      
+
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+
       if (error) {
         if (error.message.includes('429') || error.message.includes('rate limit')) {
           toast({
@@ -770,8 +812,19 @@ const Auth = () => {
         setOtp('');
         toast({ title: "Nouveau code envoyé !", description: "Vérifiez votre email." });
       }
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -794,10 +847,10 @@ const Auth = () => {
       });
       return;
     }
-    if (!captchaToken) {
+    if (!turnstileToken) {
       toast({
         title: "Vérification requise",
-        description: "Validez le CAPTCHA d'abord",
+        description: "Complétez la vérification de sécurité avant de continuer.",
         variant: "destructive"
       });
       return;
@@ -805,19 +858,28 @@ const Auth = () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
         redirectTo: 'https://run-connect.lovable.app/auth',
-        captchaToken
+        captchaToken: turnstileToken,
       });
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
       if (error) throw error;
       toast({
         title: "Email envoyé ✅",
         description: "Vérifiez votre boîte mail"
       });
-    } catch (error: any) {
-      setCaptchaToken(null);
-      captchaRef.current?.resetCaptcha();
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = authErrorMessage(error);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
+      if (isSecurityVerificationError(msg)) {
+        toast({
+          title: "Vérification de sécurité",
+          description: "Vérification de sécurité échouée, réessayez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     }
   };
 
@@ -829,279 +891,270 @@ const Auth = () => {
   );
 
   // ══════════════════════════════════════════════
-  // ██  LANDING VIEW  ██
+  // ██  LANDING VIEW — Carrousel marketing (maquette runconnect-landing + DESIGN-apple)
   // ══════════════════════════════════════════════
   const renderLanding = () => (
-    <div
-      className="relative flex min-h-[100dvh] flex-col bg-background"
-      style={{
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
-      }}
-    >
-      <AuthLandingOnboarding className="min-h-0 flex-1" />
-
-      <div className="relative z-20 mx-auto w-full max-w-[340px] shrink-0 space-y-3 px-6 pt-10">
-        <button
-          type="button"
-          onClick={() => setView("email-signup")}
-          disabled={isLoading}
-          className="flex h-[52px] w-full items-center justify-center rounded-[14px] bg-primary text-[17px] font-semibold text-primary-foreground transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: "0 2px 8px hsl(var(--primary) / 0.28)" }}
-        >
-          Inscrivez-vous gratuitement
-        </button>
-        <button
-          type="button"
-          onClick={() => setView("email-signin")}
-          disabled={isLoading}
-          className="flex h-[48px] w-full items-center justify-center rounded-[14px] bg-transparent text-[16px] font-semibold text-primary transition-colors active:bg-primary/5 disabled:opacity-50"
-        >
-          Se connecter
-        </button>
-      </div>
-    </div>
+    <AuthLandingAppleGallery
+      onSignUp={() => setView("email-signup")}
+      onSignIn={() => setView("email-signin")}
+      disabled={isLoading}
+    />
   );
 
   // ══════════════════════════════════════════════
-  // ██  EMAIL SIGNIN VIEW (3 buttons)  ██
+  // ██  EMAIL SIGNIN VIEW — Mockup 02 (Apple SignIn)  ██
+  // NavBar Retour, small icon hero, titre « Bon retour »,
+  // formulaire e-mail / mot de passe, « ou » puis Apple/Google.
   // ══════════════════════════════════════════════
   const renderEmailSignin = () => (
-    <div className="relative flex min-h-full flex-col items-center justify-between px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
-      <AuthAmbientBackground />
-
-      {/* Retour hors flux : même empilement vertical que l’écran landing (pas de décalage du bloc central) */}
-      <div
-        className="pointer-events-none absolute inset-x-0 z-20 flex justify-center"
-        style={{ top: "max(env(safe-area-inset-top, 0px), 2rem)" }}
-      >
-        <div className="relative h-10 w-full max-w-[340px] shrink-0">
+    <div
+      className="relative flex min-h-full flex-col apple-grouped-bg"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top, 0px), 0px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
+      }}
+    >
+      {/* NavBar iOS compact : Retour bleu à gauche, titre centré */}
+      <div className="px-4 pt-3">
+        <div className="flex h-11 items-center justify-between">
           <button
             type="button"
-            onClick={() => setView("landing")}
-            className="pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 -ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+            onClick={() => {
+              setTurnstileToken(null);
+              turnstileRef.current?.reset();
+              setView("landing");
+            }}
+            className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
             aria-label="Retour"
           >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
+            <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+            <span>Retour</span>
           </button>
+          <div className="apple-navbar-title">Connexion</div>
+          <div className="min-w-[70px]" />
         </div>
       </div>
 
-      {/* Top spacer — identique au landing */}
-      <div className="min-h-[40px] flex-1" />
+      {/* Hero compact (mockup : icône 60×60 rounded-14 + 28px display + 15 muted) */}
+      <div className="px-4 pt-6 text-center">
+        <img
+          src={appIcon}
+          alt="RunConnect"
+          className="mx-auto h-[60px] w-[60px] rounded-[14px] object-cover"
+        />
+        <div className="mt-4 font-display text-[28px] font-semibold tracking-[-0.5px] text-foreground">
+          Bon retour
+        </div>
+        <div className="mt-1 text-[15px] text-muted-foreground">
+          Connecte-toi à ton compte RunConnect.
+        </div>
+      </div>
 
-      <AuthBrandMark title="Connexion" subtitle="Content de vous revoir !" />
+      {/* Connexion e-mail + mot de passe (sans étape « Continuer avec e-mail ») */}
+      <div className="mt-6 min-h-0 flex-1 overflow-y-auto px-4">
+        <form onSubmit={handleUsernameOrEmailSignin}>
+          <div className="apple-group pb-4">
+            <div className="apple-group-stack">
+              <div className="apple-field-row">
+                <div className="apple-field-label">Adresse e-mail</div>
+                <input
+                  type="email"
+                  inputMode="email"
+                  placeholder="vous@exemple.com"
+                  value={usernameOrEmail}
+                  onChange={(e) => setUsernameOrEmail(e.target.value)}
+                  className="apple-field-value min-w-0"
+                  required
+                  autoComplete="username"
+                />
+              </div>
+              <div className="apple-field-row apple-field-row-last">
+                <div className="apple-field-label">Mot de passe</div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="apple-field-value min-w-0 pr-7"
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="-mr-1 ml-1 p-1 text-muted-foreground active:opacity-60"
+                  aria-label={showPassword ? "Masquer" : "Afficher"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="px-4 pb-2">
+            {!turnstileToken && (
+              <TurnstileWidget
+                ref={turnstileRef}
+                onToken={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => setTurnstileToken(null)}
+              />
+            )}
+            {turnstileToken && (
+              <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
+                ✅ Vérification réussie
+              </div>
+            )}
+          </div>
+          <div className="px-2">
+            <button
+              type="submit"
+              disabled={isLoading || !turnstileToken}
+              className="apple-pill apple-pill-large w-full disabled:opacity-50"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Se connecter
+            </button>
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={!turnstileToken}
+              className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60 disabled:opacity-50"
+            >
+              Mot de passe oublié ?
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const u = usernameOrEmail.trim();
+                if (u.includes("@")) setEmail(u);
+                setTurnstileToken(null);
+                turnstileRef.current?.reset();
+                setView("email-signin-form");
+              }}
+              disabled={isLoading}
+              className="mt-1 flex h-[40px] w-full items-center justify-center text-[14px] text-muted-foreground active:opacity-60 disabled:opacity-50"
+            >
+              Connexion avec un code reçu par e-mail
+            </button>
+          </div>
+        </form>
+      </div>
 
-      {/* Action buttons */}
-      <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
-        {/* Google */}
-        <button
-          type="button"
-          onClick={handleGoogleAuth}
-          disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-card text-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.08), 0 0 0 1px hsl(0 0% 0% / 0.06)' }}
-        >
-          <FcGoogle className="h-5 w-5" />
-          Se connecter avec Google
-        </button>
+      {/* "ou" séparateur hairline (mockup 02) */}
+      <div className="flex items-center gap-3 px-8 pt-8 pb-4">
+        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
+        <div className="text-[13px] text-muted-foreground">ou</div>
+        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
+      </div>
 
-        {/* Apple */}
+      {/* Apple + Google (50px rounded-12 — apple-social-btn) */}
+      <div className="flex flex-col gap-2.5 px-4">
         <button
           type="button"
           onClick={handleAppleAuth}
           disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+          className="apple-social-btn apple-social-btn-apple disabled:opacity-50"
         >
           <AppleIcon />
-          Se connecter avec Apple
+          Continuer avec Apple
         </button>
-
-        {/* Email */}
         <button
           type="button"
-          onClick={() => setView('email-signin-form')}
+          onClick={handleGoogleAuth}
           disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-primary text-primary-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)' }}
+          className="apple-social-btn apple-social-btn-google disabled:opacity-50"
         >
-          <Mail className="h-5 w-5" />
-          Se connecter avec e-mail
+          <FcGoogle className="h-5 w-5" />
+          Continuer avec Google
         </button>
       </div>
 
-      {/* Bottom spacer */}
-      <div className="flex-1 min-h-[24px]" />
+      <div className="flex-1" />
 
-      {/* Bottom link */}
-      <div className="w-full max-w-[340px] space-y-4 relative z-10">
-        <button
-          type="button"
-          onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
-          className="w-full text-center text-[14px] text-primary font-medium py-2 active:opacity-70 transition-opacity"
-        >
-          Vous n'avez pas de compte ? S'inscrire
-        </button>
-        <AuthLegalFooter />
-      </div>
+      <AuthLegalFooter className="pb-2 pt-6" />
     </div>
   );
 
-  // ══════════════════════════════════════════════
-  // ██  EMAIL SIGNIN FORM VIEW  ██
-  // ══════════════════════════════════════════════
+  // ██  EMAIL SIGNIN — OTP (écran séparé ; mot de passe sur l’écran Connexion principal)
   const renderEmailSigninForm = () => (
     <IosFixedPageHeaderShell
-      className="h-full min-h-0"
-      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      className="h-full min-h-0 apple-grouped-bg"
+      headerWrapperClassName="shrink-0 apple-grouped-bg"
       header={
-        <>
-          <div className="border-b border-border bg-background">
-            <div className="h-2" />
+        <div className="px-4 pt-3">
+          <div className="flex h-11 items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                setView("email-signin");
+                setTurnstileToken(null);
+                turnstileRef.current?.reset();
+              }}
+              className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
+              aria-label="Retour"
+            >
+              <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+              <span>Retour</span>
+            </button>
+            <div className="apple-navbar-title">Code e-mail</div>
+            <div className="min-w-[70px]" />
           </div>
-          <div className="px-4 pb-3 pt-6">
-            <div className="mb-2 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setView("email-signin");
-                  setCaptchaToken(null);
-                  captchaRef.current?.resetCaptcha();
-                }}
-                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
-              >
-                <ArrowLeft className="h-5 w-5 text-foreground" />
-              </button>
-              <h2 className="text-[20px] font-bold text-foreground">Connexion par e-mail</h2>
-            </div>
-          </div>
-        </>
+        </div>
       }
     >
-      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
-      {/* Password signin */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
-        <div className="px-4 py-3 border-b border-border">
-          <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Avec mot de passe</p>
-        </div>
-        <form onSubmit={handleUsernameOrEmailSignin} className="p-4 space-y-3">
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Pseudonyme ou email"
-              value={usernameOrEmail}
-              onChange={(e) => setUsernameOrEmail(e.target.value)}
-              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
-              required
-            />
-          </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
-              required
-            />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-              {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-            </button>
-          </div>
-
-          {!captchaToken && (
-            <CaptchaWidget
-              ref={captchaRef}
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-            />
-          )}
-          {captchaToken && (
-            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
-          )}
-
-          <Button type="submit" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Se connecter
-          </Button>
-        </form>
-      </div>
-
-      {/* Forgot password */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
-        <button
-          type="button"
-          onClick={handleForgotPassword}
-          disabled={!captchaToken}
-          className="w-full flex items-center justify-between px-4 py-3.5 active:bg-secondary/50 transition-colors disabled:opacity-50"
-        >
-          <span className="text-[15px] text-primary font-medium">Mot de passe oublié ?</span>
-          <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-        </button>
-      </div>
-
-      {/* Divider */}
-      <div className="flex items-center gap-4 px-2">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-[13px] text-muted-foreground">ou</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-
-      {/* OTP signin */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
-        <div className="px-4 py-3 border-b border-border">
-          <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Connexion par code</p>
-        </div>
-        <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
+      <div className="pt-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))]">
+      <div className="apple-group">
+        <div className="apple-group-title">Connexion par code</div>
+        <form onSubmit={handleEmailSubmit} className="apple-group-stack">
+          <div className="apple-field-row apple-field-row-last">
+            <div className="apple-field-label">Adresse e-mail</div>
+            <input
               type="email"
-              placeholder="Email"
+              placeholder="vous@exemple.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
+              className="apple-field-value min-w-0"
               required
+              autoComplete="email"
             />
           </div>
-          {!captchaToken && (
-            <CaptchaWidget
-              ref={captchaRef}
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-            />
-          )}
-          {captchaToken && (
-            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
-          )}
-          <Button type="submit" variant="outline" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Recevoir un code
-          </Button>
         </form>
       </div>
 
-      {/* Go to signup */}
-      <button
-        type="button"
-        onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
-        className="w-full text-center text-[15px] text-primary font-medium py-3 active:opacity-70 transition-opacity"
-      >
-        Vous n'avez pas de compte ? S'inscrire
-      </button>
+      <div className="px-4 pb-2">
+        {!turnstileToken && (
+          <TurnstileWidget
+            ref={turnstileRef}
+            onToken={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
+          />
+        )}
+        {turnstileToken && (
+          <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
+            ✅ Vérification réussie
+          </div>
+        )}
+      </div>
 
-      {/* Clean session */}
-      <button
-        type="button"
-        onClick={forceCleanSession}
-        className="w-full text-center text-[12px] text-muted-foreground/60 hover:text-destructive py-2"
-      >
-        Problème de connexion ? Nettoyer la session
-      </button>
+      <div className="px-4">
+        <button
+          type="button"
+          onClick={(e) => handleEmailSubmit(e as unknown as React.FormEvent)}
+          disabled={isLoading || !turnstileToken}
+          className="apple-pill apple-pill-large apple-pill-secondary w-full disabled:opacity-50"
+        >
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Recevoir un code
+        </button>
+        <button
+          type="button"
+          onClick={forceCleanSession}
+          className="mt-3 flex h-9 w-full items-center justify-center text-[12px] text-muted-foreground/60 hover:text-destructive"
+        >
+          Problème de connexion ? Nettoyer la session
+        </button>
+      </div>
 
       <AuthLegalFooter className="pt-4" />
       </div>
@@ -1111,122 +1164,163 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   // ██  EMAIL SIGNUP VIEW  ██
   // ══════════════════════════════════════════════
+  // ══════════════════════════════════════════════
+  // ██  EMAIL SIGNUP — Mockup 03 (Apple Inscription)  ██
+  // NavBar Annuler/Inscription/step + Group(FieldRow Email/Password)
+  // + Turnstile + Group(Cell CGU check) + Pill Continuer.
+  // Logique : `handleEmailSubmit`, `acceptSignupTerms` — préservés.
+  // ══════════════════════════════════════════════
   const renderEmailSignup = () => (
     <IosFixedPageHeaderShell
-      className="h-full min-h-0"
-      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      className="h-full min-h-0 apple-grouped-bg"
+      headerWrapperClassName="shrink-0 apple-grouped-bg"
       header={
-        <>
-          <div className="border-b border-border bg-background">
-            <div className="h-2" />
+        <div className="px-4 pt-3">
+          {/* NavBar compact iOS : Annuler bleu / titre / step counter */}
+          <div className="flex h-11 items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                setView("landing");
+                setAcceptSignupTerms(false);
+                setTurnstileToken(null);
+                turnstileRef.current?.reset();
+              }}
+              className="text-[17px] text-primary active:opacity-60"
+            >
+              Annuler
+            </button>
+            <div className="apple-navbar-title">Inscription</div>
+            <div className="text-[15px] text-muted-foreground">1 / 2</div>
           </div>
-          <div className="space-y-5 px-4 pb-3 pt-6">
-            <AuthFlowProgress current={1} total={2} />
-            <div className="mb-2 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setView("landing");
-                  setCaptchaToken(null);
-                  setAcceptSignupTerms(false);
-                  captchaRef.current?.resetCaptcha();
-                }}
-                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
-              >
-                <ArrowLeft className="h-5 w-5 text-foreground" />
-              </button>
-              <h2 className="text-[20px] font-bold text-foreground">Créer un compte</h2>
-            </div>
-          </div>
-        </>
+        </div>
       }
     >
-      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
-      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
-        <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
-              required
-            />
+      <form onSubmit={handleEmailSubmit} className="px-0 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-4">
+        {/* Group : Email + Mot de passe (mockup spec FieldRow style) */}
+        <div className="apple-group">
+          <div className="apple-group-stack">
+            <div className="apple-field-row">
+              <div className="apple-field-label">Email</div>
+              <input
+                type="email"
+                placeholder="ferdinand@icloud.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="apple-field-value"
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="apple-field-row apple-field-row-last">
+              <div className="apple-field-label">Mot de passe</div>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="apple-field-value pr-7"
+                required
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="-mr-1 ml-1 p-1 text-muted-foreground active:opacity-60"
+                aria-label={showPassword ? "Masquer" : "Afficher"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Mot de passe du compte (connexion par e-mail)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
-              required
-              autoComplete="new-password"
+        </div>
+
+        <div className="px-4 pb-2">
+          {!turnstileToken && (
+            <TurnstileWidget
+              ref={turnstileRef}
+              onToken={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+              onError={() => setTurnstileToken(null)}
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-              {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+          )}
+          {turnstileToken && (
+            <div className="text-center text-[13px] font-medium text-[hsl(var(--success,142_76%_36%))] dark:text-green-500">
+              ✅ Vérification réussie
+            </div>
+          )}
+        </div>
+
+        {/* Group : Conditions d'utilisation (Cell check style mockup) */}
+        <div className="apple-group">
+          <div className="apple-group-stack">
+            <button
+              type="button"
+              onClick={() => setAcceptSignupTerms(!acceptSignupTerms)}
+              className="apple-cell apple-cell-last w-full text-left"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="apple-cell-title">Conditions d&apos;utilisation</div>
+                <div className="apple-cell-subtitle">
+                  J&apos;accepte les{" "}
+                  <Link to="/terms" className="text-primary underline-offset-2 hover:underline" onClick={(e) => e.stopPropagation()}>
+                    CGU
+                  </Link>{" "}
+                  et la{" "}
+                  <Link to="/privacy" className="text-primary underline-offset-2 hover:underline" onClick={(e) => e.stopPropagation()}>
+                    politique de confidentialité
+                  </Link>
+                  .
+                </div>
+              </div>
+              {acceptSignupTerms ? (
+                <svg width="14" height="11" viewBox="0 0 14 11" aria-hidden style={{ color: "hsl(var(--primary))" }}>
+                  <path d="M1 5.5l4 4 8-8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden className="text-muted-foreground/40">
+                  <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeWidth="1" fill="none" />
+                </svg>
+              )}
             </button>
           </div>
+          <div className="apple-group-footer">
+            J&apos;ai au moins 13 ans.
+          </div>
+        </div>
 
-          {!captchaToken && (
-            <CaptchaWidget
-              ref={captchaRef}
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-            />
-          )}
-          {captchaToken && (
-            <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">✅ Vérification réussie</div>
-          )}
+        {/* Code parrainage (logique existante préservée) */}
+        <div className="apple-group">
+          <div className="apple-group-stack p-2">
+            <ReferralCodeInput />
+          </div>
+        </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-[10px] border border-border/60 bg-secondary/40 px-3 py-3">
-            <Checkbox
-              checked={acceptSignupTerms}
-              onCheckedChange={(c) => setAcceptSignupTerms(c === true)}
-              className="mt-0.5 shrink-0"
-              id="auth-signup-terms"
-            />
-            <span className="text-left text-[13px] leading-snug text-muted-foreground">
-              Je confirme avoir lu les{' '}
-              <Link to="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
-                Conditions d’utilisation
-              </Link>{' '}
-              (dont règles ECTS applicables) et la{' '}
-              <Link to="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
-                Politique de confidentialité
-              </Link>{' '}
-              (traitement des données — RGPD). J’ai au moins 13 ans.
-            </span>
-          </label>
-
-          <Button
+        {/* CTA bottom : Pill Continuer + lien existant */}
+        <div className="mt-2 px-4">
+          <button
             type="submit"
-            className="h-12 w-full rounded-[12px]"
-            disabled={isLoading || !captchaToken || !acceptSignupTerms}
+            disabled={isLoading || !acceptSignupTerms || !turnstileToken}
+            className="apple-pill apple-pill-large w-full disabled:opacity-50"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Créer mon compte
-          </Button>
-        </form>
-        <div className="px-4 pb-4">
-          <ReferralCodeInput />
+            Continuer
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTurnstileToken(null);
+              turnstileRef.current?.reset();
+              setView('email-signin');
+            }}
+            className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
+          >
+            Déjà inscrit ? Se connecter
+          </button>
         </div>
-      </div>
 
-      <button
-        type="button"
-        onClick={() => { setView('email-signin'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
-        className="w-full text-center text-[15px] text-primary font-medium py-3 active:opacity-70 transition-opacity"
-      >
-        Déjà inscrit ? Se connecter
-      </button>
-
-      <AuthLegalFooter className="pt-4" />
-      </div>
+        <AuthLegalFooter className="pt-6" />
+      </form>
     </IosFixedPageHeaderShell>
   );
 
@@ -1384,17 +1478,31 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   const isPasswordResetFlow =
     searchParams.get("reset") === "true" ||
-    searchParams.get("type") === "recovery" ||
-    searchParams.has("code");
+    searchParams.get("type") === "recovery";
 
   if (authLoading) {
     return (
       <div
-        className="fixed inset-0 flex flex-col items-center justify-center bg-background px-6"
-        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1.5rem)" }}
+        className="fixed inset-0 z-[130] overflow-hidden"
+        style={{
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
       >
-        <Loader2 className="mb-4 h-9 w-9 animate-spin text-primary" />
-        <p className="text-center text-sm text-muted-foreground">Vérification de la session…</p>
+        <img
+          src={RUCONNECT_ONBOARDING_ARRIVAL_BG_URL}
+          alt=""
+          draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_30%]"
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-black/15"
+          aria-hidden
+        />
+        <div className="relative flex h-full flex-col items-center justify-center px-6">
+          <Loader2 className="mb-4 h-9 w-9 animate-spin text-white" />
+          <p className="text-center text-sm font-medium text-white/90 drop-shadow-sm">Vérification de la session…</p>
+        </div>
       </div>
     );
   }
@@ -1453,8 +1561,15 @@ const Auth = () => {
             </div>
           )}
 
-          <div className="min-h-0 flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-            {view === "landing" && renderLanding()}
+          <div
+            className={`min-h-0 flex-1 ${view === "landing" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
+            style={view === "landing" ? undefined : { WebkitOverflowScrolling: "touch" }}
+          >
+            {view === "landing" && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                {renderLanding()}
+              </div>
+            )}
             {view === "email-signin" && renderEmailSignin()}
           </div>
         </>
@@ -1486,7 +1601,7 @@ const Auth = () => {
           }
           setShowProfileSetup(false);
           setNewUserId('');
-          setView('email-signin-form');
+          setView("email-signin");
         }}
         onComplete={() => {
           if (authArrivalPreview) {

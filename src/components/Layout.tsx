@@ -12,11 +12,9 @@ import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import {
-  RUCONNECT_SPLASH_BACKGROUND,
+  RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
   RUCONNECT_SPLASH_ICON_URL,
-  RUCONNECT_SPLASH_PRIMARY,
 } from '@/lib/ruconnectSplashChrome';
-import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
 interface LayoutProps {
@@ -27,7 +25,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const { isPreviewMode } = useAppPreview();
-  const { removeMainBottomInset, homeMapImmersive } = useAppContext();
+  const { removeMainBottomInset } = useAppContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -58,7 +56,9 @@ export const Layout = ({ children }: LayoutProps) => {
   const latStr = searchParams.get('lat');
   const lngStr = searchParams.get('lng');
   const zoomStr = searchParams.get('zoom');
-  const sessionIdParam = searchParams.get('sessionId') || undefined;
+  /** Liens profonds : `?session=` (stories, open link) ou `?sessionId=` (legacy). */
+  const sessionIdParam =
+    searchParams.get('sessionId') || searchParams.get('session') || undefined;
   const mapInitialLat = latStr ? parseFloat(latStr) : undefined;
   const mapInitialLng = lngStr ? parseFloat(lngStr) : undefined;
   const mapInitialZoom = zoomStr ? parseInt(zoomStr, 10) : undefined;
@@ -116,7 +116,7 @@ export const Layout = ({ children }: LayoutProps) => {
       <div
         className="fixed inset-0 z-[99] flex items-center justify-center px-5"
         style={{
-          backgroundColor: RUCONNECT_SPLASH_BACKGROUND,
+          background: RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: '0px',
         }}
@@ -128,10 +128,10 @@ export const Layout = ({ children }: LayoutProps) => {
             draggable={false}
             className="mb-5 block h-[128px] w-[128px] select-none object-contain"
           />
-          <p className="text-[26px] font-bold tracking-[0.08em]" style={{ color: RUCONNECT_SPLASH_PRIMARY }}>
+          <p className="text-[26px] font-bold tracking-[0.08em] text-white">
             RUNCONNECT
           </p>
-          <p className="mt-2 text-[12px] font-medium tracking-[0.22em] text-foreground/45">
+          <p className="mt-2 text-[12px] font-medium tracking-[0.22em] text-white/70">
             TROUVE. CONNECTE. PARTAGE.
           </p>
         </div>
@@ -178,19 +178,12 @@ export const Layout = ({ children }: LayoutProps) => {
             : undefined,
         }}
       >
+        {/* Carte persistée — toujours en arrière-plan (jamais dans le flux flex) */}
         {homeMapPrimed && (
-          <div
-            className={
-              isHome
-                ? /* Accueil : carte dans le flux flex → hauteur réelle > 0 pour Mapbox */
-                  'relative z-20 flex min-h-0 flex-1 flex-col'
-                : /* Autres onglets : carte persistée en arrière-plan */
-                  'absolute inset-0 z-0 flex min-h-0 flex-col'
-            }
-          >
+          <div className="absolute inset-0 z-0 flex min-h-0 flex-col pointer-events-none">
             <Suspense fallback={null}>
               <PersistentHomeMap
-                visible={isHome}
+                visible={false}
                 initialLat={mapInitialLat}
                 initialLng={mapInitialLng}
                 initialZoom={mapInitialZoom}
@@ -199,34 +192,17 @@ export const Layout = ({ children }: LayoutProps) => {
             </Suspense>
           </div>
         )}
-        {/*
-          Accueil : pointer-events-none sur cette colonne pour que les clics atteignent la carte (z-20).
-          Autres onglets : pointer-events-auto — sans cela, toute la chaîne (Layout + PageTransition) reste
-          en « none » et WebKit peut laisser les touches « tomber » sur la carte persistée (z-0) ou les absorber.
-        */}
-        <div
-          className={cn(
-            /* Accueil : calque au-dessus de la carte (même hauteur que le main) */
-            isHome
-              ? 'pointer-events-none absolute inset-0 z-10 flex min-h-0 flex-col overflow-x-hidden overflow-y-hidden bg-transparent'
-              : 'pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-transparent'
-          )}
-        >
-          <div
-            className={cn(
-              'animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-hidden motion-reduce:animate-none',
-              isHome ? 'pointer-events-none' : 'pointer-events-auto'
-            )}
-          >
+
+        {/* Contenu de la page — plein écran, toujours interactif */}
+        <div className="pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-transparent">
+          <div className="animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-hidden pointer-events-auto motion-reduce:animate-none">
             {children}
           </div>
         </div>
       </main>
-      {isHome && !homeMapImmersive && <HomeFeedBottomSheet />}
       <TutorialReplayHost />
       {/*
-        Tab bar toujours montée (pas de mount/unmount par route) : visibilité gérée dans BottomNavigation.
-        FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock.
+        Tab bar toujours montée : visibilité gérée dans BottomNavigation (+ bouton + central).
       */}
       <BottomNavigation />
     </div>

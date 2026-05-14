@@ -226,7 +226,7 @@ const _translationBundles: Record<string, any> = {
       presenceConfirmed: 'Présence confirmée',
     },
     navigation: {
-      home: 'Accueil',
+      home: 'Découvrir',
       messages: 'Messages',
       search: 'Recherche',
       profile: 'Profil',
@@ -626,7 +626,7 @@ const _translationBundles: Record<string, any> = {
       presenceConfirmed: 'Presence confirmed',
     },
     navigation: {
-      home: 'Home',
+      home: 'Discover',
       messages: 'Messages',
       search: 'Search',
       profile: 'Profile',
@@ -936,7 +936,7 @@ const _translationBundles: Record<string, any> = {
       presenceConfirmed: 'Presencia confirmada',
     },
     navigation: {
-      home: 'Inicio',
+      home: 'Descubrir',
       messages: 'Mensajes',
       search: 'Búsqueda',
       profile: 'Perfil',
@@ -1123,7 +1123,7 @@ const _translationBundles: Record<string, any> = {
       presenceConfirmed: 'Presença confirmada',
     },
     navigation: {
-      home: 'Início',
+      home: 'Descobrir',
       messages: 'Mensagens',
       search: 'Pesquisa',
       profile: 'Perfil',
@@ -1310,7 +1310,7 @@ const _translationBundles: Record<string, any> = {
       presenceConfirmed: 'Anwesenheit bestätigt',
     },
     navigation: {
-      home: 'Startseite',
+      home: 'Entdecken',
       messages: 'Nachrichten',
       search: 'Suche',
       profile: 'Profil',
@@ -1497,7 +1497,7 @@ const _translationBundles: Record<string, any> = {
       presenceConfirmed: '出席已确认',
     },
     navigation: {
-      home: '首页',
+      home: '发现',
       messages: '消息',
       search: '搜索',
       profile: '个人资料',
@@ -1683,7 +1683,7 @@ const _translationBundles: Record<string, any> = {
       presenceConfirmed: 'تم تأكيد الحضور',
     },
     navigation: {
-      home: 'الرئيسية',
+      home: 'اكتشف',
       messages: 'الرسائل',
       search: 'البحث',
       profile: 'الملف الشخصي',

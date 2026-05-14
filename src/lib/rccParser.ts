@@ -318,7 +318,9 @@ function newBlockId(): string {
 export function rccToSessionBlocks(blocks: ParsedBlock[]): any[] {
   return blocks.map((b) => {
     if (b.type === "interval") {
-      const effortDuration = b.distance != null ? `${b.distance}m` : b.duration != null ? `${b.duration}` : undefined;
+      // Parsed `duration` est en minutes ; le stockage séance utilise des secondes (voir parseDurationSeconds).
+      const effortDuration =
+        b.distance != null ? `${b.distance}m` : b.duration != null ? String(b.duration * 60) : undefined;
       const effortType = b.distance != null ? "distance" : "time";
       return {
         id: newBlockId(),
@@ -327,15 +329,16 @@ export function rccToSessionBlocks(blocks: ParsedBlock[]): any[] {
         effortDuration,
         effortType,
         effortPace: b.pace,
-        recoveryDuration: b.recoveryDuration ? `${b.recoveryDuration}s` : undefined,
+        recoveryDuration: b.recoveryDuration != null ? String(b.recoveryDuration) : undefined,
         recoveryType: b.recoveryType || "trot",
         rpe: typeof b.rpe === "number" ? b.rpe : undefined,
         recoveryRpe: typeof b.recoveryRpe === "number" ? b.recoveryRpe : undefined,
       };
     }
+    const simpleType = b.type === "recovery" ? "steady" : b.type;
     return {
       id: newBlockId(),
-      type: b.type,
+      type: simpleType,
       duration: b.duration ? `${b.duration}` : undefined,
       pace: b.pace,
       rpe: typeof b.rpe === "number" ? b.rpe : undefined,

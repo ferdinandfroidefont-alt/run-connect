@@ -297,7 +297,16 @@ export const ClubManagementDialog = ({
             className="min-h-0 flex-1"
             contentTopOffsetPx={0}
             headerWrapperClassName="shrink-0"
-            header={<CoachingFullscreenHeader title="Gérer le club" onBack={onClose} />}
+            header={
+              <>
+                <div
+                  className="bg-white dark:bg-card"
+                  style={{ height: "max(env(safe-area-inset-top, 0px), 12px)" }}
+                  aria-hidden="true"
+                />
+                <CoachingFullscreenHeader title="Gérer le club" onBack={onClose} />
+              </>
+            }
             scrollClassName="bg-secondary/40"
           >
             {/* ============ HÉRO ============ */}

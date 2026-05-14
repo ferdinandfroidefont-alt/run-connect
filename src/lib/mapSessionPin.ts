@@ -14,6 +14,25 @@ export type SessionPinMeta = {
 
 /** Variante affichée sur la carte : `depth` = relief léger + dégradé discret (défaut). */
 export const DEFAULT_SESSION_PIN_VARIANT: SessionPinVariant = "depth";
+/** Décalage vertical (px) pour aligner le centre visuel du pin sur le point Mapbox. */
+export const SESSION_PIN_CENTER_OFFSET_Y: number = 39;
+
+function resolveSessionPinColor(activityType?: string): string {
+  const t = (activityType ?? "").toLowerCase();
+  if (t.includes("trail") || t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike")) {
+    return "#7b2cbf";
+  }
+  if (t.includes("velo") || t.includes("vtt") || t.includes("bike") || t.includes("cycl") || t.includes("gravel")) {
+    return "#0e8e3a";
+  }
+  if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf")) {
+    return "#00858f";
+  }
+  if (t.includes("muscu") || t.includes("strength") || t.includes("gym") || t.includes("crossfit")) {
+    return "#cc4d00";
+  }
+  return "#0066cc";
+}
 
 /** `VITE_MAP_PIN_VARIANT` = `minimal` | `depth` | `premium` (sinon défaut). */
 export function resolveSessionPinVariant(): SessionPinVariant {
@@ -30,8 +49,11 @@ export function createSessionPinButton(opts: {
   ariaLabel: string;
   variant?: SessionPinVariant;
   meta?: SessionPinMeta;
+  activityType?: string;
+  colorOverride?: string;
 }): HTMLButtonElement {
   const variant = opts.variant ?? resolveSessionPinVariant();
+  const pinColor = opts.colorOverride ?? resolveSessionPinColor(opts.activityType);
 
   const pin = document.createElement("button");
   pin.type = "button";
@@ -47,10 +69,21 @@ export function createSessionPinButton(opts: {
   pin.style.margin = "0";
   pin.style.background = "transparent";
   pin.style.cursor = "pointer";
+  pin.style.setProperty("--rc-session-pin-color", pinColor);
   (pin.style as CSSStyleDeclaration & { webkitTapHighlightColor?: string }).webkitTapHighlightColor = "transparent";
 
   const visual = document.createElement("span");
   visual.className = "rc-session-pin__marker-visual";
+
+  // Pin shape from Apple-style mockup: exact SVG path (viewBox 80x96).
+  const shell = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shell.setAttribute("viewBox", "0 0 80 96");
+  shell.setAttribute("aria-hidden", "true");
+  shell.classList.add("rc-session-pin__shell");
+  const shellPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  shellPath.setAttribute("d", "M 40 0 A 40 40 0 0 1 68 68.57 L 40 96 L 12 68.57 A 40 40 0 0 1 40 0 Z");
+  shellPath.setAttribute("fill", "var(--rc-session-pin-color, #007aff)");
+  shell.appendChild(shellPath);
 
   const ground = document.createElement("span");
   ground.className = "rc-session-pin__ground";
@@ -76,6 +109,7 @@ export function createSessionPinButton(opts: {
   tip.className = "rc-session-pin__tip";
 
   visual.appendChild(ground);
+  visual.appendChild(shell);
   visual.appendChild(circle);
   visual.appendChild(avatarRing);
   visual.appendChild(tip);
