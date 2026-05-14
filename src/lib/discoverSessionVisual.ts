@@ -37,3 +37,18 @@ export function getDiscoverSportTileClass(activityType: string): string {
     return "bg-[#34C759]";
   return "bg-[#007AFF]";
 }
+
+/** Couleur pleine pastille Filtres maquette (alignée sur `getDiscoverSportTileClass`). */
+export function getDiscoverSportTileHex(activityType: string): string {
+  const t = (activityType ?? "").toLowerCase();
+  if (t.includes("vtt")) return "#8B5E3C";
+  if (t.includes("gravel")) return "#FFCC00";
+  if (t.includes("velo") || t.includes("bike") || t.includes("cycl")) return "#FF3B30";
+  if (t.includes("nat") || t.includes("swim") || t.includes("kayak") || t.includes("surf"))
+    return "#5AC8FA";
+  if (t.includes("trail")) return "#AF52DE";
+  if (t.includes("triath")) return "#5856D6";
+  if (t.includes("rando") || t.includes("marche") || t.includes("walk") || t.includes("hike"))
+    return "#34C759";
+  return "#007AFF";
+}

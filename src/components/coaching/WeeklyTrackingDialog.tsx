@@ -59,11 +59,14 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
             headerWrapperClassName="shrink-0"
             header={
               <CoachingFullscreenHeader
-                title={selectedAthleteId ? "Fiche athlète" : "Coaching"}
+                title={selectedAthleteId ? "Suivi athlète" : "Coaching"}
                 onBack={handleBack}
+                backLabel={selectedAthleteId ? "Page précédente" : "Retour"}
+                suiviAthleteStyle={!!selectedAthleteId}
+                className={selectedAthleteId ? "border-b border-[#E5E5EA] bg-white" : undefined}
               />
             }
-            scrollClassName="bg-secondary px-0 pb-4"
+            scrollClassName={selectedAthleteId ? "bg-[#F2F2F7] px-0 pb-0" : "bg-secondary px-0 pb-4"}
           >
             <WeeklyTrackingView
               clubId={clubId}

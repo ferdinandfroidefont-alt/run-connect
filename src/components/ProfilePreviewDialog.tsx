@@ -73,7 +73,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followDialogTab, setFollowDialogTab] = useState<'followers' | 'following'>('followers');
   const [showRecordsSheet, setShowRecordsSheet] = useState(false);
   const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
-  const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0 });
+  const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0, absent: 0 });
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [showAboutSheet, setShowAboutSheet] = useState(false);
@@ -156,7 +156,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     try {
       const { data } = await supabase
         .from('user_stats')
-        .select('reliability_rate, total_sessions_completed, total_sessions_joined')
+        .select('reliability_rate, total_sessions_completed, total_sessions_joined, total_sessions_absent')
         .eq('user_id', userId)
         .maybeSingle();
       if (data) {
@@ -165,6 +165,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           created: 0,
           joined: data.total_sessions_joined || 0,
           completed: data.total_sessions_completed || 0,
+          absent: Number(data.total_sessions_absent) || 0,
         });
       }
     } catch {
@@ -838,6 +839,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         totalSessionsCreated={reliabilityStats.created}
         totalSessionsJoined={reliabilityStats.joined}
         totalSessionsCompleted={reliabilityStats.completed}
+        totalSessionsAbsent={reliabilityStats.absent}
+        reliabilitySubjectUserId={userId ?? null}
       />
 
       {/* Records Sheet */}

@@ -433,3 +433,60 @@ export function getFallbackPaceForBlock(block: SessionBlock): number {
   if (block.type === 'interval') return parsePaceToSecondsPerKm(block.effortPace) ?? DEFAULT_SIMPLE_PACE_SEC_PER_KM;
   return parsePaceToSecondsPerKm(block.pace) ?? DEFAULT_SIMPLE_PACE_SEC_PER_KM;
 }
+
+function zoneTokenToChartNumber(zone?: string | null): number {
+  if (!zone || typeof zone !== 'string') return 3;
+  const m = /^z?(\d)$/i.exec(zone.trim());
+  if (!m) return 3;
+  return Math.max(1, Math.min(6, parseInt(m[1], 10)));
+}
+
+/**
+ * Répartition Z1–Z6 pour le graphique « suivi athlète » (hauteur par % de charge estimée par bloc).
+ */
+export function sessionBlocksToZoneChartSegments(rawBlocks: unknown): { z: number; pct: number }[] {
+  if (!Array.isArray(rawBlocks) || rawBlocks.length === 0) {
+    return [{ z: 3, pct: 100 }];
+  }
+  const blocks = resolveSessionBlocks(rawBlocks as SessionBlock[]);
+  const zoneWeights = new Map<number, number>();
+
+  for (const block of blocks) {
+    if (block.type === 'interval') {
+      const series = Math.max(1, block.blockRepetitions ?? 1);
+      const reps = Math.max(1, block.repetitions ?? 1);
+      const effortDistance = parseDistanceMeters(block.effortDistance);
+      const effortDuration = parseDurationSeconds(block.effortDuration);
+      const effortZone = zoneTokenToChartNumber(
+        block.effortIntensity || inferZoneFromPace(parsePaceToSecondsPerKm(block.effortPace)) || 'z4',
+      );
+      const weight =
+        ((effortDuration ?? 0) || (effortDistance ?? 0) || 1) * reps * series;
+      zoneWeights.set(effortZone, (zoneWeights.get(effortZone) ?? 0) + weight);
+      continue;
+    }
+    const distance = parseDistanceMeters(block.distance);
+    const duration = parseDurationSeconds(block.duration);
+    const zone = zoneTokenToChartNumber(
+      block.intensity || inferZoneFromPace(parsePaceToSecondsPerKm(block.pace)) || 'z2',
+    );
+    const weight = (duration ?? 0) || (distance ?? 0) || 1;
+    zoneWeights.set(zone, (zoneWeights.get(zone) ?? 0) + weight);
+  }
+
+  const total = [...zoneWeights.values()].reduce((s, w) => s + w, 0);
+  if (total <= 0) return [{ z: 3, pct: 100 }];
+
+  const entries = [...zoneWeights.entries()].sort((a, b) => a[0] - b[0]);
+  const rawPcts = entries.map(([, w]) => (w / total) * 100);
+  const floored = rawPcts.map((x) => Math.floor(x));
+  let remainder = 100 - floored.reduce((a, b) => a + b, 0);
+  const byFrac = rawPcts
+    .map((x, idx) => ({ idx, frac: x - Math.floor(x) }))
+    .sort((a, b) => b.frac - a.frac);
+  const pct = [...floored];
+  for (let k = 0; k < remainder; k++) {
+    pct[byFrac[k % byFrac.length].idx] += 1;
+  }
+  return entries.map(([z], idx) => ({ z, pct: pct[idx] }));
+}

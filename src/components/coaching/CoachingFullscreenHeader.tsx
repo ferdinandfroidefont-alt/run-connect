@@ -9,6 +9,8 @@ type CoachingFullscreenHeaderProps = {
   backLabel?: string;
   rightSlot?: ReactNode;
   className?: string;
+  /** En-tête bleu iOS 17 (chevron 24px, libellé semibold) comme l’écran « Suivi athlète ». */
+  suiviAthleteStyle?: boolean;
 };
 
 export function CoachingFullscreenHeader({
@@ -17,6 +19,7 @@ export function CoachingFullscreenHeader({
   backLabel = "Retour",
   rightSlot,
   className,
+  suiviAthleteStyle = false,
 }: CoachingFullscreenHeaderProps) {
   return (
     <header
@@ -32,13 +35,17 @@ export function CoachingFullscreenHeader({
           <button
             type="button"
             onClick={onBack}
-            className="flex touch-manipulation items-center gap-0.5 text-primary"
+            className={cn(
+              "flex touch-manipulation items-center gap-0.5 text-primary",
+              suiviAthleteStyle && "gap-0 text-[#007AFF]",
+            )}
           >
-            <ChevronLeft className="h-5 w-5 shrink-0" strokeWidth={2} />
-            <span className="text-[17px]">{backLabel}</span>
+            <ChevronLeft className={cn("h-5 w-5 shrink-0", suiviAthleteStyle && "h-6 w-6")} strokeWidth={suiviAthleteStyle ? 2.6 : 2} />
+            <span className={cn("text-[17px]", suiviAthleteStyle && "font-semibold")}>{backLabel}</span>
           </button>
         }
         title={title}
+        titleClassName={suiviAthleteStyle ? "font-bold text-[#0A0F1F]" : undefined}
         right={rightSlot}
       />
     </header>

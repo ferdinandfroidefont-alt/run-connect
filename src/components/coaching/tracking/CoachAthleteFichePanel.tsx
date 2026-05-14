@@ -1,8 +1,26 @@
-import type { ReactNode } from "react";
-import { ChevronLeft, ChevronRight, MessageCircle, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MessageCircle, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { isSameDay } from "date-fns";
 
-export type WeekFicheCell = "ok" | "rest" | "miss" | "today" | "planned";
+const ACTION_BLUE = "#007AFF";
+const TRACKING_BG = "#F2F2F7";
+
+const ZONE_CHART_COLOR: Record<number, string> = {
+  1: "#8E8E93",
+  2: "#007AFF",
+  3: "#34C759",
+  4: "#FFCC00",
+  5: "#FF9500",
+  6: "#FF3B30",
+};
+
+const ZONE_LABEL_FR: Record<number, string> = {
+  1: "Récupération",
+  2: "Endurance",
+  3: "Endurance active",
+  4: "Tempo / seuil",
+  5: "Seuil anaérobie",
+  6: "VMA",
+};
 
 function avatarHueFromUserId(id: string) {
   let h = 0;
@@ -21,32 +39,33 @@ function initialsFromName(name: string) {
   return name.slice(0, 2).toUpperCase() || "?";
 }
 
-/** Maquette 18 · Fiche athlète (RunConnect iOS) — couleurs grille */
-const FICHE_CELL: Record<
-  WeekFicheCell,
-  { className: string; symbol: string; aria: string }
-> = {
-  ok: { className: "bg-[#1FB386] text-white border-0", symbol: "✓", aria: "Séance réalisée" },
-  miss: { className: "bg-[#FF4D1A] text-white border-0", symbol: "✕", aria: "Non réalisée" },
-  rest: {
-    className: "bg-[rgba(118,118,128,0.14)] text-[#636366] dark:text-muted-foreground border-0",
-    symbol: "–",
-    aria: "Repos ou aucune séance",
-  },
-  today: { className: "bg-foreground text-background border-0", symbol: "●", aria: "Aujourd'hui" },
-  planned: {
-    className:
-      "bg-card text-[#636366] dark:text-muted-foreground border-[1.5px] border-[rgba(60,60,67,0.22)] dark:border-border shadow-none",
-    symbol: "○",
-    aria: "Prévu",
-  },
+function zoneLabelToNum(zone: string): number {
+  const m = /^z?(\d)$/i.exec(zone.trim());
+  return m ? Math.max(1, Math.min(6, parseInt(m[1], 10))) : 1;
+}
+
+export type WeekBarChartDay = {
+  dateKey: string;
+  dayOfMonth: number;
+  dayLetter: string;
+  km: number;
+  segments: { z: number; pct: number }[];
+  hasSession: boolean;
 };
 
-export type CoachAthleteFicheRecordRow = {
-  label: string;
-  value: string;
-  /** Sous-titre type maquette : « Z3 · 4:27/km » */
-  meta?: string | null;
+export type CoachAthleteSessionCard = {
+  dateKey: string;
+  dayLabel: string;
+  title: string;
+  km: number;
+  status: "done" | "missed" | "pending" | "none";
+  segments: { z: number; pct: number }[];
+};
+
+export type CoachAthleteFicheZoneRow = {
+  zone: string;
+  minPace: string;
+  maxPace: string;
 };
 
 export type CoachAthleteFichePanelProps = {
@@ -56,37 +75,38 @@ export type CoachAthleteFichePanelProps = {
   subtitle: string;
   onMessage: () => void;
   onViewProfile: () => void;
-  /** Rappel push ciblé (maquette « Relancer ») */
   onNudgeAthlete?: () => void;
   nudgeLoading?: boolean;
   nudgeDisabled?: boolean;
   weekLabel: string;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
-  weekCells: WeekFicheCell[];
-  weekDayLabels: string[];
-  selectedDayIndex: number;
-  onSelectDayIndex: (index: number) => void;
-  recordRows: CoachAthleteFicheRecordRow[];
-  recordsFooter?: string;
+  weekBarDays: WeekBarChartDay[];
+  selectedWeekListDayKey: string | null;
+  onToggleWeekChartDay: (dateKey: string) => void;
+  weekSessionCards: CoachAthleteSessionCard[];
+  onSessionCardNavigate: (dateKey: string) => void;
+  onOpenSessionDetail: (dateKey: string) => void;
+  zones: CoachAthleteFicheZoneRow[];
+  recordsFooterLine?: string;
   onManageRecords: () => void;
-  zones: { zone: string; minPace: string; maxPace: string; dotClass: string }[];
   onSendSession: () => void;
-  sessionTitle?: string;
-  sessionDetail?: string;
-  sessionStatusLabel?: string;
-  onOpenSessionDetail?: () => void;
 };
 
-function MaquetteCard({ className, children }: { className?: string; children: ReactNode }) {
+function SessionMiniBar({ segments, barHeight }: { segments: { z: number; pct: number }[]; barHeight: number }) {
+  if (!segments.length) return null;
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-[16px] border border-border/70 bg-card px-3.5 py-3.5 shadow-none dark:border-border/80",
-        className
-      )}
-    >
-      {children}
+    <div className="flex w-full flex-col-reverse overflow-hidden rounded-md" style={{ height: barHeight }}>
+      {segments.map((seg, i) => (
+        <div
+          key={`${seg.z}-${i}`}
+          style={{
+            height: `${seg.pct}%`,
+            minHeight: seg.pct > 0 ? 2 : 0,
+            background: `linear-gradient(180deg, ${ZONE_CHART_COLOR[seg.z]} 0%, ${ZONE_CHART_COLOR[seg.z]}E0 100%)`,
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -104,222 +124,569 @@ export function CoachAthleteFichePanel({
   weekLabel,
   onPreviousWeek,
   onNextWeek,
-  weekCells,
-  weekDayLabels,
-  selectedDayIndex,
-  onSelectDayIndex,
-  recordRows,
-  recordsFooter,
-  onManageRecords,
-  zones,
-  onSendSession,
-  sessionTitle,
-  sessionDetail,
-  sessionStatusLabel,
+  weekBarDays,
+  selectedWeekListDayKey,
+  onToggleWeekChartDay,
+  weekSessionCards,
+  onSessionCardNavigate,
   onOpenSessionDetail,
+  zones,
+  recordsFooterLine,
+  onManageRecords,
+  onSendSession,
 }: CoachAthleteFichePanelProps) {
   const hue = avatarHueFromUserId(userId);
   const initials = initialsFromName(displayName);
+  const today = new Date();
+  const maxKm = Math.max(...weekBarDays.map((d) => d.km), 1);
+  const MAX_BAR_H = 88;
+  const MIN_VISIBLE_H = 4;
+
+  const selectedBarDay = selectedWeekListDayKey
+    ? weekBarDays.find((d) => d.dateKey === selectedWeekListDayKey)
+    : undefined;
+  const sessionsCount = weekSessionCards.length;
+
+  const filteredCards = selectedWeekListDayKey
+    ? weekSessionCards.filter((c) => c.dateKey === selectedWeekListDayKey)
+    : weekSessionCards;
+
+  const selectedEmptyRest =
+    selectedWeekListDayKey &&
+    selectedBarDay &&
+    !selectedBarDay.hasSession;
 
   return (
-    <div className="min-w-0 bg-[var(--ios-grouped-bg)] pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-      <div className="px-5 pb-1 pt-3">
-        <div className="flex min-w-0 items-start gap-3.5">
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full ring-2 ring-white dark:ring-card">
+    <div
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      style={{ background: TRACKING_BG, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif" }}
+    >
+      <div
+        className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-5"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full"
+            style={{
+              width: 72,
+              height: 72,
+              border: "2px solid white",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+              background: avatarUrl ? undefined : `hsl(${hue}, 85%, 52%)`,
+            }}
+          >
             {avatarUrl ? (
               <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div
-                className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-white"
-                style={{ backgroundColor: `hsl(${hue},85%,52%)` }}
-              >
-                {initials}
-              </div>
+              <span className="text-[18px] font-bold text-white">{initials}</span>
             )}
           </div>
-          <div className="min-w-0 flex-1 pt-0.5">
-            <h1 className="font-display text-[24px] font-bold leading-[1.1] tracking-[-0.04em] text-foreground">
+          <div className="min-w-0 flex-1">
+            <h1
+              className="truncate"
+              style={{
+                fontSize: 30,
+                fontWeight: 900,
+                color: "#0A0F1F",
+                letterSpacing: "-0.02em",
+                margin: 0,
+                lineHeight: 1.1,
+              }}
+            >
               {displayName}
             </h1>
-            <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{subtitle}</p>
+            <p style={{ fontSize: 14, color: "#8E8E93", marginTop: 4, marginBottom: 0 }}>{subtitle}</p>
           </div>
         </div>
 
-        <div className="mt-3.5 flex gap-2">
+        <div className="mt-5 grid grid-cols-3 gap-2.5">
           <button
             type="button"
             onClick={onMessage}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[12px] bg-foreground text-[13px] font-bold text-background shadow-none active:opacity-90"
+            className="flex items-center justify-center gap-1.5 active:scale-[0.98]"
+            style={{
+              background: "#0A0F1F",
+              borderRadius: 12,
+              padding: "13px 8px",
+            }}
           >
-            <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={2.2} aria-hidden />
-            Message
+            <MessageCircle className="h-4 w-4 text-white" strokeWidth={2.4} />
+            <span style={{ fontSize: 14, fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>Message</span>
           </button>
           <button
             type="button"
             onClick={onViewProfile}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-[12px] border-[1.5px] border-border/80 bg-card text-[13px] font-bold text-foreground shadow-none active:bg-muted/40"
+            className="flex items-center justify-center active:scale-[0.98]"
+            style={{
+              background: "white",
+              borderRadius: 12,
+              padding: "13px 8px",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px #E5E5EA",
+            }}
           >
-            Voir profil
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#0A0F1F", letterSpacing: "-0.01em" }}>Voir profil</span>
           </button>
           {onNudgeAthlete ? (
             <button
               type="button"
               disabled={nudgeDisabled || nudgeLoading}
               onClick={onNudgeAthlete}
-              className="flex h-11 shrink-0 items-center justify-center rounded-[12px] bg-[#FF4D1A] px-3.5 text-[13px] font-bold text-white shadow-none active:opacity-90 disabled:pointer-events-none disabled:opacity-45"
+              className="flex items-center justify-center active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45"
+              style={{
+                background: "#FFA88E",
+                borderRadius: 12,
+                padding: "13px 8px",
+              }}
             >
-              {nudgeLoading ? "…" : "Relancer"}
+              <span style={{ fontSize: 14, fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>
+                {nudgeLoading ? "…" : "Relancer"}
+              </span>
             </button>
-          ) : null}
+          ) : (
+            <div aria-hidden className="rounded-[12px]" style={{ background: "transparent" }} />
+          )}
         </div>
-      </div>
 
-      <div className="mt-5 px-5">
-        <div className="flex min-w-0 items-end justify-between gap-2 pb-2">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Cette semaine</p>
-          <div className="flex shrink-0 items-center gap-0.5">
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[#0066CC] active:opacity-70"
-              aria-label="Semaine précédente"
-              onClick={onPreviousWeek}
-            >
-              <ChevronLeft className="h-5 w-5" />
+        <div className="mb-3 mt-7 flex items-center justify-between">
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: "#8E8E93",
+              letterSpacing: "0.08em",
+            }}
+          >
+            CETTE SEMAINE
+          </p>
+          <div className="flex items-center gap-2">
+            <button type="button" className="p-1 active:opacity-70" aria-label="Semaine précédente" onClick={onPreviousWeek}>
+              <ChevronLeft className="h-4 w-4" color={ACTION_BLUE} strokeWidth={2.6} />
             </button>
-            <span className="max-w-[128px] truncate text-center text-[11px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-              {weekLabel}
-            </span>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[#0066CC] active:opacity-70"
-              aria-label="Semaine suivante"
-              onClick={onNextWeek}
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 800,
+                color: "#0A0F1F",
+                letterSpacing: "0.04em",
+              }}
             >
-              <ChevronRight className="h-5 w-5" />
+              {weekLabel}
+            </p>
+            <button type="button" className="p-1 active:opacity-70" aria-label="Semaine suivante" onClick={onNextWeek}>
+              <ChevronRight className="h-4 w-4" color={ACTION_BLUE} strokeWidth={2.6} />
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-1">
-          {weekCells.map((cell, i) => {
-            const meta = FICHE_CELL[cell];
-            const selected = i === selectedDayIndex;
+
+        <div
+          className="flex gap-1.5 px-1"
+          style={{
+            background: "white",
+            borderRadius: 16,
+            padding: "16px 12px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+          }}
+        >
+          {weekBarDays.map((d) => {
+            const isSel = selectedWeekListDayKey === d.dateKey;
+            const dayDate = new Date(d.dateKey + "T12:00:00");
+            const isToday = isSameDay(dayDate, today);
+            const barHeight = d.km > 0 ? Math.max(14, (d.km / maxKm) * MAX_BAR_H) : 0;
+            const segments = d.km > 0 ? d.segments : [];
+
             return (
               <button
-                key={`${weekDayLabels[i] ?? i}-${i}`}
+                key={d.dateKey}
                 type="button"
-                aria-label={`${weekDayLabels[i] ?? ""} ${meta.aria}`}
-                onClick={() => onSelectDayIndex(i)}
-                className={cn(
-                  "flex aspect-square flex-col items-center justify-center rounded-[10px] text-[16px] font-bold transition-transform active:scale-[0.97]",
-                  meta.className,
-                  selected &&
-                    "ring-2 ring-[#0066CC] ring-offset-[3px] ring-offset-[var(--ios-grouped-bg)] dark:ring-offset-background"
-                )}
+                onClick={() => onToggleWeekChartDay(d.dateKey)}
+                className="flex min-w-0 flex-1 flex-col items-center gap-2 active:scale-95"
+                style={{ paddingTop: 4, paddingBottom: 2 }}
               >
-                {meta.symbol}
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: isToday ? ACTION_BLUE : "#0A0F1F",
+                    fontVariantNumeric: "tabular-nums",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {d.dayOfMonth}
+                </span>
+                <div className="flex w-full flex-col-reverse items-stretch justify-end" style={{ height: MAX_BAR_H }}>
+                  {d.km > 0 ? (
+                    <div
+                      className="flex w-full flex-col-reverse overflow-hidden"
+                      style={{
+                        height: barHeight,
+                        borderRadius: 6,
+                        boxShadow: isSel ? `0 0 0 2px white, 0 0 0 4px ${ACTION_BLUE}` : "none",
+                      }}
+                    >
+                      {segments.map((zone, i) => (
+                        <div
+                          key={`${d.dateKey}-z-${i}`}
+                          style={{
+                            background: `linear-gradient(180deg, ${ZONE_CHART_COLOR[zone.z]} 0%, ${ZONE_CHART_COLOR[zone.z]}E0 100%)`,
+                            height: `${zone.pct}%`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        height: MIN_VISIBLE_H,
+                        background: isSel ? ACTION_BLUE : "#E5E5EA",
+                        borderRadius: 9999,
+                      }}
+                    />
+                  )}
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: isToday ? ACTION_BLUE : "#8E8E93",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {d.dayLetter}
+                </span>
               </button>
             );
           })}
         </div>
-      </div>
 
-      {sessionTitle ? (
-        <div className="mt-5 px-5">
-          <MaquetteCard>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Jour sélectionné</p>
-            <p className="mt-1 text-[16px] font-bold tracking-[-0.03em] text-foreground">{sessionTitle}</p>
-            {sessionDetail ? <p className="mt-0.5 text-[13px] text-muted-foreground">{sessionDetail}</p> : null}
-            {sessionStatusLabel ? (
-              <p className="mt-2 text-[12px] font-medium text-muted-foreground">{sessionStatusLabel}</p>
-            ) : null}
-            {onOpenSessionDetail ? (
-              <button
-                type="button"
-                onClick={onOpenSessionDetail}
-                className="mt-2 text-[14px] font-semibold text-[#0066CC] active:opacity-70"
+        <div className="mt-4 space-y-3">
+          {selectedWeekListDayKey === null ? (
+            <>
+              <p
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "#8E8E93",
+                  letterSpacing: "0.08em",
+                  marginBottom: 4,
+                }}
               >
-                Détail de la séance
-              </button>
-            ) : null}
-          </MaquetteCard>
+                SÉANCES DE LA SEMAINE · {sessionsCount}
+              </p>
+              {sessionsCount === 0 ? (
+                <div
+                  className="p-5 text-center"
+                  style={{
+                    background: "white",
+                    borderRadius: 16,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <p style={{ fontSize: 15, color: "#8E8E93" }}>Aucune séance programmée</p>
+                </div>
+              ) : (
+                weekSessionCards.map((card) => (
+                  <div
+                    key={card.dateKey}
+                    className="flex overflow-hidden rounded-2xl bg-white active:opacity-95"
+                    style={{
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onSessionCardNavigate(card.dateKey)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="flex items-center gap-3 p-4 pr-2">
+                        <div className="flex h-[52px] w-6 shrink-0 flex-col justify-end">
+                          <SessionMiniBar segments={card.segments} barHeight={Math.max(40, (card.km / maxKm) * 52)} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: "#8E8E93",
+                              letterSpacing: "0.06em",
+                              margin: 0,
+                            }}
+                          >
+                            {card.dayLabel.toUpperCase()}
+                          </p>
+                          <p
+                            style={{
+                              fontSize: 17,
+                              fontWeight: 800,
+                              color: "#0A0F1F",
+                              letterSpacing: "-0.02em",
+                              marginTop: 4,
+                              marginBottom: 0,
+                            }}
+                          >
+                            {card.title}
+                          </p>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: "#8E8E93", marginTop: 4, marginBottom: 0 }}>
+                            {card.km > 0 ? `${card.km.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km` : "—"} ·{" "}
+                            {card.status === "done"
+                              ? "Fait"
+                              : card.status === "missed"
+                                ? "Non fait"
+                                : card.status === "pending"
+                                  ? "En attente"
+                                  : "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-11 shrink-0 items-center justify-center border-l border-[#F2F2F7] active:bg-[#F8F8F8]"
+                      aria-label="Détail de la séance"
+                      onClick={() => onOpenSessionDetail(card.dateKey)}
+                    >
+                      <ChevronRight className="h-5 w-5 text-[#C7C7CC]" strokeWidth={2} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </>
+          ) : selectedBarDay?.hasSession && filteredCards[0] ? (
+            <>
+              <p
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "#8E8E93",
+                  letterSpacing: "0.08em",
+                  marginBottom: 4,
+                }}
+              >
+                JOUR SÉLECTIONNÉ
+              </p>
+              <div
+                className="flex overflow-hidden rounded-2xl bg-white active:opacity-95"
+                style={{
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => onSessionCardNavigate(filteredCards[0].dateKey)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <div className="flex items-center gap-3 p-4 pr-2">
+                    <div className="flex h-[52px] w-6 shrink-0 flex-col justify-end">
+                      <SessionMiniBar
+                        segments={filteredCards[0].segments}
+                        barHeight={Math.max(40, (filteredCards[0].km / maxKm) * 52)}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: "#8E8E93",
+                          letterSpacing: "0.06em",
+                          margin: 0,
+                        }}
+                      >
+                        {filteredCards[0].dayLabel.toUpperCase()}
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 17,
+                          fontWeight: 800,
+                          color: "#0A0F1F",
+                          letterSpacing: "-0.02em",
+                          marginTop: 4,
+                          marginBottom: 0,
+                        }}
+                      >
+                        {filteredCards[0].title}
+                      </p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "#8E8E93", marginTop: 4, marginBottom: 0 }}>
+                        {filteredCards[0].km > 0
+                          ? `${filteredCards[0].km.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km`
+                          : "—"}{" "}
+                        ·{" "}
+                        {filteredCards[0].status === "done"
+                          ? "Fait"
+                          : filteredCards[0].status === "missed"
+                            ? "Non fait"
+                            : filteredCards[0].status === "pending"
+                              ? "En attente"
+                              : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-11 shrink-0 items-center justify-center border-l border-[#F2F2F7] active:bg-[#F8F8F8]"
+                  aria-label="Détail de la séance"
+                  onClick={() => onOpenSessionDetail(filteredCards[0].dateKey)}
+                >
+                  <ChevronRight className="h-5 w-5 text-[#C7C7CC]" strokeWidth={2} />
+                </button>
+              </div>
+            </>
+          ) : selectedEmptyRest ? (
+            <div
+              className="p-4"
+              style={{
+                background: "white",
+                borderRadius: 16,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "#8E8E93",
+                  letterSpacing: "0.08em",
+                  marginBottom: 4,
+                }}
+              >
+                JOUR SÉLECTIONNÉ
+              </p>
+              <p
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: "#0A0F1F",
+                  letterSpacing: "-0.02em",
+                  margin: 0,
+                }}
+              >
+                Aucune séance ·{" "}
+                {selectedBarDay
+                  ? new Date(selectedBarDay.dateKey + "T12:00:00").toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })
+                  : ""}
+              </p>
+            </div>
+          ) : null}
         </div>
-      ) : null}
 
-      <div className="mt-5 px-5">
-        <div className="mb-2 flex items-baseline justify-between gap-2">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Records personnels</p>
-          <button type="button" className="handoff-ios-link text-[13px] font-semibold" onClick={onManageRecords}>
-            Modifier
+        <div className="mb-3 mt-7 flex items-center justify-between">
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: "#8E8E93",
+              letterSpacing: "0.08em",
+            }}
+          >
+            ZONES D&apos;ENTRAÎNEMENT · COURSE
+          </p>
+          <button type="button" onClick={onManageRecords} className="active:opacity-70">
+            <span style={{ fontSize: 15, fontWeight: 700, color: ACTION_BLUE, letterSpacing: "-0.01em" }}>
+              Modifier records
+            </span>
           </button>
         </div>
-        <MaquetteCard className="py-0">
-          {recordRows.length ? (
-            recordRows.map((row, idx) => (
-              <div
-                key={`${row.label}-${idx}`}
-                className={cn(
-                  "flex items-center justify-between gap-3 py-2.5",
-                  idx < recordRows.length - 1 && "border-b border-border/60"
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-[15px] font-bold tracking-[-0.02em] text-foreground">{row.label}</p>
-                  {row.meta ? <p className="mt-0.5 text-[11px] text-muted-foreground">{row.meta}</p> : null}
-                </div>
-                <span className="shrink-0 font-mono text-[16px] font-bold tabular-nums text-foreground">{row.value}</span>
-              </div>
-            ))
-          ) : (
-            <div className="py-5 text-center text-[14px] text-muted-foreground">Aucun record renseigné</div>
-          )}
-        </MaquetteCard>
-        {recordsFooter ? <p className="mt-2 px-0.5 text-[12px] leading-snug text-muted-foreground">{recordsFooter}</p> : null}
-        <button
-          type="button"
-          onClick={onManageRecords}
-          className="mt-2 flex w-full items-center justify-center py-2.5 text-[15px] font-semibold text-[#0066CC] active:opacity-70"
-        >
-          Ajouter ou modifier un record
-        </button>
-      </div>
 
-      <div className="mt-4 px-5">
-        <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-          Zones d&apos;entraînement (course)
-        </p>
-        <MaquetteCard className="py-0">
+        <div
+          style={{
+            background: "white",
+            borderRadius: 16,
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+          }}
+        >
           {zones.length ? (
-            zones.map((z, idx) => (
-              <div
-                key={z.zone}
-                className={cn(
-                  "flex items-center gap-3 py-2.5",
-                  idx < zones.length - 1 && "border-b border-border/60"
-                )}
-              >
-                <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", z.dotClass)} />
-                <span className="w-9 shrink-0 text-[15px] font-bold text-foreground">{z.zone}</span>
-                <span className="min-w-0 flex-1 text-right text-[14px] text-muted-foreground">
-                  {z.minPace} → {z.maxPace}
-                </span>
-              </div>
-            ))
+            zones.map((row, i) => {
+              const zn = zoneLabelToNum(row.zone);
+              const zc = ZONE_CHART_COLOR[zn];
+              const paceLeft = row.minPace.replace(/\/km\s*$/i, "").trim();
+              const paceRight = row.maxPace.replace(/\/km\s*$/i, "").trim();
+              return (
+                <div key={row.zone}>
+                  {i > 0 ? <div className="ml-4 h-px bg-[#E5E5EA]" /> : null}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div
+                      className="flex shrink-0 items-center justify-center"
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        background: `${zc}1A`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 800,
+                          color: zc,
+                          fontVariantNumeric: "tabular-nums",
+                          letterSpacing: "-0.01em",
+                        }}
+                      >
+                        Z{zn}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 800,
+                          color: "#0A0F1F",
+                          margin: 0,
+                          letterSpacing: "-0.01em",
+                        }}
+                      >
+                        {ZONE_LABEL_FR[zn] ?? row.zone}
+                      </p>
+                    </div>
+                    <p
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#0A0F1F",
+                        margin: 0,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {paceLeft} – {paceRight} /km
+                    </p>
+                  </div>
+                </div>
+              );
+            })
           ) : (
-            <div className="py-5 text-center text-[14px] text-muted-foreground">
+            <div className="p-5 text-center text-[15px]" style={{ color: "#8E8E93" }}>
               Ajoute un record (profil ou privé coach) pour calculer les zones.
             </div>
           )}
-        </MaquetteCard>
+        </div>
+
+        {recordsFooterLine ? (
+          <p style={{ fontSize: 13, color: "#8E8E93", marginTop: 8, lineHeight: 1.4 }}>{recordsFooterLine}</p>
+        ) : null}
       </div>
 
-      <div className="mt-5 px-5">
+      <div className="shrink-0 border-t border-[#E5E5EA] bg-white px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
           onClick={onSendSession}
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-[16px] bg-[#FF4D1A] text-[15px] font-bold tracking-[-0.02em] text-white shadow-[0_10px_28px_rgba(255,77,26,0.35)] active:opacity-92"
+          className="flex w-full items-center justify-center gap-2 active:scale-[0.99]"
+          style={{
+            background: ACTION_BLUE,
+            borderRadius: 14,
+            padding: "14px",
+            boxShadow: "0 2px 8px rgba(0, 122, 255, 0.25)",
+          }}
         >
-          <Plus className="h-4 w-4 stroke-[2.6px]" stroke="currentColor" aria-hidden />
-          Envoyer une nouvelle séance
+          <Plus className="h-5 w-5 text-white" strokeWidth={2.8} />
+          <span style={{ fontSize: 16, fontWeight: 800, color: "white", letterSpacing: "-0.01em" }}>
+            Envoyer une nouvelle séance
+          </span>
         </button>
       </div>
     </div>

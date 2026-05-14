@@ -32,7 +32,7 @@ export function IosPageHeaderBar({
       type="button"
       onClick={leadingBack.onClick}
       aria-label={leadingBack.label ?? "Retour"}
-      className="flex min-w-0 items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-normal text-primary active:opacity-60 [-webkit-tap-highlight-color:transparent]"
+      className="flex min-w-0 items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-semibold text-[#007AFF] active:opacity-60 [-webkit-tap-highlight-color:transparent] dark:text-[#0A84FF]"
     >
       <ChevronLeft className="h-6 w-6 shrink-0 stroke-[2.4]" aria-hidden />
       <span className="min-w-0 whitespace-nowrap">{leadingBack.label ?? "Retour"}</span>
@@ -54,7 +54,7 @@ export function IosPageHeaderBar({
       <div className="flex min-h-[44px] min-w-0 flex-1 items-center justify-center px-0.5">
         <h1
           className={cn(
-            "min-w-0 w-full max-w-full truncate text-center text-[17px] font-semibold leading-snug text-foreground",
+            "min-w-0 w-full max-w-full truncate text-center text-[17px] font-bold leading-snug text-[#0A0F1F] dark:text-foreground",
             titleClassName
           )}
         >

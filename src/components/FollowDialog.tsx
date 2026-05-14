@@ -1,10 +1,7 @@
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,12 +12,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, UserCheck, X, UserMinus, UserX, ChevronRight, Clock, UserPlus, Check } from "lucide-react";
+import { Users, UserPlus, UserMinus, X, Clock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFollow } from "@/hooks/useFollow";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+
+/** Palette feuille Réseaux (maquette JSX partagée) */
+const NETWORKS_BG = "#F2F2F7";
+const ACTION_BLUE = "#007AFF";
+const DEMANDES_RED = "#FF3B30";
+const IOS_SEP = "#E5E5EA";
+const TITLE_INK = "#0A0F1F";
 
 interface FollowUser {
   user_id: string;
@@ -58,24 +62,35 @@ interface FollowDialogProps {
   targetUserId?: string;
 }
 
-export const FollowDialog = ({ 
-  open, 
-  onOpenChange, 
-  type, 
-  followerCount, 
+export const FollowDialog = ({
+  open,
+  onOpenChange,
+  type,
+  followerCount,
   followingCount,
-  targetUserId 
+  targetUserId
 }: FollowDialogProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { unfollow, removeFollower, acceptFollowRequest, rejectFollowRequest, getPendingRequests, getSentPendingRequests, cancelFollowRequest, followBack, loading: followLoading } = useFollow();
+  const {
+    unfollow,
+    removeFollower,
+    acceptFollowRequest,
+    rejectFollowRequest,
+    getPendingRequests,
+    getSentPendingRequests,
+    cancelFollowRequest,
+    followBack,
+    loading: followLoading,
+  } = useFollow();
+
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentPendingRequests, setSentPendingRequests] = useState<SentPendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>(type);
-  const [requestsSubTab, setRequestsSubTab] = useState<'received' | 'sent'>('received');
+  const [requestsSubTab, setRequestsSubTab] = useState<'received' | 'sent'>('sent');
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: 'unfollow' | 'remove' | null;
@@ -88,45 +103,13 @@ export const FollowDialog = ({
     userName: null,
   });
 
-  const tabScrollRef = useRef<HTMLDivElement>(null);
   const showRequestsTab = !targetUserId || targetUserId === user?.id;
 
   useEffect(() => {
     if (open) setActiveTab(type);
   }, [open, type]);
 
-  useEffect(() => {
-    if (open && user) {
-      fetchFollowData();
-      fetchPendingRequests();
-      fetchSentPendingRequests();
-    }
-  }, [open, user, targetUserId]);
-
-  /** Onglet actif centré dans la zone scroll (effet carrousel iOS) */
-  useLayoutEffect(() => {
-    if (!open || !tabScrollRef.current) return;
-    const root = tabScrollRef.current;
-    const node = root.querySelector<HTMLElement>(`[data-follow-tab="${activeTab}"]`);
-    if (!node) return;
-    requestAnimationFrame(() => {
-      node.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    });
-  }, [activeTab, open, showRequestsTab]);
-
-  const fetchPendingRequests = async () => {
-    if (!user || targetUserId) return; // Only show pending for own profile
-    const requests = await getPendingRequests();
-    setPendingRequests(requests);
-  };
-
-  const fetchSentPendingRequests = async () => {
-    if (!user || targetUserId) return; // Only show for own profile
-    const requests = await getSentPendingRequests();
-    setSentPendingRequests(requests);
-  };
-
-  const fetchFollowData = async () => {
+  const fetchFollowData = useCallback(async () => {
     if (!user) return;
 
     const userId = targetUserId || user.id;
@@ -146,7 +129,6 @@ export const FollowDialog = ({
         .eq('follower_id', userId)
         .eq('status', 'accepted');
 
-      // Get the list of people I follow (to check "follow back")
       const myFollowingIds = new Set(
         followingData?.map(f => f.following_id) || []
       );
@@ -190,13 +172,33 @@ export const FollowDialog = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, targetUserId]);
 
-  const openConfirmDialog = (type: 'unfollow' | 'remove', userId: string, userName: string) => {
+  const fetchPendingRequests = useCallback(async () => {
+    if (!user || targetUserId) return;
+    const requests = await getPendingRequests();
+    setPendingRequests(requests);
+  }, [user, targetUserId, getPendingRequests]);
+
+  const fetchSentPendingRequests = useCallback(async () => {
+    if (!user || targetUserId) return;
+    const requests = await getSentPendingRequests();
+    setSentPendingRequests(requests);
+  }, [user, targetUserId, getSentPendingRequests]);
+
+  useEffect(() => {
+    if (open && user) {
+      void fetchFollowData();
+      void fetchPendingRequests();
+      void fetchSentPendingRequests();
+    }
+  }, [open, user, fetchFollowData, fetchPendingRequests, fetchSentPendingRequests]);
+
+  const openConfirmDialog = (t: 'unfollow' | 'remove', uid: string, userName: string) => {
     setConfirmDialog({
       open: true,
-      type,
-      userId,
+      type: t,
+      userId: uid,
       userName,
     });
   };
@@ -232,7 +234,7 @@ export const FollowDialog = ({
     const success = await acceptFollowRequest(followerId);
     if (success) {
       setPendingRequests(prev => prev.filter(r => r.follower_id !== followerId));
-      fetchFollowData();
+      void fetchFollowData();
     }
   };
 
@@ -243,12 +245,12 @@ export const FollowDialog = ({
     }
   };
 
-  const handleFollowBack = async (userId: string) => {
-    const success = await followBack(userId);
+  const handleFollowBack = async (userIdToFollow: string) => {
+    const success = await followBack(userIdToFollow);
     if (success) {
-      setFollowers(prev => prev.map(f => 
-        f.user_id === userId ? { ...f, isFollowingBack: true } : f
-      ));
+      setFollowers(prev =>
+        prev.map(f => (f.user_id === userIdToFollow ? { ...f, isFollowingBack: true } : f))
+      );
     }
   };
 
@@ -259,265 +261,312 @@ export const FollowDialog = ({
     }
   };
 
-  const navigateToUserProfile = (targetUserId: string) => {
-    if (!targetUserId) return;
+  const navigateToUserProfile = (uid: string) => {
+    if (!uid) return;
     onOpenChange(false);
-    if (targetUserId === user?.id) {
+    if (uid === user?.id) {
       navigate("/profile");
       return;
     }
-    navigate(`/profile/${targetUserId}`);
+    navigate(`/profile/${uid}`);
   };
 
-  const PendingRequestsList = () => {
-    if (pendingRequests.length === 0) {
-      return (
-        <div className="flex min-h-[min(360px,55dvh)] flex-1 flex-col items-center justify-center px-4 py-8">
-          <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-            <Clock className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-medium text-foreground mb-1">
-            Aucune demande en attente
-          </p>
-          <p className="text-xs text-muted-foreground text-center">
-            Les nouvelles demandes de suivi apparaîtront ici
-          </p>
-        </div>
-      );
-    }
+  const mainTabsBase = [
+    { id: "followers" as const, label: "Abonnés", icon: Users, count: followerCount, activeColor: ACTION_BLUE },
+    { id: "following" as const, label: "Abonnements", icon: UserPlus, count: followingCount, activeColor: ACTION_BLUE },
+  ];
+
+  const mainTabs =
+    showRequestsTab
+      ? [
+          ...mainTabsBase,
+          {
+            id: "requests" as const,
+            label: "Demandes",
+            icon: Clock,
+            count: pendingRequests.length + sentPendingRequests.length,
+            activeColor: DEMANDES_RED,
+          },
+        ]
+      : mainTabsBase;
+
+  const emptyBlock = (
+    <div className="flex flex-1 items-center justify-center py-12">
+      <p className="text-[15px]" style={{ color: "#8E8E93" }}>
+        Aucun utilisateur
+      </p>
+    </div>
+  );
+
+  const PendingRequestsRows = () => {
+    if (pendingRequests.length === 0) return emptyBlock;
 
     return (
-      <div className="pt-1">
-        <div className="bg-card rounded-[10px] border border-border overflow-hidden">
-          {pendingRequests.map((request, index) => (
+      <div
+        className="overflow-hidden bg-white"
+        style={{
+          borderRadius: 16,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+        }}
+      >
+        {pendingRequests.map((request, index) => (
+          <div key={request.id}>
+            {index > 0 ? <div className="ml-[76px] h-px" style={{ background: IOS_SEP }} /> : null}
             <div
-              key={request.id}
-              className={`flex cursor-pointer items-center gap-3 p-3 ${
-                index !== pendingRequests.length - 1 ? 'border-b border-border' : ''
-              }`}
+              className="flex cursor-pointer items-center gap-3 px-3 py-3"
               onClick={() => navigateToUserProfile(request.follower_id)}
             >
-              <div 
-                className="relative"
-              >
-                <Avatar className="h-12 w-12">
+              <div className="relative h-14 w-14 shrink-0">
+                <Avatar className="h-14 w-14">
                   <AvatarImage src={request.avatar_url || undefined} />
-                  <AvatarFallback className="bg-secondary text-foreground">
-                    {request.username?.[0] || '?'}
+                  <AvatarFallback
+                    className="text-lg font-extrabold"
+                    style={{ background: "#E5E5EA", color: "#8E8E93" }}
+                  >
+                    {request.username?.[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              
-              <div 
-                className="flex-1 min-w-0"
-              >
-                <p className="font-medium text-foreground truncate">
+              <div className="min-w-0 flex-1">
+                <p
+                  className="truncate text-[17px] font-extrabold"
+                  style={{ color: TITLE_INK, letterSpacing: "-0.01em" }}
+                >
                   {request.display_name || request.username}
                 </p>
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="mt-0.5 truncate text-sm" style={{ color: "#8E8E93" }}>
                   @{request.username}
                 </p>
               </div>
-
-              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => handleAcceptRequest(request.follower_id)}
+              <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => void handleAcceptRequest(request.follower_id)}
                   disabled={followLoading}
-                  className="h-8 px-3 rounded-full"
+                  className="shrink-0 rounded-full px-4 py-2 text-[15px] font-bold text-white transition-transform active:scale-[0.97]"
+                  style={{ background: ACTION_BLUE }}
                 >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleRejectRequest(request.follower_id)}
+                  Accepter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRejectRequest(request.follower_id)}
                   disabled={followLoading}
-                  className="h-8 px-3 rounded-full"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-transform active:scale-95"
+                  style={{ background: "white", borderColor: IOS_SEP }}
+                  aria-label="Refuser la demande"
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  <X className="h-5 w-5" color={DEMANDES_RED} strokeWidth={2.6} />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   };
 
-  const SentPendingRequestsList = () => {
-    if (sentPendingRequests.length === 0) {
-      return (
-        <div className="flex min-h-[min(360px,55dvh)] flex-1 flex-col items-center justify-center px-4 py-8">
-          <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-            <Clock className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-medium text-foreground mb-1">
-            Aucune demande envoyée
-          </p>
-          <p className="text-xs text-muted-foreground text-center">
-            Vos demandes de suivi en attente apparaîtront ici
-          </p>
-        </div>
-      );
-    }
+  const SentPendingRows = () => {
+    if (sentPendingRequests.length === 0) return emptyBlock;
 
     return (
-      <div className="pt-1">
-        <div className="bg-card rounded-[10px] border border-border overflow-hidden">
-          {sentPendingRequests.map((request, index) => (
+      <div
+        className="overflow-hidden bg-white"
+        style={{
+          borderRadius: 16,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+        }}
+      >
+        {sentPendingRequests.map((request, index) => (
+          <div key={request.id}>
+            {index > 0 ? <div className="ml-[76px] h-px" style={{ background: IOS_SEP }} /> : null}
             <div
-              key={request.id}
-              className={`flex cursor-pointer items-center gap-3 p-3 ${
-                index !== sentPendingRequests.length - 1 ? 'border-b border-border' : ''
-              }`}
+              className="flex cursor-pointer items-center gap-3 px-3 py-3"
               onClick={() => navigateToUserProfile(request.following_id)}
             >
-              <div 
-                className="relative"
-              >
-                <Avatar className="h-12 w-12">
+              <div className="relative h-14 w-14 shrink-0">
+                <Avatar className="h-14 w-14">
                   <AvatarImage src={request.avatar_url || undefined} />
-                  <AvatarFallback className="bg-secondary text-foreground">
-                    {request.username?.[0] || '?'}
+                  <AvatarFallback
+                    className="text-lg font-extrabold"
+                    style={{ background: "#E5E5EA", color: "#8E8E93" }}
+                  >
+                    {request.username?.[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              
-              <div 
-                className="flex-1 min-w-0"
-              >
-                <p className="font-medium text-foreground truncate">
+              <div className="min-w-0 flex-1">
+                <p
+                  className="truncate text-[17px] font-extrabold"
+                  style={{ color: TITLE_INK, letterSpacing: "-0.01em" }}
+                >
                   {request.display_name || request.username}
                 </p>
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="mt-0.5 truncate text-sm" style={{ color: "#8E8E93" }}>
                   @{request.username}
                 </p>
               </div>
-
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
-                  En attente
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleCancelSentRequest(request.following_id)}
-                  disabled={followLoading}
-                  className="h-8 px-3 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
+              <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <span
+                  className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-extrabold"
+                  style={{ background: "#FFF1D6", color: "#A67700" }}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  En attente
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleCancelSentRequest(request.following_id)}
+                  disabled={followLoading}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-transform active:scale-95"
+                  style={{ background: "white", borderColor: IOS_SEP }}
+                  aria-label="Annuler la demande"
+                >
+                  <X className="h-5 w-5" color={DEMANDES_RED} strokeWidth={2.6} />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   };
 
-  const UserList = ({ users, showUnfollowButton = false, showRemoveButton = false }: { 
-    users: FollowUser[], 
-    showUnfollowButton?: boolean,
-    showRemoveButton?: boolean
+  const UserRows = ({
+    users,
+    mode,
+  }: {
+    users: FollowUser[];
+    mode: "followers" | "following";
   }) => {
     const isViewingOwnProfile = !targetUserId || targetUserId === user?.id;
-    
-    if (users.length === 0) {
-      return (
-        <div className="flex min-h-[min(360px,55dvh)] flex-1 flex-col items-center justify-center px-4 py-8">
-          <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-            <Users className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-medium text-foreground mb-1">
-            {showUnfollowButton ? "Aucun abonnement pour le moment" : "Aucun abonné pour le moment"}
-          </p>
-          <p className="text-xs text-muted-foreground text-center">
-            {showUnfollowButton ? "Découvrez des profils pour commencer à suivre !" : "Partagez votre profil pour être suivi !"}
-          </p>
-        </div>
-      );
-    }
-    
+
+    if (users.length === 0) return emptyBlock;
+
     return (
-      <div>
-        <div className="bg-card rounded-[10px] border border-border overflow-hidden">
-          {users.map((userItem, index) => (
+      <div
+        className="overflow-hidden bg-white"
+        style={{
+          borderRadius: 16,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+        }}
+      >
+        {users.map((userItem, index) => (
+          <div key={userItem.user_id}>
+            {index > 0 ? <div className="ml-[76px] h-px" style={{ background: IOS_SEP }} /> : null}
             <div
-              key={userItem.user_id}
-              className={`flex items-center gap-3 p-3 hover:bg-secondary transition-all duration-200 cursor-pointer ${
-                index !== users.length - 1 ? 'border-b border-border' : ''
-              }`}
+              className={cn(
+                "flex cursor-pointer items-center gap-3 px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/40"
+              )}
               onClick={() => navigateToUserProfile(userItem.user_id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigateToUserProfile(userItem.user_id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
             >
-              <div className="relative">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={userItem.avatar_url} />
-                  <AvatarFallback className="bg-secondary text-foreground">
-                    {userItem.username?.[0] || userItem.display_name?.[0] || '?'}
+              <div className="relative h-14 w-14 shrink-0">
+                <Avatar className="h-14 w-14">
+                  <AvatarImage src={userItem.avatar_url || undefined} />
+                  <AvatarFallback
+                    className="text-lg font-extrabold"
+                    style={{ background: "#E5E5EA", color: "#8E8E93" }}
+                  >
+                    {(userItem.display_name?.[0] || userItem.username?.[0] || "?").toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <OnlineStatus userId={userItem.user_id} />
+                <OnlineStatus userId={userItem.user_id} networksMaquette />
               </div>
-              
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">
+
+              <div className="min-w-0 flex-1">
+                <p
+                  className="truncate text-[17px] font-extrabold"
+                  style={{ color: TITLE_INK, letterSpacing: "-0.01em" }}
+                >
                   {userItem.display_name || userItem.username}
                 </p>
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="mt-0.5 truncate text-sm" style={{ color: "#8E8E93" }}>
                   @{userItem.username}
                 </p>
               </div>
 
-              {/* Follow back button for followers */}
-              {isViewingOwnProfile && showRemoveButton && !userItem.isFollowingBack && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleFollowBack(userItem.user_id)}
+              {isViewingOwnProfile && mode === "followers" && !userItem.isFollowingBack && (
+                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => void handleFollowBack(userItem.user_id)}
                     disabled={followLoading}
-                    className="h-8 px-3 rounded-full text-xs"
+                    className="flex shrink-0 items-center justify-center gap-1.5 rounded-full border-[1.5px] px-4 py-2 transition-transform active:scale-[0.97]"
+                    style={{ borderColor: ACTION_BLUE, background: "white" }}
                   >
-                    <UserPlus className="h-3 w-3 mr-1" />
-                    Suivre
-                  </Button>
+                    <UserPlus className="h-4 w-4" color={ACTION_BLUE} strokeWidth={2.4} />
+                    <span className="text-[15px] font-bold" style={{ color: ACTION_BLUE }}>
+                      Suivre
+                    </span>
+                  </button>
                 </div>
               )}
 
-              {isViewingOwnProfile && showUnfollowButton && (
-                <div onClick={(e) => e.stopPropagation()}>
+              {isViewingOwnProfile && mode === "followers" && (
+                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => openConfirmDialog('unfollow', userItem.user_id, userItem.display_name || userItem.username)}
-                    className="h-8 w-8 rounded-full bg-secondary hover:bg-destructive/10 transition-colors flex items-center justify-center group"
-                    title="Ne plus suivre"
+                    type="button"
+                    onClick={() =>
+                      openConfirmDialog(
+                        "remove",
+                        userItem.user_id,
+                        userItem.display_name || userItem.username
+                      )
+                    }
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+                    style={{ background: NETWORKS_BG }}
+                    aria-label="Retirer abonné"
                   >
-                    <UserX className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
+                    <UserMinus className="h-5 w-5" color="#8E8E93" strokeWidth={2.2} />
                   </button>
                 </div>
               )}
-              {isViewingOwnProfile && showRemoveButton && (
-                <div onClick={(e) => e.stopPropagation()}>
+
+              {isViewingOwnProfile && mode === "following" && (
+                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => openConfirmDialog('remove', userItem.user_id, userItem.display_name || userItem.username)}
-                    className="h-8 w-8 rounded-full bg-secondary hover:bg-destructive/10 transition-colors flex items-center justify-center group"
-                    title="Supprimer"
+                    type="button"
+                    onClick={() =>
+                      openConfirmDialog(
+                        "unfollow",
+                        userItem.user_id,
+                        userItem.display_name || userItem.username
+                      )
+                    }
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+                    style={{ background: NETWORKS_BG }}
+                    aria-label="Se désabonner"
                   >
-                    <UserMinus className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
+                    <UserMinus className="h-5 w-5" color="#8E8E93" strokeWidth={2.2} />
                   </button>
                 </div>
               )}
-              
+
               {!isViewingOwnProfile && (
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
               )}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   };
+
+  const loadingBlock = (
+    <div className="flex flex-1 items-center justify-center py-16">
+      <div
+        className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+        style={{ borderColor: ACTION_BLUE }}
+      />
+    </div>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -525,199 +574,160 @@ export const FollowDialog = ({
         hideCloseButton
         fullScreen
         stackNested
-        className="z-[160] flex flex-col gap-0 overflow-hidden bg-secondary p-0"
+        className="z-[160] flex flex-col gap-0 overflow-hidden p-0"
+        style={{
+          background: NETWORKS_BG,
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+        }}
       >
-        {/* iOS Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-3 pt-[max(12px,env(safe-area-inset-top,0px))]">
-          <div className="w-8" />
-          <h2 className="text-[17px] font-semibold text-foreground">Réseaux</h2>
+        {/* HEADER */}
+        <div
+          className="flex shrink-0 items-center px-4 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))]"
+          style={{ background: "white", borderBottom: `1px solid ${IOS_SEP}` }}
+        >
+          <div className="w-9 shrink-0" />
+          <h1
+            className="m-0 flex-1 text-center text-[22px] font-extrabold tracking-[-0.02em]"
+            style={{ color: TITLE_INK }}
+          >
+            Réseaux
+          </h1>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-neutral-100"
+            aria-label="Fermer"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" color="#8E8E93" strokeWidth={2.4} />
           </button>
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary"
+        {/* PILLS */}
+        <div
+          className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 [-webkit-overflow-scrolling:touch]"
+          style={{ background: "white", borderBottom: `1px solid ${IOS_SEP}` }}
         >
-          {/* Carrousel d’onglets : scroll horizontal, onglet actif centré */}
-          <div className="shrink-0 border-b border-border/80 bg-background/95 backdrop-blur-md">
-            <div
-              ref={tabScrollRef}
-              className={cn(
-                "flex w-full overflow-x-auto overscroll-x-contain scroll-smooth",
-                "snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]",
-                "[&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch]",
-                "px-[max(1rem,calc(50vw-76px))]"
-              )}
-            >
-              <TabsList
-                className={cn(
-                  "inline-flex h-auto min-h-[52px] w-max items-stretch gap-2 rounded-none border-0 bg-transparent py-2 pl-0 pr-0",
-                  "snap-none"
-                )}
+          {mainTabs.map((t) => {
+            const sel = activeTab === t.id;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className="flex shrink-0 items-center gap-2 transition-transform active:scale-[0.97]"
+                style={{
+                  background: sel ? t.activeColor : "white",
+                  color: sel ? "white" : TITLE_INK,
+                  borderRadius: 9999,
+                  padding: "10px 18px 10px 14px",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  border: sel ? "none" : `1px solid ${IOS_SEP}`,
+                  boxShadow: sel
+                    ? `0 2px 8px ${t.activeColor}40`
+                    : "0 1px 2px rgba(0,0,0,0.03)",
+                }}
               >
-                <TabsTrigger
-                  value="followers"
-                  data-follow-tab="followers"
-                  className={cn(
-                    "group snap-center shrink-0 gap-1.5 rounded-[12px] border border-transparent px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 ease-out",
-                    "min-h-[44px] min-w-[132px] justify-center data-[state=inactive]:text-muted-foreground",
-                    "data-[state=active]:border-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
-                    "data-[state=inactive]:bg-muted/50 data-[state=inactive]:hover:bg-muted/80"
-                  )}
+                <Icon className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+                <span className="shrink-0 tracking-[-0.01em]">{t.label}</span>
+                <span
+                  className="shrink-0 rounded-full px-2 py-px text-[13px] font-extrabold tabular-nums"
+                  style={{
+                    background: sel ? "rgba(0,0,0,0.18)" : "#D9E8FF",
+                    color: sel ? "white" : ACTION_BLUE,
+                  }}
                 >
-                  <Users className="h-4 w-4 shrink-0" />
-                  <span>Abonnés</span>
-                  {followerCount > 0 && (
-                    <span className="rounded-full bg-primary-foreground/25 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-primary-foreground group-data-[state=inactive]:bg-primary/15 group-data-[state=inactive]:text-primary">
-                      {followerCount}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="following"
-                  data-follow-tab="following"
-                  className={cn(
-                    "group snap-center shrink-0 gap-1.5 rounded-[12px] border border-transparent px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 ease-out",
-                    "min-h-[44px] min-w-[132px] justify-center data-[state=inactive]:text-muted-foreground",
-                    "data-[state=active]:border-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
-                    "data-[state=inactive]:bg-muted/50 data-[state=inactive]:hover:bg-muted/80"
-                  )}
+                  {t.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* SOUS-TABS DEMANDES */}
+        {activeTab === "requests" && showRequestsTab && (
+          <div className="flex shrink-0 gap-2 px-4 pt-3" style={{ background: NETWORKS_BG }}>
+            {(
+              [
+                { id: "received" as const, label: "Reçues", count: pendingRequests.length },
+                { id: "sent" as const, label: "Envoyées", count: sentPendingRequests.length },
+              ] as const
+            ).map((sub) => {
+              const sel = requestsSubTab === sub.id;
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => setRequestsSubTab(sub.id)}
+                  className="flex flex-1 items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+                  style={{
+                    background: sel ? ACTION_BLUE : "white",
+                    color: sel ? "white" : TITLE_INK,
+                    borderRadius: 9999,
+                    padding: 10,
+                    fontWeight: 700,
+                    fontSize: 15,
+                    border: sel ? "none" : `1px solid ${IOS_SEP}`,
+                  }}
                 >
-                  <UserCheck className="h-4 w-4 shrink-0" />
-                  <span>Abonnements</span>
-                  {followingCount > 0 && (
-                    <span className="rounded-full bg-primary-foreground/25 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-primary-foreground group-data-[state=inactive]:bg-primary/15 group-data-[state=inactive]:text-primary">
-                      {followingCount}
-                    </span>
-                  )}
-                </TabsTrigger>
-                {showRequestsTab && (
-                  <TabsTrigger
-                    value="requests"
-                    data-follow-tab="requests"
-                    className={cn(
-                      "group snap-center shrink-0 gap-1.5 rounded-[12px] border border-transparent px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 ease-out",
-                      "min-h-[44px] min-w-[132px] justify-center data-[state=inactive]:text-muted-foreground",
-                      "data-[state=active]:border-destructive/25 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground data-[state=active]:shadow-md",
-                      "data-[state=inactive]:bg-muted/50 data-[state=inactive]:hover:bg-muted/80"
-                    )}
+                  <span>{sub.label}</span>
+                  <span
+                    className="rounded-full px-[7px] py-px text-xs font-extrabold tabular-nums"
+                    style={{
+                      background: sel ? "rgba(0,0,0,0.18)" : "#D9E8FF",
+                      color: sel ? "white" : ACTION_BLUE,
+                    }}
                   >
-                    <Clock className="h-4 w-4 shrink-0" />
-                    <span>Demandes</span>
-                    {(pendingRequests.length > 0 || sentPendingRequests.length > 0) && (
-                      <span className="rounded-full bg-destructive-foreground/30 px-1.5 py-0.5 text-[10px] font-bold text-destructive-foreground group-data-[state=inactive]:bg-destructive/15 group-data-[state=inactive]:text-destructive">
-                        {pendingRequests.length + sentPendingRequests.length}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </div>
+                    {sub.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+        )}
 
-          <TabsContent
-            value="followers"
-            className="m-0 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary p-0 focus-visible:outline-none data-[state=inactive]:hidden"
-          >
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-3">
-              {loading ? (
-                <div className="flex flex-1 items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              ) : (
-                <UserList users={followers} showRemoveButton />
-              )}
-            </div>
-          </TabsContent>
+        {/* LISTE */}
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3"
+          style={{ background: NETWORKS_BG }}
+        >
+          {activeTab === "followers" &&
+            (loading ? loadingBlock : <UserRows users={followers} mode="followers" />)}
 
-          <TabsContent
-            value="following"
-            className="m-0 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary p-0 focus-visible:outline-none data-[state=inactive]:hidden"
-          >
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-3">
-              {loading ? (
-                <div className="flex flex-1 items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              ) : (
-                <UserList users={following} showUnfollowButton />
-              )}
-            </div>
-          </TabsContent>
+          {activeTab === "following" &&
+            (loading ? loadingBlock : <UserRows users={following} mode="following" />)}
 
-          <TabsContent
-            value="requests"
-            className="m-0 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary p-0 focus-visible:outline-none data-[state=inactive]:hidden"
-          >
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-3">
-              <div className="mb-3 flex shrink-0 gap-2">
-                <Button
-                  variant={requestsSubTab === "received" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setRequestsSubTab("received")}
-                  className="h-10 flex-1 rounded-full text-[12px] font-semibold"
-                >
-                  Reçues
-                  {pendingRequests.length > 0 && (
-                    <span className="ml-1.5 rounded-full bg-destructive-foreground/20 px-1.5 py-0.5 text-[10px]">
-                      {pendingRequests.length}
-                    </span>
-                  )}
-                </Button>
-                <Button
-                  variant={requestsSubTab === "sent" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setRequestsSubTab("sent")}
-                  className="h-10 flex-1 rounded-full text-[12px] font-semibold"
-                >
-                  Envoyées
-                  {sentPendingRequests.length > 0 && (
-                    <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">
-                      {sentPendingRequests.length}
-                    </span>
-                  )}
-                </Button>
-              </div>
-
-              <div className="flex min-h-0 flex-1 flex-col">
-                {loading ? (
-                  <div className="flex flex-1 items-center justify-center py-12">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  </div>
-                ) : requestsSubTab === "received" ? (
-                  <PendingRequestsList />
-                ) : (
-                  <SentPendingRequestsList />
-                )}
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+          {activeTab === "requests" && showRequestsTab && (
+            <>
+              {loading
+                ? loadingBlock
+                : requestsSubTab === "received"
+                  ? <PendingRequestsRows />
+                  : <SentPendingRows />}
+            </>
+          )}
+        </div>
       </DialogContent>
-      
+
       <AlertDialog open={confirmDialog.open} onOpenChange={closeConfirmDialog}>
-        <AlertDialogContent className="bg-background border-border">
+        <AlertDialogContent className="border-border bg-background">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">
               {confirmDialog.type === 'unfollow' ? 'Ne plus suivre ?' : 'Supprimer l\'abonné ?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmDialog.type === 'unfollow' 
+              {confirmDialog.type === 'unfollow'
                 ? `Êtes-vous sûr de vouloir ne plus suivre ${confirmDialog.userName} ? Vous pourrez le/la suivre à nouveau plus tard.`
-                : `Êtes-vous sûr de vouloir supprimer ${confirmDialog.userName} de vos abonnés ? Cette personne ne vous suivra plus.`
-              }
+                : `Êtes-vous sûr de vouloir supprimer ${confirmDialog.userName} de vos abonnés ? Cette personne ne vous suivra plus.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-[8px]">Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-[8px]">
+            <AlertDialogAction
+              onClick={() => void handleConfirm()}
+              className="rounded-[8px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Confirmer
             </AlertDialogAction>
           </AlertDialogFooter>

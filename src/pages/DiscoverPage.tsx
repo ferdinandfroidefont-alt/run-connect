@@ -13,13 +13,18 @@ import {
 import { DiscoverMapCard } from "@/components/discover/DiscoverMapCard";
 import { DiscoverMapMaquetteToolbar } from "@/components/discover/DiscoverMapMaquetteToolbar";
 import { DiscoverFeedInlineSection } from "@/components/discover/DiscoverFeedInlineSection";
+import { DiscoverNearYouSection } from "@/components/discover/DiscoverNearYouSection";
 import { DiscoverLiveMaquetteSection } from "@/components/discover/DiscoverLiveMaquetteSection";
-import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import {
-  HomeMapFilterGroupedList,
-  HomeMapFilterRow,
-  HomeMapFilterSheet,
-} from "@/components/map/HomeMapFilterSheet";
+  DiscoverMapFilterSheets,
+  type DiscoverFilterPanel,
+} from "@/components/discover/DiscoverMapFilterSheets";
+import { DiscoverMaquetteSheet } from "@/components/discover/DiscoverMaquetteSheet";
+import {
+  MaquetteSheetCard,
+  MaquetteFilterRow,
+  MaquetteFilterRowDivider,
+} from "@/components/discover/DiscoverMaquetteFilterParts";
 import {
   DISCOVER_MAP_3D_PITCH,
   DISCOVER_MAP_PALETTE_ROWS,
@@ -63,7 +68,7 @@ export function DiscoverPage() {
   const [discoverMapFullscreen, setDiscoverMapFullscreen] = useState(false);
   const [liveMapFullscreen, setLiveMapFullscreen] = useState(false);
   const [discoverMapPaletteId, setDiscoverMapPaletteId] = useState<DiscoverMapPaletteId>("standard");
-  const [discoverFilterSheetOpen, setDiscoverFilterSheetOpen] = useState(false);
+  const [discoverFilterPanel, setDiscoverFilterPanel] = useState<DiscoverFilterPanel>(null);
   const [discoverStyleSheetOpen, setDiscoverStyleSheetOpen] = useState(false);
 
   const discoverMapStyleUrl = useMemo(() => discoverPaletteToStyleUrl(discoverMapPaletteId), [discoverMapPaletteId]);
@@ -139,11 +144,27 @@ export function DiscoverPage() {
               <DiscoverMapMaquetteToolbar
                 fullscreen={discoverMapFullscreen}
                 onToggleFullscreen={() => setDiscoverMapFullscreen((v) => !v)}
-                onOpenStyleSheet={() => setDiscoverStyleSheetOpen(true)}
-                onOpenFiltersSheet={() => setDiscoverFilterSheetOpen(true)}
+                onOpenStyleSheet={() => {
+                  setDiscoverStyleSheetOpen(true);
+                  setDiscoverFilterPanel(null);
+                }}
+                onOpenFiltersSheet={() => {
+                  setDiscoverFilterPanel("main");
+                  setDiscoverStyleSheetOpen(false);
+                }}
               />
             </div>
 
+            {!discoverMapFullscreen ? (
+              <DiscoverNearYouSection
+                sessions={discoverSessions}
+                loading={discoverLoading}
+                onRowPress={(s) => {
+                  if (sessionLikelyLive(s.scheduled_at)) setSelectedSession(discoverToDialog(s));
+                  else void joinSession(s);
+                }}
+              />
+            ) : null}
           </>
         ) : null}
 
@@ -177,8 +198,14 @@ export function DiscoverPage() {
             mapPitch={discoverMapPitch}
             fullscreen={liveMapFullscreen}
             onToggleFullscreen={() => setLiveMapFullscreen((v) => !v)}
-            onOpenStyleSheet={() => setDiscoverStyleSheetOpen(true)}
-            onOpenFiltersSheet={() => setDiscoverFilterSheetOpen(true)}
+            onOpenStyleSheet={() => {
+              setDiscoverStyleSheetOpen(true);
+              setDiscoverFilterPanel(null);
+            }}
+            onOpenFiltersSheet={() => {
+              setDiscoverFilterPanel("main");
+              setDiscoverStyleSheetOpen(false);
+            }}
             onOpenSession={onPin}
             joinSession={joinSession}
           />
@@ -209,54 +236,42 @@ export function DiscoverPage() {
         }}
       />
 
-      <HomeMapFilterSheet
-        open={discoverFilterSheetOpen}
-        onClose={() => setDiscoverFilterSheetOpen(false)}
-        title="Filtres"
-        description="Affine ta recherche de séances"
-        titleId="discover-map-filters-sheet-title"
-        variant="tall"
-      >
-        <DiscoverFilters
-          maxDistance={maxDistance}
-          setMaxDistance={setMaxDistance}
-          selectedActivities={selectedActivities}
-          toggleActivity={toggleActivity}
-          toggleAllActivities={toggleAllActivities}
-        />
-      </HomeMapFilterSheet>
+      <DiscoverMapFilterSheets
+        panel={discoverFilterPanel}
+        onSetPanel={setDiscoverFilterPanel}
+        maxDistance={maxDistance}
+        setMaxDistance={setMaxDistance}
+        selectedActivities={selectedActivities}
+        toggleActivity={toggleActivity}
+        toggleAllActivities={toggleAllActivities}
+      />
 
-      <HomeMapFilterSheet
+      <DiscoverMaquetteSheet
         open={discoverStyleSheetOpen}
         onClose={() => setDiscoverStyleSheetOpen(false)}
         title="Style de carte"
-        description="Choisis ton type d'affichage"
+        subtitle="Choisis ton type d'affichage"
         titleId="discover-map-style-sheet-title"
       >
-        <HomeMapFilterGroupedList>
-          {DISCOVER_MAP_PALETTE_ROWS.map((row) => (
-            <HomeMapFilterRow
-              key={row.id}
-              label={row.label}
-              hint={row.hint}
-              selected={discoverMapPaletteId === row.id}
-              onClick={() => {
-                setDiscoverMapPaletteId(row.id);
-                setDiscoverStyleSheetOpen(false);
-              }}
-              leading={
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] text-[18px] leading-none"
-                  style={{ backgroundColor: `${row.accent}22` }}
-                  aria-hidden
-                >
-                  {row.emoji}
-                </span>
-              }
-            />
+        <MaquetteSheetCard>
+          {DISCOVER_MAP_PALETTE_ROWS.map((row, i) => (
+            <div key={row.id}>
+              {i > 0 && <MaquetteFilterRowDivider />}
+              <MaquetteFilterRow
+                emoji={row.emoji}
+                color={row.accent}
+                title={row.label}
+                subtitle={row.hint}
+                selected={discoverMapPaletteId === row.id}
+                onClick={() => {
+                  setDiscoverMapPaletteId(row.id);
+                  setDiscoverStyleSheetOpen(false);
+                }}
+              />
+            </div>
           ))}
-        </HomeMapFilterGroupedList>
-      </HomeMapFilterSheet>
+        </MaquetteSheetCard>
+      </DiscoverMaquetteSheet>
     </>
   );
 }

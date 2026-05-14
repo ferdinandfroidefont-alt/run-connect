@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -6,21 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserCheck, Send, BookOpen, Save, MapPin, Waves, BarChart3, Triangle, Activity } from "lucide-react";
-import { ACTIVITY_TYPES } from "@/components/session-creation/types";
+import { Users, UserCheck, Save, MapPin, ChevronLeft, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { RCCEditor } from "./RCCEditor";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
-import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import {
   rccToSessionBlocks,
   mergeParsedBlocksByIndex,
+  parseRCC,
   type RCCResult,
   type ParsedBlock,
 } from "@/lib/rccParser";
@@ -32,6 +29,36 @@ import {
 } from "@/lib/sessionBlockRpe";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import {
+  inferPaletteFromSegment,
+  rebuildDurationOnlyMinutes,
+  rebuildIntervalDistanceSegment,
+  rebuildIntervalTimeSegment,
+  rebuildSteadyLikeSegment,
+  removeRccSegment,
+  replaceRccSegment,
+  splitRccSegments,
+} from "@/lib/coachingCreateSessionRcc";
+import {
+  COACHING_ACTION_BLUE,
+  COACHING_PAGE_BG,
+  CoachingSchemaChart,
+  BlockPreviewBars,
+  COACHING_BLOCK_PALETTE,
+  COACHING_SEANCE_SPORTS,
+  type PaletteBlockId,
+} from "./create-session/CoachingCreateSessionSchema";
+import {
+  DistanceWheelPicker,
+  PaceWheelPicker,
+  TimeWheelPicker,
+  formatPaceWheel,
+  paceColonToWheel,
+  wheelToColon,
+  type DistanceWheelValue,
+  type PaceWheelValue,
+  type TimeWheelValue,
+} from "./create-session/CoachingWheelPickers";
 
 interface CreateCoachingSessionDialogProps {
   isOpen: boolean;
@@ -48,6 +75,65 @@ interface ClubMember {
   avatar_url: string | null;
 }
 
+type DraggingState = { type: PaletteBlockId; x: number; y: number; over: boolean } | null;
+
+type PickerState =
+  | { kind: "time"; title: string; value: TimeWheelValue; onConfirm: (v: TimeWheelValue) => void }
+  | { kind: "pace"; title: string; value: PaceWheelValue; onConfirm: (v: PaceWheelValue) => void }
+  | { kind: "distance"; title: string; value: DistanceWheelValue; onConfirm: (v: DistanceWheelValue) => void };
+
+function parseSingleSegment(seg: string): ParsedBlock | null {
+  const r = parseRCC(seg);
+  if (r.errors.length === 0 && r.blocks.length === 1) return r.blocks[0];
+  return null;
+}
+
+function durationToTimeWheel(minutes: number): TimeWheelValue {
+  const m = Math.max(0, Math.round(minutes));
+  return { h: Math.floor(m / 60), m: m % 60, s: 0 };
+}
+
+function timeWheelToTotalMinutes(v: TimeWheelValue): number {
+  return v.h * 60 + v.m + v.s / 60;
+}
+
+function metersToDistanceWheel(meters: number): DistanceWheelValue {
+  const m = Math.max(0, Math.round(meters));
+  return { km: Math.floor(m / 1000), m: m % 1000 };
+}
+
+function FieldBox({
+  label,
+  value,
+  suffix,
+  onClick,
+  placeholder = "—",
+}: {
+  label: string;
+  value: string | number | undefined | null;
+  suffix?: string;
+  onClick?: () => void;
+  placeholder?: string;
+}) {
+  const display = value !== undefined && value !== null && value !== "" ? String(value) : "";
+  return (
+    <div>
+      <p className="mb-2 text-center text-[12px] font-extrabold tracking-wider text-[#8E8E93]">{label}</p>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!onClick}
+        className="w-full rounded-2xl border-2 border-[#E5E5EA] bg-white py-3 text-center active:bg-[#F8F8F8] disabled:opacity-55"
+      >
+        <span className={`text-[18px] font-extrabold ${display ? "text-[#0A0F1F]" : "text-[#C7C7CC]"}`}>
+          {display || placeholder}
+        </span>
+      </button>
+      {suffix ? <p className="mt-1.5 text-center text-[12px] text-[#8E8E93]">{suffix}</p> : null}
+    </div>
+  );
+}
+
 export const CreateCoachingSessionDialog = ({
   isOpen,
   onClose,
@@ -60,7 +146,6 @@ export const CreateCoachingSessionDialog = ({
   const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
 
-  // Form state
   const [activityType, setActivityType] = useState("course");
   const [objective, setObjective] = useState("");
   const [rccCode, setRccCode] = useState("");
@@ -69,17 +154,21 @@ export const CreateCoachingSessionDialog = ({
   const [blockRpe, setBlockRpe] = useState<number[]>([]);
   const [coachNotes, setCoachNotes] = useState("");
   const [locationName, setLocationName] = useState("");
-  // Recipients
   const [sendMode, setSendMode] = useState<"club" | "individual">("club");
   const [members, setMembers] = useState<ClubMember[]>([]);
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Templates
   const [showTemplates, setShowTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
+
+  const [tab, setTab] = useState<"construire" | "modeles">("construire");
+  const [dragging, setDragging] = useState<DraggingState>(null);
+  const schemaRef = useRef<HTMLDivElement>(null);
+  const [expandedSeg, setExpandedSeg] = useState<Set<number>>(new Set());
+  const [picker, setPicker] = useState<PickerState | null>(null);
 
   useEffect(() => {
     if (isOpen && clubId) loadMembers();
@@ -88,6 +177,61 @@ export const CreateCoachingSessionDialog = ({
   useEffect(() => {
     if (!isOpen) resetForm();
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!dragging) return;
+
+    const onMove = (x: number, y: number) => {
+      setDragging((d) => {
+        if (!d) return d;
+        const over = isOverSchema(x, y);
+        return { ...d, x, y, over };
+      });
+    };
+    const onMouseMove = (e: MouseEvent) => onMove(e.clientX, e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      e.preventDefault();
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const finish = () => {
+      setDragging((d) => {
+        if (d?.over) {
+          const meta = COACHING_BLOCK_PALETTE.find((b) => b.id === d.type);
+          if (meta) {
+            setTimeout(() => {
+              setRccCode((prev) => (prev.trim() ? `${prev}, ${meta.rccInsert}` : meta.rccInsert));
+            }, 0);
+          }
+        }
+        return null;
+      });
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", finish);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", finish);
+    document.addEventListener("touchcancel", finish);
+
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", finish);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", finish);
+      document.removeEventListener("touchcancel", finish);
+    };
+  }, [dragging?.type]);
+
+  const isOverSchema = (x: number, y: number) => {
+    if (!schemaRef.current) return false;
+    const r = schemaRef.current.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  };
+
+  const startDrag = (type: PaletteBlockId, x: number, y: number) => {
+    setDragging({ type, x, y, over: false });
+  };
 
   const loadMembers = async () => {
     setLoadingMembers(true);
@@ -108,15 +252,18 @@ export const CreateCoachingSessionDialog = ({
       const { data: profiles, error: profError } = await supabase
         .from("profiles")
         .select("user_id, username, display_name, avatar_url")
-        .in("user_id", memberIds.map(m => m.user_id));
+        .in(
+          "user_id",
+          memberIds.map((m) => m.user_id)
+        );
       if (profError) throw profError;
       setMembers(profiles || []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
       setMembers([]);
       toast({
         title: "Membres du club",
-        description: e?.message || "Impossible de charger la liste des membres.",
+        description: e instanceof Error ? e.message : "Impossible de charger la liste des membres.",
         variant: "destructive",
       });
     } finally {
@@ -125,7 +272,7 @@ export const CreateCoachingSessionDialog = ({
   };
 
   const toggleAthlete = (userId: string) => {
-    setSelectedAthletes(prev => {
+    setSelectedAthletes((prev) => {
       const next = new Set(prev);
       next.has(userId) ? next.delete(userId) : next.add(userId);
       return next;
@@ -142,12 +289,16 @@ export const CreateCoachingSessionDialog = ({
         rcc_code: rccCode.trim(),
         activity_type: activityType,
         objective: objective.trim() || null,
-      } as any);
+      } as never);
       if (error) throw error;
       toast({ title: "Template sauvegardé !" });
       setTemplateName("");
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Échec",
+        variant: "destructive",
+      });
     } finally {
       setSavingTemplate(false);
     }
@@ -158,7 +309,8 @@ export const CreateCoachingSessionDialog = ({
     if (sendMode === "club" && members.length === 0) {
       toast({
         title: "Aucun destinataire",
-        description: "Ce club n’a pas d’autres membres à notifier. Invitez des athlètes ou choisissez le mode individuel.",
+        description:
+          "Ce club n’a pas d’autres membres à notifier. Invitez des athlètes ou choisissez le mode individuel.",
         variant: "destructive",
       });
       return;
@@ -183,7 +335,7 @@ export const CreateCoachingSessionDialog = ({
           coach_notes: coachNotes.trim() || null,
           scheduled_at: (preselectedDate || new Date()).toISOString(),
           activity_type: activityType,
-          session_blocks: sessionBlocks as any,
+          session_blocks: sessionBlocks as never,
           status: "planned",
           send_mode: sendMode,
           target_athletes: targetIds,
@@ -192,20 +344,18 @@ export const CreateCoachingSessionDialog = ({
           default_location_name: locationName.trim() || null,
           rpe: resolvedRpe,
           rpe_phases: blockRpeToJson(effectiveBlockRpe),
-        } as any)
+        } as never)
         .select("id")
         .single();
 
       if (error) throw error;
 
-      // Create participations
-      const recipientIds = sendMode === "individual" && selectedAthletes.size > 0
-        ? targetIds
-        : members.map(m => m.user_id);
+      const recipientIds =
+        sendMode === "individual" && selectedAthletes.size > 0 ? targetIds : members.map((m) => m.user_id);
 
       if (recipientIds.length > 0) {
         const { error: partError } = await supabase.from("coaching_participations").insert(
-          recipientIds.map(userId => ({
+          recipientIds.map((userId) => ({
             coaching_session_id: session.id,
             user_id: userId,
             status: "sent",
@@ -214,7 +364,6 @@ export const CreateCoachingSessionDialog = ({
         if (partError) throw partError;
       }
 
-      // Notify in-app + push
       const { data: coachProfile } = await supabase
         .from("profiles")
         .select("display_name, username")
@@ -236,8 +385,12 @@ export const CreateCoachingSessionDialog = ({
       toast({ title: "Séance envoyée !", description: `${recipientIds.length} athlète(s) notifié(s)` });
       onCreated();
       onClose();
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -256,10 +409,15 @@ export const CreateCoachingSessionDialog = ({
     setSelectedAthletes(new Set());
     setSearchQuery("");
     setTemplateName("");
+    setTab("construire");
+    setDragging(null);
+    setExpandedSeg(new Set());
+    setPicker(null);
   };
 
-  const filteredMembers = members.filter(m =>
-    !searchQuery || (m.display_name || m.username || "").toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMembers = members.filter(
+    (m) =>
+      !searchQuery || (m.display_name || m.username || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleParsedChange = (result: RCCResult) => {
@@ -280,410 +438,732 @@ export const CreateCoachingSessionDialog = ({
   const dateLabel = preselectedDate
     ? format(preselectedDate, "EEE d MMM", { locale: fr })
     : format(new Date(), "EEE d MMM", { locale: fr });
-  const selectedActivity = ACTIVITY_TYPES.find((type) => type.value === activityType) ?? ACTIVITY_TYPES[0];
-  const mockupPalette = {
-    actionBlue: "#007AFF",
-    z1: "#B5B5BA",
-    z2: "#0066cc",
-    z3: "#34C759",
-    z4: "#FFCC00",
-    z5: "#FF9500",
-    z6: "#FF3B30",
-    separator: "rgba(60,60,67,0.18)",
-  } as const;
-  const schemaBars = parsedBlocks.slice(0, 6);
-  const activeTile = parsedBlocks.length > 0 ? "pyramide" : "continu";
+
+  const segments = useMemo(() => splitRccSegments(rccCode), [rccCode]);
+  const chartBlocks = useMemo(
+    () =>
+      segments.map((seg, i) => ({
+        id: `seg-${i}-${seg.slice(0, 12)}`,
+        type: inferPaletteFromSegment(seg),
+      })),
+    [segments]
+  );
+
+  const draggedMeta = dragging ? COACHING_BLOCK_PALETTE.find((bt) => bt.id === dragging.type) : null;
+
+  const toggleSeg = (i: number) => {
+    setExpandedSeg((prev) => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  };
+
+  const removeSeg = (i: number) => {
+    setRccCode((c) => removeRccSegment(c, i));
+    setExpandedSeg((prev) => {
+      const next = new Set<number>();
+      prev.forEach((idx) => {
+        if (idx < i) next.add(idx);
+        else if (idx > i) next.add(idx - 1);
+      });
+      return next;
+    });
+  };
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
-          <IosFixedPageHeaderShell
-            className="min-h-0 flex-1"
-            headerWrapperClassName="shrink-0"
-            header={
-              <CoachingFullscreenHeader
-                title="Créer une séance"
-                onBack={onClose}
-                rightSlot={
-                  <span className="max-w-[min(120px,32vw)] truncate text-right text-xs capitalize text-muted-foreground">
-                    {dateLabel}
-                  </span>
-                }
-              />
-            }
-            scrollClassName="bg-secondary px-4 py-4"
-            footer={
-              <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={loading || !canSubmit}
-                  className="h-12 w-full rounded-[14px]"
-                  style={{ backgroundColor: mockupPalette.actionBlue }}
-                >
-                  {loading ? "Envoi..." : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Enregistrer la séance
-                    </>
-                  )}
-                </Button>
-              </div>
-            }
+          <div
+            className="flex h-full min-h-0 flex-col overflow-hidden"
+            style={{
+              background: COACHING_PAGE_BG,
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+            }}
           >
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 rounded-full border border-[#d8d8dd] bg-white p-1">
-                <button type="button" className="h-10 rounded-full bg-[#0066cc] text-[15px] font-semibold text-white">
-                  Construire
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowTemplates(true)}
-                  className="h-10 rounded-full text-[15px] font-semibold text-[#1d1d1f]"
-                >
-                  Modèles
-                </button>
-              </div>
-
-              <div className="px-1">
-                <Input
-                  value={objective}
-                  onChange={e => setObjective(e.target.value)}
-                  placeholder="Nom de la séance"
-                  className="h-auto border-0 bg-transparent px-0 py-0 font-display text-[44px] font-semibold leading-[1.05] tracking-[-0.7px] text-[#1d1d1f] placeholder:text-[#7a7a7a] shadow-none focus-visible:ring-0"
-                />
-                <p className="mt-1 text-[14px] text-[#7a7a7a]">
-                  {parsedBlocks.length > 0
-                    ? `${parsedBlocks.length} blocs · ~${Math.max(20, parsedBlocks.length * 8)} min`
-                    : "Ajoute des blocs pour estimer la durée"}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { id: "course", emoji: "🏃", bg: "#007AFF" },
-                  { id: "velo", emoji: "🚴", bg: "#FF3B30" },
-                  { id: "natation", emoji: "🏊", bg: "#5AC8FA" },
-                  { id: "musculation", emoji: "💪", bg: "#FF9500" },
-                ].map((sport) => (
-                  <button
-                    key={sport.id}
-                    type="button"
-                    onClick={() => setActivityType(sport.id)}
-                    className="relative flex aspect-square items-center justify-center rounded-[14px] text-[33px]"
-                    style={{ backgroundColor: sport.bg }}
-                  >
-                    {activityType === sport.id ? (
-                      <span className="pointer-events-none absolute inset-0 rounded-[14px] ring-2 ring-white ring-offset-2 ring-offset-[#0066cc]" />
-                    ) : null}
-                    <span aria-hidden>{sport.emoji}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-2 px-1">
-                <p className="text-[26px] font-semibold tracking-[-0.4px] text-[#1d1d1f]">Schéma de séance</p>
-                <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-3">
-                  <svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" className="w-full">
-                    <line x1="40" y1="20" x2="360" y2="20" stroke="#e0e0e0" strokeDasharray="2 3" />
-                    <line x1="40" y1="50" x2="360" y2="50" stroke="#e0e0e0" strokeDasharray="2 3" />
-                    <line x1="40" y1="80" x2="360" y2="80" stroke="#e0e0e0" strokeDasharray="2 3" />
-                    <line x1="40" y1="110" x2="360" y2="110" stroke="#e0e0e0" strokeDasharray="2 3" />
-                    <line x1="40" y1="140" x2="360" y2="140" stroke="#e0e0e0" strokeDasharray="2 3" />
-                    <line x1="40" y1="170" x2="360" y2="170" stroke="#e0e0e0" strokeDasharray="2 3" />
-                    <line x1="40" y1="200" x2="360" y2="200" stroke="#1d1d1f" strokeOpacity="0.18" />
-                    <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fontWeight="600" fill="#7a7a7a">
-                      <text x="32" y="38" textAnchor="end">Z6</text>
-                      <text x="32" y="68" textAnchor="end">Z5</text>
-                      <text x="32" y="98" textAnchor="end">Z4</text>
-                      <text x="32" y="128" textAnchor="end">Z3</text>
-                      <text x="32" y="158" textAnchor="end">Z2</text>
-                      <text x="32" y="188" textAnchor="end">Z1</text>
-                    </g>
-                    <rect x="40" y="170" width="144" height="30" fill="#B5B5BA" rx="3" />
-                    <rect x="184" y="50" width="37" height="150" fill="#FF9500" rx="3" />
-                    <rect x="221" y="170" width="6" height="30" fill="#B5B5BA" rx="2" />
-                    <rect x="227" y="50" width="37" height="150" fill="#FF9500" rx="3" />
-                    <rect x="264" y="170" width="59" height="30" fill="#B5B5BA" rx="3" />
-                    <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fill="#7a7a7a">
-                      <text x="40" y="216" textAnchor="middle">0:00</text>
-                      <text x="120" y="216" textAnchor="middle">0:15</text>
-                      <text x="200" y="216" textAnchor="middle">0:30</text>
-                      <text x="280" y="216" textAnchor="middle">0:45</text>
-                      <text x="360" y="216" textAnchor="end">1:00</text>
-                    </g>
-                  </svg>
-                </div>
-              </div>
-
-              <div className="space-y-3 px-1">
-                <p className="text-[14px] font-semibold text-[#333]">Blocs</p>
-
-                {[
-                  {
-                    id: "continu",
-                    label: "Continu",
-                    badge: "1",
-                    subtitle: "Z1 · 5 km · 27 min",
-                    accent: "#34C759",
-                    icon: <Waves className="h-4 w-4" />,
-                    insert: "5km>5'30",
-                    fields: [
-                      ["Allure", "5'30", "/km"],
-                      ["Distance", "5", "km"],
-                      ["Temps", "27", "min"],
-                    ],
-                  },
-                  {
-                    id: "intervalle",
-                    label: "Intervalle",
-                    badge: "2 × 2",
-                    subtitle: "Z5 · 2 km @ 3'30 · récup 1 min",
-                    accent: "#0066cc",
-                    icon: <BarChart3 className="h-4 w-4" />,
-                    insert: "2x(2km>3'30 r1')",
-                    fields: [
-                      ["Blocs", "1", ""],
-                      ["Répétitions", "2", ""],
-                      ["RPE", "8", ""],
-                      ["Distance", "2", "km"],
-                      ["Temps", "7", "min"],
-                      ["Allure", "3'30", "/km"],
-                    ],
-                  },
-                  {
-                    id: "pyramide",
-                    label: "Pyramide",
-                    badge: "3 + 2 miroirs",
-                    subtitle: "Symétrique · 5 paliers",
-                    accent: "#FF9500",
-                    icon: <Triangle className="h-4 w-4" />,
-                    insert: "200>5'30, 400>5'00, 600>4'40, 400>5'00, 200>5'30",
-                    fields: [
-                      ["Palier 1", "200m", "5'30"],
-                      ["Palier 2", "400m", "5'00"],
-                      ["Palier 3", "600m", "4'40"],
-                    ],
-                  },
-                  {
-                    id: "variation",
-                    label: "Variation",
-                    badge: "7'00 → 4'30",
-                    subtitle: "Z2 · 5 km · 30 min",
-                    accent: "#0066cc",
-                    icon: <Activity className="h-4 w-4" />,
-                    insert: "5km de 7'00 à 4'30",
-                    fields: [
-                      ["Allure début", "7'00", "/km"],
-                      ["Allure finale", "4'30", "/km"],
-                      ["RPE", "7", ""],
-                      ["Distance", "5", "km"],
-                      ["Temps", "30", "min"],
-                    ],
-                  },
-                ].map((block) => (
-                  <div key={block.id} className="overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
-                    <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderLeft: `3px solid ${block.accent}` }}>
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: block.accent }}>
-                          {block.icon}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[16px] font-semibold">{block.label}</span>
-                            <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: block.accent, backgroundColor: `${block.accent}22` }}>
-                              {block.badge}
-                            </span>
-                          </div>
-                          <p className="truncate text-[13px] text-[#7a7a7a]">{block.subtitle}</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setRccCode((prev) => (prev.trim() ? `${prev}, ${block.insert}` : block.insert))}
-                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-white"
-                        style={{ backgroundColor: block.accent }}
-                      >
-                        Ajouter
-                      </button>
-                    </div>
-                    <div className="border-t border-[#f0f0f0] px-4 py-3">
-                      <div className="grid grid-cols-3 gap-2">
-                        {block.fields.map(([label, value, unit], idx) => (
-                          <div key={`${block.id}-${idx}`}>
-                            <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.35px] text-[#7a7a7a]">{label}</p>
-                            <input
-                              readOnly
-                              value={value}
-                              className="h-9 w-full rounded-[11px] border border-[#e0e0e0] bg-white px-2 text-center text-[14px] font-medium text-[#1d1d1f]"
-                            />
-                            <p className="mt-1 text-center text-[10px] text-[#7a7a7a]">{unit || "\u00A0"}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                className="ios-card space-y-4 overflow-hidden border p-0 shadow-[var(--shadow-card)]"
-                style={{ borderColor: mockupPalette.actionBlue, boxShadow: "0 8px 22px -14px rgba(0,122,255,0.45)" }}
-              >
-                <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ backgroundColor: "rgba(0,122,255,0.06)", borderBottom: `0.5px solid ${mockupPalette.separator}` }}>
-                  <div>
-                    <p className="text-sm font-semibold">Éditeur du bloc actif</p>
-                    <p className="text-xs text-muted-foreground">RCC + aperçu du bloc</p>
-                  </div>
-                  <span className="rounded-lg px-2 py-1 text-xs font-semibold text-white" style={{ backgroundColor: mockupPalette.actionBlue }}>
-                    Actif
+            {/* HEADER maquette */}
+            <div
+              className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-[max(12px,var(--safe-area-top))]"
+              style={{ background: "white", borderBottom: "1px solid #E5E5EA" }}
+            >
+              <button type="button" onClick={onClose} className="flex flex-shrink-0 items-center gap-0">
+                <ChevronLeft className="h-6 w-6" color={COACHING_ACTION_BLUE} strokeWidth={2.6} />
+                <span className="text-[17px] font-semibold" style={{ color: COACHING_ACTION_BLUE }}>
+                  Retour
+                </span>
+              </button>
+              <p className="min-w-0 flex-1 truncate px-1 text-center text-[17px] font-bold text-[#0A0F1F]">
+                Créer une séance
+              </p>
+              <div className="flex flex-shrink-0 flex-col items-end">
+                <button type="button" onClick={onClose}>
+                  <span className="text-[17px] font-bold" style={{ color: COACHING_ACTION_BLUE }}>
+                    OK
                   </span>
-                </div>
-                <div className="px-4 pb-4 pt-3">
-                  <RCCEditor
-                    value={rccCode}
-                    onChange={setRccCode}
-                    onParsedChange={handleParsedChange}
-                  />
-                  {parsedBlocks.length > 0 && (
-                    <RCCBlocksPreview
-                      blocks={parsedBlocks}
-                      blockRpe={blockRpe}
-                      onBlockRpeChange={setBlockRpe}
-                    />
-                  )}
-                </div>
+                </button>
+                <span className="max-w-[92px] truncate text-[11px] font-medium capitalize text-[#8E8E93]">
+                  {dateLabel}
+                </span>
               </div>
+            </div>
 
-              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1 text-xs">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    Lieu (optionnel)
-                  </Label>
-                  <Input
-                    placeholder="Parc, stade, forêt..."
-                    value={locationName}
-                    onChange={e => setLocationName(e.target.value)}
-                    className="h-11 rounded-xl border-border bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Consignes coach (optionnel)</Label>
-                  <Textarea
-                    placeholder="Hydratation, échauffement spécifique..."
-                    value={coachNotes}
-                    onChange={e => setCoachNotes(e.target.value)}
-                    rows={2}
-                    className="rounded-xl border-border bg-card"
-                  />
-                </div>
-              </div>
-
-              <div className="ios-card space-y-1.5 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <Label className="text-xs">Nom du bloc *</Label>
-                <Input
-                  placeholder="Pyramide seuil, 10x400..."
-                  value={objective}
-                  onChange={e => setObjective(e.target.value)}
-                  className="h-11 rounded-[14px] border-border bg-card"
-                />
-              </div>
-
-              <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Destinataires</p>
-                <div className="flex gap-2">
-                  <Button
+            {/* TABS */}
+            <div
+              className="flex shrink-0 gap-3 px-5 pb-3 pt-3"
+              style={{ background: "white", borderBottom: "1px solid #E5E5EA" }}
+            >
+              {(
+                [
+                  { id: "construire" as const, label: "Construire" },
+                  { id: "modeles" as const, label: "Modèles" },
+                ] as const
+              ).map((t) => {
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
                     type="button"
-                    variant={sendMode === "club" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSendMode("club")}
-                    className="min-w-0 flex-1 text-xs"
+                    onClick={() => {
+                      setTab(t.id);
+                      if (t.id === "modeles") setShowTemplates(true);
+                    }}
+                    className="flex-1 rounded-full py-2 text-[16px] font-bold transition-colors"
+                    style={{
+                      background: active ? COACHING_ACTION_BLUE : "white",
+                      color: active ? "white" : "#0A0F1F",
+                      border: active ? "none" : "1.5px solid #E5E5EA",
+                    }}
                   >
-                    <Users className="mr-1 h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">Tout le club ({members.length})</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={sendMode === "individual" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSendMode("individual")}
-                    className="min-w-0 flex-1 text-xs"
-                  >
-                    <UserCheck className="mr-1 h-3.5 w-3.5 shrink-0" />
-                    Sélection
-                  </Button>
-                </div>
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
 
-                {sendMode === "individual" && (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Rechercher un athlète..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="h-10 rounded-xl border-border bg-card text-xs"
-                    />
-                    <div className="max-h-40 space-y-1 overflow-y-auto [-webkit-overflow-scrolling:touch]">
-                      {filteredMembers.map(m => {
-                        const isSelected = selectedAthletes.has(m.user_id);
+            <div
+              className="min-h-0 flex-1 overflow-y-auto px-5 pt-5"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                paddingBottom: "calc(120px + var(--safe-area-bottom))",
+                overflowY: dragging ? "hidden" : "auto",
+                background: COACHING_PAGE_BG,
+              }}
+            >
+              {tab === "modeles" ? (
+                <div className="rounded-[20px] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                  <p className="text-[20px] font-extrabold text-[#0A0F1F]">Bibliothèque</p>
+                  <p className="mt-2 text-[13px] leading-snug text-[#8E8E93]">
+                    Ouvre tes modèles sauvegardés pour remplir automatiquement le schéma RCC et le nom.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplates(true)}
+                    className="mt-5 w-full rounded-2xl py-3.5 text-[16px] font-bold text-white"
+                    style={{
+                      background: COACHING_ACTION_BLUE,
+                      boxShadow: "0 2px 8px rgba(0, 122, 255, 0.25)",
+                    }}
+                  >
+                    Voir les modèles
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-2 text-[15px] font-extrabold tracking-wide text-[#8E8E93]">Nom de la séance</p>
+                  <input
+                    value={objective}
+                    onChange={(e) => setObjective(e.target.value)}
+                    placeholder="Ex. Fractionné piste"
+                    className="w-full rounded-2xl px-4 py-3 text-[16px] text-[#0A0F1F] placeholder:text-[#8E8E93] outline-none"
+                    style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)", background: "white" }}
+                  />
+
+                  <div className="mt-5 grid grid-cols-4 gap-3">
+                    {COACHING_SEANCE_SPORTS.map((sp) => {
+                      const sel = activityType === sp.activityValue;
+                      return (
+                        <button
+                          key={sp.id}
+                          type="button"
+                          onClick={() => setActivityType(sp.activityValue)}
+                          className="flex aspect-square items-center justify-center rounded-2xl text-[36px] transition-transform active:scale-95"
+                          style={{
+                            background: sp.bg,
+                            boxShadow: sel ? `0 0 0 3px white, 0 0 0 5px ${COACHING_ACTION_BLUE}` : "0 1px 2px rgba(0,0,0,0.04)",
+                          }}
+                          aria-label={sp.id}
+                        >
+                          {sp.emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="mb-3 mt-7 text-[20px] font-extrabold text-[#0A0F1F]">Schéma de séance</p>
+                  <CoachingSchemaChart ref={schemaRef} blocks={chartBlocks} dragOver={dragging?.over} />
+
+                  <p className="mb-1 mt-7 text-[20px] font-extrabold text-[#0A0F1F]">Ajouter un bloc</p>
+                  <p className="mb-3 text-[13px] text-[#8E8E93]">Glisse un bloc sur le schéma ↑</p>
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {COACHING_BLOCK_PALETTE.map((bt) => {
+                      const isBeingDragged = dragging?.type === bt.id;
+                      return (
+                        <div
+                          key={bt.id}
+                          role="button"
+                          tabIndex={0}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            startDrag(bt.id, e.clientX, e.clientY);
+                          }}
+                          onTouchStart={(e) => {
+                            if (e.touches.length === 0) return;
+                            startDrag(bt.id, e.touches[0].clientX, e.touches[0].clientY);
+                          }}
+                          className="select-none"
+                          style={{
+                            background: "white",
+                            borderRadius: 18,
+                            padding: "12px 8px 10px 8px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 6,
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                            cursor: "grab",
+                            opacity: isBeingDragged ? 0.35 : 1,
+                            transform: isBeingDragged ? "scale(0.94)" : "scale(1)",
+                            transition: "opacity 0.18s ease-out, transform 0.18s ease-out",
+                            touchAction: "none",
+                          }}
+                        >
+                          <BlockPreviewBars type={bt.id} />
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: "#0A0F1F",
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            {bt.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {segments.length > 0 && (
+                    <div className="mt-5 space-y-3">
+                      {segments.map((seg, idx) => {
+                        const parsed = parseSingleSegment(seg);
+                        const paletteType = inferPaletteFromSegment(seg);
+                        const meta = COACHING_BLOCK_PALETTE.find((b) => b.id === paletteType);
+                        const accentColor = meta?.color ?? "#8E8E93";
+                        const expanded = expandedSeg.has(idx);
+
+                        let title = meta?.label ?? "Bloc";
+                        let badge: string | null = null;
+                        let subtitle = "";
+
+                        if (parsed?.type === "interval") {
+                          title = "Intervalle";
+                          badge = `${parsed.repetitions ?? "?"}×`;
+                          subtitle =
+                            parsed.distance != null
+                              ? `${parsed.distance} m @ ${parsed.pace ?? "—"}`
+                              : `${parsed.duration ?? "?"}' @ ${parsed.pace ?? "—"}`;
+                        } else if (parsed && (parsed.type === "steady" || parsed.type === "warmup" || parsed.type === "cooldown")) {
+                          title = parsed.type === "warmup" ? "Échauffement" : parsed.type === "cooldown" ? "Retour au calme" : "Bloc continu";
+                          badge = "1";
+                          subtitle = parsed.pace ? `${parsed.duration ?? "?"} min · ${parsed.pace}` : `${parsed.duration ?? "?"} min`;
+                        } else if (!parsed) {
+                          title = "Bloc";
+                          subtitle = seg.length > 48 ? `${seg.slice(0, 48)}…` : seg;
+                        }
+
+                        const replaceAt = (nextSeg: string) => setRccCode((c) => replaceRccSegment(c, idx, nextSeg));
+
                         return (
                           <div
-                            key={m.user_id}
-                            className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-xl p-2 transition-colors ${
-                              isSelected ? "border border-primary/20 bg-primary/10" : "hover:bg-muted/50"
-                            }`}
-                            onClick={() => toggleAthlete(m.user_id)}
+                            key={`card-${idx}-${seg.slice(0, 24)}`}
+                            className="relative overflow-hidden rounded-2xl bg-white"
+                            style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
                           >
-                            <Checkbox checked={isSelected} />
-                            <Avatar className="h-6 w-6 shrink-0">
-                              <AvatarImage src={m.avatar_url || ""} />
-                              <AvatarFallback className="text-xs">{(m.username || "?")[0].toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <span className="min-w-0 truncate text-xs font-medium">{m.display_name || m.username}</span>
+                            <div className="absolute bottom-0 left-0 top-0 w-1" style={{ background: accentColor }} />
+
+                            <div className="flex items-center gap-3 px-4 py-3 pl-5">
+                              <div
+                                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-[18px] font-extrabold text-white"
+                                style={{ background: accentColor }}
+                              >
+                                {meta?.emoji ?? "◆"}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[18px] font-extrabold text-[#0A0F1F]">{title}</span>
+                                  {badge ? (
+                                    <span
+                                      className="rounded-full px-2.5 py-0.5 text-[12px] font-bold"
+                                      style={{ background: `${accentColor}22`, color: accentColor }}
+                                    >
+                                      {badge}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                {subtitle ? <p className="mt-0.5 truncate text-[13px] text-[#8E8E93]">{subtitle}</p> : null}
+                              </div>
+                              <button type="button" onClick={() => toggleSeg(idx)} className="p-1">
+                                {expanded ? (
+                                  <ChevronUp className="h-5 w-5 text-[#8E8E93]" />
+                                ) : (
+                                  <ChevronDown className="h-5 w-5 text-[#8E8E93]" />
+                                )}
+                              </button>
+                              <button type="button" onClick={() => removeSeg(idx)} className="p-1" aria-label="Supprimer le bloc">
+                                <Trash2 className="h-5 w-5 text-[#8E8E93]" strokeWidth={2} />
+                              </button>
+                            </div>
+
+                            {expanded && (
+                              <div className="px-4 pb-4 pl-5">
+                                {!parsed ? (
+                                  <p className="text-[13px] leading-snug text-[#8E8E93]">
+                                    Ce segment utilise un format RCC avancé. Modifie-le dans l’éditeur en bas de page.
+                                  </p>
+                                ) : parsed.type === "interval" ? (
+                                  <div>
+                                    <div className="mt-2 grid grid-cols-3 gap-2">
+                                      <FieldBox
+                                        label="RÉPÉTITIONS"
+                                        value={parsed.repetitions ?? 1}
+                                        onClick={() => {
+                                          const next = Math.min(30, (parsed.repetitions ?? 1) + 1);
+                                          if (parsed.distance != null && parsed.pace) {
+                                            replaceAt(
+                                              rebuildIntervalDistanceSegment(
+                                                next,
+                                                parsed.distance,
+                                                parsed.pace,
+                                                parsed.recoveryDuration,
+                                                parsed.recoveryType ?? "trot"
+                                              )
+                                            );
+                                          } else if (parsed.duration != null && parsed.pace) {
+                                            replaceAt(
+                                              rebuildIntervalTimeSegment(
+                                                next,
+                                                parsed.duration,
+                                                parsed.pace,
+                                                parsed.recoveryDuration,
+                                                parsed.recoveryType ?? "trot"
+                                              )
+                                            );
+                                          }
+                                        }}
+                                      />
+                                      <FieldBox label="RÉCUP (min)" value={parsed.recoveryDuration != null ? Math.round(parsed.recoveryDuration / 60) : "—"} suffix="" />
+                                      <FieldBox label="TYPE RÉCUP" value={parsed.recoveryType ?? "trot"} />
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-3 gap-2">
+                                      {parsed.distance != null ? (
+                                        <FieldBox
+                                          label="DISTANCE"
+                                          value={`${parsed.distance} m`}
+                                          onClick={() =>
+                                            setPicker({
+                                              kind: "distance",
+                                              title: "Distance",
+                                              value: metersToDistanceWheel(parsed.distance!),
+                                              onConfirm: (v: DistanceWheelValue) => {
+                                                const meters = v.km * 1000 + v.m;
+                                                if (parsed.pace) {
+                                                  replaceAt(
+                                                    rebuildIntervalDistanceSegment(
+                                                      parsed.repetitions ?? 1,
+                                                      meters,
+                                                      parsed.pace,
+                                                      parsed.recoveryDuration,
+                                                      parsed.recoveryType ?? "trot"
+                                                    )
+                                                  );
+                                                }
+                                                setPicker(null);
+                                              },
+                                            })
+                                          }
+                                        />
+                                      ) : (
+                                        <FieldBox
+                                          label="TEMPS (min)"
+                                          value={parsed.duration ?? "—"}
+                                          onClick={() =>
+                                            setPicker({
+                                              kind: "time",
+                                              title: "Durée effort",
+                                              value: durationToTimeWheel(parsed.duration ?? 0),
+                                              onConfirm: (tv: TimeWheelValue) => {
+                                                const mins = Math.max(1, Math.round(timeWheelToTotalMinutes(tv)));
+                                                if (parsed.pace) {
+                                                  replaceAt(
+                                                    rebuildIntervalTimeSegment(
+                                                      parsed.repetitions ?? 1,
+                                                      mins,
+                                                      parsed.pace,
+                                                      parsed.recoveryDuration,
+                                                      parsed.recoveryType ?? "trot"
+                                                    )
+                                                  );
+                                                }
+                                                setPicker(null);
+                                              },
+                                            })
+                                          }
+                                        />
+                                      )}
+                                      <FieldBox
+                                        label="ALLURE"
+                                        value={parsed.pace ? formatPaceWheel(paceColonToWheel(parsed.pace)) : "—"}
+                                        suffix="/km"
+                                        onClick={() =>
+                                          setPicker({
+                                            kind: "pace",
+                                            title: "Allure",
+                                            value: paceColonToWheel(parsed.pace || "5:00"),
+                                            onConfirm: (pv: PaceWheelValue) => {
+                                              const colon = wheelToColon(pv);
+                                              if (parsed.distance != null) {
+                                                replaceAt(
+                                                  rebuildIntervalDistanceSegment(
+                                                    parsed.repetitions ?? 1,
+                                                    parsed.distance,
+                                                    colon,
+                                                    parsed.recoveryDuration,
+                                                    parsed.recoveryType ?? "trot"
+                                                  )
+                                                );
+                                              } else if (parsed.duration != null) {
+                                                replaceAt(
+                                                  rebuildIntervalTimeSegment(
+                                                    parsed.repetitions ?? 1,
+                                                    parsed.duration,
+                                                    colon,
+                                                    parsed.recoveryDuration,
+                                                    parsed.recoveryType ?? "trot"
+                                                  )
+                                                );
+                                              }
+                                              setPicker(null);
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                    <p className="mt-2 text-[11px] text-[#C7C7CC]">Récup : ajuste dans l’éditeur RCC si besoin (r1&apos;15&gt;trot).</p>
+                                  </div>
+                                ) : parsed.type === "steady" ||
+                                  parsed.type === "warmup" ||
+                                  parsed.type === "cooldown" ? (
+                                  parsed.pace ? (
+                                    <div className="mt-2 grid grid-cols-3 gap-2">
+                                      <FieldBox
+                                        label="ALLURE"
+                                        value={formatPaceWheel(paceColonToWheel(parsed.pace))}
+                                        suffix="/km"
+                                        onClick={() =>
+                                          parsed.duration != null &&
+                                          setPicker({
+                                            kind: "pace",
+                                            title: "Allure",
+                                            value: paceColonToWheel(parsed.pace || "5:30"),
+                                            onConfirm: (pv: PaceWheelValue) => {
+                                              replaceAt(rebuildSteadyLikeSegment(parsed.duration!, wheelToColon(pv)));
+                                              setPicker(null);
+                                            },
+                                          })
+                                        }
+                                      />
+                                      <FieldBox label="DISTANCE" value="—" suffix="via RCC" />
+                                      <FieldBox
+                                        label="TEMPS"
+                                        value={parsed.duration != null ? `${parsed.duration}` : "—"}
+                                        suffix="min"
+                                        onClick={() =>
+                                          parsed.pace &&
+                                          parsed.duration != null &&
+                                          setPicker({
+                                            kind: "time",
+                                            title: "Durée du bloc",
+                                            value: durationToTimeWheel(parsed.duration ?? 20),
+                                            onConfirm: (tv: TimeWheelValue) => {
+                                              const mins = Math.max(1, Math.round(timeWheelToTotalMinutes(tv)));
+                                              replaceAt(rebuildSteadyLikeSegment(mins, parsed.pace!));
+                                              setPicker(null);
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                  ) : parsed.duration != null ? (
+                                    <div className="mt-2">
+                                      <FieldBox
+                                        label="TEMPS"
+                                        value={`${parsed.duration}`}
+                                        suffix="min"
+                                        onClick={() =>
+                                          setPicker({
+                                            kind: "time",
+                                            title: "Durée du bloc",
+                                            value: durationToTimeWheel(parsed.duration ?? 20),
+                                            onConfirm: (tv: TimeWheelValue) => {
+                                              const mins = Math.max(1, Math.round(timeWheelToTotalMinutes(tv)));
+                                              replaceAt(rebuildDurationOnlyMinutes(mins));
+                                              setPicker(null);
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                  ) : (
+                                    <p className="text-[13px] text-[#8E8E93]">Modifie ce segment dans l’éditeur RCC.</p>
+                                  )
+                                ) : (
+                                  <p className="text-[13px] text-[#8E8E93]">
+                                    Type de bloc non éditable ici — utilise l’éditeur RCC.
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              {rccCode.trim() ? (
-                <div className="ios-card flex items-end gap-2 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <Label className="text-xs">Sauver comme template</Label>
-                    <Input
-                      placeholder="Nom du template..."
-                      value={templateName}
-                      onChange={e => setTemplateName(e.target.value)}
-                      className="h-10 rounded-xl border-border bg-card text-xs"
-                    />
+                  <div className="mt-6 rounded-[20px] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                    <p className="text-[15px] font-extrabold text-[#0A0F1F]">Éditeur RCC</p>
+                    <p className="mb-3 text-[12px] text-[#8E8E93]">Syntaxe avancée, même logique qu&apos;avant.</p>
+                    <RCCEditor value={rccCode} onChange={setRccCode} onParsedChange={handleParsedChange} />
+                    {parsedBlocks.length > 0 && (
+                      <div className="mt-4">
+                        <RCCBlocksPreview blocks={parsedBlocks} blockRpe={blockRpe} onBlockRpeChange={setBlockRpe} />
+                      </div>
+                    )}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSaveTemplate}
-                    disabled={!templateName.trim() || savingTemplate}
-                    className="h-10 shrink-0 rounded-xl"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ) : null}
+
+                  <div className="mt-5 space-y-4 rounded-[20px] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1 text-[12px] font-semibold text-[#8E8E93]">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        Lieu (optionnel)
+                      </Label>
+                      <Input
+                        placeholder="Parc, stade, forêt..."
+                        value={locationName}
+                        onChange={(e) => setLocationName(e.target.value)}
+                        className="h-11 rounded-2xl border-[#E5E5EA] bg-[#F2F2F7]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[12px] font-semibold text-[#8E8E93]">Consignes coach (optionnel)</Label>
+                      <Textarea
+                        placeholder="Hydratation, échauffement spécifique..."
+                        value={coachNotes}
+                        onChange={(e) => setCoachNotes(e.target.value)}
+                        rows={2}
+                        className="rounded-2xl border-[#E5E5EA] bg-[#F2F2F7]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-5 space-y-3 rounded-[20px] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                    <p className="text-[12px] font-extrabold uppercase tracking-wide text-[#8E8E93]">Destinataires</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSendMode("club")}
+                        className="min-h-[44px] min-w-0 flex-1 rounded-xl px-3 text-[13px] font-bold"
+                        style={{
+                          background: sendMode === "club" ? COACHING_ACTION_BLUE : "#F2F2F7",
+                          color: sendMode === "club" ? "white" : "#0A0F1F",
+                          border: sendMode === "club" ? "none" : "1px solid #E5E5EA",
+                        }}
+                      >
+                        <span className="flex items-center justify-center gap-1">
+                          <Users className="h-4 w-4 shrink-0" />
+                          <span className="truncate">Club ({members.length})</span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSendMode("individual")}
+                        className="min-h-[44px] min-w-0 flex-1 rounded-xl px-3 text-[13px] font-bold"
+                        style={{
+                          background: sendMode === "individual" ? COACHING_ACTION_BLUE : "#F2F2F7",
+                          color: sendMode === "individual" ? "white" : "#0A0F1F",
+                          border: sendMode === "individual" ? "none" : "1px solid #E5E5EA",
+                        }}
+                      >
+                        <span className="flex items-center justify-center gap-1">
+                          <UserCheck className="h-4 w-4 shrink-0" />
+                          <span className="truncate">Sélection</span>
+                        </span>
+                      </button>
+                    </div>
+
+                    {sendMode === "individual" && (
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Rechercher un athlète..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="h-10 rounded-xl border-[#E5E5EA] bg-[#F2F2F7] text-[13px]"
+                        />
+                        <div className="max-h-40 space-y-1 overflow-y-auto [-webkit-overflow-scrolling:touch]">
+                          {filteredMembers.map((m) => {
+                            const isSelected = selectedAthletes.has(m.user_id);
+                            return (
+                              <div
+                                key={m.user_id}
+                                className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-xl p-2 transition-colors ${
+                                  isSelected ? "border border-[#007AFF]/25 bg-[#007AFF]/10" : "hover:bg-[#F2F2F7]"
+                                }`}
+                                onClick={() => toggleAthlete(m.user_id)}
+                              >
+                                <Checkbox checked={isSelected} />
+                                <Avatar className="h-7 w-7 shrink-0">
+                                  <AvatarImage src={m.avatar_url || ""} />
+                                  <AvatarFallback className="text-[11px]">{(m.username || "?")[0].toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <span className="min-w-0 truncate text-[13px] font-semibold">{m.display_name || m.username}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {rccCode.trim() ? (
+                    <div className="mt-5 flex items-end gap-2 rounded-[20px] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <Label className="text-[12px] font-semibold text-[#8E8E93]">Sauver comme modèle</Label>
+                        <Input
+                          placeholder="Nom du modèle..."
+                          value={templateName}
+                          onChange={(e) => setTemplateName(e.target.value)}
+                          className="h-10 rounded-xl border-[#E5E5EA] bg-[#F2F2F7] text-[13px]"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSaveTemplate}
+                        disabled={!templateName.trim() || savingTemplate}
+                        className="h-10 shrink-0 rounded-xl border-[#E5E5EA]"
+                      >
+                        <Save className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  {loadingMembers ? (
+                    <p className="mt-4 pb-8 text-center text-[13px] text-[#8E8E93]">Chargement des membres…</p>
+                  ) : (
+                    <div className="h-4 pb-[env(safe-area-bottom)]" />
+                  )}
+                </>
+              )}
             </div>
-          </IosFixedPageHeaderShell>
+
+            {/* FOOTER */}
+            <div
+              className="shrink-0 px-5 py-3 pb-[max(12px,var(--safe-area-bottom))]"
+              style={{ background: "white", borderTop: "1px solid #E5E5EA" }}
+            >
+              <button
+                type="button"
+                disabled={!canSubmit || loading}
+                onClick={handleSubmit}
+                className="w-full rounded-2xl py-3.5 text-[16px] font-bold text-white transition-all active:scale-[0.99]"
+                style={{
+                  background: canSubmit && !loading ? COACHING_ACTION_BLUE : `${COACHING_ACTION_BLUE}66`,
+                  boxShadow: canSubmit && !loading ? "0 2px 8px rgba(0, 122, 255, 0.25)" : "none",
+                }}
+              >
+                {loading ? "Envoi…" : "Enregistrer la séance"}
+              </button>
+            </div>
+
+            {dragging && draggedMeta && (
+              <div
+                style={{
+                  position: "fixed",
+                  left: dragging.x,
+                  top: dragging.y,
+                  transform: dragging.over ? "translate(-50%, -50%) scale(1.08)" : "translate(-50%, -50%) scale(1)",
+                  pointerEvents: "none",
+                  zIndex: 9998,
+                  background: "white",
+                  borderRadius: 18,
+                  padding: "12px 16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 6,
+                  boxShadow: dragging.over
+                    ? `0 12px 32px rgba(0, 122, 255, 0.4), 0 0 0 1.5px ${COACHING_ACTION_BLUE}`
+                    : "0 10px 28px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                  transition: "box-shadow 0.15s ease-out, transform 0.15s ease-out",
+                }}
+              >
+                <BlockPreviewBars type={dragging.type} size="lg" />
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#0A0F1F", letterSpacing: "-0.01em" }}>
+                  {draggedMeta.label}
+                </span>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
       <CoachingTemplatesDialog
         isOpen={showTemplates}
-        onClose={() => setShowTemplates(false)}
+        onClose={() => {
+          setShowTemplates(false);
+          setTab("construire");
+        }}
         onSelect={(code, obj) => {
           setRccCode(code);
           if (obj) setObjective(obj);
+          setTab("construire");
         }}
       />
+
+      {picker?.kind === "pace" ? (
+        <PaceWheelPicker
+          title={picker.title}
+          value={picker.value}
+          onClose={() => setPicker(null)}
+          onConfirm={(v) => picker.onConfirm(v)}
+        />
+      ) : picker?.kind === "distance" ? (
+        <DistanceWheelPicker
+          title={picker.title}
+          value={picker.value}
+          onClose={() => setPicker(null)}
+          onConfirm={(v) => picker.onConfirm(v)}
+        />
+      ) : picker ? (
+        <TimeWheelPicker
+          title={picker.title}
+          value={picker.value}
+          onClose={() => setPicker(null)}
+          onConfirm={(v) => picker.onConfirm(v)}
+        />
+      ) : null}
     </>
   );
 };

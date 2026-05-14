@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { PersonStanding, Bike, Waves, Trophy, Footprints, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   PROFILE_SPORT_RECORD_LABELS,
+  PROFILE_SPORT_RECORD_KEYS,
   type ProfileSportRecordKey,
   isProfileSportRecordKey,
 } from "@/lib/profileSportRecords";
@@ -62,6 +63,24 @@ function formatRecordValueForProfileList(raw: string): string {
   return `${parts[0]} · ${parts[1]}`;
 }
 
+function splitMaquetteProfileRecord(display: string): { main: string; detail: string } {
+  const d = display.trim();
+  const idx = d.indexOf(" · ");
+  if (idx === -1) return { main: d, detail: "" };
+  return { main: d.slice(0, idx).trim(), detail: d.slice(idx + 3).trim() };
+}
+
+const MAQUETTE_SPORT: Record<
+  Exclude<ProfileSportRecordKey, "other">,
+  { emoji: string; color: string; label: string }
+> = {
+  running: { emoji: "🏃", color: "#007AFF", label: PROFILE_SPORT_RECORD_LABELS.running },
+  cycling: { emoji: "🚴", color: "#FF3B30", label: PROFILE_SPORT_RECORD_LABELS.cycling },
+  swimming: { emoji: "🏊", color: "#5AC8FA", label: PROFILE_SPORT_RECORD_LABELS.swimming },
+  triathlon: { emoji: "🔱", color: "#AF52DE", label: PROFILE_SPORT_RECORD_LABELS.triathlon },
+  walking: { emoji: "🚶", color: "#34C759", label: PROFILE_SPORT_RECORD_LABELS.walking },
+};
+
 export function ProfileRecordsDisplay({
   userId,
   legacy,
@@ -70,12 +89,15 @@ export function ProfileRecordsDisplay({
   hideIfEmpty,
   /** Titre au-dessus du bloc (ex. profil public) */
   sectionTitle,
+  /** Cartes blanches groupées par sport (maquette Profil RunConnect v6) */
+  presentation,
 }: {
   userId: string;
   legacy?: LegacyRecords;
   className?: string;
   hideIfEmpty?: boolean;
   sectionTitle?: string;
+  presentation?: "default" | "maquette";
 }) {
   const [rows, setRows] = useState<ProfileSportRecordRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,6 +181,230 @@ export function ProfileRecordsDisplay({
     return (
       <div className={cn("px-ios-4 py-4 ios-shell:px-2.5", className)}>
         <p className="text-ios-subheadline text-muted-foreground">Aucun record renseigné pour le moment.</p>
+      </div>
+    );
+  }
+
+  if (presentation === "maquette") {
+    const customGrouped = rows.reduce<Map<string, ProfileSportRecordRow[]>>((acc, row) => {
+      const k = row.sport_key || "other";
+      if (!acc.has(k)) acc.set(k, []);
+      acc.get(k)!.push(row);
+      return acc;
+    }, new Map());
+
+    const customBlocks = PROFILE_SPORT_RECORD_KEYS.filter((sk) => sk !== "other" && customGrouped.has(sk)).map(
+      (sk) => ({
+        key: sk as Exclude<ProfileSportRecordKey, "other">,
+        rows: customGrouped.get(sk)!,
+      }),
+    );
+    const otherRows = [...(customGrouped.get("other") ?? [])];
+    for (const [k, rs] of customGrouped.entries()) {
+      if (k === "other") continue;
+      if (!(PROFILE_SPORT_RECORD_KEYS as readonly string[]).includes(k)) {
+        otherRows.push(...rs);
+      }
+    }
+
+    const renderLegacyGroup = (key: keyof typeof sportConfig, entries: { label: string; value: string }[]) => {
+      if (entries.length === 0) return null;
+      const g = MAQUETTE_SPORT[key];
+      return (
+        <div key={`legacy-${key}`} className="space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex shrink-0 items-center justify-center text-[18px]"
+              style={{ width: 36, height: 36, borderRadius: 10, background: g.color }}
+            >
+              {g.emoji}
+            </div>
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: "#0A0F1F",
+                letterSpacing: "-0.02em",
+                margin: 0,
+              }}
+            >
+              {g.label}
+            </h2>
+          </div>
+          <div
+            style={{
+              background: "white",
+              borderRadius: 16,
+              overflow: "hidden",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+            }}
+          >
+            {entries.map(({ label, value }, i) => (
+              <Fragment key={`${key}-${label}-${i}`}>
+                {i > 0 ? <div className="ml-4 h-px bg-[#E5E5EA]" /> : null}
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p
+                      style={{
+                        fontSize: 17,
+                        fontWeight: 800,
+                        color: "#0A0F1F",
+                        margin: 0,
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      {label}
+                    </p>
+                    <p style={{ marginTop: 2, margin: "2px 0 0", fontSize: 13, color: "#8E8E93" }}>
+                      Record personnel
+                    </p>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 900,
+                      color: g.color,
+                      margin: 0,
+                      fontVariantNumeric: "tabular-nums",
+                      letterSpacing: "-0.02em",
+                    }}
+                    className="shrink-0 pl-3"
+                  >
+                    {value}
+                  </p>
+                </div>
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className={cn("space-y-7", className)}>
+        {customBlocks.map(({ key, rows: groupRows }) => {
+          const g = MAQUETTE_SPORT[key];
+          return (
+            <div key={key} className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="flex shrink-0 items-center justify-center text-[18px]"
+                  style={{ width: 36, height: 36, borderRadius: 10, background: g.color }}
+                >
+                  {g.emoji}
+                </div>
+                <h2
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: "#0A0F1F",
+                    letterSpacing: "-0.02em",
+                    margin: 0,
+                  }}
+                >
+                  {g.label}
+                </h2>
+              </div>
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                }}
+              >
+                {groupRows.map((row, i) => (
+                  <Fragment key={row.id}>
+                    {i > 0 ? <div className="ml-4 h-px bg-[#E5E5EA]" /> : null}
+                    <div className="flex items-center justify-between px-4 py-3.5">
+                      <div className="min-w-0 flex-1">
+                        <p
+                          style={{
+                            fontSize: 17,
+                            fontWeight: 800,
+                            color: "#0A0F1F",
+                            margin: 0,
+                            letterSpacing: "-0.01em",
+                          }}
+                        >
+                          {row.event_label}
+                        </p>
+                        {(() => {
+                          const formatted = formatRecordValueForProfileList(row.record_value);
+                          const { main, detail } = splitMaquetteProfileRecord(formatted);
+                          if (!detail) return null;
+                          return (
+                            <p style={{ marginTop: 2, margin: "2px 0 0", fontSize: 13, color: "#8E8E93" }}>
+                              {detail}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                      <p
+                        style={{
+                          fontSize: 22,
+                          fontWeight: 900,
+                          color: g.color,
+                          margin: 0,
+                          fontVariantNumeric: "tabular-nums",
+                          letterSpacing: "-0.02em",
+                        }}
+                        className="shrink-0 pl-3"
+                      >
+                        {splitMaquetteProfileRecord(formatRecordValueForProfileList(row.record_value)).main}
+                      </p>
+                    </div>
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        {otherRows.map((row) => {
+          const g = { emoji: "📌", color: "#8E8E93", label: PROFILE_SPORT_RECORD_LABELS.other };
+          const formatted = formatRecordValueForProfileList(row.record_value);
+          const split = splitMaquetteProfileRecord(formatted);
+          return (
+            <div key={row.id} className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="flex shrink-0 items-center justify-center text-[18px]"
+                  style={{ width: 36, height: 36, borderRadius: 10, background: g.color }}
+                >
+                  {g.emoji}
+                </div>
+                <h2 className="m-0 text-[20px] font-extrabold tracking-tight text-[#0A0F1F]">{g.label}</h2>
+              </div>
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="m-0 text-[17px] font-extrabold tracking-tight text-[#0A0F1F]">{row.event_label}</p>
+                    {split.detail ? (
+                      <p className="m-0 mt-0.5 text-[13px] text-[#8E8E93]">{split.detail}</p>
+                    ) : null}
+                  </div>
+                  <p
+                    style={{ fontSize: 22, fontWeight: 900, color: g.color }}
+                    className="shrink-0 pl-3 font-black tabular-nums text-[22px]"
+                  >
+                    {split.main}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {legacyBlocks.map(({ key, entries }) => renderLegacyGroup(key, entries))}
+
       </div>
     );
   }

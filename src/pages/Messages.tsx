@@ -73,6 +73,7 @@ import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
 import { SignedImage } from "@/components/SignedImage";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 import { MessagesInboxStickyScroll } from "@/components/messages/MessagesInboxStickyScroll";
+import { MessagesMaquetteSubpageShell } from "@/components/messages/MessagesMaquetteSubpageShell";
 import { MessagesDiscoveryTabsMaquette } from "@/components/messages/MessagesDiscoveryTabsMaquette";
 import { ProfilesTab } from "@/components/search/ProfilesTab";
 import { ClubsTab } from "@/components/search/ClubsTab";
@@ -92,6 +93,9 @@ const ConversationInfoSheet = lazy(() =>
 );
 const CreateClubFormPanel = lazy(() =>
   import("@/components/CreateClubDialogPremium").then((m) => ({ default: m.CreateClubFormPanel }))
+);
+const CreateGroupFormPanel = lazy(() =>
+  import("@/components/CreateGroupFormPanel").then((m) => ({ default: m.CreateGroupFormPanel }))
 );
 const ClubInfoDialog = lazy(() =>
   import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
@@ -196,7 +200,7 @@ interface PastSessionCommentTarget {
   activity_type: string | null;
 }
 
-type MessagesRootTab = "conversations" | "create-club";
+type MessagesRootTab = "conversations" | "create-club" | "create-group";
 type MessageDiscoveryTab = "profiles" | "clubs" | "strava" | "contacts";
 
 const Messages = () => {
@@ -345,6 +349,16 @@ const Messages = () => {
     }, { replace: true });
   }, [setSearchParams]);
 
+  const openCreateGroupTab = useCallback(() => {
+    setMessagesComposeSheetOpen(false);
+    setActiveRootTab("create-group");
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "create-group");
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
   const openNewConversationView = useCallback(() => {
     setMessagesComposeSheetOpen(false);
     setActiveRootTab("conversations");
@@ -480,7 +494,8 @@ const Messages = () => {
     const onMessagesPage = location.pathname.startsWith("/messages");
     const inThread = onMessagesPage && !!selectedConversation;
     const inNewMessageCompose = onMessagesPage && showNewConversation;
-    const inClubComposer = onMessagesPage && activeRootTab === "create-club";
+    const inClubComposer =
+      onMessagesPage && (activeRootTab === "create-club" || activeRootTab === "create-group");
     const suppressTabBar = inThread || inNewMessageCompose || inClubComposer;
     setBottomNavSuppressed("messages-thread", suppressTabBar);
 
@@ -2141,6 +2156,10 @@ const Messages = () => {
       setActiveRootTab("create-club");
       return;
     }
+    if (tabParam === "create-group") {
+      setActiveRootTab("create-group");
+      return;
+    }
   }, [isCommentsTab, navigate, tabParam]);
 
   useEffect(() => {
@@ -2243,6 +2262,7 @@ const Messages = () => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.delete("createClub");
+        next.set("tab", "create-club");
         return next;
       }, { replace: true });
     }
@@ -2357,10 +2377,6 @@ const Messages = () => {
           <NewConversationView
             onBack={() => setShowNewConversation(false)}
             onStartConversation={startConversation}
-            onCreateClub={() => {
-              setShowNewConversation(false);
-              openCreateClubTab();
-            }}
             onAvatarClick={handleAvatarClick}
           />
         </Suspense>
@@ -2468,7 +2484,7 @@ const Messages = () => {
                         <DropdownMenuItem
                           onClick={() => {
                             setSelectedConversation(null);
-                            openCreateClubTab();
+                            openCreateGroupTab();
                           }}
                           className="py-ios-3"
                         >
@@ -2610,7 +2626,7 @@ const Messages = () => {
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedConversation(null);
-                              openCreateClubTab();
+                              openCreateGroupTab();
                             }}
                             className="py-ios-3"
                           >
@@ -3548,50 +3564,49 @@ const Messages = () => {
         )}
         data-tutorial="tutorial-messages"
       >
-        {activeRootTab === "create-club" ? (
-          <IosFixedPageHeaderShell
-            className="min-h-0 flex-1"
-            contentScroll={false}
-            pinHeader
-            forcePin={false}
-            contentTopOffsetPx={0}
-            headerWrapperClassName="z-50 apple-grouped-bg"
-            header={
-              <MainTopHeader
-                title="Créer un club"
-                disableScrollCollapse
-                left={
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveRootTab("conversations");
-                      setSearchParams((prev) => {
-                        const next = new URLSearchParams(prev);
-                        next.delete("tab");
-                        return next;
-                      }, { replace: true });
-                    }}
-                    className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full active:scale-95"
-                    aria-label="Retour aux messages"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </button>
-                }
-              />
-            }
+        {activeRootTab === "create-club" || activeRootTab === "create-group" ? (
+          <MessagesMaquetteSubpageShell
+            title={activeRootTab === "create-club" ? "Créer un club" : "Créer un groupe"}
+            titleSizePx={activeRootTab === "create-club" ? 40 : 36}
+            onBack={() => {
+              setActiveRootTab("conversations");
+              setSearchParams((prev) => {
+                const next = new URLSearchParams(prev);
+                next.delete("tab");
+                return next;
+              }, { replace: true });
+            }}
           >
-            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-secondary pt-2.5 pb-ios-2">
-              <Suspense fallback={<div className="min-h-[50vh] bg-secondary" />}>
+            <Suspense fallback={<div className="min-h-[50vh]" />}>
+              {activeRootTab === "create-club" ? (
                 <CreateClubFormPanel
-                  active={activeRootTab === "create-club"}
+                  active
                   onSuccess={() => {
                     void loadConversations();
                     setActiveRootTab("conversations");
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.delete("tab");
+                      return next;
+                    }, { replace: true });
                   }}
                 />
-              </Suspense>
-            </div>
-          </IosFixedPageHeaderShell>
+              ) : (
+                <CreateGroupFormPanel
+                  active
+                  onSuccess={() => {
+                    void loadConversations();
+                    setActiveRootTab("conversations");
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.delete("tab");
+                      return next;
+                    }, { replace: true });
+                  }}
+                />
+              )}
+            </Suspense>
+          </MessagesMaquetteSubpageShell>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <MessagesInboxStickyScroll onOpenCompose={() => setMessagesComposeSheetOpen(true)}>
@@ -4010,7 +4025,7 @@ const Messages = () => {
                     type="button"
                     className="flex w-full items-center gap-3 rounded-lg py-3 text-left transition-colors active:bg-[#F2F2F7]"
                     data-no-tab-swipe="true"
-                    onClick={() => openCreateClubTab()}
+                    onClick={() => openCreateGroupTab()}
                   >
                     <div className="flex h-9 w-9 items-center justify-center">
                       <UserPlus className="h-6 w-6" style={{ color: "#007AFF" }} strokeWidth={2.2} />

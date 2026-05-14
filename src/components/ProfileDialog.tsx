@@ -182,6 +182,7 @@ export const ProfileDialog = ({
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
+  const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
   const [recordsData, setRecordsData] = useState<{
     walking: Record<string, string>;
     running: Record<string, string>;
@@ -409,11 +410,16 @@ export const ProfileDialog = ({
       // Fetch reliability rate from user_stats
       const {
         data: statsData
-      } = await supabase.from('user_stats').select('reliability_rate, total_sessions_joined, total_sessions_completed').eq('user_id', user.id).single();
+      } = await supabase
+        .from('user_stats')
+        .select('reliability_rate, total_sessions_joined, total_sessions_completed, total_sessions_absent')
+        .eq('user_id', user.id)
+        .single();
       if (statsData) {
         setReliabilityRate(Number(statsData.reliability_rate) || 100);
         setTotalSessionsJoined(statsData.total_sessions_joined || 0);
         setTotalSessionsCompleted(statsData.total_sessions_completed || 0);
+        setTotalSessionsAbsent(Number(statsData.total_sessions_absent) || 0);
       }
 
       // Fetch total sessions created
@@ -1213,7 +1219,16 @@ export const ProfileDialog = ({
       </Suspense>
 
       {/* Reliability Details Dialog */}
-      <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
+      <ReliabilityDetailsDialog
+        open={showReliabilityDialog}
+        onOpenChange={setShowReliabilityDialog}
+        reliabilityRate={reliabilityRate}
+        totalSessionsCreated={totalSessionsCreated}
+        totalSessionsJoined={totalSessionsJoined}
+        totalSessionsCompleted={totalSessionsCompleted}
+        totalSessionsAbsent={totalSessionsAbsent}
+        reliabilitySubjectUserId={user?.id ?? null}
+      />
 
       <ProfileShareScreen
         open={showProfileShare}

@@ -10,8 +10,11 @@ import {
   startOfWeek,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronDown, Plus, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, Search } from "lucide-react";
+
+/** Maquette RunConnect.jsx */
+const ACTION_BLUE = "#007AFF";
+const MAQUETTE_TITLE = "#0A0F1F";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +92,7 @@ export function CoachPlanificationMonthCalendar({
   onSelectAthlete,
 }: Props) {
   const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(today));
+  const [currentMonth] = useState(() => startOfMonth(today));
   const [selectedDay, setSelectedDay] = useState<Date>(today);
 
   // ── Calendar grid ─────────────────────────────────────────────────────────
@@ -118,9 +121,19 @@ export function CoachPlanificationMonthCalendar({
     [sessions, selectedDay]
   );
 
-  const selectedDayLabel = format(selectedDay, "EEEE d", { locale: fr });
-  const selectedDayCapitalized =
-    selectedDayLabel.charAt(0).toUpperCase() + selectedDayLabel.slice(1);
+  const selectedDayLabelShort = useMemo(() => {
+    const w = format(selectedDay, "EEEE", { locale: fr });
+    const cap = w.charAt(0).toUpperCase() + w.slice(1);
+    return `${cap} ${format(selectedDay, "d")}`;
+  }, [selectedDay]);
+
+  const calendarWeeks = useMemo(() => {
+    const chunks: Date[][] = [];
+    for (let i = 0; i < calendarDays.length; i += 7) {
+      chunks.push(calendarDays.slice(i, i + 7));
+    }
+    return chunks;
+  }, [calendarDays]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -131,7 +144,7 @@ export function CoachPlanificationMonthCalendar({
         <button
           type="button"
           className="flex items-center gap-1"
-          style={{ color: "#0066cc" }}
+          style={{ color: ACTION_BLUE }}
           onClick={() => {
             /* month picker — could open a popover */
           }}
@@ -141,14 +154,16 @@ export function CoachPlanificationMonthCalendar({
               c.toUpperCase()
             )}
           </span>
-          <ChevronDown className="mt-0.5 h-4 w-4" />
+          <span className="text-lg leading-none" style={{ color: ACTION_BLUE }}>
+            ⌄
+          </span>
         </button>
-        <div className="flex items-center gap-[18px]">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             aria-label="Rechercher"
             className="h-6 w-6 transition-opacity active:opacity-60"
-            style={{ color: "#0066cc" }}
+            style={{ color: ACTION_BLUE }}
           >
             <Search className="h-full w-full" strokeWidth={2.2} />
           </button>
@@ -156,10 +171,10 @@ export function CoachPlanificationMonthCalendar({
             type="button"
             aria-label="Nouvelle séance"
             className="h-6 w-6 transition-opacity active:opacity-60"
-            style={{ color: "#0066cc" }}
+            style={{ color: ACTION_BLUE }}
             onClick={() => onCreateSession(selectedDay)}
           >
-            <Plus className="h-full w-full" strokeWidth={2.2} />
+            <Plus className="h-full w-full" strokeWidth={2.4} />
           </button>
         </div>
       </div>
@@ -167,91 +182,79 @@ export function CoachPlanificationMonthCalendar({
       {/* ── Calendar grid ────────────────────────────────────────────────── */}
       <div className="px-3">
         {/* Day-of-week labels */}
-        <div
-          className="mb-2 grid grid-cols-7 border-b pb-2"
-          style={{ borderColor: "#E5E5EA" }}
-        >
+        <div className="mb-2 grid grid-cols-7">
           {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
-            <span
-              key={i}
-              className="text-center text-[11px] font-medium tracking-[0.04em]"
-              style={{ color: "#8E8E93" }}
-            >
+            <span key={i} className="text-center text-[13px] font-medium" style={{ color: "#8E8E93" }}>
               {d}
             </span>
           ))}
         </div>
+        <div className="mb-2 h-px bg-[#E5E5EA]" />
 
-        {/* Month grid */}
-        <div className="grid grid-cols-7">
-          {calendarDays.map((day) => {
-            const isToday = isSameDay(day, today);
-            const isSelected = isSameDay(day, selectedDay);
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const dateKey = format(day, "yyyy-MM-dd");
-            const dots = dotsByDate[dateKey] ?? [];
+        {/* Month grid — semaines espacées comme la maquette */}
+        <div>
+          {calendarWeeks.map((week, wi) => (
+            <div key={wi} className="grid grid-cols-7 gap-y-3 py-2">
+              {week.map((day) => {
+                const isToday = isSameDay(day, today);
+                const isSelected = isSameDay(day, selectedDay);
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                const dateKey = format(day, "yyyy-MM-dd");
+                const dots = dotsByDate[dateKey] ?? [];
 
-            return (
-              <button
-                key={day.toISOString()}
-                type="button"
-                className="relative flex flex-col items-center pb-[14px] pt-2"
-                onClick={() => setSelectedDay(day)}
-              >
-                {/* Day number */}
-                <span
-                  className={cn(
-                    "flex h-[30px] w-[30px] items-center justify-center rounded-full text-[17px] font-medium transition-all",
-                    isToday && "font-semibold text-white",
-                    isSelected && !isToday && "font-semibold text-white",
-                    !isCurrentMonth && !isToday && !isSelected && "font-normal"
-                  )}
-                  style={{
-                    backgroundColor: isToday
-                      ? "#0066cc"
-                      : isSelected
-                        ? "#0A1628"
-                        : "transparent",
-                    color: isToday || isSelected
-                      ? "#fff"
-                      : isCurrentMonth
-                        ? "#0A1628"
-                        : "#C7C7CC",
-                  }}
-                >
-                  {format(day, "d")}
-                </span>
+                let bg = "transparent";
+                let color = isCurrentMonth ? MAQUETTE_TITLE : "#C7C7CC";
+                if (isToday) {
+                  bg = ACTION_BLUE;
+                  color = "white";
+                } else if (isSelected) {
+                  bg = "#0A0F1F";
+                  color = "white";
+                }
 
-                {/* Status dots */}
-                {dots.length > 0 && (
-                  <div className="absolute bottom-[2px] flex items-center gap-[3px]">
-                    {dots.slice(0, 3).map((status, i) => (
-                      <span
-                        key={i}
-                        className="h-[5px] w-[5px] rounded-full"
-                        style={{ backgroundColor: STATUS_COLOR[status] }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={day.toISOString()}
+                    type="button"
+                    className="flex flex-col items-center justify-start"
+                    style={{ gap: 4 }}
+                    onClick={() => setSelectedDay(day)}
+                  >
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-[19px] font-bold transition-colors"
+                      style={{
+                        background: bg,
+                        color,
+                      }}
+                    >
+                      {format(day, "d")}
+                    </div>
+                    <div className="flex h-[5px] items-center justify-center gap-[3px]">
+                      {dots.slice(0, 3).map((status, i) => (
+                        <div
+                          key={i}
+                          className="h-[5px] w-[5px] rounded-full"
+                          style={{ background: STATUS_COLOR[status] }}
+                        />
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
       </div>
 
       {/* ── Day detail panel (fond gris = scroll parent apple-grouped-bg) ── */}
-      <div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-[#E5E5EA] px-4 pb-[18px] pt-4 dark:border-white/10">
+      <div className="mt-5 flex min-h-0 flex-1 flex-col px-4 pb-[18px] pt-0 dark:border-white/10">
         {/* Panel header */}
         <div className="mb-3 flex items-baseline gap-2">
-          <span
-            className="text-[22px] font-extrabold leading-none tracking-[-0.01em]"
-            style={{ color: "#0A1628" }}
-          >
-            {selectedDayCapitalized}
+          <span className="text-[24px] font-bold leading-none tracking-[-0.02em]" style={{ color: MAQUETTE_TITLE }}>
+            {selectedDayLabelShort}
           </span>
-          <span className="text-[14px] font-medium" style={{ color: "#8E8E93" }}>
+          <span className="text-[15px]" style={{ color: "#8E8E93" }}>
             {selectedDaySessions.length === 0
               ? "Aucune séance"
               : `${selectedDaySessions.length} séance${selectedDaySessions.length > 1 ? "s" : ""}`}
@@ -320,7 +323,7 @@ export function CoachPlanificationMonthCalendar({
               <button
                 type="button"
                 className="shrink-0 rounded-full px-[14px] py-[7px] text-[13px] font-semibold transition-opacity active:opacity-70"
-                style={{ background: "#F7F7F8", color: "#0066cc" }}
+                style={{ background: "#F7F7F8", color: ACTION_BLUE }}
                 onClick={() => onOpenSession(session.id)}
               >
                 ›
@@ -332,57 +335,62 @@ export function CoachPlanificationMonthCalendar({
         {/* CTA — Créer une séance */}
         <button
           type="button"
-          className="mt-[10px] flex w-full items-center justify-center gap-1.5 rounded-[14px] py-[13px] text-[14px] font-semibold text-white transition-all active:scale-[0.98]"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[16px] font-semibold text-white transition-all active:scale-[0.99]"
           style={{
-            background: "#0066cc",
-            boxShadow: "0 4px 14px -4px rgba(0,122,255,0.45), 0 1px 2px rgba(0,0,0,0.04)",
+            background: ACTION_BLUE,
+            boxShadow: "0 2px 8px rgba(0, 122, 255, 0.25)",
           }}
           onClick={() => onCreateSession(selectedDay)}
         >
-          <Plus className="h-4 w-4" strokeWidth={2.4} />
+          <Plus className="h-5 w-5" strokeWidth={2.5} />
           Créer une séance
         </button>
       </div>
 
       {/* ── Mes athlètes ─────────────────────────────────────────────────── */}
       {athletes.length > 0 && (
-        <div className="border-t border-[#E5E5EA] px-4 pb-5 pt-4 dark:border-white/10">
+        <div className="mt-7 border-t border-[#E5E5EA] pt-4 dark:border-white/10">
           <p
-            className="mb-[10px] text-[11px] font-semibold uppercase tracking-[0.08em]"
+            className="mb-3 px-4 text-[13px] font-extrabold tracking-[0.08em]"
             style={{ color: "#8E8E93" }}
           >
-            Mes athlètes · {athletes.length}
+            MES ATHLÈTES · {athletes.length}
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            {athletes.slice(0, 6).map((athlete) => (
+          <div
+            className="flex gap-3 overflow-x-auto pb-2 pl-4 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollSnapType: "x proximity" }}
+          >
+            {athletes.map((athlete) => (
               <button
                 key={athlete.id}
                 type="button"
-                className="flex flex-col items-center gap-1.5 rounded-[14px] border border-[#E5E5EA] bg-white px-2 pb-[10px] pt-3 transition-opacity active:opacity-70"
+                className="flex w-[116px] flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-3 pt-3.5 text-left transition-transform active:scale-[0.97]"
+                style={{
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                  scrollSnapAlign: "start",
+                }}
                 onClick={() => onSelectAthlete?.(athlete.id)}
               >
-                {/* Avatar */}
-                <div className="relative">
+                <div className="relative mx-auto" style={{ width: 64, height: 64 }}>
                   {athlete.avatarUrl ? (
                     <img
                       src={athlete.avatarUrl}
                       alt={athlete.name}
-                      className="h-12 w-12 rounded-full object-cover"
+                      className="h-full w-full rounded-full border-2 border-white object-cover shadow-[0_1px_4px_rgba(0,0,0,0.08)]"
                     />
                   ) : (
                     <div
-                      className="flex h-12 w-12 items-center justify-center rounded-full text-[17px] font-semibold text-white"
+                      className="flex h-full w-full items-center justify-center rounded-full border-2 border-white text-[20px] font-semibold text-white shadow-[0_1px_4px_rgba(0,0,0,0.08)]"
                       style={{
                         background: `linear-gradient(135deg, hsl(${avatarHue(athlete.name)},55%,58%), hsl(${avatarHue(athlete.name)},65%,40%))`,
                       }}
                     >
-                      {initials(athlete.name)}
+                      {initials(athlete.name).slice(0, 1)}
                     </div>
                   )}
-                  {/* Status dot */}
-                  {athlete.statusColor && (
+                  {athlete.statusColor ? (
                     <span
-                      className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-white"
+                      className="absolute bottom-0.5 right-1 h-3 w-3 rounded-full border-2 border-white"
                       style={{
                         background:
                           athlete.statusColor === "orange"
@@ -394,17 +402,12 @@ export function CoachPlanificationMonthCalendar({
                                 : "#C7C7CC",
                       }}
                     />
-                  )}
+                  ) : null}
                 </div>
-                <span
-                  className="w-full truncate text-center text-[13px] font-semibold"
-                  style={{ color: "#0A1628" }}
-                >
+                <p className="mt-2.5 w-full truncate text-center text-[15px] font-extrabold tracking-[-0.01em]" style={{ color: MAQUETTE_TITLE }}>
                   {athlete.name.split(" ")[0]}
-                </span>
-                <span className="text-[11px]" style={{ color: "#8E8E93" }}>
-                  Athlète
-                </span>
+                </p>
+                <p className="mt-0.5 text-center text-[12px] text-[#8E8E93]">Athlète</p>
               </button>
             ))}
           </div>

@@ -35,6 +35,13 @@ interface PlanningHeaderProps {
   onPressClubAvatar?: () => void;
   /** Fond du bloc header (défaut : liste groupée iOS). */
   surfaceClassName?: string;
+  /** Grand titre (maquette RunConnect.jsx : Mon plan 40px / Planification 36px, extrablack). */
+  largeTitleClassName?: string;
+  /**
+   * Pastille initiale utilisateur (#007AFF) à droite du grand titre — maquette page Coaching
+   * (prioritaire sur RC / avatar club quand défini avec hideDrawerActions).
+   */
+  userInitialAccentBadge?: string | null;
 }
 
 export function PlanningHeader({
@@ -48,6 +55,8 @@ export function PlanningHeader({
   clubName,
   onPressClubAvatar,
   surfaceClassName,
+  largeTitleClassName,
+  userInitialAccentBadge,
 }: PlanningHeaderProps) {
   const showBellAndSettings = !coachLandingBrand && !hideDrawerActions;
   /** Dès qu’une action fiche club est fournie, afficher le bouton (initiale de secours si pas encore nom/photo). */
@@ -65,6 +74,17 @@ export function PlanningHeader({
   /** À côté du grand titre : hauteur proche du libellé 34px, alignée en bas avec la ligne titre. */
   const clubLargeTitleClass =
     "inline-flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center overflow-hidden rounded-[10px] bg-primary/12 text-[13px] font-semibold text-primary active:opacity-80";
+  const userMaquetteBadge =
+    userInitialAccentBadge != null && userInitialAccentBadge !== "" ? (
+      <div
+        className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full text-[15px] font-bold leading-none text-white"
+        style={{ background: "#007AFF" }}
+        aria-hidden
+      >
+        {userInitialAccentBadge.slice(0, 1).toUpperCase()}
+      </div>
+    ) : null;
+
   const clubMarkButton = (
     <button
       type="button"
@@ -81,7 +101,9 @@ export function PlanningHeader({
   );
   const largeTitleAccessory =
     brandBesideLargeTitle ? (
-      showClubMark ? (
+      userMaquetteBadge ? (
+        userMaquetteBadge
+      ) : showClubMark ? (
         clubMarkButton
       ) : (
         <RunConnectHeaderMark />
@@ -99,6 +121,7 @@ export function PlanningHeader({
       subtitle={subtitle}
       className={surfaceClassName ?? "apple-grouped-bg"}
       disableScrollCollapse
+      largeTitleClassName={largeTitleClassName}
       tabs={tabs}
       tabsAriaLabel={`Navigation ${title}`}
       largeTitleRight={largeTitleAccessory}

@@ -21,6 +21,8 @@ type MainTopHeaderProps = {
   /** Optionnel · alignement ligne titre + accessory (ex. items-end avec avatar club). */
   largeTitleFlexClassName?: string;
   largeTitleAccessoryWrapperClassName?: string;
+  /** Surcharge du style du grand titre (ex. maquette coaching 40px / 36px). */
+  largeTitleClassName?: string;
   className?: string;
   /** Désactive la compaction au scroll et garde le header fixe/étendu. */
   disableScrollCollapse?: boolean;
@@ -36,6 +38,7 @@ export function MainTopHeader({
   largeTitleRight,
   largeTitleFlexClassName,
   largeTitleAccessoryWrapperClassName,
+  largeTitleClassName,
   className,
   disableScrollCollapse = false,
 }: MainTopHeaderProps) {
@@ -137,7 +140,12 @@ export function MainTopHeader({
             largeTitleFlexClassName
           )}
         >
-          <h1 className="font-display min-w-0 select-none truncate text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
+          <h1
+            className={cn(
+              "font-display min-w-0 select-none truncate text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground",
+              largeTitleClassName
+            )}
+          >
             {title}
           </h1>
           {largeTitleRight ? (

@@ -1,3 +1,6 @@
+import { Maximize2, Minimize2, Layers, SlidersHorizontal } from "lucide-react";
+import { ACTION_BLUE } from "@/components/discover/DiscoverChromeShell";
+
 type DiscoverMapMaquetteToolbarProps = {
   fullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -5,12 +8,11 @@ type DiscoverMapMaquetteToolbarProps = {
   onOpenFiltersSheet: () => void;
 };
 
-/** Emojis plein écran / palette / filtres — équivalent maquette RunConnect (4), taille ~20px comme les icônes w-5 h-5. */
 const BTN =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-md transition-transform active:scale-95";
 
 /**
- * Boutons flottants carte « Découvrir » — même disposition que la maquette (haut-droite, pile verticale, 40×40, gap 8px).
+ * Boutons flottants carte Découvrir — maquette RunConnect (6) : colonne, Lucide, filtres en bleu.
  */
 export function DiscoverMapMaquetteToolbar({
   fullscreen,
@@ -26,24 +28,17 @@ export function DiscoverMapMaquetteToolbar({
         aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"}
         className={BTN}
       >
-        <span className="text-[20px] leading-none select-none" aria-hidden>
-          {fullscreen ? "🔳" : "🔲"}
-        </span>
+        {fullscreen ? (
+          <Minimize2 className="h-5 w-5 text-[#0A0F1F]" strokeWidth={2.4} aria-hidden />
+        ) : (
+          <Maximize2 className="h-5 w-5 text-[#0A0F1F]" strokeWidth={2.4} aria-hidden />
+        )}
       </button>
       <button type="button" onClick={onOpenStyleSheet} aria-label="Style de carte" className={BTN}>
-        <span className="text-[20px] leading-none select-none" aria-hidden>
-          🗺️
-        </span>
+        <Layers className="h-5 w-5 text-[#0A0F1F]" strokeWidth={2.2} aria-hidden />
       </button>
-      <button
-        type="button"
-        onClick={onOpenFiltersSheet}
-        aria-label="Filtres"
-        className={`${BTN} ring-2 ring-[#007AFF]/28`}
-      >
-        <span className="text-[20px] leading-none select-none" aria-hidden>
-          🎛️
-        </span>
+      <button type="button" onClick={onOpenFiltersSheet} aria-label="Filtres" className={BTN}>
+        <SlidersHorizontal className="h-5 w-5" color={ACTION_BLUE} strokeWidth={2.4} aria-hidden />
       </button>
     </div>
   );

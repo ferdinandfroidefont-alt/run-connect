@@ -1,30 +1,32 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { ChevronRight, Settings, Share } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 
-import { useLanguage } from "@/contexts/LanguageContext";
 import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
-import { MainTopHeader } from "@/components/layout/MainTopHeader";
+import { estimateSessionDurationMinutes } from "@/lib/estimateSessionDurationMinutes";
+import { ProfileSelfMaquetteLayout } from "@/components/profile/ProfileSelfMaquetteLayout";
+import type {
+  ProfileMaquetteNextSession,
+  ProfileMaquetteParticipantChip,
+} from "@/components/profile/ProfileSelfMaquetteLayout";
+import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
+import { startOfWeek, endOfWeek } from "date-fns";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
-import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
@@ -55,28 +57,31 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
 }
-interface UserRoute {
-  id: string;
-  name: string;
-  description: string | null;
-  total_distance: number | null;
-  total_elevation_gain: number | null;
-  created_at: string;
-  coordinates: any;
-}
 interface ProfileStoryHighlight {
   id: string;
   story_id: string;
   title: string;
   position: number;
 }
+
+const SESSION_DASHBOARD_SELECT =
+  "id, title, scheduled_at, activity_type, location_name, location_lat, location_lng, current_participants, max_participants, organizer_id, description, distance_km, pace_general, session_blocks, intensity, created_at";
+
+function profileMondayIndex(d: Date): number {
+  const j = d.getDay();
+  return j === 0 ? 6 : j - 1;
+}
+
+function profileChipInitials(displayName: string | null, username: string | null) {
+  const source = (displayName || username || "U").trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0] || ""}${parts[1]![0] || ""}`.toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
+}
 const Profile = () => {
-  const {
-    user,
-    signOut,
-    subscriptionInfo,
-    refreshSubscription
-  } = useAuth();
+  const { user } = useAuth();
   
 
   const {
@@ -110,14 +115,12 @@ const Profile = () => {
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
-  const [userRoutes, setUserRoutes] = useState<UserRoute[]>([]);
-  const [routesLoading, setRoutesLoading] = useState(false);
-  const [commonClubs, setCommonClubs] = useState<any[]>([]);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [settingsFocus, setSettingsFocus] = useState<string>("");
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [commonClubs, setCommonClubs] = useState<any[]>([]);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
@@ -128,33 +131,22 @@ const Profile = () => {
   const [storyHighlights, setStoryHighlights] = useState<ProfileStoryHighlight[]>([]);
   const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
   const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
+  const [dashNextSummary, setDashNextSummary] = useState<ProfileMaquetteNextSession | null>(null);
+  const [dashNextRaw, setDashNextRaw] = useState<Record<string, unknown> | null>(null);
+  const [dashNextOrganizer, setDashNextOrganizer] = useState<{
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null>(null);
+  const [participantChips, setParticipantChips] = useState<ProfileMaquetteParticipantChip[]>([]);
+  const [weekKm, setWeekKm] = useState(0);
+  const [weekSessionsCount, setWeekSessionsCount] = useState(0);
+  const [weekMinutesTotal, setWeekMinutesTotal] = useState<number | null>(null);
+  const [weekBarLevels, setWeekBarLevels] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [profileSessionDetail, setProfileSessionDetail] = useState<Record<string, unknown> | null>(null);
   const {
     toast
   } = useToast();
-  const {
-    selectFromGallery,
-    loading: cameraLoading
-  } = useCamera();
-  const {
-    t
-  } = useLanguage();
-  const profileHeaderTabs = [{
-    id: "profile",
-    label: "Profil",
-    active: true
-  }, {
-    id: "records",
-    label: "Record",
-    active: false,
-    onClick: () => navigate("/profile/records")
-  }, {
-    id: "story",
-    label: "Créer une story",
-    active: false,
-    onClick: () => navigate("/stories/create")
-  }];
-
-  // Vérifier si on arrive avec un message d'erreur
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam === 'not_friends') {
@@ -194,34 +186,29 @@ const Profile = () => {
   }, [searchParams, navigate, isViewingOtherUser]);
   useEffect(() => {
     if (user) {
-      // Si on regarde son propre profil, utiliser le profil global
       if (!isViewingOtherUser && globalProfile) {
-        console.log('✅ [Profile] Using global profile:', globalProfile.username);
         setProfile(globalProfile);
         setFormData(globalProfile);
         setLoading(false);
       } else {
-        // Sinon charger le profil spécifique
         fetchProfile();
       }
       fetchFollowCounts();
       fetchReliabilityStats();
       if (!isViewingOtherUser) {
-        fetchUserRoutes();
         fetchStoriesAndHighlights();
       } else {
         fetchCommonClubs();
-        // Fetch connection history only for creator
         if (hasCreatorSupportAccess(user?.email, globalProfile?.username)) {
           fetchConnectionHistory();
         }
       }
     }
-    // Check notification permission
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
   }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
+
+  useEffect(() => {
+    if ("Notification" in window) setNotificationPermission(Notification.permission);
+  }, []);
   const fetchReliabilityStats = async () => {
     if (!user || isViewingOtherUser) return;
     try {
@@ -269,6 +256,173 @@ const Profile = () => {
       console.error("Error fetching highlights:", error);
     }
   };
+  const fetchProfileDashboard = useCallback(async () => {
+    if (!user?.id || isViewingOtherUser) return;
+
+    try {
+      const uid = user.id;
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+      const weekCap = now < weekEnd ? now : weekEnd;
+      const weekStartIso = weekStart.toISOString();
+      const weekEndIso = weekCap.toISOString();
+
+      const { data: organizedUp } = await supabase
+        .from("sessions")
+        .select(SESSION_DASHBOARD_SELECT)
+        .eq("organizer_id", uid)
+        .gte("scheduled_at", nowIso)
+        .order("scheduled_at", { ascending: true })
+        .limit(20);
+
+      const { data: participantRows } = await supabase
+        .from("session_participants")
+        .select("session_id")
+        .eq("user_id", uid);
+
+      const pidList = [...new Set((participantRows ?? []).map((p) => p.session_id).filter(Boolean))] as string[];
+      let joinedUp: Record<string, unknown>[] = [];
+      if (pidList.length > 0) {
+        const { data } = await supabase
+          .from("sessions")
+          .select(SESSION_DASHBOARD_SELECT)
+          .in("id", pidList)
+          .neq("organizer_id", uid)
+          .gte("scheduled_at", nowIso)
+          .order("scheduled_at", { ascending: true })
+          .limit(20);
+        joinedUp = data ?? [];
+      }
+
+      const upcomingMerged = [...(organizedUp ?? []), ...joinedUp] as Array<Record<string, unknown>>;
+      upcomingMerged.sort((a, b) => {
+        const ta = String(a.scheduled_at);
+        const tb = String(b.scheduled_at);
+        return ta.localeCompare(tb);
+      });
+      const next = upcomingMerged[0] ?? null;
+
+      if (!next) {
+        setDashNextSummary(null);
+        setDashNextRaw(null);
+        setDashNextOrganizer(null);
+        setParticipantChips([]);
+      } else {
+        setDashNextSummary({
+          id: String(next.id),
+          title: String(next.title ?? ""),
+          scheduled_at: String(next.scheduled_at),
+          activity_type: String(next.activity_type ?? ""),
+          location_name:
+            typeof next.location_name === "string" && next.location_name.trim() ? next.location_name : null,
+          current_participants: next.current_participants != null ? Number(next.current_participants) : null,
+        });
+        setDashNextRaw(next);
+
+        const orgId = String(next.organizer_id);
+        const { data: orgProf } = await supabase
+          .from("profiles")
+          .select("username, display_name, avatar_url")
+          .eq("user_id", orgId)
+          .maybeSingle();
+
+        setDashNextOrganizer(
+          orgProf
+            ? {
+                username: orgProf.username,
+                display_name: orgProf.display_name,
+                avatar_url: orgProf.avatar_url,
+              }
+            : null,
+        );
+
+        let chips: ProfileMaquetteParticipantChip[] = [];
+        const sid = String(next.id);
+        const { data: pals } = await supabase
+          .from("session_participants")
+          .select("user_id")
+          .eq("session_id", sid)
+          .neq("user_id", uid)
+          .limit(24);
+        const friendIds = [...new Set((pals ?? []).map((p) => p.user_id).filter(Boolean))] as string[];
+        if (friendIds.length > 0) {
+          const { data: pfRows } = await supabase
+            .from("profiles")
+            .select("username, display_name")
+            .in("user_id", friendIds.slice(0, 8));
+          const PALETTE = ["#007AFF", "#34C759", "#FF9500"];
+          chips = (pfRows ?? []).slice(0, 3).map((p, idx) => {
+            const initials = profileChipInitials(p.display_name, p.username);
+            return {
+              label: initials,
+              bg: PALETTE[idx % PALETTE.length]!,
+            };
+          });
+        }
+        setParticipantChips(chips);
+      }
+
+      const { data: organizedPast } = await supabase
+        .from("sessions")
+        .select(SESSION_DASHBOARD_SELECT)
+        .eq("organizer_id", uid)
+        .gte("scheduled_at", weekStartIso)
+        .lte("scheduled_at", weekEndIso)
+        .lt("scheduled_at", nowIso);
+
+      let joinedPast: Record<string, unknown>[] = [];
+      if (pidList.length > 0) {
+        const { data } = await supabase
+          .from("sessions")
+          .select(SESSION_DASHBOARD_SELECT)
+          .in("id", pidList)
+          .gte("scheduled_at", weekStartIso)
+          .lte("scheduled_at", weekEndIso)
+          .lt("scheduled_at", nowIso);
+        joinedPast = data ?? [];
+      }
+
+      const byId = new Map<string, Record<string, unknown>>();
+      for (const s of [...(organizedPast ?? []), ...joinedPast]) {
+        const id = String((s as { id: unknown }).id);
+        byId.set(id, s as Record<string, unknown>);
+      }
+      const weekSessions = [...byId.values()];
+
+      let kmSum = 0;
+      let minSum = 0;
+      let inferredMin = false;
+      const dayKm = [0, 0, 0, 0, 0, 0, 0];
+      for (const s of weekSessions) {
+        const dk = Number(s.distance_km) || 0;
+        kmSum += dk;
+        const est = estimateSessionDurationMinutes(s as Parameters<typeof estimateSessionDurationMinutes>[0]);
+        if (est != null) {
+          minSum += est;
+          inferredMin = true;
+        }
+        const d = new Date(String(s.scheduled_at));
+        const idx = profileMondayIndex(d);
+        dayKm[idx] += dk;
+      }
+      const maxDay = Math.max(...dayKm, 0);
+      const levels = maxDay <= 0 ? [0, 0, 0, 0, 0, 0, 0] : dayKm.map((k) => (k > 0 ? k / maxDay : 0));
+
+      setWeekKm(kmSum);
+      setWeekSessionsCount(weekSessions.length);
+      setWeekMinutesTotal(inferredMin && minSum > 0 ? minSum : null);
+      setWeekBarLevels(levels);
+    } catch (e) {
+      console.error("Error loading profile dashboard:", e);
+    }
+  }, [user?.id, isViewingOtherUser]);
+
+  useEffect(() => {
+    void fetchProfileDashboard();
+  }, [fetchProfileDashboard]);
+
   const fetchFollowCounts = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
@@ -327,31 +481,6 @@ const Profile = () => {
       console.error('Error fetching connection history:', error);
     }
   };
-  const fetchUserRoutes = async () => {
-    if (!user) return;
-    setRoutesLoading(true);
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from('routes').select('id, name, description, total_distance, total_elevation_gain, created_at, coordinates').eq('created_by', user.id).order('created_at', {
-        ascending: false
-      });
-      if (error) throw error;
-      setUserRoutes(data || []);
-    } catch (error) {
-      console.error('Error fetching user routes:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger vos parcours",
-        variant: "destructive"
-      });
-    } finally {
-      setRoutesLoading(false);
-    }
-  };
-
-  // Vérifier le rôle admin via la fonction sécurisée has_role
   const fetchAdminStatus = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
@@ -372,25 +501,6 @@ const Profile = () => {
   useEffect(() => {
     fetchAdminStatus();
   }, [user?.id, viewingUserId]);
-  const deleteRoute = async (routeId: string) => {
-    try {
-      const {
-        error
-      } = await supabase.from('routes').delete().eq('id', routeId).eq('created_by', user?.id);
-      if (error) throw error;
-      setUserRoutes(prev => prev.filter(route => route.id !== routeId));
-      toast({
-        title: "Parcours supprimé",
-        description: "Le parcours a été supprimé avec succès"
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le parcours",
-        variant: "destructive"
-      });
-    }
-  };
   const fetchProfile = async (retryCount = 0) => {
     try {
       const targetUserId = viewingUserId || user?.id;
@@ -704,369 +814,283 @@ const Profile = () => {
     }
     return source.slice(0, 2).toUpperCase();
   };
-  const highlightedStories = storyHighlights.slice(0, 8);
-  const reliabilityRingRadius = 19;
-  const reliabilityRingCircumference = 2 * Math.PI * reliabilityRingRadius;
-  const reliabilityRingOffset =
-    reliabilityRingCircumference - (Math.max(0, Math.min(100, reliabilityRate)) / 100) * reliabilityRingCircumference;
+
+  if (!profile) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-[#F2F2F7]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const openNextSessionDetailModal = () => {
+    const row = dashNextRaw;
+    if (!row || !user) return;
+    const org = dashNextOrganizer;
+    const isSelfOrg = String(row.organizer_id) === user.id;
+    const prof =
+      org && !isSelfOrg
+        ? org
+        : { username: profile.username, display_name: profile.display_name, avatar_url: profile.avatar_url };
+
+    setProfileSessionDetail({
+      ...row,
+      session_type: row.activity_type ?? "course",
+      intensity: (row.intensity as string) ?? "moderate",
+      location_lat: Number(row.location_lat ?? 0),
+      location_lng: Number(row.location_lng ?? 0),
+      location_name: row.location_name ? String(row.location_name) : "",
+      max_participants: Number(row.max_participants ?? 0),
+      current_participants: Number(row.current_participants ?? 0),
+      description: row.description ? String(row.description) : "",
+      profiles: {
+        username: prof.username,
+        display_name: prof.display_name,
+        avatar_url: prof.avatar_url ?? undefined,
+      },
+    });
+  };
 
   return (
     <div
-      className="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
+      className="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-[#F2F2F7]"
       data-tutorial="tutorial-profile-page"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-50"><div className="pointer-events-auto">
-        <MainTopHeader
-          title="Profil"
-          disableScrollCollapse
-          className=""
-          largeTitleRight={
-            profile ? (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    shareProfile({
-                      username: profile.username,
-                      displayName: profile.display_name,
-                      avatarUrl: profile.avatar_url,
-                    })
-                  }
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[17px] text-primary active:opacity-70"
-                  aria-label="Partager le profil"
-                >
-                  <Share className="h-5 w-5 text-primary" strokeWidth={2} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/profile?tab=settings")}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[17px] text-primary active:opacity-70"
-                  aria-label="Ouvrir les paramètres"
-                >
-                  <Settings className="h-5 w-5 text-primary" strokeWidth={2} />
-                </button>
-              </div>
-            ) : undefined
-          }
-        />
-      </div></div>
-      <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full bg-secondary" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 88px)" }}>
       {isEditing && !isViewingOtherUser && (
-        <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
+        <input
+          id="avatar-upload"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleAvatarChange}
+          className="hidden"
+        />
       )}
 
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden bg-secondary pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border min-h-0 min-w-0 max-w-full space-y-6 px-5 pt-3 sm:mx-auto sm:max-w-2xl">
-          <button
-            type="button"
-            onClick={() => navigate("/profile/edit")}
-            className="flex w-full items-center gap-3 rounded-xl bg-white px-3 py-3 text-left active:bg-secondary/60"
-          >
-            <Avatar className="h-[60px] w-[60px] shrink-0">
-              <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="bg-[#0A84FF] text-[22px] font-semibold text-white">
-                {getInitials(profile?.display_name, profile?.username)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[20px] font-semibold leading-tight text-foreground">
-                {profile?.display_name || profile?.username}
-              </p>
-              <p className="mt-1 truncate text-[13px] text-muted-foreground">
-                @{profile?.username} {profile?.country ? `· ${profile.country}` : ""} {profile?.is_premium ? "· Premium ✓" : ""}
-              </p>
-            </div>
-            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-          </button>
+      <ProfileSelfMaquetteLayout
+        profile={profile}
+        avatarPreview={avatarPreview}
+        getInitials={getInitials}
+        navigate={navigate}
+        followerCount={followerCount}
+        followingCount={followingCount}
+        sessionsJoinedCount={totalSessionsJoined}
+        formatCompactCount={formatCompactCount}
+        openFollowDialog={(type) => {
+          setFollowDialogType(type);
+          setShowFollowDialog(true);
+        }}
+        onShareProfile={() =>
+          shareProfile({
+            username: profile.username,
+            displayName: profile.display_name,
+            avatarUrl: profile.avatar_url,
+          })
+        }
+        onOpenSettings={() => navigate("/profile?tab=settings")}
+        nextSession={dashNextSummary}
+        friendCountPreview={participantChips}
+        onOpenNextSessionDetail={() => dashNextSummary && openNextSessionDetailModal()}
+        onGoToNextSession={() => dashNextSummary && openNextSessionDetailModal()}
+        weekKm={weekKm}
+        weekSessionsCount={weekSessionsCount}
+        weekMinutes={weekMinutesTotal}
+        weekBarLevels={weekBarLevels}
+        referenceDate={new Date()}
+        onWeekVoirTout={() => navigate("/profile/sessions")}
+        storyHighlights={storyHighlights.slice(0, 8)}
+        highlightPreviewByStoryId={highlightPreviewByStoryId}
+        onOpenHighlight={(sid) => setSelectedHighlightStoryId(sid)}
+        reliabilityRate={reliabilityRate}
+        totalSessionsJoined={totalSessionsJoined}
+        totalSessionsCompleted={totalSessionsCompleted}
+        userIdForRecords={user.id}
+        legacyRecords={{
+          running_records: profile.running_records,
+          cycling_records: profile.cycling_records,
+          swimming_records: profile.swimming_records,
+          triathlon_records: profile.triathlon_records,
+          walking_records: profile.walking_records,
+        }}
+      />
 
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl border border-border bg-white py-3">
-              <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(userRoutes.length)}</p>
-              <p className="mt-1 text-[12px] text-muted-foreground">Séances</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setFollowDialogType('followers');
-                setShowFollowDialog(true);
-              }}
-              className="rounded-xl border border-border bg-white py-3"
-            >
-              <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followerCount)}</p>
-              <p className="mt-1 text-[12px] text-muted-foreground">Abonnés</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFollowDialogType('following');
-                setShowFollowDialog(true);
-              }}
-              className="rounded-xl border border-border bg-white py-3"
-            >
-              <p className="text-[22px] font-semibold leading-none text-foreground">{formatCompactCount(followingCount)}</p>
-              <p className="mt-1 text-[12px] text-muted-foreground">Suivis</p>
-            </button>
-          </div>
+      {/* Follow Dialog */}
+      <FollowDialog
+        open={showFollowDialog}
+        onOpenChange={setShowFollowDialog}
+        type={followDialogType}
+        followerCount={followerCount}
+        followingCount={followingCount}
+        targetUserId={viewingUserId || undefined}
+      />
 
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[20px] font-semibold text-foreground">Stories à la une</h2>
-              <button type="button" onClick={() => navigate("/stories/create")} className="text-[14px] font-medium text-primary">Voir tout</button>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              <div className="shrink-0">
-                <button
-                  onClick={() => navigate("/stories/create")}
-                  className="flex h-[150px] w-[110px] flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#d9dbe0] bg-[#f6f7f9] text-[#0A84FF]"
-                >
-                  <span className="mb-3 inline-flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#0A84FF] text-[40px] font-light leading-none text-white">
-                    +
-                  </span>
-                  <span className="text-[14px] font-semibold leading-none">Nouvelle</span>
-                </button>
-                <p className="mt-2 text-center text-[12px] text-muted-foreground">Créer</p>
-              </div>
-              {highlightedStories.map((story) => (
-                <div key={story.id} className="shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedHighlightStoryId(story.story_id)}
-                    className="relative h-[150px] w-[110px] overflow-hidden rounded-xl border border-border bg-muted text-left"
-                  >
-                    {highlightPreviewByStoryId[story.story_id] ? (
-                      <img src={highlightPreviewByStoryId[story.story_id]} alt={story.title} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-3">
-                      <p className="truncate text-[14px] font-semibold text-white">{story.title?.trim() || "Story à la une"}</p>
-                    </div>
-                  </button>
-                  <p className="mt-2 text-center text-[12px] text-muted-foreground">Story à la une</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/stories/create')}
-              className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
-            >
-              <div className="mb-2 inline-flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-gradient-to-b from-[#FF5E3A] to-[#FF9500] leading-none">
-                <span className="text-[23px] leading-none">📸</span>
-              </div>
-              <p className="text-[14px] font-semibold text-foreground">Créer une story</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">Partage ta sortie</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/profile/records')}
-              className="rounded-xl border border-border bg-[#f9f9fb] p-4 text-left active:bg-secondary/50"
-            >
-              <div className="mb-2 inline-flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-[#0A84FF] leading-none">
-                <span className="text-[23px] leading-none">🏅</span>
-              </div>
-              <p className="text-[14px] font-semibold text-foreground">Nouveau record</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">Bats ton PR</p>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate('/profile/sessions')}
-            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 text-left shadow-sm active:bg-[#EFEFF4]"
-          >
-            <div className="relative h-[46px] w-[46px] shrink-0">
-              <svg viewBox="0 0 46 46" className="h-full w-full -rotate-90">
-                <circle
-                  cx="23"
-                  cy="23"
-                  r={reliabilityRingRadius}
-                  fill="none"
-                  stroke="rgba(10,132,255,0.12)"
-                  strokeWidth="5"
-                />
-                <circle
-                  cx="23"
-                  cy="23"
-                  r={reliabilityRingRadius}
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  strokeDasharray={reliabilityRingCircumference}
-                  strokeDashoffset={reliabilityRingOffset}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center text-[13px] font-bold leading-none text-foreground">
-                {Math.round(reliabilityRate)}
-              </div>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[16px] font-semibold text-foreground">Mes séances</p>
-              <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-                {totalSessionsCompleted}/{totalSessionsJoined} confirmées · Fiabilité {Math.round(reliabilityRate)}%
-              </p>
-            </div>
-            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-          </button>
-
-          {user?.id ? (
-            <div>
-              <p className="pb-2 text-[12px] font-semibold uppercase tracking-[0.25px] text-muted-foreground">
-                RECORDS PERSONNELS
-              </p>
-              <div className="overflow-hidden rounded-xl border border-border bg-white">
-                <ProfileRecordsDisplay
-                  userId={user.id}
-                  legacy={{
-                    running_records: profile?.running_records,
-                    cycling_records: profile?.cycling_records,
-                    swimming_records: profile?.swimming_records,
-                    triathlon_records: profile?.triathlon_records,
-                    walking_records: profile?.walking_records,
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => navigate("/profile/records")}
-                  className="flex w-full items-center justify-center border-t border-border px-3 py-3 text-[15px] font-medium text-primary active:bg-secondary/50"
-                >
-                  Gérer mes records
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-        {!isViewingOtherUser && isEditing && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-            <div className="ios-card overflow-hidden border border-border/60">
+      {!isViewingOtherUser && isEditing && (
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+          <div className="ios-card overflow-hidden border border-border/60">
             <div className="space-y-ios-3 px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
-                  <Input value={formData.username || ''} onChange={e => setFormData({
-              ...formData,
-              username: e.target.value
-            })} className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Nom d'affichage</label>
-                  <Input value={formData.display_name || ''} onChange={e => setFormData({
-              ...formData,
-              display_name: e.target.value
-            })} className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Âge</label>
-                  <Input type="number" value={formData.age || ''} onChange={e => setFormData({
-              ...formData,
-              age: parseInt(e.target.value) || null
-            })} className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Téléphone</label>
-                  <Input value={formData.phone || ''} onChange={e => setFormData({
-              ...formData,
-              phone: e.target.value
-            })} placeholder="06 12 34 56 78" className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Bio</label>
-                  <Input value={formData.bio || ''} onChange={e => setFormData({
-              ...formData,
-              bio: e.target.value
-            })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pays</label>
-                  <select
-                    value={formData.country || ''}
-                    onChange={e => setFormData({ ...formData, country: e.target.value || null })}
-                    className="h-11 w-full rounded-ios-sm border border-input bg-background px-3 text-ios-subheadline"
-                  >
-                    <option value="">Non spécifié</option>
-                    <option value="FR">🇫🇷 France</option>
-                    <option value="BE">🇧🇪 Belgique</option>
-                    <option value="CH">🇨🇭 Suisse</option>
-                    <option value="CA">🇨🇦 Canada</option>
-                    <option value="LU">🇱🇺 Luxembourg</option>
-                    <option value="MA">🇲🇦 Maroc</option>
-                    <option value="TN">🇹🇳 Tunisie</option>
-                    <option value="DZ">🇩🇿 Algérie</option>
-                    <option value="SN">🇸🇳 Sénégal</option>
-                    <option value="CI">🇨🇮 Côte d'Ivoire</option>
-                    <option value="ES">🇪🇸 Espagne</option>
-                    <option value="PT">🇵🇹 Portugal</option>
-                    <option value="DE">🇩🇪 Allemagne</option>
-                    <option value="IT">🇮🇹 Italie</option>
-                    <option value="GB">🇬🇧 Royaume-Uni</option>
-                    <option value="US">🇺🇸 États-Unis</option>
-                  </select>
-                </div>
-                <div className="flex gap-ios-2 pt-ios-2">
-                  <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-ios-sm">
-                    {loading && <Loader2 className="mr-ios-2 h-4 w-4 animate-spin" />}
-                    Sauvegarder
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-              setIsEditing(false);
-              setAvatarFile(null);
-              setAvatarPreview("");
-              setFormData(profile || {});
-            }} className="flex-1 h-11 rounded-ios-sm">
-                    Annuler
-                  </Button>
-                </div>
+              <div>
+                <label className="mb-ios-1 block text-ios-footnote text-muted-foreground">Pseudo</label>
+                <Input
+                  value={formData.username || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      username: e.target.value,
+                    })
+                  }
+                  className="h-11 rounded-ios-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-ios-1 block text-ios-footnote text-muted-foreground">Nom d'affichage</label>
+                <Input
+                  value={formData.display_name || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      display_name: e.target.value,
+                    })
+                  }
+                  className="h-11 rounded-ios-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-ios-1 block text-ios-footnote text-muted-foreground">Âge</label>
+                <Input
+                  type="number"
+                  value={formData.age || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      age: parseInt(e.target.value) || null,
+                    })
+                  }
+                  className="h-11 rounded-ios-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-ios-1 block text-ios-footnote text-muted-foreground">Téléphone</label>
+                <Input
+                  value={formData.phone || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: e.target.value,
+                    })
+                  }
+                  placeholder="06 12 34 56 78"
+                  className="h-11 rounded-ios-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-ios-1 block text-ios-footnote text-muted-foreground">Bio</label>
+                <Input
+                  value={formData.bio || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      bio: e.target.value,
+                    })
+                  }
+                  placeholder="Décrivez vos records, vos objectifs..."
+                  className="h-11 rounded-ios-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-ios-1 block text-ios-footnote text-muted-foreground">Pays</label>
+                <select
+                  value={formData.country || ""}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value || null })}
+                  className="h-11 w-full rounded-ios-sm border border-input bg-background px-3 text-ios-subheadline"
+                >
+                  <option value="">Non spécifié</option>
+                  <option value="FR">France</option>
+                  <option value="BE">Belgique</option>
+                  <option value="CH">Suisse</option>
+                  <option value="CA">Canada</option>
+                  <option value="LU">Luxembourg</option>
+                  <option value="MA">Maroc</option>
+                  <option value="TN">Tunisie</option>
+                  <option value="DZ">Algérie</option>
+                  <option value="SN">Sénégal</option>
+                  <option value="CI">Côte d'Ivoire</option>
+                  <option value="ES">Espagne</option>
+                  <option value="PT">Portugal</option>
+                  <option value="DE">Allemagne</option>
+                  <option value="IT">Italie</option>
+                  <option value="GB">Royaume-Uni</option>
+                  <option value="US">États-Unis</option>
+                </select>
+              </div>
+              <div className="flex gap-ios-2 pt-ios-2">
+                <Button onClick={updateProfile} disabled={loading} className="h-11 flex-1 rounded-ios-sm">
+                  {loading && <Loader2 className="mr-ios-2 h-4 w-4 animate-spin" />}
+                  Sauvegarder
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setAvatarFile(null);
+                    setAvatarPreview("");
+                    setFormData(profile || {});
+                  }}
+                  className="h-11 flex-1 rounded-ios-sm"
+                >
+                  Annuler
+                </Button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Follow Dialog */}
-        <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />
+      <Suspense fallback={null}>
+        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
+      </Suspense>
 
-        {/* Settings Dialog */}
-        <Suspense fallback={null}>
-          <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
-        </Suspense>
-
-        {/* Report User Dialog */}
-        <ReportUserDialog isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} reportedUserId={viewingUserId || ""} reportedUsername={profile?.username || ""} />
+      {/* Report User Dialog */}
+      <ReportUserDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        reportedUserId={viewingUserId || ""}
+        reportedUsername={profile.username}
+      />
 
         {/* Image Crop Editor */}
-        <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
+      <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
-        <ProfileShareScreen open={showProfileShare} onClose={() => setShowProfileShare(false)} />
-        <SessionStoryDialog
-          open={!!selectedHighlightStoryId}
-          onOpenChange={(open) => {
-            if (!open) setSelectedHighlightStoryId(null);
-          }}
-          authorId={user?.id || ""}
-          viewerUserId={user?.id ?? null}
-          storyId={selectedHighlightStoryId}
-          onOpenFeed={() => {
-            setSelectedHighlightStoryId(null);
-            navigate("/feed");
-          }}
+      <SessionDetailsDialog
+        session={profileSessionDetail as never}
+        onClose={() => setProfileSessionDetail(null)}
+        onSessionUpdated={() => void fetchProfileDashboard()}
+      />
+
+      <ProfileShareScreen open={showProfileShare} onClose={() => setShowProfileShare(false)} />
+      <SessionStoryDialog
+        open={!!selectedHighlightStoryId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedHighlightStoryId(null);
+        }}
+        authorId={user?.id || ""}
+        viewerUserId={user?.id ?? null}
+        storyId={selectedHighlightStoryId}
+        onOpenFeed={() => {
+          setSelectedHighlightStoryId(null);
+          navigate("/feed");
+        }}
+      />
+      {qrData ? (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
         />
-        {qrData ? (
-          <QRShareDialog
-            open={showQRDialog}
-            onOpenChange={setShowQRDialog}
-            profileUrl={qrData.profileUrl}
-            username={qrData.username}
-            displayName={qrData.displayName}
-            avatarUrl={qrData.avatarUrl}
-            referralCode={qrData.referralCode}
-          />
-        ) : null}
-
-        </div>
-      </div>
-      </div>
+      ) : null}
     </div>
   );
 };

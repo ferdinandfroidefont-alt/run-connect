@@ -1619,7 +1619,7 @@ export function CoachPlanningExperience() {
     } finally {
       setAthletePlanLoading(false);
     }
-  }, [user, activeMenuKey, memberClubIds, weekAnchor, toast]);
+  }, [user, activeMenuKey, memberClubIds, weekAnchor, toast, userProfile?.running_records]);
 
   useEffect(() => {
     void loadAthleteWeek();
@@ -2897,7 +2897,8 @@ export function CoachPlanningExperience() {
 
   useLayoutEffect(() => {
     const bump = () => {
-      coachingMainScrollRef.current && (coachingMainScrollRef.current.scrollTop = 0);
+      const el = coachingMainScrollRef.current;
+      if (el) el.scrollTop = 0;
     };
     bump();
     const raf = window.requestAnimationFrame(() => bump());
@@ -2961,6 +2962,14 @@ export function CoachPlanningExperience() {
         return "Planification";
     }
   }, [activeMenuKey, effectiveAthleteMode, isCoachMode]);
+
+  const coachingMaquetteUserInitial = useMemo(() => {
+    const n = userProfile?.display_name?.trim();
+    if (n?.length) return n.charAt(0).toUpperCase();
+    const em = user?.email?.trim();
+    if (em?.length) return em.charAt(0).toUpperCase();
+    return "?";
+  }, [userProfile?.display_name, user?.email]);
 
   const clearWeekPlannerTarget = useCallback(() => {
     setActiveAthleteId(undefined);
@@ -3273,7 +3282,7 @@ export function CoachPlanningExperience() {
           scrollRef={coachingMainScrollRef}
           headerWrapperClassName={
             weekPlannerMode
-              ? "shrink-0 border-0 apple-grouped-bg"
+              ? "shrink-0 border-b border-[#E5E5EA] bg-white dark:border-border dark:bg-background"
               : activeMenuKey === "club"
                 ? "shrink-0 border-b border-border apple-grouped-bg"
                 : activeMenuKey === "my-plan"
@@ -3334,6 +3343,18 @@ export function CoachPlanningExperience() {
                 coachLandingBrand={false}
                 hideDrawerActions={
                   coachingHeaderTitle === "Mon plan" || coachingHeaderTitle === "Planification"
+                }
+                largeTitleClassName={
+                  coachingHeaderTitle === "Mon plan"
+                    ? "text-[40px] font-black leading-none tracking-[-0.04em] text-[#0A0F1F]"
+                    : coachingHeaderTitle === "Planification"
+                      ? "text-[36px] font-black leading-none tracking-[-0.04em] text-[#0A0F1F]"
+                      : undefined
+                }
+                userInitialAccentBadge={
+                  coachingHeaderTitle === "Mon plan" || coachingHeaderTitle === "Planification"
+                    ? coachingMaquetteUserInitial
+                    : undefined
                 }
                 clubAvatarUrl={activeClubId ? clubAvatarUrl : undefined}
                 clubName={activeClubId ? activeClubName : undefined}
@@ -3403,57 +3424,58 @@ export function CoachPlanningExperience() {
             {weekPlannerMode ? (
               <>
                 <div ref={weekPlannerTopRef} className="h-0 w-full" aria-hidden />
-                <div className="sticky top-0 z-20 bg-secondary/95 pt-1 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur">
-                <PlanningSearchBar
-                  bare
-                  value={search}
-                  onChange={setSearch}
-                  placeholder="Rechercher un athlète ou un groupe"
-                />
-                {search.trim().length > 0 && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) ? (
-                  <div className="mt-2 divide-y divide-border overflow-hidden rounded-[12px] border border-border bg-card shadow-sm">
-                    {searchResults.groups.map((group) => (
-                      <button
-                        key={group.id}
-                        type="button"
-                        className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
-                        onClick={() => {
-                          setActiveGroupId(group.id);
-                          setActiveAthleteId(undefined);
-                          setCoachWeekProgrammerOpen(false);
-                          setSearch("");
-                          scrollWeekPlannerTopIntoView();
-                        }}
-                      >
-                        <span className="text-[15px] font-medium text-foreground">{group.name}</span>
-                        <span className="text-[13px] text-muted-foreground">Groupe</span>
-                      </button>
-                    ))}
-                    {searchResults.athletes.map((athlete) => (
-                      <button
-                        key={athlete.id}
-                        type="button"
-                        className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
-                        onClick={() => {
-                          setActiveAthleteId(athlete.id);
-                          setActiveGroupId(undefined);
-                          setCoachWeekProgrammerOpen(false);
-                          setSearch("");
-                          scrollWeekPlannerTopIntoView();
-                        }}
-                      >
-                        <span className="text-[15px] font-medium text-foreground">{athlete.name}</span>
-                        <span className="text-[13px] text-muted-foreground">Athlète</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
+                <div className="px-5 pt-4">
+                  <PlanningSearchBar
+                    bare
+                    variant="planifierSemaine"
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Rechercher un athlète ou un groupe"
+                  />
+                  {search.trim().length > 0 && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) ? (
+                    <div className="mt-2 divide-y divide-border overflow-hidden rounded-[12px] border border-border bg-card shadow-sm">
+                      {searchResults.groups.map((group) => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
+                          onClick={() => {
+                            setActiveGroupId(group.id);
+                            setActiveAthleteId(undefined);
+                            setCoachWeekProgrammerOpen(false);
+                            setSearch("");
+                            scrollWeekPlannerTopIntoView();
+                          }}
+                        >
+                          <span className="text-[15px] font-medium text-foreground">{group.name}</span>
+                          <span className="text-[13px] text-muted-foreground">Groupe</span>
+                        </button>
+                      ))}
+                      {searchResults.athletes.map((athlete) => (
+                        <button
+                          key={athlete.id}
+                          type="button"
+                          className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
+                          onClick={() => {
+                            setActiveAthleteId(athlete.id);
+                            setActiveGroupId(undefined);
+                            setCoachWeekProgrammerOpen(false);
+                            setSearch("");
+                            scrollWeekPlannerTopIntoView();
+                          }}
+                        >
+                          <span className="text-[15px] font-medium text-foreground">{athlete.name}</span>
+                          <span className="text-[13px] text-muted-foreground">Athlète</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </>
             ) : null}
 
             {weekPlannerMode && (activeAthlete || activeGroup) ? (
-              <div className="px-4 pb-[18px] pt-3">
+              <div className="px-5 pb-[18px] pt-3">
                 {activeAthlete ? (
                   <div className="flex items-center gap-3 rounded-[14px] border border-[rgba(10,132,255,0.25)] bg-card py-2.5 pl-2.5 pr-2 shadow-[0_0_0_3px_rgba(10,132,255,0.08)]">
                     {activeAthlete.avatarUrl ? (
@@ -3519,37 +3541,34 @@ export function CoachPlanningExperience() {
 
             {activeMenuKey === "my-plan" ? (
               <div ref={myPlanContinuousRef} className="pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-                {weekStartsContinuous.map((weekStart) => {
+                {weekStartsContinuous.map((weekStart, weekIdx) => {
                   const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
                   const weekSessions = athletePlanSessions.filter((session) => {
                     const d = new Date(session.assignedDate);
                     return d >= weekStart && d < addDays(weekStart, 7);
                   });
+                  const weekKm = formatCalendarDistance(weekSessions.reduce((acc, item) => acc + (item.distanceKm || 0), 0));
                   return (
-                    <div key={weekStart.toISOString()}>
-                      <div className="px-5 pb-1.5 pt-2">
-                        <div className="flex items-baseline gap-2">
-                          <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekStart)}</p>
-                          <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
-                            · {format(weekStart, "d", { locale: fr })} - {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
+                    <div key={weekStart.toISOString()} className={cn(weekIdx > 0 && "mt-7")}>
+                      <div className="px-5 pb-3 pt-2">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+                          <h2 className="text-[26px] font-extrabold leading-none tracking-tight text-[#0A0F1F]">
+                            Semaine {getISOWeek(weekStart)}
+                          </h2>
+                          <p className="text-[14px] font-medium text-[#8E8E93]">
+                            · {format(weekStart, "d", { locale: fr })} -{" "}
+                            {format(addDays(weekStart, 6), "d MMM", { locale: fr }).toUpperCase()}
                           </p>
                         </div>
-                        <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
-                          <span>
-                            <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
-                              {formatCalendarDistance(
-                                weekSessions.reduce((acc, item) => acc + (item.distanceKm || 0), 0)
-                              )}
-                            </b>{" "}
-                            · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{weekSessions.length}</b> séance(s)
-                          </span>
-                        </div>
+                        <p className="mt-1 text-[14px]">
+                          <span className="font-bold text-[#0A0F1F]">{weekKm || "—"}</span>
+                          <span className="text-[#8E8E93]"> · {weekSessions.length} séance(s)</span>
+                        </p>
                       </div>
-                      <div>
+                      <div className="mt-1">
                         {weekDaysLocal.map((day, dayIdx) => {
                     const daySessions = athletePlanSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                     const session = daySessions[0];
-                    const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
                     const normalizedSegments = session
                       ? buildWorkoutSegments(session.blocks, { sport: session.sport })
                       : [];
@@ -3575,22 +3594,24 @@ export function CoachPlanningExperience() {
                           distance: workoutMetrics?.distanceLabel,
                           intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
                           miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
-                          isRestDay: isExplicitRestDay([{ ...session, assignedDate: session.assignedDate } as any]),
+                          isRestDay: isExplicitRestDay([session]),
                           sportHint,
                         }
                       : undefined;
                     const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
+                    const dayIsToday = isSameDay(day, new Date());
                     return (
                       <div key={day.toISOString()} data-day-key={format(day, "yyyy-MM-dd")}>
                         <DayPlanningRow
                           dayLabel={format(day, "EEEE", { locale: fr })}
                           dateLabel={format(day, "d")}
-                          isSelected={isSelectedDay}
+                          isToday={dayIsToday}
+                          isSelected={false}
                           session={summary}
                           isSent={session?.participationStatus === "completed"}
                           accentColor={accentColor}
                           emptyLabel="Repos"
-                          layoutVariant="coachWeek"
+                          layoutVariant="athleteTimeline"
                           isLast={dayIdx === weekDaysLocal.length - 1}
                           athleteSessionCompleted={session?.participationStatus === "completed"}
                           onAdd={() => undefined}
@@ -3629,47 +3650,34 @@ export function CoachPlanningExperience() {
             ) : activeMenuKey === "planning" ? (
               <>
                 {weekPlannerMode ? (
-                  <div ref={planningContinuousRef} className="pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+                  <div ref={planningContinuousRef} className="pb-[calc(2rem+env(safe-area-inset-bottom))]">
                     {weekStartsContinuous.map((weekStart) => {
                       const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
                       const weekSessions = enrichedFilteredSessions.filter((session) => {
                         const d = new Date(session.assignedDate);
                         return d >= weekStart && d < addDays(weekStart, 7);
                       });
+                      const rangeStart = format(weekStart, "d MMM", { locale: fr }).replace(/\.$/, "").toUpperCase();
+                      const rangeEnd = format(addDays(weekStart, 6), "d MMM", { locale: fr }).replace(/\.$/, "").toUpperCase();
                       return (
-                        <div key={weekStart.toISOString()}>
-                          <div className="px-5 pb-1.5 pt-2">
-                            <div className="flex items-baseline gap-2">
-                              <p className="text-[22px] font-bold tracking-[-0.5px] text-foreground">Semaine {getISOWeek(weekStart)}</p>
-                              <p className="text-[13px] font-medium uppercase tracking-[-0.1px] text-muted-foreground">
-                                · {format(weekStart, "d", { locale: fr })} - {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
+                        <div key={weekStart.toISOString()} className="mt-7">
+                          <div className="mb-4 px-5">
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+                              <h2 className="text-[32px] font-extrabold leading-tight tracking-tight text-[#0A0F1F] dark:text-foreground">
+                                Semaine {getISOWeek(weekStart)}
+                              </h2>
+                              <p className="text-[14px] font-bold tracking-wider text-[#8E8E93]">
+                                · {rangeStart} – {rangeEnd}
                               </p>
                             </div>
-                            <div className="mt-1.5 flex gap-3.5 text-[12px] tracking-[-0.1px] text-muted-foreground">
-                              <span>
-                                <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">
-                                  {formatCalendarDistance(
-                                    weekSessions.reduce((acc, session) => {
-                                      const metrics = resolveWorkoutMetrics({
-                                        segments: buildWorkoutSegments(session.blocks, {
-                                          sport: session.sport,
-                                          athleteIntensity: session.athleteIntensity ?? undefined,
-                                        }),
-                                      });
-                                      return acc + (metrics.distanceKm || 0);
-                                    }, 0)
-                                  )}
-                                </b>{" "}
-                                · <b className="font-semibold text-[color:rgba(60,60,67,0.9)]">{weekSessions.length}</b> séance(s)
-                              </span>
-                            </div>
+                            <p className="mt-0.5 text-[13px] text-[#8E8E93]">· {weekSessions.length} séance(s)</p>
                           </div>
 
-                          <div>
+                          <div className="space-y-3 px-5">
                             {weekDaysLocal.map((day, dayIdx) => {
                         const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                         const session = daySessions[0];
-                        const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                        const dayIsToday = isSameDay(day, new Date());
                         const normalizedSegments = session
                           ? buildWorkoutSegments(session.blocks, {
                               sport: session.sport,
@@ -3710,7 +3718,8 @@ export function CoachPlanningExperience() {
                             <DayPlanningRow
                               dayLabel={format(day, "EEEE", { locale: fr })}
                               dateLabel={format(day, "d")}
-                              isSelected={isSelectedDay}
+                              isSelected={false}
+                              isToday={dayIsToday}
                               session={summary}
                               isSent={session?.sent}
                               accentColor={accentColor}
@@ -3824,7 +3833,7 @@ export function CoachPlanningExperience() {
                 ) : null}
 
                 {weekPlannerMode && (activeAthlete || activeGroup) ? (
-                  <div className="flex gap-2.5 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
+                  <div className="flex gap-2.5 px-5 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
                     <button type="button" className="handoff-week-btn handoff-week-btn--primary" onClick={() => copyAthleteWeek()}>
                       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 text-[#0066cc]">
                         <rect x="4" y="4" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.8" />

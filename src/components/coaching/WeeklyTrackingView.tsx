@@ -13,9 +13,6 @@ import {
   ChevronRight as ChevronRightIcon,
   Bell,
   Loader2,
-  Check,
-  Clock3,
-  Minus,
   Save,
   Plus,
   Trash2,
@@ -28,21 +25,19 @@ import {
   addWeeks,
   subWeeks,
   eachDayOfInterval,
-  isSameDay,
-  isBefore,
-  startOfDay,
-  parseISO,
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import type { WeekSession } from "@/components/coaching/WeeklyPlanSessionEditor";
 import { parseAthleteBlockRpeFelt } from "@/lib/sessionBlockRpe";
+import { sessionBlocksToZoneChartSegments } from "@/lib/sessionBlockCalculations";
 import { useNavigate } from "react-router-dom";
 import { getOrCreateDirectConversation } from "@/lib/coachingMessaging";
 import { SessionFeedback } from "@/components/coaching/tracking/SessionFeedback";
 import {
   CoachAthleteFichePanel,
-  type WeekFicheCell,
+  type CoachAthleteSessionCard,
+  type WeekBarChartDay,
 } from "@/components/coaching/tracking/CoachAthleteFichePanel";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
@@ -88,6 +83,7 @@ interface SessionInfo {
   objective: string | null;
   pace_target: string | null;
   rpe: number | null;
+  session_blocks?: unknown;
 }
 
 interface DayData {
@@ -176,34 +172,6 @@ function formatRecordDistanceLabel(distanceKm: number, distanceM: number): strin
   return `${Math.round(distanceM)} m`;
 }
 
-function computeAthleteLevelFrom5k(timeSec?: number | null): number | null {
-  if (!timeSec || !Number.isFinite(timeSec) || timeSec <= 0) return null;
-  const score = Math.round(2000 - timeSec);
-  return Math.max(100, Math.min(2200, score));
-}
-
-const DAY_STATUS_META: Record<UiDayStatus, { label: string; bgClass: string; Icon: typeof Check }> = {
-  done: { label: "Fait", bgClass: "bg-emerald-500", Icon: Check },
-  missed: { label: "Non fait", bgClass: "bg-red-500", Icon: X },
-  pending: { label: "En attente", bgClass: "bg-amber-400", Icon: Clock3 },
-  none: { label: "Aucune", bgClass: "bg-slate-400", Icon: Minus },
-};
-
-function mapDayToFicheCell(day: Date, dayData: DayData | undefined): WeekFicheCell {
-  const today = isSameDay(day, new Date());
-  if (!dayData) return "rest";
-  if (dayData.status === "completed") return "ok";
-  if (dayData.status === "missed") return "miss";
-  if (dayData.status === "pending") {
-    if (today) return "today";
-    const sessionDay = startOfDay(new Date(dayData.session.scheduled_at));
-    const todayStart = startOfDay(new Date());
-    if (isBefore(sessionDay, todayStart)) return "miss";
-    return "planned";
-  }
-  return "rest";
-}
-
 export const WeeklyTrackingView = ({
   clubId,
   selectedAthleteId,
@@ -223,7 +191,7 @@ export const WeeklyTrackingView = ({
   const [newGroupName, setNewGroupName] = useState("");
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
-  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [weekListFilterKey, setWeekListFilterKey] = useState<string | null>(null);
   const [recordsDialogOpen, setRecordsDialogOpen] = useState(false);
   const [athleteProfileDialogOpen, setAthleteProfileDialogOpen] = useState(false);
   const [recordsDraft, setRecordsDraft] = useState<Array<{ id?: string; event_label: string; record_value: string; note: string }>>([]);
@@ -291,7 +259,7 @@ export const WeeklyTrackingView = ({
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
         supabase
           .from("coaching_sessions")
-          .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe")
+          .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, session_blocks")
           .eq("club_id", clubId)
           .gte("scheduled_at", weekStart.toISOString())
           .lte("scheduled_at", weekEnd.toISOString()),
@@ -537,16 +505,6 @@ export const WeeklyTrackingView = ({
     () => selectedAthleteProfileRecords.find((record) => record.key === "5k") ?? null,
     [selectedAthleteProfileRecords]
   );
-  const selectedAthleteLevel = useMemo(
-    () => computeAthleteLevelFrom5k(selectedAthlete5kRecord?.timeSec),
-    [selectedAthlete5kRecord]
-  );
-  const profileCardHeadline = useMemo(() => {
-    if (selectedAthleteLevel != null) return `Niveau ${selectedAthleteLevel}`;
-    const firstRecord = selectedAthleteProfileRecords[0];
-    if (!firstRecord) return "Ajoute un record";
-    return `${formatRecordDistanceLabel(firstRecord.distanceKm, firstRecord.distanceM)} · ${formatDurationFromSeconds(firstRecord.timeSec)}`;
-  }, [selectedAthleteLevel, selectedAthleteProfileRecords]);
   const selectedAthleteZoneCards = useMemo(() => {
     const zones = selectedAthletePaces?.zones;
     if (!zones) return [];
@@ -560,12 +518,42 @@ export const WeeklyTrackingView = ({
     });
   }, [selectedAthletePaces]);
 
-  const weekFicheCells = useMemo((): WeekFicheCell[] => {
+  const weekBarDays = useMemo((): WeekBarChartDay[] => {
     if (!selectedAthlete) return [];
     return weekDays.map((day) => {
       const key = format(day, "yyyy-MM-dd");
-      return mapDayToFicheCell(day, selectedAthlete.days[key]);
+      const dd = selectedAthlete.days[key];
+      const km = dd?.session.distance_km != null ? Number(dd.session.distance_km) : 0;
+      const segments = km > 0 ? sessionBlocksToZoneChartSegments(dd?.session?.session_blocks) : [];
+      return {
+        dateKey: key,
+        dayOfMonth: day.getDate(),
+        dayLetter: format(day, "EEE", { locale: fr }).slice(0, 1).toUpperCase(),
+        km,
+        segments,
+        hasSession: !!dd,
+      };
     });
+  }, [selectedAthlete, weekDays]);
+
+  const weekSessionCards = useMemo((): CoachAthleteSessionCard[] => {
+    if (!selectedAthlete) return [];
+    return weekDays
+      .map((day) => {
+        const key = format(day, "yyyy-MM-dd");
+        const dd = selectedAthlete.days[key];
+        if (!dd) return null;
+        const km = dd.session.distance_km != null ? Number(dd.session.distance_km) : 0;
+        return {
+          dateKey: key,
+          dayLabel: format(day, "EEEE d MMMM", { locale: fr }),
+          title: dd.sessionTitle,
+          km,
+          status: toUiStatus(dd.status),
+          segments: sessionBlocksToZoneChartSegments(dd.session.session_blocks),
+        };
+      })
+      .filter(Boolean) as CoachAthleteSessionCard[];
   }, [selectedAthlete, weekDays]);
 
   const ficheRecordRows = useMemo(() => {
@@ -586,11 +574,11 @@ export const WeeklyTrackingView = ({
     });
   }, [selectedAthlete, selectedMergedRunningRecords, selectedAthletePaces?.zones]);
 
-  const selectedDayIndex = useMemo(() => {
-    if (!selectedDayKey) return 0;
-    const idx = weekDays.findIndex((d) => format(d, "yyyy-MM-dd") === selectedDayKey);
-    return idx >= 0 ? idx : 0;
-  }, [selectedDayKey, weekDays]);
+  const recordsFooterLine = useMemo(() => {
+    const first = ficheRecordRows[0];
+    if (!first) return "Ajoute des records sur le profil ou en privé coach pour calculer les zones.";
+    return `Allures calculées à partir des records de l'athlète (${first.label} · ${first.value}).`;
+  }, [ficheRecordRows]);
 
   const ficheZoneRows = useMemo(
     () =>
@@ -598,23 +586,34 @@ export const WeeklyTrackingView = ({
         zone: z.zone,
         minPace: z.minPace,
         maxPace: z.maxPace,
-        dotClass: zoneToPreviewColorClass(z.zone),
       })),
     [selectedAthleteZoneCards]
   );
 
-  const selectedDayData = selectedAthlete && selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
+  const feedbackDayData = useMemo(() => {
+    if (!selectedAthlete) return undefined;
+    if (weekListFilterKey) return selectedAthlete.days[weekListFilterKey];
+    const hit = weekDays.find((d) => selectedAthlete.days[format(d, "yyyy-MM-dd")]);
+    return hit ? selectedAthlete.days[format(hit, "yyyy-MM-dd")] : undefined;
+  }, [selectedAthlete, weekListFilterKey, weekDays]);
+
   const sessionDetailData = selectedAthlete && sessionDetailDayKey ? selectedAthlete.days[sessionDetailDayKey] : undefined;
+  const sessionDetailAvgRpe = useMemo(() => {
+    if (!sessionDetailData) return null;
+    const felt = parseAthleteBlockRpeFelt(sessionDetailData.athleteRpeFelt, 12);
+    if (!felt.length) return null;
+    return Math.round(felt.reduce((a, b) => a + b, 0) / felt.length);
+  }, [sessionDetailData]);
   const selectedFeedback = useMemo(() => {
     const zones = selectedAthletePaces?.zones;
-    const selectedPace = selectedDayData?.session.pace_target;
+    const selectedPace = feedbackDayData?.session.pace_target;
     if (!zones || !selectedPace) return undefined;
     const [min, sec] = selectedPace.split(":").map(Number);
     if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
     const pace = min * 60 + sec;
     const zone = getZoneFromPace(pace, zones);
     return zone ? zoneToFeedback(zone) : undefined;
-  }, [selectedAthletePaces, selectedDayData]);
+  }, [selectedAthletePaces, feedbackDayData]);
 
   const athleteHasLateSessions = useMemo(() => {
     if (!selectedAthlete) return false;
@@ -692,22 +691,16 @@ export const WeeklyTrackingView = ({
 
   useEffect(() => {
     if (!selectedAthlete) {
-      setSelectedDayKey(null);
+      setWeekListFilterKey(null);
       setSessionDetailOpen(false);
       setSessionDetailDayKey(null);
       return;
     }
-    if (selectedDayKey && weekDays.some((day) => format(day, "yyyy-MM-dd") === selectedDayKey)) {
-      return;
-    }
-    const todayKey = format(new Date(), "yyyy-MM-dd");
-    if (weekDays.some((day) => format(day, "yyyy-MM-dd") === todayKey)) {
-      setSelectedDayKey(todayKey);
-      return;
-    }
-    const firstWithSession = weekDays.find((day) => !!selectedAthlete.days[format(day, "yyyy-MM-dd")]);
-    setSelectedDayKey(firstWithSession ? format(firstWithSession, "yyyy-MM-dd") : format(weekStart, "yyyy-MM-dd"));
-  }, [selectedAthlete, selectedDayKey, weekDays, weekStart]);
+  }, [selectedAthlete]);
+
+  useEffect(() => {
+    setWeekListFilterKey(null);
+  }, [weekStart, selectedAthlete?.userId]);
 
   useEffect(() => {
     if (!recordsDialogOpen || !selectedAthlete) return;
@@ -724,7 +717,7 @@ export const WeeklyTrackingView = ({
     );
   }, [recordsDialogOpen, selectedAthlete]);
 
-  const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
+  const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`.toUpperCase();
   const totalAthletes = athletes.length;
   const displayedAthletes = filtered.length;
 
@@ -995,17 +988,6 @@ export const WeeklyTrackingView = ({
 
   // ==================== MODE DETAIL ====================
   const pct = selectedAthlete.totalCount > 0 ? Math.round((selectedAthlete.completedCount / selectedAthlete.totalCount) * 100) : 0;
-  const selectedStatus = toUiStatus(selectedDayData?.status);
-  const selectedFelt = selectedDayData ? parseAthleteBlockRpeFelt(selectedDayData.athleteRpeFelt, 12) : [];
-  const selectedAvgRpe = selectedFelt.length > 0 ? Math.round(selectedFelt.reduce((a, b) => a + b, 0) / selectedFelt.length) : null;
-  const selectedDetails = selectedDayData
-    ? [
-        selectedDayData.session.distance_km ? `${Math.round(Number(selectedDayData.session.distance_km) * 10) / 10} km` : "",
-        selectedDayData.session.pace_target ? `Allure ${selectedDayData.session.pace_target}` : "",
-      ]
-        .filter(Boolean)
-        .join(" • ") || "Séance planifiée"
-    : "";
 
   const ficheSubtitleParts = [
     selectedAthlete.groupName ?? null,
@@ -1014,12 +996,20 @@ export const WeeklyTrackingView = ({
   ].filter(Boolean);
   const ficheSubtitle = ficheSubtitleParts.join(" · ") || "Membre du club";
 
-  const sessionStatusLabelForFiche = selectedDayData
-    ? `${DAY_STATUS_META[selectedStatus].label}${selectedAvgRpe != null ? ` · RPE ${selectedAvgRpe}/10` : ""}`
-    : undefined;
+  const toggleWeekListDay = useCallback((key: string) => {
+    setWeekListFilterKey((prev) => (prev === key ? null : key));
+  }, []);
+
+  const onSessionCardNavigate = useCallback((key: string) => {
+    setWeekListFilterKey((prev) => {
+      if (prev === null) return key;
+      if (prev === key) return null;
+      return key;
+    });
+  }, []);
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] space-y-0">
+    <div className="mx-auto flex min-h-0 min-w-0 w-full max-w-[1180px] flex-1 flex-col space-y-0">
       <CoachAthleteFichePanel
         userId={selectedAthlete.userId}
         displayName={selectedAthlete.displayName}
@@ -1033,17 +1023,15 @@ export const WeeklyTrackingView = ({
         weekLabel={weekLabel}
         onPreviousWeek={() => setCurrentWeek(subWeeks(currentWeek, 1))}
         onNextWeek={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-        weekCells={weekFicheCells}
-        weekDayLabels={weekDays.map((d) => format(d, "EEE", { locale: fr }).slice(0, 1).toUpperCase())}
-        selectedDayIndex={selectedDayIndex}
-        onSelectDayIndex={(index) => {
-          const day = weekDays[index];
-          if (day) setSelectedDayKey(format(day, "yyyy-MM-dd"));
-        }}
-        recordRows={ficheRecordRows}
-        recordsFooter="Records profil + notes privées coach pour le calcul des zones."
+        weekBarDays={weekBarDays}
+        selectedWeekListDayKey={weekListFilterKey}
+        onToggleWeekChartDay={toggleWeekListDay}
+        weekSessionCards={weekSessionCards}
+        onSessionCardNavigate={onSessionCardNavigate}
+        onOpenSessionDetail={openSessionDetail}
         onManageRecords={() => setRecordsDialogOpen(true)}
         zones={ficheZoneRows}
+        recordsFooterLine={recordsFooterLine}
         onSendSession={() => {
           if (onOpenPlanForAthlete) {
             onOpenPlanForAthlete(
@@ -1054,20 +1042,8 @@ export const WeeklyTrackingView = ({
             );
             return;
           }
-          toast.info("Planification", { description: "Ouvre la planification depuis l’onglet Coaching pour envoyer une séance." });
+          toast.info("Planification", { description: "Ouvre la planification depuis l'onglet Coaching pour envoyer une séance." });
         }}
-        sessionTitle={
-          selectedDayData
-            ? selectedDayData.sessionTitle
-            : selectedDayKey
-              ? `Aucune séance · ${format(new Date(selectedDayKey), "EEEE d MMMM", { locale: fr })}`
-              : undefined
-        }
-        sessionDetail={selectedDayData ? selectedDetails : undefined}
-        sessionStatusLabel={sessionStatusLabelForFiche}
-        onOpenSessionDetail={
-          selectedDayData && selectedDayKey ? () => openSessionDetail(selectedDayKey) : undefined
-        }
       />
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
 
@@ -1111,7 +1087,7 @@ export const WeeklyTrackingView = ({
 
                   <div className="rounded-2xl border border-border/60 bg-card p-3">
                     <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Commentaire athlète</p>
-                    <SessionFeedback note={sessionDetailData.note} rpeLabel={selectedAvgRpe != null ? `RPE ${selectedAvgRpe}/10` : undefined} />
+                    <SessionFeedback note={sessionDetailData.note} rpeLabel={sessionDetailAvgRpe != null ? `RPE ${sessionDetailAvgRpe}/10` : undefined} />
                     <Button
                       type="button"
                       variant="outline"

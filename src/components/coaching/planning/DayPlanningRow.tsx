@@ -24,7 +24,9 @@ interface DayPlanningRowProps {
   allowSessionActions?: boolean;
   hideActionSlot?: boolean;
   /** Maquette 16 · ligne plan coach (colonnes 48px / flex / action). */
-  layoutVariant?: "default" | "coachWeek";
+  layoutVariant?: "default" | "coachWeek" | "athleteTimeline";
+  /** Jour courant — fond bleu clair + bande latérale (maquette Mon plan). */
+  isToday?: boolean;
   /** Dernière ligne du groupe : pas de filet inférieur (coachWeek). */
   isLast?: boolean;
   /** Athlète ciblé : participation « completed » (maquette 16). */
@@ -66,60 +68,71 @@ export function DayPlanningRow({
   hideActionSlot = false,
   layoutVariant = "default",
   isLast = false,
+  isToday = false,
   athleteSessionCompleted = false,
 }: DayPlanningRowProps) {
   const coachWeek = layoutVariant === "coachWeek";
+  const athleteTimeline = layoutVariant === "athleteTimeline";
   const dayAbbrev = dayLabel.slice(0, 3).toUpperCase();
+  const maquetteBlue = "#007AFF";
 
-  if (coachWeek) {
+  if (athleteTimeline) {
     const isRest = session?.isRestDay;
     const rowAccent = accentColor;
-    const dayNumber = dateLabel;
 
     return (
       <div
-        className={cn(
-          "grid grid-cols-[36px_minmax(0,1fr)_36px] items-stretch gap-2.5 px-3.5 py-1.5 transition-colors",
-          isSelected && "bg-primary/10"
-        )}
+        className={cn("relative flex items-stretch gap-3 px-5 py-2", isToday && !isRest && "rounded-none")}
+        style={isToday ? { background: "#E5F0FF" } : undefined}
       >
-        <div
-          className={cn(
-            "flex flex-col items-center gap-0.5 px-0 py-2.5",
-            isSelected && "rounded-xl bg-primary/20"
-          )}
-        >
-          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.35px] text-muted-foreground", isSelected && "text-primary")}>{dayAbbrev}</p>
-          <p className={cn("font-display text-[22px] font-bold leading-none tracking-[-0.03em] text-foreground", isSelected && "text-primary")}>
-            {dayNumber}
+        {isToday ? (
+          <div
+            className="pointer-events-none absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r"
+            style={{ background: maquetteBlue }}
+            aria-hidden
+          />
+        ) : null}
+
+        <div className="flex w-11 shrink-0 flex-col justify-center">
+          <p
+            className="text-[11px] font-bold tracking-wide"
+            style={{ color: isToday ? maquetteBlue : "#8E8E93" }}
+          >
+            {dayAbbrev}
+          </p>
+          <p
+            className="text-[26px] font-extrabold leading-none tracking-tight"
+            style={{ color: isToday ? maquetteBlue : "#0A0F1F" }}
+          >
+            {dateLabel}
           </p>
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {!session || isRest ? (
-            <div className="flex min-h-[56px] items-center justify-center rounded-[14px] border border-dashed border-[rgba(60,60,67,0.22)] text-[13px] font-medium text-muted-foreground">
-              {emptyLabel ?? "Repos"}
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] px-4 py-5">
+              <p className="text-[15px] font-semibold text-[#8E8E93]">{emptyLabel ?? "Repos"}</p>
             </div>
           ) : (
             <button
               type="button"
               onClick={onOpen}
-              className="w-full min-w-0 overflow-hidden rounded-[14px] border border-black/5 bg-card text-left shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+              className="w-full min-w-0 overflow-hidden rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-transform active:scale-[0.98]"
             >
-              <div className="flex items-center justify-between border-b border-[rgba(60,60,67,0.12)] px-3.5 py-2.5">
-                <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-foreground">
+              <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2">
+                <div className="flex min-w-0 items-center gap-1.5">
                   {session.sportHint ? (
                     <span style={{ color: rowAccent }}>
                       <CoachSportIcon sport={session.sportHint} />
                     </span>
                   ) : null}
-                  <span className="truncate">Détail</span>
+                  <p className="truncate text-[15px] font-bold text-[#0A0F1F]">Détail</p>
                 </div>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
               </div>
-              <div className="px-3.5 pb-3.5 pt-3">
+              <div className="pt-3">
                 {session.miniProfile?.length ? (
-                  <div className="mb-2.5 h-12 px-1.5 py-1">
+                  <div className="mb-2 h-14 px-1">
                     <MiniWorkoutProfile
                       blocks={session.miniProfile}
                       isRestDay={false}
@@ -130,18 +143,130 @@ export function DayPlanningRow({
                     />
                   </div>
                 ) : null}
-                <p className="truncate text-[15px] font-semibold tracking-[-0.2px] text-foreground">{session.title}</p>
-                <div className="mt-1.5 flex items-center gap-3.5 text-[12px] text-muted-foreground">
+                <p className="truncate text-[16px] font-bold text-[#0A0F1F]">{session.title}</p>
+                <div className="mt-1 flex items-center gap-3 text-[13px] text-[#8E8E93]">
                   {session.duration ? (
                     <span className="inline-flex items-center gap-1">
-                      <Clock3 className="h-3 w-3" aria-hidden />
-                      <b className="font-semibold text-[color:rgba(60,60,67,0.85)]">{session.duration}</b>
+                      <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                      {session.duration}
                     </span>
                   ) : null}
                   {session.distance ? (
                     <span className="inline-flex items-center gap-1">
-                      <Ruler className="h-3 w-3" aria-hidden />
-                      <b className="font-semibold text-[color:rgba(60,60,67,0.85)]">{session.distance}</b>
+                      <Ruler className="h-3.5 w-3.5" aria-hidden />
+                      {session.distance}
+                    </span>
+                  ) : null}
+                  {athleteSessionCompleted ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-[#34C759]/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#248a3d] dark:text-[#34C759]">
+                      <Check className="h-2.5 w-2.5 stroke-[2.8]" aria-hidden />
+                      Fait
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (coachWeek) {
+    const isRest = session?.isRestDay;
+    const rowAccent = accentColor;
+    const dayNumber = dateLabel;
+    const maquetteBlue = "#007AFF";
+
+    const addMaquetteButton = (
+      <button
+        type="button"
+        onClick={onAdd}
+        className={cn(
+          "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-[0_2px_6px_rgba(0,122,255,0.3)] transition-transform active:scale-90 dark:shadow-[0_2px_6px_rgba(10,132,255,0.35)]",
+          !allowSessionActions && "pointer-events-none opacity-45"
+        )}
+        style={{ backgroundColor: maquetteBlue }}
+        aria-label="Ajouter une séance"
+      >
+        <Plus className="h-5 w-5" strokeWidth={2.8} aria-hidden />
+      </button>
+    );
+
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-2.5 rounded-2xl transition-colors",
+          isToday && "-mx-2 bg-[#E5F0FF] py-1 pl-1 pr-2 dark:bg-[#1a2535]"
+        )}
+      >
+        <div
+          className={cn(
+            "flex w-[52px] shrink-0 flex-col items-center justify-center rounded-xl px-1 py-2",
+            isToday ? "bg-[#CDE2FF] dark:bg-[#243047]" : "bg-transparent"
+          )}
+        >
+          <p
+            className="text-[10px] font-extrabold tracking-wider"
+            style={{ color: isToday ? maquetteBlue : "#8E8E93" }}
+          >
+            {dayAbbrev}
+          </p>
+          <p
+            className="mt-1 text-[26px] font-extrabold leading-none tracking-tight"
+            style={{ color: isToday ? maquetteBlue : "#0A0F1F" }}
+          >
+            {dayNumber}
+          </p>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          {!session || isRest ? (
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-[1.5px] border-dashed border-[#C7C7CC] bg-transparent px-3 py-4 dark:border-muted-foreground/40">
+              <p className="text-[15px] font-semibold text-[#8E8E93]">{emptyLabel ?? "Repos"}</p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpen}
+              className="w-full min-w-0 overflow-hidden rounded-2xl border border-black/[0.06] bg-white text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-border dark:bg-card"
+            >
+              <div className="flex items-center justify-between border-b border-[#F2F2F7] px-3 py-2.5 dark:border-border">
+                <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-[#0A0F1F] dark:text-foreground">
+                  {session.sportHint ? (
+                    <span style={{ color: rowAccent }}>
+                      <CoachSportIcon sport={session.sportHint} />
+                    </span>
+                  ) : null}
+                  <span className="truncate">Détail</span>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#C7C7CC]" aria-hidden />
+              </div>
+              <div className="px-3 pb-3 pt-3">
+                {session.miniProfile?.length ? (
+                  <div className="mb-2 h-12 px-1">
+                    <MiniWorkoutProfile
+                      blocks={session.miniProfile}
+                      isRestDay={false}
+                      compact
+                      variant="premiumCompact"
+                      zoneBandMode
+                      className="h-full w-full rounded-none border-0 bg-transparent px-0 py-0"
+                    />
+                  </div>
+                ) : null}
+                <p className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[#0A0F1F] dark:text-foreground">{session.title}</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[12px] text-[#8E8E93]">
+                  {session.duration ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
+                      <span className="font-semibold text-[#0A0F1F]/85 dark:text-foreground/85">{session.duration}</span>
+                    </span>
+                  ) : null}
+                  {session.distance ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Ruler className="h-3 w-3 shrink-0" aria-hidden />
+                      <span className="font-semibold text-[#0A0F1F]/85 dark:text-foreground/85">{session.distance}</span>
                     </span>
                   ) : null}
                   {athleteSessionCompleted ? (
@@ -156,37 +281,17 @@ export function DayPlanningRow({
           )}
         </div>
 
-        <div className="flex items-center justify-end">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center">
           {hideActionSlot ? null : !session ? (
-            <button
-              type="button"
-              onClick={onAdd}
-              className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_2px_6px_rgba(0,102,204,0.25)] transition-transform",
-                !allowSessionActions && "pointer-events-none opacity-45"
-              )}
-              aria-label="Ajouter une séance"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-            </button>
+            addMaquetteButton
           ) : isRest ? (
-            <button
-              type="button"
-              onClick={onAdd}
-              className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_2px_6px_rgba(0,102,204,0.25)] transition-transform",
-                !allowSessionActions && "pointer-events-none opacity-45"
-              )}
-              aria-label="Ajouter une séance"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-            </button>
+            addMaquetteButton
           ) : isSent ? (
-            <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
+            <div className={cn(!allowSessionActions && "pointer-events-none opacity-45")}>
               <SessionStatusAction mode="sent" onSentClick={onUnsend} />
             </div>
           ) : (
-            <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
+            <div className={cn(!allowSessionActions && "pointer-events-none opacity-45")}>
               <SessionActionMenu onSend={onSend || onAdd} onDuplicate={onDuplicate || onAdd} onDelete={onDelete || onAdd} />
             </div>
           )}

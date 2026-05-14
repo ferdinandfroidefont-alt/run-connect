@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
 interface OnlineStatusProps {
   userId: string;
@@ -8,6 +9,11 @@ interface OnlineStatusProps {
   className?: string;
   /** badge = pastille sur l’avatar (défaut) · subtitle = ligne « ● En ligne » type maquette Messages */
   display?: "badge" | "subtitle";
+  /**
+   * Pastille type feuille Réseaux (maquette SF) : rouge #FF3B30, uniquement si en ligne ;
+   * masquée si hors ligne.
+   */
+  networksMaquette?: boolean;
 }
 
 export const OnlineStatus = ({
@@ -15,6 +21,7 @@ export const OnlineStatus = ({
   showOnlineStatus = true,
   className = "",
   display = "badge",
+  networksMaquette = false,
 }: OnlineStatusProps) => {
   const [isOnline, setIsOnline] = useState(false);
   const { user } = useAuth();
@@ -153,6 +160,20 @@ export const OnlineStatus = ({
       <div className={`text-[11px] font-semibold leading-none text-[#1FB386] ${className}`}>
         ● En ligne
       </div>
+    );
+  }
+
+  if (networksMaquette) {
+    if (!isOnline) return null;
+    return (
+      <div
+        className={cn(
+          "pointer-events-none absolute bottom-0 right-0.5 rounded-full border-2 border-white bg-[#FF3B30]",
+          className
+        )}
+        style={{ width: "22%", height: "22%", minWidth: 10, minHeight: 10 }}
+        title="En ligne"
+      />
     );
   }
 
