@@ -1,6 +1,9 @@
 import { forwardRef, type ReactNode } from "react";
 import { COACHING_ACTION_BLUE } from "./CoachingWheelPickers";
 
+/** Réexport pour les consommateurs du module schéma / palette. */
+export { COACHING_ACTION_BLUE };
+
 export const COACHING_PAGE_BG = "#F2F2F7";
 
 export type PaletteBlockId = "continu" | "intervalle" | "pyramide" | "variation";
