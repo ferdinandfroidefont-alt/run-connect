@@ -18,6 +18,7 @@ import { SessionDetailsDialog } from './SessionDetailsDialog';
 
 import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
+import { MapboxBootLoadingBody } from '@/components/map/MapboxMapBootOverlay';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
@@ -28,7 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Gauge, RefreshCw, WifiOff, Loader2 } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Gauge } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -1857,37 +1858,12 @@ export const InteractiveMap = ({
           aria-hidden={isMapLoaded}
         >
           {!isMapLoaded && (
-            <div className="pointer-events-auto flex max-w-[280px] flex-col items-center gap-3 px-6 text-center">
-              {isOffline ? (
-                <WifiOff className="h-7 w-7 text-amber-500" strokeWidth={1.75} aria-hidden />
-              ) : isSlowBoot ? (
-                <RefreshCw className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} aria-hidden />
-              ) : (
-                <Loader2 className="h-7 w-7 animate-spin text-primary" strokeWidth={1.75} aria-hidden />
-              )}
-              <p className="text-[13px] font-medium leading-snug text-foreground/85">
-                {isOffline
-                  ? 'Pas de connexion'
-                  : isSlowBoot
-                    ? 'Connexion lente — la carte met du temps à charger'
-                    : networkQuality === 'slow'
-                      ? 'Chargement de la carte… (réseau lent)'
-                      : 'Chargement de la carte…'}
-              </p>
-              {(isSlowBoot || isOffline) && (
-                <button
-                  type="button"
-                  onClick={retryMapBoot}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground shadow-sm',
-                    'transition-transform duration-150 active:scale-[0.97]'
-                  )}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
-                  Réessayer
-                </button>
-              )}
-            </div>
+            <MapboxBootLoadingBody
+              networkQuality={networkQuality}
+              isOffline={isOffline}
+              isSlowBoot={isSlowBoot}
+              onRetry={retryMapBoot}
+            />
           )}
         </div>
       </div>

@@ -57,11 +57,6 @@ export function DiscoverLiveMaquetteSection({
           onSessionMarkerClick={onOpenSession}
           className="h-full min-h-0"
         />
-        {discoverLoading && liveSessions.length === 0 ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/60">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        ) : null}
         <DiscoverMapMaquetteToolbar
           fullscreen={fullscreen}
           onToggleFullscreen={onToggleFullscreen}

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Map, Marker } from 'mapbox-gl';
-import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MapPin, ChevronRight, Navigation, Plus, Undo, Redo, Trash2, FileText } from 'lucide-react';
+import { ChevronRight, Navigation, Plus, Undo, Redo, Trash2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,8 +56,11 @@ import {
 } from '@/lib/routePersistence';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
-import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
-import { cn } from '@/lib/utils';
+import {
+  MapboxBootErrorBody,
+  MapboxBootLoadingBody,
+} from '@/components/map/MapboxMapBootOverlay';
+import { useNetworkQuality } from '@/lib/networkQuality';
 import { Capacitor } from '@capacitor/core';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
@@ -126,6 +128,10 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [isSlowBoot, setIsSlowBoot] = useState(false);
+  const [bootAttempt, setBootAttempt] = useState(0);
+  const networkQuality = useNetworkQuality();
+  const isOffline = networkQuality === 'offline';
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
   const [mapStyleId, setMapStyleId] = useState(() => getStoredMapStyleId());
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -154,6 +160,27 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
   const [canRedo, setCanRedo] = useState(false);
 
   const isManualModeRef = useRef(false);
+
+  useEffect(() => {
+    if (mapError) {
+      setIsSlowBoot(false);
+      return;
+    }
+    if (isMapLoaded) {
+      setIsSlowBoot(false);
+      return;
+    }
+    const slowMs = networkQuality === 'slow' || networkQuality === 'offline' ? 4000 : 9000;
+    const t = window.setTimeout(() => setIsSlowBoot(true), slowMs);
+    return () => window.clearTimeout(t);
+  }, [isMapLoaded, mapError, networkQuality, bootAttempt]);
+
+  const retryMapBoot = useCallback(() => {
+    setMapError(false);
+    setIsSlowBoot(false);
+    setIsMapLoaded(false);
+    setBootAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     isManualModeRef.current = isManualMode;
@@ -344,10 +371,11 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
       userLocationMarkerRef.current = null;
       map.current?.remove();
       map.current = null;
+      setIsMapLoaded(false);
     };
     // loadExistingRoute lit editRouteDataRef + map : dépendances incomplètes assumées (ré-init si isEditMode change).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode]);
+  }, [isEditMode, bootAttempt]);
 
   const clearMarkers = () => {
     startMarkerRef.current?.remove();
@@ -1079,7 +1107,7 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
     setRouteSaving(false);
 
     if (!result.ok) {
-      toast.error((result as any).message);
+      toast.error(result.message);
       return;
     }
 
@@ -1142,24 +1170,27 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
               <div ref={mapContainer} className="absolute inset-0 z-[1] min-h-0 w-full" />
 
               {!isMapLoaded && !mapError ? (
-                <div className="absolute inset-0 z-[5] flex items-center justify-center bg-secondary/90">
-                  <div className="flex flex-col items-center gap-ios-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    <p className="text-ios-subheadline text-muted-foreground">Chargement de la carte...</p>
-                  </div>
+                <div
+                  className="absolute inset-0 z-[5] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <MapboxBootLoadingBody
+                    networkQuality={networkQuality}
+                    isOffline={isOffline}
+                    isSlowBoot={isSlowBoot}
+                    onRetry={retryMapBoot}
+                  />
                 </div>
               ) : null}
               {mapError ? (
-                <div className="absolute inset-0 z-[5] flex items-center justify-center bg-secondary/95 px-4">
-                  <div className="flex max-w-sm flex-col items-center gap-ios-4 text-center">
-                    <MapPin className="h-12 w-12 text-muted-foreground" />
-                    <p className="text-ios-subheadline text-muted-foreground">
-                      Impossible de charger la carte. Vérifiez VITE_MAPBOX_ACCESS_TOKEN.
-                    </p>
-                    <Button variant="outline" onClick={() => navigate(-1)}>
-                      Retour
-                    </Button>
-                  </div>
+                <div className="absolute inset-0 z-[5] flex items-center justify-center bg-secondary/95 px-4 backdrop-blur-sm">
+                  <MapboxBootErrorBody
+                    message="Impossible de charger la carte. Vérifie ta connexion, la clé VITE_MAPBOX_ACCESS_TOKEN ou réessaie."
+                    onRetry={retryMapBoot}
+                    backLabel="Retour"
+                    onBack={() => navigate(-1)}
+                  />
                 </div>
               ) : null}
 

@@ -22,7 +22,7 @@ type NetworkInfoLike = {
   removeEventListener?: (type: string, listener: () => void) => void;
 };
 
-function getNetworkInfo(): NetworkInfoLike | null {
+export function getNetworkInfo(): NetworkInfoLike | null {
   if (typeof navigator === "undefined") return null;
   const n = navigator as Navigator & {
     connection?: NetworkInfoLike;

@@ -1,9 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Map, Marker } from 'mapbox-gl';
+import {
+  MapboxBootErrorBody,
+  MapboxBootLoadingBody,
+} from '@/components/map/MapboxMapBootOverlay';
 import { createEmbeddedMapboxMap } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { useNetworkQuality } from '@/lib/networkQuality';
+import { cn } from '@/lib/utils';
 import {
   createSessionPinButton,
   resolveSessionPinVariant,
@@ -51,8 +57,34 @@ export const MiniMapPreview = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(false);
+  const [isSlowBoot, setIsSlowBoot] = useState(false);
+  const [bootAttempt, setBootAttempt] = useState(0);
+
+  const networkQuality = useNetworkQuality();
+  const isOffline = networkQuality === 'offline';
+
+  useEffect(() => {
+    if (mapError) {
+      setIsSlowBoot(false);
+      return;
+    }
+    if (isMapLoaded) {
+      setIsSlowBoot(false);
+      return;
+    }
+    const slowMs = networkQuality === 'slow' || networkQuality === 'offline' ? 4000 : 9000;
+    const t = window.setTimeout(() => setIsSlowBoot(true), slowMs);
+    return () => window.clearTimeout(t);
+  }, [isMapLoaded, mapError, networkQuality, bootAttempt]);
+
+  const retryMapBoot = useCallback(() => {
+    setMapError(false);
+    setIsSlowBoot(false);
+    setIsMapLoaded(false);
+    setBootAttempt((n) => n + 1);
+  }, []);
 
   const handleMapClick = useCallback(() => {
     if (!interactive) return;
@@ -71,12 +103,12 @@ export const MiniMapPreview = ({
   }, [interactive, lat, lng, onOpenSession, sessionId, navigate]);
 
   useEffect(() => {
-    setError(false);
-    setIsLoading(true);
+    setMapError(false);
+    setIsMapLoaded(false);
 
     if (!getMapboxAccessToken()) {
-      setIsLoading(false);
-      setError(true);
+      setIsMapLoaded(false);
+      setMapError(true);
       return;
     }
 
@@ -90,8 +122,8 @@ export const MiniMapPreview = ({
         await new Promise<void>((r) => requestAnimationFrame(() => r()));
         if (!mapRef.current || cancelled) {
           if (!cancelled) {
-            setError(true);
-            setIsLoading(false);
+            setMapError(true);
+            setIsMapLoaded(false);
           }
           return;
         }
@@ -112,18 +144,6 @@ export const MiniMapPreview = ({
           }
         };
 
-        const onReady = () => {
-          resizeMap();
-          requestAnimationFrame(() => requestAnimationFrame(resizeMap));
-        };
-        if (map.isStyleLoaded()) onReady();
-        else map.once('load', onReady);
-
-        if (mapRef.current) {
-          resizeObserver = new ResizeObserver(() => resizeMap());
-          resizeObserver.observe(mapRef.current);
-        }
-
         const wrap = document.createElement('div');
         wrap.className = 'rc-session-pin';
         wrap.style.position = 'relative';
@@ -140,6 +160,13 @@ export const MiniMapPreview = ({
         wrap.appendChild(pin);
 
         const mapboxgl = await loadMapboxGl();
+        if (cancelled || !mapInstanceRef.current) {
+          markerRef.current?.remove();
+          markerRef.current = null;
+          map.remove();
+          return;
+        }
+
         markerRef.current = new mapboxgl.Marker({
           element: wrap,
           anchor: 'bottom',
@@ -150,12 +177,25 @@ export const MiniMapPreview = ({
 
         map.on('click', handleMapClick);
 
-        if (!cancelled) setIsLoading(false);
+        const onReady = () => {
+          resizeMap();
+          requestAnimationFrame(() => requestAnimationFrame(resizeMap));
+          if (!cancelled) setIsMapLoaded(true);
+        };
+        if (map.isStyleLoaded()) onReady();
+        else map.once('load', onReady);
+
+        if (mapRef.current) {
+          resizeObserver = new ResizeObserver(() => resizeMap());
+          resizeObserver.observe(mapRef.current);
+        }
+
+        if (!cancelled) setIsMapLoaded(true);
       } catch (err) {
         console.error('MiniMapPreview error:', err);
         if (!cancelled) {
-          setError(true);
-          setIsLoading(false);
+          setMapError(true);
+          setIsMapLoaded(false);
         }
       }
     };
@@ -170,24 +210,57 @@ export const MiniMapPreview = ({
       markerRef.current = null;
       mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
+      setIsMapLoaded(false);
     };
-  }, [lat, lng, handleMapClick, avatarUrl, zoom, interactive, activityType]);
+  }, [
+    lat,
+    lng,
+    handleMapClick,
+    avatarUrl,
+    zoom,
+    interactive,
+    activityType,
+    bootAttempt,
+  ]);
 
-  if (error) {
+  if (mapError) {
     return (
-      <div className="w-full h-full rounded-xl bg-muted flex items-center justify-center">
-        <span className="text-muted-foreground text-sm">Carte indisponible</span>
+      <div
+        className={cn(
+          'flex h-full w-full flex-col items-center justify-center rounded-xl bg-muted px-3 py-4',
+          className,
+        )}
+      >
+        <MapboxBootErrorBody
+          compact
+          message="Carte indisponible. Vérifie ta connexion ou réessaie."
+          onRetry={retryMapBoot}
+        />
       </div>
     );
   }
 
   return (
     <div className={`relative h-full w-full ${className ?? ''}`}>
-      {isLoading && (
-        <div className="absolute inset-0 rounded-xl bg-muted animate-pulse flex items-center justify-center z-10">
-          <span className="text-muted-foreground text-sm">Chargement...</span>
-        </div>
-      )}
+      <div
+        className={cn(
+          'absolute inset-0 z-[2] flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none',
+          isMapLoaded ? 'pointer-events-none opacity-0' : 'opacity-100',
+        )}
+        role="status"
+        aria-live="polite"
+        aria-hidden={isMapLoaded}
+      >
+        {!isMapLoaded ? (
+          <MapboxBootLoadingBody
+            className="max-w-[240px] px-4 [&_svg]:h-6 [&_svg]:w-6 [&_p]:text-[12px]"
+            networkQuality={networkQuality}
+            isOffline={isOffline}
+            isSlowBoot={isSlowBoot}
+            onRetry={retryMapBoot}
+          />
+        ) : null}
+      </div>
       <div
         ref={mapRef}
         className={`h-full w-full rounded-xl ${interactive ? 'cursor-pointer' : 'cursor-default'}`}

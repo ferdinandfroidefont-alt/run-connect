@@ -1,10 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
+import {
+  MapboxBootErrorBody,
+  MapboxBootLoadingBody,
+} from "@/components/map/MapboxMapBootOverlay";
+import { cn } from "@/lib/utils";
 import { createEmbeddedMapboxMap, fitMapToCoords } from "@/lib/mapboxEmbed";
 import type { MapCoord } from "@/lib/geoUtils";
 import { loadMapboxGl } from "@/lib/mapboxLazy";
+import { useNetworkQuality } from "@/lib/networkQuality";
 import {
   createSessionPinButton,
   resolveSessionPinVariant,
@@ -42,6 +48,12 @@ export function DiscoverMapCard({
   const { getCurrentPosition } = useGeolocation();
   const [userCoord, setUserCoord] = useState<MapCoord | null>(null);
   const [mapError, setMapError] = useState(false);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [isSlowBoot, setIsSlowBoot] = useState(false);
+  const [bootAttempt, setBootAttempt] = useState(0);
+
+  const networkQuality = useNetworkQuality();
+  const isOffline = networkQuality === "offline";
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +69,23 @@ export function DiscoverMapCard({
       cancelled = true;
     };
   }, [getCurrentPosition]);
+
+  useEffect(() => {
+    if (isMapLoaded) {
+      setIsSlowBoot(false);
+      return;
+    }
+    const slowMs = networkQuality === "slow" || networkQuality === "offline" ? 4000 : 9000;
+    const t = window.setTimeout(() => setIsSlowBoot(true), slowMs);
+    return () => window.clearTimeout(t);
+  }, [isMapLoaded, networkQuality, bootAttempt]);
+
+  const retryMapBoot = useCallback(() => {
+    setMapError(false);
+    setIsSlowBoot(false);
+    setIsMapLoaded(false);
+    setBootAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -96,7 +125,6 @@ export function DiscoverMapCard({
           interactive: true,
           center,
           zoom: 12,
-          antialias: true,
           style: mapStyleUrl,
           pitch: mapPitch,
         });
@@ -108,6 +136,7 @@ export function DiscoverMapCard({
 
         map.once("load", () => {
           if (cancelled || runId !== runIdRef.current) return;
+          setIsMapLoaded(true);
           map.resize();
 
           void (async () => {
@@ -183,20 +212,47 @@ export function DiscoverMapCard({
       runIdRef.current += 1;
       ro?.disconnect();
       void teardown();
+      setIsMapLoaded(false);
     };
-  }, [sessions, userCoord, mapStyleUrl, mapPitch]);
+  }, [sessions, userCoord, mapStyleUrl, mapPitch, bootAttempt]);
 
   if (mapError) {
     return (
-      <div className={`flex min-h-[200px] flex-col items-center justify-center bg-muted ${className}`}>
-        <p className="px-4 text-center text-[13px] text-muted-foreground">Carte indisponible</p>
+      <div
+        className={cn(
+          "relative flex min-h-[200px] flex-col items-center justify-center bg-muted",
+          className,
+        )}
+      >
+        <MapboxBootErrorBody
+          message="Carte indisponible. Vérifie ta connexion ou réessaie."
+          onRetry={retryMapBoot}
+        />
       </div>
     );
   }
 
   return (
-    <div className={`relative w-full overflow-hidden bg-muted ${className}`}>
+    <div className={cn("relative w-full overflow-hidden bg-muted", className)}>
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
+      <div
+        className={cn(
+          "absolute inset-0 z-[2] flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none",
+          isMapLoaded ? "pointer-events-none opacity-0" : "opacity-100",
+        )}
+        role="status"
+        aria-live="polite"
+        aria-hidden={isMapLoaded}
+      >
+        {!isMapLoaded && (
+          <MapboxBootLoadingBody
+            networkQuality={networkQuality}
+            isOffline={isOffline}
+            isSlowBoot={isSlowBoot}
+            onRetry={retryMapBoot}
+          />
+        )}
+      </div>
     </div>
   );
 }
