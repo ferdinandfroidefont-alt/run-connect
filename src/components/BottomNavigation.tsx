@@ -24,16 +24,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DISCOVER_BG } from "@/components/discover/DiscoverChromeShell";
 
-/** Maquette RunConnect.jsx ACTION_BLUE (#007AFF) */
+/** Maquette RunConnect.jsx ACTION_BLUE (#007AFF) ; gris inactif NavButton #8E8E93 (inline pour éviter ReferenceError si bundle désaligné). */
 const LIGHT_ACTION_BLUE = "#007AFF";
 
-/** Solid : même groupe que « Découvrir » (DISCOVER_BG) ; sans blur sinon la barre prend une teinte différente au-dessus du contenu. */
+/**
+ * Même base que StickyPage / DiscoverChromeShell (#F2F2F7) : la maquette applique un verre
+ * légèrement translucide sur la tab bar pour qu’elle se confonde avec le fond des pages.
+ * @see RunConnect (4).jsx — `<nav style={{ background: "rgba(242, 242, 247, 0.92)", … }}>`
+ */
 const TAB_BAR_LIGHT: CSSProperties = {
-  background: DISCOVER_BG,
-  backdropFilter: "none",
-  WebkitBackdropFilter: "none",
+  background: "rgba(242, 242, 247, 0.92)",
+  backdropFilter: "blur(20px) saturate(180%)",
+  WebkitBackdropFilter: "blur(20px) saturate(180%)",
   borderTop: "1px solid rgba(0, 0, 0, 0.06)",
 };
 
@@ -73,7 +76,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const pathname = location.pathname;
   const isDark = resolvedTheme === "dark";
   const activeBlue = isDark ? "#0A84FF" : LIGHT_ACTION_BLUE;
-  const inactiveGray = isDark ? "rgba(235, 235, 245, 0.55)" : LIGHT_LABEL_GRAY;
+  const inactiveGray = isDark ? "rgba(235, 235, 245, 0.55)" : "#8E8E93";
   const tabBarSurface = isDark ? TAB_BAR_DARK : TAB_BAR_LIGHT;
 
   /** Icônes Lucide identiques à la maquette (Compass, CalendarDays, Clock, MessageCircle). */
