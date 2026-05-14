@@ -29,8 +29,41 @@ export function AuthAmbientBackground() {
   );
 }
 
+type AuthLegalFooterTone = "default" | "ios-mockup";
+
 /** Bloc légal réutilisé (landing + choix connexion). */
-export function AuthLegalFooter({ className }: { className?: string }) {
+export function AuthLegalFooter({
+  className,
+  tone = "default",
+}: {
+  className?: string;
+  tone?: AuthLegalFooterTone;
+}) {
+  if (tone === "ios-mockup") {
+    return (
+      <p
+        className={cn(
+          "mx-auto mt-6 max-w-[360px] px-2 text-center text-[12px] leading-[1.5] text-[#8E8E93]",
+          className,
+        )}
+      >
+        En continuant, vous acceptez nos{" "}
+        <Link to="/terms" className="font-semibold text-[#0A0F1F] underline underline-offset-2">
+          Conditions d&apos;utilisation
+        </Link>{" "}
+        et notre{" "}
+        <Link to="/privacy" className="font-semibold text-[#0A0F1F] underline underline-offset-2">
+          Politique de confidentialité
+        </Link>
+        .{" "}
+        <Link to="/legal" className="font-semibold text-[#0A0F1F] underline underline-offset-2">
+          Mentions légales
+        </Link>
+        .
+      </p>
+    );
+  }
+
   return (
     <p className={cn("px-4 text-center text-[12px] leading-relaxed text-muted-foreground/70", className)}>
       En continuant, vous acceptez nos{" "}

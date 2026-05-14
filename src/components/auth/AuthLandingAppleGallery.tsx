@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { RUCONNECT_ONBOARDING_ARRIVAL_BG_URL } from "@/lib/ruconnectSplashChrome";
 
-/** Tokens design system Apple / RunConnect (DESIGN-apple) — hex explicites pour cette surface marketing. */
+/** Tokens alignés maquette RunConnect (9).jsx — ACTION_BLUE & surfaces marketing. */
 const RC = {
-  primary: "#0066cc",
-  primaryFocus: "#0071e3",
-  primaryOnDark: "#2997ff",
+  /** iOS system blue (#007AFF) — CTAs landing / hiérarchie liens sur fond sombre. */
+  primary: "#007AFF",
+  primaryFocus: "#0056CC",
+  primaryOnDark: "#FFFFFF",
   inkMuted48: "#7a7a7a",
   canvas: "#ffffff",
   canvasParchment: "#f5f5f7",
@@ -126,7 +128,7 @@ function MiniMapMockup() {
             className="absolute z-[5] flex h-8 w-8 items-center justify-center"
             style={{ top: pin.top, left: pin.left }}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0066cc] p-0.5 shadow-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#007AFF] p-0.5 shadow-sm">
               <div className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white text-[10px] font-semibold text-[#1d1d1f]">
                 {pin.label}
               </div>
@@ -134,7 +136,7 @@ function MiniMapMockup() {
           </div>
         ))}
         <div
-          className="absolute z-[4] h-3 w-3 rounded-full border-2 border-white bg-[#0066cc] shadow"
+          className="absolute z-[4] h-3 w-3 rounded-full border-2 border-white bg-[#007AFF] shadow"
           style={{ top: "58%", left: "48%", transform: "translate(-50%, -50%)" }}
         />
       </div>
@@ -228,9 +230,11 @@ export function AuthLandingAppleGallery({
       />
 
       <h1
-        className="font-display pointer-events-none absolute left-1/2 z-[50] -translate-x-1/2 text-[28px] font-semibold leading-none tracking-[-0.7px] text-white"
+        className="pointer-events-none absolute left-1/2 z-[50] -translate-x-1/2 text-center text-[38px] font-black leading-none tracking-[-0.03em] text-white"
         style={{
           top: "max(76px, calc(env(safe-area-inset-top, 0px) + 52px))",
+          textShadow: "0 2px 12px rgba(0,0,0,0.35)",
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
         }}
       >
         RunConnect
@@ -277,19 +281,14 @@ export function AuthLandingAppleGallery({
       </div>
 
       <div
-        className={`pointer-events-none absolute bottom-[calc(168px+env(safe-area-inset-bottom,0px))] left-1/2 z-[50] flex -translate-x-1/2 items-center gap-2 text-[12px] font-normal uppercase tracking-[-0.12px] text-white transition-opacity duration-300 ${
-          showSwipeHint ? "opacity-85" : "pointer-events-none opacity-0"
-        } motion-reduce:animate-none`}
+        className={`pointer-events-none absolute bottom-[calc(168px+env(safe-area-inset-bottom,0px))] left-1/2 z-[50] flex -translate-x-1/2 items-center gap-1.5 text-white transition-opacity duration-300 ${
+          showSwipeHint ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
         style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}
         aria-hidden={!showSwipeHint}
       >
-        <span>Découvrir</span>
-        <div
-          className="h-3 w-3 rotate-45 border-r-[1.5px] border-t-[1.5px] border-white motion-reduce:translate-x-0 [.motion-reduce_&]:animate-none"
-          style={{
-            animation: showSwipeHint ? "authLandingSwipeBounce 2s ease-in-out infinite" : undefined,
-          }}
-        />
+        <span className="text-[12px] font-extrabold tracking-[0.14em]">DÉCOUVRIR</span>
+        <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={2.6} aria-hidden />
       </div>
 
       <div
@@ -304,10 +303,10 @@ export function AuthLandingAppleGallery({
             role="tab"
             aria-selected={activeIndex === i}
             aria-label={`Slide ${i + 1}`}
-            className="h-2.5 w-2.5 rounded-full border-2 p-0 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
+            className="h-2 shrink-0 rounded-full p-0 transition-all duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
             style={{
-              borderColor: RC.primary,
-              backgroundColor: activeIndex === i ? RC.primary : "transparent",
+              width: activeIndex === i ? 22 : 8,
+              backgroundColor: activeIndex === i ? "#ffffff" : "rgba(255,255,255,0.4)",
               outlineColor: RC.primaryFocus,
             }}
             onClick={() => scrollToSlide(i)}
@@ -322,16 +321,17 @@ export function AuthLandingAppleGallery({
             "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 35%, rgba(0,0,0,0.55) 100%)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-[360px] flex-col gap-3">
+        <div className="mx-auto flex w-full max-w-[360px] flex-col gap-2.5 pb-2">
           <button
             type="button"
             disabled={disabled}
             onClick={onSignUp}
-            className="w-full rounded-full py-[14px] text-center text-[18px] font-light text-white transition-transform duration-150 active:scale-[0.95] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 motion-reduce:active:scale-100"
+            className="w-full rounded-full py-3.5 text-center text-[17px] font-extrabold tracking-[-0.01em] text-white transition-transform duration-150 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 motion-reduce:active:scale-100"
             style={{
               backgroundColor: RC.primary,
               outlineColor: RC.primaryFocus,
               fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
+              boxShadow: "0 4px 16px rgba(0,122,255,0.4)",
             }}
           >
             S&apos;inscrire gratuitement
@@ -340,11 +340,9 @@ export function AuthLandingAppleGallery({
             type="button"
             disabled={disabled}
             onClick={onSignIn}
-            className="flex h-[50px] w-full items-center justify-center rounded-full border bg-transparent text-[17px] font-normal transition-transform duration-150 active:scale-[0.95] active:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 motion-reduce:active:scale-100"
+            className="w-full rounded-full border-[1.5px] border-white bg-transparent py-3.5 text-[17px] font-extrabold tracking-[-0.01em] text-white transition-opacity duration-150 active:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
             style={{
-              borderColor: RC.primary,
-              /* Lisible sur fond photo sombre (équivalent lien sur surface sombre). */
-              color: RC.primaryOnDark,
+              outlineColor: "#ffffff",
               fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
             }}
           >
@@ -352,13 +350,6 @@ export function AuthLandingAppleGallery({
           </button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes authLandingSwipeBounce {
-          0%, 100% { transform: translateX(0) rotate(45deg); }
-          50% { transform: translateX(8px) rotate(45deg); }
-        }
-      `}</style>
     </div>
   );
 }

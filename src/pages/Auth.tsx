@@ -10,8 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { FcGoogle } from "react-icons/fc";
-import { Loader2, Lock, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { Loader2, Lock, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft, Check } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { Browser } from '@capacitor/browser';
 import { getIosSupabaseOAuthBridgeRedirectTo } from "@/lib/oauthMobile";
@@ -46,6 +45,41 @@ function isSecurityVerificationError(message: string): boolean {
 /** UUID factice pour le dialogue profil en parcours arrivée (aucune écriture DB). */
 const ARRIVAL_PREVIEW_FAKE_USER_ID = "00000000-0000-4000-8000-000000000001";
 const ARRIVAL_PREVIEW_EMAIL = "nouveau.compte@exemple.runconnect";
+
+/** Palette écrans connexion / inscription — alignée maquette RunConnect (9).jsx */
+const AUTH_MOCKUP = {
+  blue: "#007AFF",
+  ink: "#0A0F1F",
+  muted: "#8E8E93",
+  sep: "#E5E5EA",
+  hairlineDivider: "#C7C7CC",
+  success: "#34C759",
+  canvas: "#F2F2F7",
+  cardShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+} as const;
+
+function MockupGoogleGlyph({ className }: { className?: string }) {
+  return (
+    <svg className={className} width={18} height={18} viewBox="0 0 48 48" aria-hidden>
+      <path
+        fill="#FFC107"
+        d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"
+      />
+      <path
+        fill="#FF3D00"
+        d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+      />
+      <path
+        fill="#4CAF50"
+        d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"
+      />
+      <path
+        fill="#1976D2"
+        d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.2 5.2c-.4.4 6.7-4.9 6.7-14.8 0-1.3-.1-2.6-.4-3.9z"
+      />
+    </svg>
+  );
+}
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -885,7 +919,7 @@ const Auth = () => {
 
   // ── Apple icon SVG ──
   const AppleIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
     </svg>
   );
@@ -908,89 +942,114 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   const renderEmailSignin = () => (
     <div
-      className="relative flex min-h-full flex-col apple-grouped-bg"
+      className="relative flex min-h-full flex-col overflow-hidden"
       style={{
+        background: AUTH_MOCKUP.canvas,
         paddingTop: "max(env(safe-area-inset-top, 0px), 0px)",
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
       }}
     >
-      {/* NavBar iOS compact : Retour bleu à gauche, titre centré */}
-      <div className="px-4 pt-3">
-        <div className="flex h-11 items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              setTurnstileToken(null);
-              turnstileRef.current?.reset();
-              setView("landing");
+      <div className="flex shrink-0 items-center px-4 pb-3 pt-3">
+        <button
+          type="button"
+          onClick={() => {
+            setTurnstileToken(null);
+            turnstileRef.current?.reset();
+            setView("landing");
+          }}
+          className="flex w-[90px] shrink-0 items-center gap-0 active:opacity-70"
+          aria-label="Retour"
+        >
+          <ChevronLeft className="h-6 w-6 shrink-0 text-[#007AFF]" strokeWidth={2.6} />
+          <span className="text-[17px] font-medium tracking-[-0.01em] text-[#007AFF]">Retour</span>
+        </button>
+        <h1
+          className="min-w-0 flex-1 text-center text-[18px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
+          style={{ margin: 0 }}
+        >
+          Connexion
+        </h1>
+        <div className="w-[90px] shrink-0" aria-hidden />
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
+        <div className="mt-2 text-center">
+          <img
+            src={appIcon}
+            alt="RunConnect"
+            className="mx-auto h-[72px] w-[72px] rounded-[16px] object-cover"
+            style={{ boxShadow: "0 8px 24px rgba(0,122,255,0.35)" }}
+          />
+          <h2
+            className="mt-4 text-[38px] font-black tracking-[-0.03em] text-[#0A0F1F]"
+            style={{
+              margin: 0,
+              marginTop: 16,
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
             }}
-            className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
-            aria-label="Retour"
           >
-            <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
-            <span>Retour</span>
-          </button>
-          <div className="apple-navbar-title">Connexion</div>
-          <div className="min-w-[70px]" />
+            Bon retour
+          </h2>
+          <p className="mt-2 text-[16px] leading-normal text-[#8E8E93]" style={{ margin: 0, marginTop: 8 }}>
+            Connecte-toi à ton compte RunConnect.
+          </p>
         </div>
-      </div>
 
-      {/* Hero compact (mockup : icône 60×60 rounded-14 + 28px display + 15 muted) */}
-      <div className="px-4 pt-6 text-center">
-        <img
-          src={appIcon}
-          alt="RunConnect"
-          className="mx-auto h-[60px] w-[60px] rounded-[14px] object-cover"
-        />
-        <div className="mt-4 font-display text-[28px] font-semibold tracking-[-0.5px] text-foreground">
-          Bon retour
-        </div>
-        <div className="mt-1 text-[15px] text-muted-foreground">
-          Connecte-toi à ton compte RunConnect.
-        </div>
-      </div>
-
-      {/* Connexion e-mail + mot de passe (sans étape « Continuer avec e-mail ») */}
-      <div className="mt-6 min-h-0 flex-1 overflow-y-auto px-4">
         <form onSubmit={handleUsernameOrEmailSignin}>
-          <div className="apple-group pb-4">
-            <div className="apple-group-stack">
-              <div className="apple-field-row">
-                <div className="apple-field-label">Adresse e-mail</div>
-                <input
-                  type="email"
-                  inputMode="email"
-                  placeholder="vous@exemple.com"
-                  value={usernameOrEmail}
-                  onChange={(e) => setUsernameOrEmail(e.target.value)}
-                  className="apple-field-value min-w-0"
-                  required
-                  autoComplete="username"
-                />
-              </div>
-              <div className="apple-field-row apple-field-row-last">
-                <div className="apple-field-label">Mot de passe</div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="apple-field-value min-w-0 pr-7"
-                  required
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="-mr-1 ml-1 p-1 text-muted-foreground active:opacity-60"
-                  aria-label={showPassword ? "Masquer" : "Afficher"}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+          <div className="mt-6 overflow-hidden rounded-[14px] bg-white" style={{ boxShadow: AUTH_MOCKUP.cardShadow }}>
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <label
+                htmlFor="auth-signin-email"
+                className="w-[130px] shrink-0 text-[17px] font-semibold tracking-[-0.01em] text-[#0A0F1F]"
+              >
+                Adresse e-mail
+              </label>
+              <input
+                id="auth-signin-email"
+                type="email"
+                inputMode="email"
+                placeholder="vous@exemple.com"
+                value={usernameOrEmail}
+                onChange={(e) => setUsernameOrEmail(e.target.value)}
+                className="min-w-0 flex-1 border-0 bg-transparent text-right text-[17px] text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+                required
+                autoComplete="username"
+              />
+            </div>
+            <div className="ml-4 h-px bg-[#E5E5EA]" />
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <label
+                htmlFor="auth-signin-password"
+                className="w-[130px] shrink-0 text-[17px] font-semibold tracking-[-0.01em] text-[#0A0F1F]"
+              >
+                Mot de passe
+              </label>
+              <input
+                id="auth-signin-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="min-w-0 flex-1 border-0 bg-transparent pr-1 text-right text-[17px] text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="shrink-0 active:opacity-70"
+                aria-label={showPassword ? "Masquer" : "Afficher"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.2} />
+                ) : (
+                  <Eye className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.2} />
+                )}
+              </button>
             </div>
           </div>
-          <div className="px-4 pb-2">
+
+          <div className="pb-2 pt-2">
             {!turnstileToken && (
               <TurnstileWidget
                 ref={turnstileRef}
@@ -1000,89 +1059,103 @@ const Auth = () => {
               />
             )}
             {turnstileToken && (
-              <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
-                ✅ Vérification réussie
+              <div className="mb-3 mt-5 flex items-center justify-center gap-1.5">
+                <span className="text-[16px]" aria-hidden>
+                  ✅
+                </span>
+                <span
+                  className="text-[15px] font-bold tracking-[-0.01em]"
+                  style={{ color: AUTH_MOCKUP.success }}
+                >
+                  Vérification réussie
+                </span>
               </div>
             )}
           </div>
-          <div className="px-2">
-            <button
-              type="submit"
-              disabled={isLoading || !turnstileToken}
-              className="apple-pill apple-pill-large w-full disabled:opacity-50"
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Se connecter
-            </button>
+
+          <button
+            type="submit"
+            disabled={isLoading || !turnstileToken}
+            className="w-full rounded-full py-3.5 text-[17px] font-extrabold tracking-[-0.01em] text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+            style={{
+              background: AUTH_MOCKUP.blue,
+              boxShadow: "0 4px 14px rgba(0,122,255,0.35)",
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            {isLoading && <Loader2 className="mr-2 inline h-4 w-4 animate-spin align-[-2px]" />}
+            Se connecter
+          </button>
+
+          <div className="mt-4 text-center">
             <button
               type="button"
               onClick={handleForgotPassword}
               disabled={!turnstileToken}
-              className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60 disabled:opacity-50"
+              className="text-[15px] font-semibold tracking-[-0.01em] text-[#007AFF] active:opacity-70 disabled:opacity-50"
             >
               Mot de passe oublié ?
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                const u = usernameOrEmail.trim();
-                if (u.includes("@")) setEmail(u);
-                setTurnstileToken(null);
-                turnstileRef.current?.reset();
-                setView("email-signin-form");
-              }}
-              disabled={isLoading}
-              className="mt-1 flex h-[40px] w-full items-center justify-center text-[14px] text-muted-foreground active:opacity-60 disabled:opacity-50"
-            >
-              Connexion avec un code reçu par e-mail
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const u = usernameOrEmail.trim();
+              if (u.includes("@")) setEmail(u);
+              setTurnstileToken(null);
+              turnstileRef.current?.reset();
+              setView("email-signin-form");
+            }}
+            disabled={isLoading}
+            className="mt-3 w-full text-center text-[14px] text-[#8E8E93] active:opacity-70 disabled:opacity-50"
+          >
+            Connexion avec un code reçu par e-mail
+          </button>
         </form>
+
+        <div className="mb-4 mt-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-[#C7C7CC]" />
+          <span className="text-[14px] font-medium text-[#8E8E93]">ou</span>
+          <div className="h-px flex-1 bg-[#C7C7CC]" />
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={handleAppleAuth}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[16px] font-bold tracking-[-0.01em] text-white transition-opacity active:opacity-80 disabled:opacity-50"
+            style={{ background: "#0A0F1F" }}
+          >
+            <AppleIcon />
+            Continuer avec Apple
+          </button>
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-white py-3.5 text-[16px] font-bold tracking-[-0.01em] text-[#0A0F1F] transition-colors active:bg-[#F8F8F8] disabled:opacity-50"
+            style={{ boxShadow: "0 0 0 1px #E5E5EA" }}
+          >
+            <MockupGoogleGlyph />
+            Continuer avec Google
+          </button>
+        </div>
+
+        <AuthLegalFooter tone="ios-mockup" className="pb-2 pt-6" />
       </div>
-
-      {/* "ou" séparateur hairline (mockup 02) */}
-      <div className="flex items-center gap-3 px-8 pt-8 pb-4">
-        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
-        <div className="text-[13px] text-muted-foreground">ou</div>
-        <div className="h-px flex-1 bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]" />
-      </div>
-
-      {/* Apple + Google (50px rounded-12 — apple-social-btn) */}
-      <div className="flex flex-col gap-2.5 px-4">
-        <button
-          type="button"
-          onClick={handleAppleAuth}
-          disabled={isLoading}
-          className="apple-social-btn apple-social-btn-apple disabled:opacity-50"
-        >
-          <AppleIcon />
-          Continuer avec Apple
-        </button>
-        <button
-          type="button"
-          onClick={handleGoogleAuth}
-          disabled={isLoading}
-          className="apple-social-btn apple-social-btn-google disabled:opacity-50"
-        >
-          <FcGoogle className="h-5 w-5" />
-          Continuer avec Google
-        </button>
-      </div>
-
-      <div className="flex-1" />
-
-      <AuthLegalFooter className="pb-2 pt-6" />
     </div>
   );
 
   // ██  EMAIL SIGNIN — OTP (écran séparé ; mot de passe sur l’écran Connexion principal)
   const renderEmailSigninForm = () => (
     <IosFixedPageHeaderShell
-      className="h-full min-h-0 apple-grouped-bg"
-      headerWrapperClassName="shrink-0 apple-grouped-bg"
+      className="h-full min-h-0 bg-[#F2F2F7]"
+      headerWrapperClassName="shrink-0 bg-[#F2F2F7]"
       header={
-        <div className="px-4 pt-3">
-          <div className="flex h-11 items-center justify-between">
+        <div className="px-4 pb-3 pt-3">
+          <div className="flex items-center">
             <button
               type="button"
               onClick={() => {
@@ -1090,73 +1163,99 @@ const Auth = () => {
                 setTurnstileToken(null);
                 turnstileRef.current?.reset();
               }}
-              className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
+              className="flex w-[90px] shrink-0 items-center gap-0 active:opacity-70"
               aria-label="Retour"
             >
-              <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
-              <span>Retour</span>
+              <ChevronLeft className="h-6 w-6 shrink-0 text-[#007AFF]" strokeWidth={2.6} />
+              <span className="text-[17px] font-medium tracking-[-0.01em] text-[#007AFF]">Retour</span>
             </button>
-            <div className="apple-navbar-title">Code e-mail</div>
-            <div className="min-w-[70px]" />
+            <h1
+              className="min-w-0 flex-1 text-center text-[18px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
+              style={{ margin: 0 }}
+            >
+              Code e-mail
+            </h1>
+            <div className="w-[90px] shrink-0" aria-hidden />
           </div>
         </div>
       }
     >
-      <div className="pt-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))]">
-      <div className="apple-group">
-        <div className="apple-group-title">Connexion par code</div>
-        <form onSubmit={handleEmailSubmit} className="apple-group-stack">
-          <div className="apple-field-row apple-field-row-last">
-            <div className="apple-field-label">Adresse e-mail</div>
-            <input
-              type="email"
-              placeholder="vous@exemple.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="apple-field-value min-w-0"
-              required
-              autoComplete="email"
-            />
-          </div>
-        </form>
-      </div>
-
-      <div className="px-4 pb-2">
-        {!turnstileToken && (
-          <TurnstileWidget
-            ref={turnstileRef}
-            onToken={setTurnstileToken}
-            onExpire={() => setTurnstileToken(null)}
-            onError={() => setTurnstileToken(null)}
-          />
-        )}
-        {turnstileToken && (
-          <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">
-            ✅ Vérification réussie
-          </div>
-        )}
-      </div>
-
-      <div className="px-4">
-        <button
-          type="button"
-          onClick={(e) => handleEmailSubmit(e as unknown as React.FormEvent)}
-          disabled={isLoading || !turnstileToken}
-          className="apple-pill apple-pill-large apple-pill-secondary w-full disabled:opacity-50"
+      <div className="px-5 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-4">
+        <p className="mb-3 text-[13px] font-medium uppercase tracking-wide text-[#8E8E93]">
+          Connexion par code
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleEmailSubmit(e);
+          }}
         >
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Recevoir un code
-        </button>
+          <div className="overflow-hidden rounded-[14px] bg-white" style={{ boxShadow: AUTH_MOCKUP.cardShadow }}>
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <label
+                htmlFor="auth-otp-email"
+                className="w-[130px] shrink-0 text-[17px] font-semibold tracking-[-0.01em] text-[#0A0F1F]"
+              >
+                Adresse e-mail
+              </label>
+              <input
+                id="auth-otp-email"
+                type="email"
+                placeholder="vous@exemple.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="min-w-0 flex-1 border-0 bg-transparent text-right text-[17px] text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+                required
+                autoComplete="email"
+              />
+            </div>
+          </div>
+
+          <div className="pb-2 pt-3">
+            {!turnstileToken && (
+              <TurnstileWidget
+                ref={turnstileRef}
+                onToken={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => setTurnstileToken(null)}
+              />
+            )}
+            {turnstileToken && (
+              <div className="mb-3 mt-5 flex items-center justify-center gap-1.5">
+                <span className="text-[16px]" aria-hidden>
+                  ✅
+                </span>
+                <span className="text-[15px] font-bold tracking-[-0.01em]" style={{ color: AUTH_MOCKUP.success }}>
+                  Vérification réussie
+                </span>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading || !turnstileToken}
+            className="w-full rounded-full py-3.5 text-[17px] font-extrabold tracking-[-0.01em] text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+            style={{
+              background: AUTH_MOCKUP.blue,
+              boxShadow: turnstileToken ? "0 4px 14px rgba(0,122,255,0.35)" : "none",
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            {isLoading && <Loader2 className="mr-2 inline h-4 w-4 animate-spin align-[-2px]" />}
+            Recevoir un code
+          </button>
+        </form>
+
         <button
           type="button"
           onClick={forceCleanSession}
-          className="mt-3 flex h-9 w-full items-center justify-center text-[12px] text-muted-foreground/60 hover:text-destructive"
+          className="mt-3 flex h-9 w-full items-center justify-center text-[12px] text-[#8E8E93]/80 hover:text-destructive"
         >
           Problème de connexion ? Nettoyer la session
         </button>
-      </div>
 
-      <AuthLegalFooter className="pt-4" />
+        <AuthLegalFooter tone="ios-mockup" className="pt-6" />
       </div>
     </IosFixedPageHeaderShell>
   );
@@ -1170,14 +1269,21 @@ const Auth = () => {
   // + Turnstile + Group(Cell CGU check) + Pill Continuer.
   // Logique : `handleEmailSubmit`, `acceptSignupTerms` — préservés.
   // ══════════════════════════════════════════════
-  const renderEmailSignup = () => (
+  const renderEmailSignup = () => {
+    const signupCanContinue =
+      acceptSignupTerms &&
+      !!turnstileToken &&
+      email.trim().length > 3 &&
+      password.trim().length >= 6 &&
+      !isLoading;
+
+    return (
     <IosFixedPageHeaderShell
-      className="h-full min-h-0 apple-grouped-bg"
-      headerWrapperClassName="shrink-0 apple-grouped-bg"
+      className="h-full min-h-0 bg-[#F2F2F7]"
+      headerWrapperClassName="shrink-0 bg-[#F2F2F7]"
       header={
-        <div className="px-4 pt-3">
-          {/* NavBar compact iOS : Annuler bleu / titre / step counter */}
-          <div className="flex h-11 items-center justify-between">
+        <div className="px-5 pb-3 pt-3">
+          <div className="flex items-center">
             <button
               type="button"
               onClick={() => {
@@ -1186,56 +1292,72 @@ const Auth = () => {
                 setTurnstileToken(null);
                 turnstileRef.current?.reset();
               }}
-              className="text-[17px] text-primary active:opacity-60"
+              className="w-[90px] shrink-0 text-left text-[17px] font-medium tracking-[-0.01em] text-[#007AFF] active:opacity-70"
             >
               Annuler
             </button>
-            <div className="apple-navbar-title">Inscription</div>
-            <div className="text-[15px] text-muted-foreground">1 / 2</div>
+            <h1
+              className="min-w-0 flex-1 text-center text-[18px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
+              style={{ margin: 0 }}
+            >
+              Inscription
+            </h1>
+            <div className="w-[90px] shrink-0 text-right text-[17px] font-medium text-[#8E8E93]">1 / 2</div>
           </div>
         </div>
       }
     >
-      <form onSubmit={handleEmailSubmit} className="px-0 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-4">
-        {/* Group : Email + Mot de passe (mockup spec FieldRow style) */}
-        <div className="apple-group">
-          <div className="apple-group-stack">
-            <div className="apple-field-row">
-              <div className="apple-field-label">Email</div>
-              <input
-                type="email"
-                placeholder="ferdinand@icloud.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="apple-field-value"
-                required
-                autoComplete="email"
-              />
-            </div>
-            <div className="apple-field-row apple-field-row-last">
-              <div className="apple-field-label">Mot de passe</div>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="apple-field-value pr-7"
-                required
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="-mr-1 ml-1 p-1 text-muted-foreground active:opacity-60"
-                aria-label={showPassword ? "Masquer" : "Afficher"}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
+      <form
+        onSubmit={handleEmailSubmit}
+        className="px-5 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-3"
+      >
+        <div className="mt-3 overflow-hidden rounded-[14px] bg-white" style={{ boxShadow: AUTH_MOCKUP.cardShadow }}>
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <label htmlFor="auth-signup-email" className="w-[130px] shrink-0 text-[17px] font-semibold tracking-[-0.01em] text-[#0A0F1F]">
+              Email
+            </label>
+            <input
+              id="auth-signup-email"
+              type="email"
+              placeholder="vous@exemple.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="min-w-0 flex-1 border-0 bg-transparent text-right text-[17px] text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+              required
+              autoComplete="email"
+            />
+          </div>
+          <div className="ml-4 h-px bg-[#E5E5EA]" />
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <label htmlFor="auth-signup-password" className="w-[130px] shrink-0 text-[17px] font-semibold tracking-[-0.01em] text-[#0A0F1F]">
+              Mot de passe
+            </label>
+            <input
+              id="auth-signup-password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="min-w-0 flex-1 border-0 bg-transparent pr-1 text-right text-[17px] text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+              required
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="shrink-0 active:opacity-70"
+              aria-label={showPassword ? "Masquer" : "Afficher"}
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.2} />
+              ) : (
+                <Eye className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.2} />
+              )}
+            </button>
           </div>
         </div>
 
-        <div className="px-4 pb-2">
+        <div className="pb-2 pt-2">
           {!turnstileToken && (
             <TurnstileWidget
               ref={turnstileRef}
@@ -1245,84 +1367,98 @@ const Auth = () => {
             />
           )}
           {turnstileToken && (
-            <div className="text-center text-[13px] font-medium text-[hsl(var(--success,142_76%_36%))] dark:text-green-500">
-              ✅ Vérification réussie
+            <div className="mb-3 mt-5 flex items-center justify-center gap-1.5">
+              <span className="text-[16px]" aria-hidden>
+                ✅
+              </span>
+              <span className="text-[15px] font-bold tracking-[-0.01em]" style={{ color: AUTH_MOCKUP.success }}>
+                Vérification réussie
+              </span>
             </div>
           )}
         </div>
 
-        {/* Group : Conditions d'utilisation (Cell check style mockup) */}
-        <div className="apple-group">
-          <div className="apple-group-stack">
-            <button
-              type="button"
-              onClick={() => setAcceptSignupTerms(!acceptSignupTerms)}
-              className="apple-cell apple-cell-last w-full text-left"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="apple-cell-title">Conditions d&apos;utilisation</div>
-                <div className="apple-cell-subtitle">
-                  J&apos;accepte les{" "}
-                  <Link to="/terms" className="text-primary underline-offset-2 hover:underline" onClick={(e) => e.stopPropagation()}>
-                    CGU
-                  </Link>{" "}
-                  et la{" "}
-                  <Link to="/privacy" className="text-primary underline-offset-2 hover:underline" onClick={(e) => e.stopPropagation()}>
-                    politique de confidentialité
-                  </Link>
-                  .
-                </div>
-              </div>
-              {acceptSignupTerms ? (
-                <svg width="14" height="11" viewBox="0 0 14 11" aria-hidden style={{ color: "hsl(var(--primary))" }}>
-                  <path d="M1 5.5l4 4 8-8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden className="text-muted-foreground/40">
-                  <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeWidth="1" fill="none" />
-                </svg>
-              )}
-            </button>
+        <button
+          type="button"
+          onClick={() => setAcceptSignupTerms(!acceptSignupTerms)}
+          className="flex w-full items-start gap-3 rounded-[14px] bg-white p-4 text-left transition-colors active:bg-[#F8F8F8]"
+          style={{ boxShadow: AUTH_MOCKUP.cardShadow }}
+        >
+          <div className="min-w-0 flex-1">
+            <p className="m-0 text-[17px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">Conditions d&apos;utilisation</p>
+            <p className="m-0 mt-1 text-[14px] leading-snug text-[#0A0F1F]">
+              J&apos;accepte les{" "}
+              <Link to="/terms" className="font-semibold text-[#007AFF]" onClick={(e) => e.stopPropagation()}>
+                CGU
+              </Link>{" "}
+              et la{" "}
+              <Link to="/privacy" className="font-semibold text-[#007AFF]" onClick={(e) => e.stopPropagation()}>
+                politique de confidentialité
+              </Link>
+              .
+            </p>
           </div>
-          <div className="apple-group-footer">
-            J&apos;ai au moins 13 ans.
-          </div>
-        </div>
-
-        {/* Code parrainage (logique existante préservée) */}
-        <div className="apple-group">
-          <div className="apple-group-stack p-2">
-            <ReferralCodeInput />
-          </div>
-        </div>
-
-        {/* CTA bottom : Pill Continuer + lien existant */}
-        <div className="mt-2 px-4">
-          <button
-            type="submit"
-            disabled={isLoading || !acceptSignupTerms || !turnstileToken}
-            className="apple-pill apple-pill-large w-full disabled:opacity-50"
+          <div
+            className="mt-1 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full transition-all"
+            style={{
+              border: acceptSignupTerms ? `1.5px solid ${AUTH_MOCKUP.blue}` : "1.5px solid #C7C7CC",
+              background: acceptSignupTerms ? AUTH_MOCKUP.blue : "transparent",
+            }}
+            aria-hidden
           >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Continuer
-          </button>
+            {acceptSignupTerms && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3.5} />}
+          </div>
+        </button>
+
+        <p className="mb-0 ml-1 mt-2.5 text-[14px] text-[#8E8E93]">J&apos;ai au moins 13 ans.</p>
+
+        <ReferralCodeInput appearance="authSignup" />
+
+        <button
+          type="submit"
+          disabled={
+            isLoading ||
+            !acceptSignupTerms ||
+            !turnstileToken ||
+            email.trim().length <= 3 ||
+            password.trim().length < 6
+          }
+          className="mt-6 w-full rounded-full py-3.5 text-[17px] font-extrabold tracking-[-0.01em] text-white transition-transform active:scale-[0.98]"
+          style={{
+            background: signupCanContinue ? AUTH_MOCKUP.blue : "rgba(0, 122, 255, 0.4)",
+            boxShadow: signupCanContinue ? "0 4px 14px rgba(0,122,255,0.35)" : "none",
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+            opacity:
+              isLoading || !acceptSignupTerms || !turnstileToken ? 0.55 : 1,
+            cursor:
+              isLoading || !acceptSignupTerms || !turnstileToken || email.trim().length <= 3 || password.trim().length < 6
+                ? "not-allowed"
+                : "pointer",
+          }}
+        >
+          {isLoading && <Loader2 className="mr-2 inline h-4 w-4 animate-spin align-[-2px]" />}
+          Continuer
+        </button>
+
+        <div className="mt-4 text-center">
           <button
             type="button"
             onClick={() => {
               setTurnstileToken(null);
               turnstileRef.current?.reset();
-              setView('email-signin');
+              setView("email-signin");
             }}
-            className="mt-3 flex h-[44px] w-full items-center justify-center text-[15px] text-primary active:opacity-60"
+            className="text-[15px] font-semibold tracking-[-0.01em] text-[#007AFF] active:opacity-70"
           >
             Déjà inscrit ? Se connecter
           </button>
         </div>
 
-        <AuthLegalFooter className="pt-6" />
+        <AuthLegalFooter tone="ios-mockup" className="pt-6" />
       </form>
     </IosFixedPageHeaderShell>
-  );
+    );
+  };
 
   // ══════════════════════════════════════════════
   // ██  OTP VIEW  ██
