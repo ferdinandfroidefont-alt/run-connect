@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
+import { cn } from '@/lib/utils';
 
 import { RouteDialog } from '@/components/RouteDialog';
 import { MapStyleSelector } from '@/components/MapStyleSelector';
