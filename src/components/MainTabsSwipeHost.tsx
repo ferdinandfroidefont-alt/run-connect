@@ -15,7 +15,7 @@ import { TabPaneErrorBoundary } from "@/components/TabPaneErrorBoundary";
 const Index = lazy(() => import("@/pages/Index"));
 const MySessions = lazy(() => import("@/pages/MySessions"));
 const Messages = lazy(() => import("@/pages/Messages"));
-const RouteCreation = lazy(() => import("@/pages/RouteCreation"));
+const DiscoverRouteCreationPage = lazy(() => import("@/pages/DiscoverRouteCreationPage"));
 const Coaching = lazy(() => import("@/pages/Coaching"));
 
 type TabDef = {
@@ -27,7 +27,7 @@ const TABS: TabDef[] = [
   { path: "/", render: () => <Index /> },
   { path: "/my-sessions", render: () => <MySessions /> },
   { path: "/messages", render: () => <Messages /> },
-  { path: "/route-create", render: () => <RouteCreation /> },
+  { path: "/route-create", render: () => <DiscoverRouteCreationPage /> },
   { path: "/coaching", render: () => <Coaching /> },
 ];
 

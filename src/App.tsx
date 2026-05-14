@@ -41,7 +41,7 @@ const DonationCanceled = lazy(() => import("./pages/DonationCanceled"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Search = lazy(() => import("./pages/Search"));
 const DiscoverLocationSearch = lazy(() => import("./pages/DiscoverLocationSearch"));
-const RouteCreation = lazy(() => import("./pages/RouteCreation"));
+const DiscoverRouteCreationPage = lazy(() => import("./pages/DiscoverRouteCreationPage"));
 const ItineraryMyRoutes = lazy(() => import("./pages/ItineraryMyRoutes"));
 const ItineraryRouteDetail = lazy(() => import("./pages/ItineraryRouteDetail"));
 const Itinerary3D = lazy(() => import("./pages/Itinerary3D"));
@@ -138,7 +138,7 @@ const App = () => {
         import("./pages/NotFound"),
         import("./pages/Search"),
         import("./pages/DiscoverLocationSearch"),
-        import("./pages/RouteCreation"),
+        import("./pages/DiscoverRouteCreationPage"),
         import("./pages/ItineraryMyRoutes"),
         import("./pages/ItineraryRouteDetail"),
         import("./pages/Itinerary3D"),
@@ -439,8 +439,8 @@ const App = () => {
                   <Route path="/itinerary/route/:routeId" element={<Layout><PageTransition><PageSuspense><ItineraryRouteDetail /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/3d" element={<Layout><PageTransition><PageSuspense><Itinerary3D /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/training" element={<Layout><PageTransition><PageSuspense><ItineraryTraining /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/route-create" element={<Layout><PageTransition><PageSuspense><RouteCreation /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/route-creation" element={<Layout><PageTransition><PageSuspense><RouteCreation /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/route-create" element={<Layout><PageTransition><PageSuspense><DiscoverRouteCreationPage /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/route-creation" element={<Layout><PageTransition><PageSuspense><DiscoverRouteCreationPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/privacy" element={<PageTransition><PageSuspense><Privacy /></PageSuspense></PageTransition>} />
                   <Route path="/legal" element={<PageTransition><PageSuspense><LegalNotice /></PageSuspense></PageTransition>} />
                   <Route path="/terms" element={<PageTransition><PageSuspense><Terms /></PageSuspense></PageTransition>} />
