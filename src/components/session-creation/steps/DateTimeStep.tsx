@@ -115,6 +115,23 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
 
   const calendarCardStyle = { boxShadow: WIZARD_CARD_SHADOW };
 
+  /** Affichage heure (native input peut être vide avant interaction). */
+  const displayTimeForUi = selectedTime || '09:00';
+
+  /** Estimation +1 h façon maquette quand le parent ne fournit pas encore de fin calculée. */
+  const fallbackEndLabel = useMemo(() => {
+    const [hh, mm] = displayTimeForUi.split(':').map(Number);
+    if (!Number.isFinite(hh)) return null;
+    const m = Number.isFinite(mm) ? mm : 0;
+    const endH = (hh + 1) % 24;
+    return `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }, [displayTimeForUi]);
+
+  const endLabelShown = estimatedEndTimeLabel ?? fallbackEndLabel;
+
+  const showProvisionalSuffix =
+    estimatedEndTimeLabel == null || isEstimatedEndTimeProvisional;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 12 }}
@@ -183,13 +200,15 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
             </div>
           </div>
 
+          {/* Maquette : plus d’air sous le calendrier avant « HEURE DE DÉPART » */}
           <p
-            className="mb-2.5 mt-[22px] text-[13px] font-extrabold uppercase"
+            className="mb-[10px] mt-7 text-[13px] font-extrabold uppercase"
             style={{ color: WIZARD_MUTED, letterSpacing: '0.1em' }}
           >
             Heure de départ
           </p>
 
+          {/* Carte heure : coins 16px comme la maquette */}
           <div className="flex items-center justify-between rounded-2xl bg-white p-4" style={calendarCardStyle}>
             <span className="text-[18px] font-bold" style={{ color: WIZARD_TITLE }}>
               Heure
@@ -208,10 +227,11 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
             />
           </div>
 
-          {estimatedEndTimeLabel ? (
-            <p className="mt-2.5 text-[13px] leading-[1.4]" style={{ color: WIZARD_MUTED }}>
-              Fin estimée à {estimatedEndTimeLabel}
-              {isEstimatedEndTimeProvisional ? ' (estimation provisoire)' : ''} — basé sur tes records.
+          {/* Toujours présent comme sur la maquette → même espacement vers les pills même sans date / sans estimation serveur */}
+          {endLabelShown ? (
+            <p className="mt-[10px] text-[13px] leading-[1.4]" style={{ color: WIZARD_MUTED }}>
+              Fin estimée à {endLabelShown}
+              {showProvisionalSuffix ? ' (estimation provisoire)' : ''} — basé sur tes records.
             </p>
           ) : null}
 
@@ -228,7 +248,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                     background: selected ? WIZARD_ACTION_BLUE : '#fff',
                     color: selected ? '#fff' : WIZARD_TITLE,
                     boxShadow: selected ? '0 2px 8px rgba(0,122,255,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
-                    border: selected ? 'none' : undefined,
+                    border: 'none',
                   }}
                 >
                   {t}

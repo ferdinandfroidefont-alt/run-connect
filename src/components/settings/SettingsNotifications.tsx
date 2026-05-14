@@ -1,19 +1,217 @@
-import { useState, useEffect, useRef } from "react";
-import { Switch } from "@/components/ui/switch";
+import { useState, useEffect, useRef, useCallback, type ComponentType, type CSSProperties, type ReactNode } from "react";
+import type { LucideProps } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, BellRing, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, ChevronRight } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight, Smartphone, Users, MessageCircle, Play, Check, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
 import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
-import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+
+/** Tokens maquette Réglages (RunConnect.jsx). */
+const ACTION_BLUE = "#007AFF";
+const SETTINGS_BG = "#F2F2F7";
+const CARD_SHADOW = "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
+
+type IconComp = ComponentType<LucideProps>;
+
+function SettingsMaquetteSubHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div className="flex shrink-0 items-center px-4 pb-3 pt-3" style={{ background: SETTINGS_BG }}>
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex shrink-0 items-center gap-0 transition-opacity active:opacity-70"
+        style={{ width: 90 }}
+      >
+        <ChevronLeft className="size-6" color={ACTION_BLUE} strokeWidth={2.6} />
+        <span
+          className="-tracking-[0.01em]"
+          style={{ fontSize: 17, fontWeight: 500, color: ACTION_BLUE }}
+        >
+          Retour
+        </span>
+      </button>
+      <h1
+        className="flex-1 text-center -tracking-[0.02em]"
+        style={{ fontSize: 18, fontWeight: 800, color: "#0A0F1F", margin: 0 }}
+      >
+        {title}
+      </h1>
+      <div style={{ width: 90 }} aria-hidden />
+    </div>
+  );
+}
+
+function SettingsMaquetteToggle({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={value}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!value)}
+      className="shrink-0 transition-opacity disabled:opacity-40 active:not-disabled:opacity-80"
+      style={{
+        width: 51,
+        height: 31,
+        borderRadius: 9999,
+        background: value ? ACTION_BLUE : "#E5E5EA",
+        opacity: disabled ? 0.45 : 1,
+        position: "relative",
+        padding: 2,
+        transition: "background 0.2s",
+      }}
+    >
+      <div
+        style={{
+          width: 27,
+          height: 27,
+          borderRadius: "50%",
+          background: "white",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+          transition: "transform 0.2s",
+          transform: value ? "translateX(20px)" : "translateX(0)",
+        }}
+      />
+    </button>
+  );
+}
+
+function SettingsMaquetteSectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <p
+      className="tracking-[0.08em]"
+      style={{
+        fontSize: 13,
+        fontWeight: 800,
+        color: "#8E8E93",
+        padding: "20px 16px 8px",
+        margin: 0,
+      }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function maquetteCardSx(): CSSProperties {
+  return {
+    background: "white",
+    borderRadius: 16,
+    boxShadow: CARD_SHADOW,
+  };
+}
+
+function SettingsMaquetteToggleRow({
+  Icon,
+  iconColor,
+  label,
+  subtitle,
+  value,
+  onChange,
+  premium,
+  disabled,
+}: {
+  Icon: IconComp;
+  iconColor: string;
+  label: string;
+  subtitle?: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  premium?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-3">
+      <div
+        className="flex shrink-0 items-center justify-center"
+        style={{ width: 36, height: 36, borderRadius: 10, background: iconColor }}
+      >
+        <Icon className="size-[19px] text-white" strokeWidth={2.4} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="-tracking-[0.01em] m-0" style={{ fontSize: 17, fontWeight: 700, color: "#0A0F1F" }}>
+            {label}
+          </p>
+          {premium ? (
+            <span
+              className="rounded-full uppercase"
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: ACTION_BLUE,
+                background: `${ACTION_BLUE}1A`,
+                padding: "2px 8px",
+                letterSpacing: "0.06em",
+              }}
+            >
+              PREMIUM
+            </span>
+          ) : null}
+        </div>
+        {subtitle ? (
+          <p className="m-0 mt-0.5 leading-[1.3]" style={{ fontSize: 13, color: "#8E8E93" }}>
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      <SettingsMaquetteToggle value={value} onChange={onChange} disabled={disabled} />
+    </div>
+  );
+}
+
+function SettingsMaquetteChevronRow({
+  Icon,
+  iconColor,
+  label,
+  subtitle,
+  onClick,
+}: {
+  Icon: IconComp;
+  iconColor: string;
+  label: string;
+  subtitle?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex w-full touch-manipulation items-center gap-3 px-3 py-3 transition-colors active:bg-[#F8F8F8]"
+      onClick={onClick}
+    >
+      <div
+        className="flex shrink-0 items-center justify-center"
+        style={{ width: 36, height: 36, borderRadius: 10, background: iconColor }}
+      >
+        <Icon className="size-[19px] text-white" strokeWidth={2.4} />
+      </div>
+      <div className="min-w-0 flex-1 text-left">
+        <p className="-tracking-[0.01em] m-0" style={{ fontSize: 17, fontWeight: 700, color: "#0A0F1F" }}>
+          {label}
+        </p>
+        {subtitle ? (
+          <p className="m-0 mt-0.5" style={{ fontSize: 13, color: "#8E8E93" }}>
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      <ChevronRight className="size-5 shrink-0 text-[#C7C7CC]" />
+    </button>
+  );
+}
 
 interface Profile {
   notifications_enabled?: boolean;
-  
   notif_follow_request?: boolean;
   notif_message?: boolean;
   notif_session_request?: boolean;
@@ -31,50 +229,53 @@ interface SettingsNotificationsProps {
 export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isRegistered, requestPermissions, isNative, testNotification, checkPermissionStatus, pushDebug, refreshDebugFromBackend, permissionStatus } = usePushNotifications();
+  const {
+    isRegistered,
+    requestPermissions,
+    isNative,
+    testNotification,
+    checkPermissionStatus,
+    pushDebug,
+    refreshDebugFromBackend,
+    permissionStatus,
+  } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  /** Évite double-appui pendant la demande système (sinon sensation de bouton « gelé »). */
   const pushPermissionInFlight = useRef(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-      refreshDebugFromBackend();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
+    if (!user) return;
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('notifications_enabled, notif_follow_request, notif_message, notif_session_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed, is_premium' as any)
-        .eq('user_id', user?.id)
+        .from("profiles")
+        .select(
+          "notifications_enabled, notif_follow_request, notif_message, notif_session_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed, is_premium"
+        )
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (error) throw error;
-      setProfile(data as any);
+      setProfile(data as unknown as Profile);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching profile:", error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    void fetchProfile();
+    void refreshDebugFromBackend();
+  }, [user, fetchProfile, refreshDebugFromBackend]);
 
   const updatePrivacySettings = async (field: string, value: boolean) => {
     if (!user) return;
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ [field]: value })
-        .eq('user_id', user.id);
+      const { error } = await supabase.from("profiles").update({ [field]: value }).eq("user_id", user.id);
 
       if (error) throw error;
-      setProfile(prev => prev ? { ...prev, [field]: value } : null);
+      setProfile((prev) => (prev ? { ...prev, [field]: value } : null));
       toast({ title: "Paramètres mis à jour", description: "Vos préférences de notifications ont été sauvegardées." });
 
       if (field === "notifications_enabled" && value && isNative) {
-        /* Ne pas await ici : la modale iOS/Android + le Switch Radix sur le même tick = UI bloquée / clics ignorés. */
         window.setTimeout(() => {
           if (pushPermissionInFlight.current) return;
           pushPermissionInFlight.current = true;
@@ -88,8 +289,9 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
           })();
         }, 0);
       }
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur inconnue";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
 
@@ -102,11 +304,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
         if (granted && user) {
           await checkPermissionStatus();
           await new Promise((resolve) => setTimeout(resolve, 3000));
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("push_token")
-            .eq("user_id", user.id)
-            .single();
+          const { data: profileData } = await supabase.from("profiles").select("push_token").eq("user_id", user.id).single();
 
           if (!profileData?.push_token) {
             toast({
@@ -121,8 +319,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
           toast({ title: "Permission refusée", description: "Ouvrez les paramètres pour activer", variant: "destructive" });
         }
       } else {
-        if (isNative && typeof (window as any).AndroidBridge?.openSettings === "function") {
-          (window as any).AndroidBridge.openSettings();
+        if (isNative && typeof (window as unknown as { AndroidBridge?: { openSettings?: () => void } }).AndroidBridge?.openSettings === "function") {
+          (window as unknown as { AndroidBridge: { openSettings: () => void } }).AndroidBridge.openSettings();
         } else {
           toast({
             title: "Paramètres système",
@@ -136,159 +334,147 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
     }
   };
 
-  const notificationItems = [
-    { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
-    { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
-    { key: 'notif_session_request', icon: Play, color: 'bg-orange-500', label: 'Demandes de session', desc: 'Demandes de participation' },
-    { key: 'notif_friend_session', icon: Users, color: 'bg-violet-500', label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
-    { key: 'notif_club_invitation', icon: Users, color: 'bg-destructive', label: 'Invitations de club', desc: 'Invitations à rejoindre un club' },
-    { key: 'notif_session_accepted', icon: CheckCircle, color: 'bg-green-500', label: 'Participants acceptés', desc: 'Quelqu\'un rejoint votre session' },
-    { key: 'notif_presence_confirmed', icon: UserCheck, color: 'bg-primary', label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
+  const handleTestTap = async () => {
+    if (!profile?.notifications_enabled) {
+      toast({ title: "Notifications push", description: "Activez d'abord les notifications push.", variant: "destructive" });
+      return;
+    }
+    await testNotification();
+  };
+
+  const pushOn = profile?.notifications_enabled === true;
+  const typesDisabled = !pushOn;
+
+  const notificationItems: {
+    key: keyof Profile;
+    icon: IconComp;
+    iconColor: string;
+    label: string;
+    desc: string;
+    premium?: boolean;
+  }[] = [
+    { key: "notif_follow_request", icon: Users, iconColor: ACTION_BLUE, label: "Demandes de suivi", desc: "Quand quelqu'un vous suit" },
+    { key: "notif_message", icon: MessageCircle, iconColor: "#34C759", label: "Messages", desc: "Nouveaux messages reçus" },
+    { key: "notif_session_request", icon: Play, iconColor: "#FF9500", label: "Demandes de session", desc: "Demandes de participation" },
+    { key: "notif_friend_session", icon: Users, iconColor: "#5856D6", label: "Sessions d'amis", desc: "Vos amis créent une session", premium: true },
+    { key: "notif_club_invitation", icon: Users, iconColor: "#FF3B30", label: "Invitations de club", desc: "Invitations à rejoindre un club" },
+    { key: "notif_session_accepted", icon: Check, iconColor: "#34C759", label: "Participants acceptés", desc: "Quelqu'un rejoint votre session" },
+    {
+      key: "notif_presence_confirmed",
+      icon: UserCheck,
+      iconColor: ACTION_BLUE,
+      label: "Confirmation de présence",
+      desc: "L'organisateur confirme votre présence",
+    },
   ];
 
+  const showAuthorizeRow = !isRegistered && isNative && pushOn;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ x: 100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-[#F2F2F7]"
+      style={{
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'SF Pro Display', SF Pro Display, system-ui, sans-serif",
+      }}
     >
       <IosFixedPageHeaderShell
         className="min-h-0 flex-1"
         headerWrapperClassName="shrink-0"
         contentScroll
-        scrollClassName="min-h-0 bg-secondary"
+        scrollClassName="min-h-0 bg-[#F2F2F7]"
         header={
-          <div className="shrink-0 bg-secondary">
-            <IosPageHeaderBar leadingBack={{ onClick: onBack }} title="Notifications" />
+          <div className="shrink-0">
+            <SettingsMaquetteSubHeader title="Notifications" onBack={onBack} />
           </div>
         }
       >
         <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-        <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden py-6">
-          {/* Main Toggle */}
-          <div className="space-y-2" data-tutorial="settings-notifications-push">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
-              Notifications Push
-            </h3>
-            <div className="bg-card overflow-hidden">
-              <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                <div className="ios-list-row-icon bg-[#FF3B30]">
-                  <Smartphone className="h-[18px] w-[18px] text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium">Notifications push</p>
-                  <p className="text-[13px] text-muted-foreground">
-                    {profile?.notifications_enabled ? "Activées" : "Désactivées"}
-                  </p>
-                </div>
-                <Switch
-                  checked={profile?.notifications_enabled === true}
-                  onCheckedChange={(checked) => updatePrivacySettings('notifications_enabled', checked)}
+          <div className="min-w-0 max-w-full pb-8" data-tutorial="settings-notifications-root">
+            {/* NOTIFICATIONS PUSH */}
+            <div data-tutorial="settings-notifications-push">
+              <SettingsMaquetteSectionLabel>NOTIFICATIONS PUSH</SettingsMaquetteSectionLabel>
+              <div className="mx-4 overflow-hidden" style={maquetteCardSx()}>
+                <SettingsMaquetteToggleRow
+                  Icon={Smartphone}
+                  iconColor="#FF3B30"
+                  label="Notifications push"
+                  subtitle={pushOn ? "Activées" : "Désactivées"}
+                  value={pushOn}
+                  onChange={(v) => void updatePrivacySettings("notifications_enabled", v)}
+                />
+                <div className="ml-[64px] h-px bg-[#E5E5EA]" />
+                {showAuthorizeRow ? (
+                  <>
+                    <SettingsMaquetteChevronRow
+                      Icon={Bell}
+                      iconColor={ACTION_BLUE}
+                      label="Autoriser les notifications"
+                      subtitle="Activez les permissions système"
+                      onClick={() => void handleNotificationToggle()}
+                    />
+                    <div className="ml-[64px] h-px bg-[#E5E5EA]" />
+                  </>
+                ) : null}
+                <SettingsMaquetteChevronRow
+                  Icon={Bell}
+                  iconColor="#5856D6"
+                  label="Tester les notifications"
+                  subtitle="Envoyer une notification de test"
+                  onClick={() => void handleTestTap()}
                 />
               </div>
-
-              {profile?.notifications_enabled === false && (
-                <>
-                  <div className="h-px bg-border" />
-                  <div className="px-4 ios-shell:px-2.5 py-2.5 bg-orange-500/10">
-                    <p className="text-[13px] text-orange-500">⚠️ Les préférences ci-dessous sont inactives</p>
-                  </div>
-                </>
-              )}
-
-              {!isRegistered && isNative && profile?.notifications_enabled === true && (
-                <>
-                  <div className="h-px bg-border" />
-                  <button
-                    type="button"
-                    onClick={() => void handleNotificationToggle()}
-                    className="relative z-10 flex w-full touch-manipulation items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 bg-primary/10 transition-colors active:bg-primary/20"
-                  >
-                    <div className="ios-list-row-icon bg-primary">
-                      <Bell className="h-[18px] w-[18px] text-primary-foreground" />
-                    </div>
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="truncate text-[15px] font-medium text-primary">Autoriser les notifications</p>
-                      <p className="text-[13px] text-primary/70">Activez les permissions</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-primary/50" />
-                  </button>
-                </>
-              )}
-
-              {profile?.notifications_enabled === true && (
-                <>
-                  <div className="h-px bg-border ml-[54px]" />
-                  <button
-                    type="button"
-                    onClick={() => void testNotification()}
-                    className="relative z-10 flex w-full min-w-0 touch-manipulation items-center gap-3 px-4 ios-shell:px-2.5 py-3 active:bg-secondary/50 transition-colors"
-                  >
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
-                      <BellRing className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="text-[15px] font-medium">Tester les notifications</p>
-                      <p className="text-[13px] text-muted-foreground">Envoyer une notification de test</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-                  </button>
-                </>
-              )}
             </div>
-          </div>
 
-          {/* Individual Toggles */}
-          <div className="space-y-2" data-tutorial="settings-notifications-types">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
-              Types de notifications
-            </h3>
-            <div className="bg-card overflow-hidden">
-              {notificationItems.map((item, index) => (
-                <div key={item.key}>
-                  <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                    <div className={cn("ios-list-row-icon", item.color)}>
-                      <item.icon className="h-[18px] w-[18px] text-white" />
+            {/* TYPES */}
+            <div data-tutorial="settings-notifications-types">
+              <SettingsMaquetteSectionLabel>TYPES DE NOTIFICATIONS</SettingsMaquetteSectionLabel>
+              <div className="mx-4 overflow-hidden" style={maquetteCardSx()}>
+                {notificationItems.map((item, index) => {
+                  const rowDisabled = typesDisabled || !!(item.premium && !profile?.is_premium);
+                  const checked = profile?.[item.key] === true;
+                  return (
+                    <div key={item.key}>
+                      {index > 0 ? <div className="ml-[64px] h-px bg-[#E5E5EA]" /> : null}
+                      <SettingsMaquetteToggleRow
+                        Icon={item.icon}
+                        iconColor={item.iconColor}
+                        label={item.label}
+                        subtitle={item.desc}
+                        premium={!!item.premium}
+                        value={checked}
+                        disabled={rowDisabled}
+                        onChange={(v) => {
+                          if (!user || typesDisabled || (item.premium && !profile?.is_premium)) return;
+                          void updatePrivacySettings(item.key as string, v);
+                        }}
+                      />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[15px] font-medium">{item.label}</p>
-                        {item.premium && profile?.is_premium && (
-                          <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-medium">PREMIUM</span>
-                        )}
-                      </div>
-                      <p className="mt-px text-[13px] leading-snug text-muted-foreground">{item.desc}</p>
-                    </div>
-                    <Switch
-                      checked={(profile as any)?.[item.key] === true}
-                      onCheckedChange={(checked) => updatePrivacySettings(item.key, checked)}
-                      disabled={profile?.notifications_enabled !== true || (item.premium && !profile?.is_premium)}
-                    />
-                  </div>
-                  {index < notificationItems.length - 1 && <div className="ios-list-row-inset-sep" />}
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* ─── Diagnostic Push iOS (dev only) ─── */}
-          {import.meta.env.DEV && (
-            <PushDiagnosticPanel
-              pushDebug={pushDebug}
-              permissionStatus={permissionStatus}
-              isNative={isNative}
-              isRegistered={isRegistered}
-              userId={user?.id}
-              requestPermissions={requestPermissions}
-              checkPermissionStatus={checkPermissionStatus}
-              refreshDebugFromBackend={refreshDebugFromBackend}
-            />
-          )}
+            {import.meta.env.DEV ? (
+              <div className="mt-6">
+                <PushDiagnosticPanel
+                  pushDebug={pushDebug}
+                  permissionStatus={permissionStatus}
+                  isNative={isNative}
+                  isRegistered={isRegistered}
+                  userId={user?.id}
+                  requestPermissions={requestPermissions}
+                  checkPermissionStatus={checkPermissionStatus}
+                  refreshDebugFromBackend={refreshDebugFromBackend}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
       </IosFixedPageHeaderShell>
     </motion.div>
   );

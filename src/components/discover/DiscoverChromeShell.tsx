@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { RefreshCw, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,7 @@ export function DiscoverChromeShell({
   onChipPress,
 }: DiscoverChromeShellProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -198,7 +199,11 @@ export function DiscoverChromeShell({
             <button
               type="button"
               aria-label="Rechercher"
-              onClick={() => navigate("/discover/location-search")}
+              onClick={() =>
+                navigate("/discover/location-search", {
+                  state: { returnPath: location.pathname === "/discover/location-search" ? "/" : location.pathname },
+                })
+              }
               className="flex h-9 w-9 flex-shrink-0 items-center justify-center"
             >
               <Search style={{ width: 24, height: 24, color: ACTION_BLUE }} strokeWidth={2.4} />

@@ -16,6 +16,7 @@ import {
   resolveSessionPinVariant,
 } from "@/lib/mapSessionPin";
 import { createUserLocationMapboxMarker } from "@/lib/mapUserLocationIcon";
+import { consumeDiscoverMapFlyTo } from "@/lib/discoverMapFlyTo";
 
 type DiscoverMapCardProps = {
   sessions: DiscoverSession[];
@@ -189,7 +190,15 @@ export function DiscoverMapCard({
               .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lng) && !(c.lat === 0 && c.lng === 0));
             if (userCoord) coords.push(userCoord);
 
-            if (coords.length > 0) {
+            const flyTo = consumeDiscoverMapFlyTo();
+            if (flyTo) {
+              map.easeTo({
+                center: [flyTo.lng, flyTo.lat],
+                zoom: flyTo.zoom ?? 14,
+                duration: 1200,
+                essential: true,
+              });
+            } else if (coords.length > 0) {
               /** Évite le zoom max 16 (trop serré quand user + pins sont proches), aligné carte accueil ~12. */
               await fitMapToCoords(map, coords, 48, { maxZoom: 12 });
             }

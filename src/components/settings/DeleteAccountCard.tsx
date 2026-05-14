@@ -3,6 +3,7 @@ import { Trash2, ChevronRight, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,9 +19,10 @@ import {
 interface DeleteAccountCardProps {
   /** Fermeture éventuelle après succès (ex. dialog réglages). */
   onClose?: () => void;
+  className?: string;
 }
 
-export function DeleteAccountCard({ onClose }: DeleteAccountCardProps) {
+export function DeleteAccountCard({ onClose, className }: DeleteAccountCardProps) {
   const { user, session, signOut } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -54,21 +56,23 @@ export function DeleteAccountCard({ onClose }: DeleteAccountCardProps) {
   if (!user) return null;
 
   return (
-    <div className="bg-card overflow-hidden">
+    <div className={cn("overflow-hidden bg-transparent", className)}>
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <button
             type="button"
-            className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-destructive/5 transition-colors"
+            className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors active:bg-[#F8F8F8]"
           >
-            <div className="ios-list-row-icon bg-[#FF3B30]">
-              <Trash2 className="h-[18px] w-[18px] text-white" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#FF3B30]">
+              <Trash2 className="h-[19px] w-[19px] text-white" strokeWidth={2.4} />
             </div>
-            <div className="min-w-0 flex-1 text-left">
-              <p className="text-[15px] font-medium text-destructive">Supprimer mon compte</p>
-              <p className="text-[13px] text-muted-foreground">Suppression serveur, sans e-mail obligatoire</p>
+            <div className="min-w-0 flex-1">
+              <p className="m-0 text-[17px] font-bold tracking-tight text-[#FF3B30]" style={{ letterSpacing: "-0.01em" }}>
+                Supprimer mon compte
+              </p>
+              <p className="m-0 mt-0.5 text-[13px] text-[#8E8E93]">Suppression serveur, sans e-mail obligatoire</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-destructive/50 shrink-0" />
+            <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
           </button>
         </AlertDialogTrigger>
         <AlertDialogContent>

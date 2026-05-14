@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Instagram as InstagramIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,11 @@ import {
   InstagramProfileLink,
 } from "@/components/instagram/InstagramBrand";
 
+const IG_GRADIENT =
+  "linear-gradient(135deg, #FEDA75 0%, #FA7E1E 25%, #D62976 50%, #962FBF 75%, #4F5BD5 100%)";
+const SETTINGS_CARD_SHADOW =
+  "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
+
 interface InstagramConnectProps {
   profile?: {
     instagram_connected?: boolean;
@@ -22,9 +28,16 @@ interface InstagramConnectProps {
   };
   onProfileUpdate?: () => void;
   isOwnProfile?: boolean;
+  /** Aligné maquette RunConnect (9).jsx — sous-page Réglages → Connexions */
+  presentation?: "card" | "settings-pixel";
 }
 
-export const InstagramConnect = ({ profile, onProfileUpdate, isOwnProfile }: InstagramConnectProps) => {
+export const InstagramConnect = ({
+  profile,
+  onProfileUpdate,
+  isOwnProfile,
+  presentation = "card",
+}: InstagramConnectProps) => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const isNative = Capacitor.isNativePlatform();
@@ -124,6 +137,152 @@ export const InstagramConnect = ({ profile, onProfileUpdate, isOwnProfile }: Ins
         ) : (
           <span>Instagram non connecté</span>
         )}
+      </div>
+    );
+  }
+
+  if (presentation === "settings-pixel") {
+    return (
+      <div
+        className="mx-4 mb-3 min-w-0 max-w-full p-4"
+        style={{
+          background: "white",
+          borderRadius: 16,
+          boxShadow: SETTINGS_CARD_SHADOW,
+        }}
+      >
+        <div className="mb-3 flex items-start gap-2.5">
+          <div
+            className="flex flex-shrink-0 items-center justify-center"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: IG_GRADIENT,
+            }}
+          >
+            <InstagramIcon className="h-4 w-4 text-white" strokeWidth={2.4} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p
+              style={{
+                fontSize: 16,
+                fontWeight: 800,
+                color: "#0A0F1F",
+                letterSpacing: "-0.01em",
+                margin: 0,
+              }}
+            >
+              Instagram
+            </p>
+            <p
+              style={{
+                fontSize: 13,
+                color: "#8E8E93",
+                margin: 0,
+                marginTop: 2,
+                lineHeight: 1.3,
+              }}
+            >
+              Instagram est une marque déposée de Meta.
+            </p>
+          </div>
+        </div>
+        {profile?.instagram_connected ? (
+          <>
+            <p
+              style={{
+                fontSize: 14,
+                color: "#0A0F1F",
+                lineHeight: 1.45,
+                margin: 0,
+                marginBottom: 14,
+              }}
+            >
+              Ton compte Instagram est lié à RunConnect pour la vérification sur ton profil.
+              {profile.instagram_verified_at
+                ? ` Vérifié le ${new Date(profile.instagram_verified_at).toLocaleDateString("fr-FR")}.`
+                : ""}
+            </p>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="bg-pink-500/15 font-semibold text-pink-700 dark:text-pink-300">
+                Connecté
+              </Badge>
+            </div>
+            {profile.instagram_username ? (
+              <div className="mb-3">
+                <InstagramProfileLink username={profile.instagram_username} label="Voir sur Instagram" />
+              </div>
+            ) : null}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleInstagramDisconnect()}
+              className="w-full py-3 transition-opacity active:opacity-90 disabled:opacity-60"
+              style={{
+                background: "white",
+                borderRadius: 9999,
+                border: "1px solid #E5E5EA",
+                color: "#0A0F1F",
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {loading ? "Déconnexion…" : "Déconnecter Instagram"}
+            </button>
+          </>
+        ) : (
+          <>
+            <p
+              style={{
+                fontSize: 14,
+                color: "#0A0F1F",
+                lineHeight: 1.45,
+                margin: 0,
+                marginBottom: 14,
+              }}
+            >
+              Connecte ton compte Instagram pour faire vérifier ton profil aux autres membres. Tu seras redirigé vers
+              Instagram pour autoriser l&apos;accès prévu par l&apos;application (identité / profil).
+            </p>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleInstagramConnect()}
+              className="flex w-full items-center justify-center gap-2 py-3 transition-colors active:bg-[#F8F8F8] disabled:opacity-60"
+              style={{
+                background: "white",
+                borderRadius: 9999,
+                border: "1px solid #E5E5EA",
+                color: "#0A0F1F",
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                  background: IG_GRADIENT,
+                }}
+              >
+                <InstagramIcon className="h-3 w-3 text-white" strokeWidth={2.4} />
+              </div>
+              {loading ? "Connexion…" : "Se connecter avec Instagram"}
+            </button>
+          </>
+        )}
+        <div className="mt-3 flex items-start gap-1.5">
+          <InstagramIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-[#D62976]" strokeWidth={2.6} />
+          <p style={{ fontSize: 12, color: "#8E8E93", margin: 0, lineHeight: 1.4 }}>
+            Fourni par Instagram. Instagram est une marque déposée de Meta. Les données Instagram sont traitées selon
+            les règles d&apos;Instagram et de votre compte RunConnect.
+          </p>
+        </div>
       </div>
     );
   }

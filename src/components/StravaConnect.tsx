@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +8,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { StravaConnectButton, StravaPoweredBy } from '@/components/strava/StravaBrand';
+import { StravaConnectButton, StravaPoweredBy, StravaViewLink } from '@/components/strava/StravaBrand';
+
+const STRAVA_SETTINGS_ORANGE = '#FC5200';
+const SETTINGS_CARD_SHADOW =
+  '0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)';
 
 interface StravaConnectProps {
   profile?: {
@@ -17,9 +22,16 @@ interface StravaConnectProps {
   };
   isOwnProfile?: boolean;
   onProfileUpdate?: () => void;
+  /** Aligné maquette RunConnect (9).jsx — sous-page Réglages → Connexions */
+  presentation?: 'card' | 'settings-pixel';
 }
 
-export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }: StravaConnectProps) => {
+export const StravaConnect = ({
+  profile,
+  isOwnProfile = false,
+  onProfileUpdate,
+  presentation = 'card',
+}: StravaConnectProps) => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const isNative = Capacitor.isNativePlatform();
@@ -115,6 +127,114 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
 
   if (!isOwnProfile) return null;
 
+  if (presentation === 'settings-pixel') {
+    return (
+      <div
+        className="mx-4 mb-3 min-w-0 max-w-full p-4"
+        style={{
+          background: 'white',
+          borderRadius: 16,
+          boxShadow: SETTINGS_CARD_SHADOW,
+        }}
+      >
+        <div className="mb-2.5 flex items-center gap-2">
+          <Activity className="h-[18px] w-[18px]" color={STRAVA_SETTINGS_ORANGE} strokeWidth={2.6} />
+          <p
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              color: STRAVA_SETTINGS_ORANGE,
+              letterSpacing: '-0.01em',
+              margin: 0,
+            }}
+          >
+            Compatible avec Strava
+          </p>
+        </div>
+        {profile?.strava_connected ? (
+          <>
+            <p
+              style={{
+                fontSize: 15,
+                color: '#0A0F1F',
+                lineHeight: 1.4,
+                margin: 0,
+                marginBottom: 14,
+              }}
+            >
+              Votre compte Strava est connecté et vérifié.
+              {profile.strava_verified_at
+                ? ` Vérifié le ${new Date(profile.strava_verified_at).toLocaleDateString('fr-FR')}.`
+                : ''}
+            </p>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="bg-green-100 font-semibold text-green-800">
+                Connecté
+              </Badge>
+            </div>
+            {profile.strava_user_id ? (
+              <div className="mb-3">
+                <StravaViewLink href={`https://www.strava.com/athletes/${profile.strava_user_id}`} />
+              </div>
+            ) : null}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleStravaDisconnect()}
+              className="w-full py-3 transition-opacity active:opacity-90 disabled:opacity-60"
+              style={{
+                background: 'white',
+                borderRadius: 9999,
+                border: '1px solid #E5E5EA',
+                color: '#0A0F1F',
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {loading ? 'Déconnexion…' : 'Déconnecter Strava'}
+            </button>
+          </>
+        ) : (
+          <>
+            <p
+              style={{
+                fontSize: 15,
+                color: '#0A0F1F',
+                lineHeight: 1.4,
+                margin: 0,
+                marginBottom: 14,
+              }}
+            >
+              Connectez votre compte Strava pour être vérifié et gagner en crédibilité auprès des autres sportifs.
+            </p>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleStravaConnect()}
+              className="flex w-full items-center justify-center gap-2 py-3 transition-opacity active:opacity-90 disabled:opacity-60"
+              style={{
+                background: STRAVA_SETTINGS_ORANGE,
+                borderRadius: 9999,
+                color: 'white',
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              <Activity className="h-4 w-4 text-white" strokeWidth={2.6} />
+              {loading ? 'Connexion…' : 'Se connecter avec Strava'}
+            </button>
+          </>
+        )}
+        <div className="mt-3 flex items-center gap-1.5">
+          <Activity className="h-3 w-3" color={STRAVA_SETTINGS_ORANGE} strokeWidth={2.6} />
+          <p style={{ fontSize: 12, color: '#8E8E93', margin: 0 }}>Compatible avec Strava</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Card className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60 bg-card shadow-[var(--shadow-card)]">
       <CardHeader className="space-y-0 px-4 py-2.5">
@@ -139,14 +259,7 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
               Votre compte Strava est connecte et verifie.
             </p>
             {profile.strava_user_id && (
-              <a
-                href={`https://www.strava.com/athletes/${profile.strava_user_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block text-sm font-medium text-[#FC4C02] underline"
-              >
-                Voir sur Strava
-              </a>
+              <StravaViewLink href={`https://www.strava.com/athletes/${profile.strava_user_id}`} />
             )}
             <Button 
               variant="outline" 
