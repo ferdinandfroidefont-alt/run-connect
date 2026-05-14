@@ -296,7 +296,7 @@ export const NewConversationView = ({
   const scrollHideStyle = { scrollbarWidth: 'none' as const, msOverflowStyle: 'none' as const, WebkitOverflowScrolling: 'touch' as const };
 
   return (
-    <div className="fixed inset-0 z-50 bg-white">
+    <div className="fixed inset-0 z-[140] bg-white">
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
