@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
@@ -16,8 +17,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { FeedSession } from "@/hooks/useFeed";
 import { firstMapPointFromRouteCoordinates, pickSessionCoordinate, type MapCoord } from "@/lib/geoUtils";
+import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 
 const PARIS_FALLBACK: MapCoord = { lat: 48.8566, lng: 2.3522 };
+const ACTION_BLUE_MAQUETTE = "#007AFF";
 
 function resolveSessionMapCoords(
   session: Pick<PastSession, "location_lat" | "location_lng" | "route_id">,
@@ -61,6 +64,8 @@ export default function ProfileSessions() {
   const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
   const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
+  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
+  const [showReliabilityDetail, setShowReliabilityDetail] = useState(false);
   const [sessions, setSessions] = useState<PastSession[]>([]);
   const [subjectProfile, setSubjectProfile] = useState<MeProfile | null>(null);
   const [commentCountBySession, setCommentCountBySession] = useState<Record<string, number>>({});
@@ -115,6 +120,12 @@ export default function ProfileSessions() {
       setTotalSessionsJoined(stats?.total_sessions_joined || 0);
       setTotalSessionsCompleted(stats?.total_sessions_completed || 0);
       setTotalSessionsAbsent(stats?.total_sessions_absent || 0);
+
+      const { count: createdCount } = await supabase
+        .from("sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("organizer_id", subjectUserId);
+      setTotalSessionsCreated(createdCount ?? 0);
 
       const { data: profileRow } = await supabase
         .from("profiles")
@@ -181,10 +192,6 @@ export default function ProfileSessions() {
     }
     void loadData();
   }, [user, routeUserId, navigate, loadData]);
-
-  const ringRadius = 19;
-  const ringCircumference = 2 * Math.PI * ringRadius;
-  const ringOffset = ringCircumference - (Math.max(0, Math.min(100, reliabilityRate)) / 100) * ringCircumference;
 
   const totalDiscussionComments = useMemo(
     () => Object.values(commentCountBySession).reduce((acc, n) => acc + n, 0),
@@ -261,10 +268,6 @@ export default function ProfileSessions() {
 
   const waitingForDiscussionResolve =
     Boolean(discussionSessionId) && !discussionSession && (loading || discussionSessionFetching);
-
-  const reliabilityBlurb = viewingOther
-    ? "Indicateur calculé à partir des séances où cette personne s’est inscrite et a confirmé sa présence."
-    : "Calculé sur les confirmations de présence de tes séances passées.";
 
   const headerBack =
     viewingOther ? (
@@ -352,47 +355,29 @@ export default function ProfileSessions() {
 
       <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto bg-secondary" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 96px)" }}>
         <div className="mx-auto w-full max-w-2xl space-y-3.5 px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-3.5">
-          <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3 border-b border-border pb-3">
-              <div className="relative h-16 w-16 shrink-0">
-                <svg viewBox="0 0 46 46" className="h-full w-full -rotate-90">
-                  <circle cx="23" cy="23" r={ringRadius} fill="none" stroke="rgba(10,132,255,0.12)" strokeWidth="5" />
-                  <circle
-                    cx="23"
-                    cy="23"
-                    r={ringRadius}
-                    fill="none"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth="5"
-                    strokeLinecap="round"
-                    strokeDasharray={ringCircumference}
-                    strokeDashoffset={ringOffset}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center text-[18px] font-bold text-foreground">
-                  {Math.round(reliabilityRate)}
-                </div>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[17px] font-semibold text-foreground">Fiabilité</p>
-                <p className="text-[13px] text-muted-foreground">{reliabilityBlurb}</p>
-              </div>
+          <button
+            type="button"
+            onClick={() => setShowReliabilityDetail(true)}
+            className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.06] active:bg-[#F8F8F8]"
+          >
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[3px] text-[12px] font-bold"
+              style={{
+                borderColor: ACTION_BLUE_MAQUETTE,
+                color: ACTION_BLUE_MAQUETTE,
+              }}
+            >
+              {Math.round(Math.max(0, Math.min(100, reliabilityRate)))}
             </div>
-            <div className="grid grid-cols-3 gap-2 pt-3 text-center">
-              <div>
-                <p className="text-[19px] font-semibold text-foreground">{totalSessionsCompleted}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Présent</p>
-              </div>
-              <div>
-                <p className="text-[19px] font-semibold text-foreground">{totalSessionsJoined}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Inscrit</p>
-              </div>
-              <div>
-                <p className="text-[19px] font-semibold text-foreground">{totalSessionsAbsent}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Absent</p>
-              </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[16px] font-bold text-[#0A0F1F]">Mes séances</p>
+              <p className="text-[12px] text-[#8E8E93]">
+                {totalSessionsCompleted}/{totalSessionsJoined} confirmées · Fiabilité{" "}
+                {Math.round(Math.max(0, Math.min(100, reliabilityRate)))}%
+              </p>
             </div>
-          </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
+          </button>
 
           <div className="flex items-center justify-between px-1 pt-2">
             <h2 className="text-[22px] font-bold tracking-tight text-foreground">Toutes les séances</h2>

@@ -11,9 +11,9 @@ const IOS_LABEL_GRAY = "#8E8E93";
 const IOS_TITLE = "#0A0F1F";
 const IOS_BORDER = "#E5E5EA";
 
-/** Cartes plein écran mobile + modal desktop (z empilé avec profil). */
-const RELIABILITY_SHELL =
-  "fixed inset-0 left-0 right-0 top-0 z-[126] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden rounded-none border-0 p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[125] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[20px] sm:border sm:border-[#E5E5EA] sm:shadow-[0_8px_40px_rgba(0,0,0,0.12)]";
+/** Contenu : mobile plein écran via `fullScreen` ; desktop centré (sm). Z élevé pour passer au-dessus du layout profil / séances. */
+const RELIABILITY_CONTENT_LAYOUT =
+  "!z-[200] flex max-h-[100dvh] min-h-0 w-full flex-col gap-0 overflow-hidden border-0 bg-[#F2F2F7] p-0 shadow-none sm:!fixed sm:inset-auto sm:left-1/2 sm:top-1/2 sm:z-[200] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[20px] sm:border sm:border-[#E5E5EA] sm:shadow-[0_8px_40px_rgba(0,0,0,0.12)]";
 
 const CARD_SHADOW = "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
 
@@ -277,7 +277,11 @@ export const ReliabilityDetailsDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         hideCloseButton
-        className={cn(RELIABILITY_SHELL, "gap-0 bg-[#F2F2F7] p-0 text-[15px] antialiased sm:bg-[#F2F2F7]")}
+        fullScreen
+        noZoom
+        stackNested
+        overlayClassName="z-[199]"
+        className={cn(RELIABILITY_CONTENT_LAYOUT, "text-[15px] antialiased")}
         style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif" }}
       >
         <div

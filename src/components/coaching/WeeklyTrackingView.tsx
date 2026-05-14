@@ -543,15 +543,16 @@ export const WeeklyTrackingView = ({
       .map((day) => {
         const key = format(day, "yyyy-MM-dd");
         const dd = selectedAthlete.days[key];
-        if (!dd) return null;
-        const km = dd.session.distance_km != null ? Number(dd.session.distance_km) : 0;
+        if (!dd?.session) return null;
+        const sess = dd.session;
+        const km = sess.distance_km != null ? Number(sess.distance_km) : 0;
         return {
           dateKey: key,
           dayLabel: format(day, "EEEE d MMMM", { locale: fr }),
           title: dd.sessionTitle,
           km,
           status: toUiStatus(dd.status),
-          segments: sessionBlocksToZoneChartSegments(dd.session.session_blocks),
+          segments: sessionBlocksToZoneChartSegments(sess.session_blocks),
         };
       })
       .filter(Boolean) as CoachAthleteSessionCard[];
@@ -717,6 +718,18 @@ export const WeeklyTrackingView = ({
         : [{ event_label: "", record_value: "", note: "" }]
     );
   }, [recordsDialogOpen, selectedAthlete]);
+
+  const toggleWeekListDay = useCallback((key: string) => {
+    setWeekListFilterKey((prev) => (prev === key ? null : key));
+  }, []);
+
+  const onSessionCardNavigate = useCallback((key: string) => {
+    setWeekListFilterKey((prev) => {
+      if (prev === null) return key;
+      if (prev === key) return null;
+      return key;
+    });
+  }, []);
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`.toUpperCase();
   const totalAthletes = athletes.length;
@@ -996,18 +1009,6 @@ export const WeeklyTrackingView = ({
     selectedAthlete.totalCount > 0 ? `${pct}% réalisé cette semaine` : null,
   ].filter(Boolean);
   const ficheSubtitle = ficheSubtitleParts.join(" · ") || "Membre du club";
-
-  const toggleWeekListDay = useCallback((key: string) => {
-    setWeekListFilterKey((prev) => (prev === key ? null : key));
-  }, []);
-
-  const onSessionCardNavigate = useCallback((key: string) => {
-    setWeekListFilterKey((prev) => {
-      if (prev === null) return key;
-      if (prev === key) return null;
-      return key;
-    });
-  }, []);
 
   return (
     <div className="mx-auto flex min-h-0 min-w-0 w-full max-w-[1180px] flex-1 flex-col space-y-0">
