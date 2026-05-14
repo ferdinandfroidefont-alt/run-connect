@@ -70,6 +70,15 @@ function splitMaquetteProfileRecord(display: string): { main: string; detail: st
   return { main: d.slice(0, idx).trim(), detail: d.slice(idx + 3).trim() };
 }
 
+function normalizeSportKeyForMaquette(raw: string | undefined | null): ProfileSportRecordKey {
+  const s = (raw ?? "").trim();
+  if (!s) return "other";
+  if (isProfileSportRecordKey(s)) return s;
+  const lower = s.toLowerCase();
+  if (isProfileSportRecordKey(lower)) return lower;
+  return "other";
+}
+
 const MAQUETTE_SPORT: Record<
   Exclude<ProfileSportRecordKey, "other">,
   { emoji: string; color: string; label: string }
@@ -186,106 +195,40 @@ export function ProfileRecordsDisplay({
   }
 
   if (presentation === "maquette") {
-    const customGrouped = rows.reduce<Map<string, ProfileSportRecordRow[]>>((acc, row) => {
-      const k = row.sport_key || "other";
+    type MainSportKey = Exclude<ProfileSportRecordKey, "other">;
+
+    const customGrouped = rows.reduce<Map<ProfileSportRecordKey, ProfileSportRecordRow[]>>((acc, row) => {
+      const k = normalizeSportKeyForMaquette(row.sport_key);
       if (!acc.has(k)) acc.set(k, []);
       acc.get(k)!.push(row);
       return acc;
     }, new Map());
 
-    const customBlocks = PROFILE_SPORT_RECORD_KEYS.filter((sk) => sk !== "other" && customGrouped.has(sk)).map(
-      (sk) => ({
-        key: sk as Exclude<ProfileSportRecordKey, "other">,
-        rows: customGrouped.get(sk)!,
-      }),
-    );
-    const otherRows = [...(customGrouped.get("other") ?? [])];
+    /** Autre + sport_key hors schéma. */
+    const otherUnified: ProfileSportRecordRow[] = [...(customGrouped.get("other") ?? [])];
     for (const [k, rs] of customGrouped.entries()) {
       if (k === "other") continue;
       if (!(PROFILE_SPORT_RECORD_KEYS as readonly string[]).includes(k)) {
-        otherRows.push(...rs);
+        otherUnified.push(...rs);
       }
     }
 
-    const renderLegacyGroup = (key: keyof typeof sportConfig, entries: { label: string; value: string }[]) => {
-      if (entries.length === 0) return null;
-      const g = MAQUETTE_SPORT[key];
-      return (
-        <div key={`legacy-${key}`} className="space-y-3">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex shrink-0 items-center justify-center text-[18px]"
-              style={{ width: 36, height: 36, borderRadius: 10, background: g.color }}
-            >
-              {g.emoji}
-            </div>
-            <h2
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: "#0A0F1F",
-                letterSpacing: "-0.02em",
-                margin: 0,
-              }}
-            >
-              {g.label}
-            </h2>
-          </div>
-          <div
-            style={{
-              background: "white",
-              borderRadius: 16,
-              overflow: "hidden",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
-            }}
-          >
-            {entries.map(({ label, value }, i) => (
-              <Fragment key={`${key}-${label}-${i}`}>
-                {i > 0 ? <div className="ml-4 h-px bg-[#E5E5EA]" /> : null}
-                <div className="flex items-center justify-between px-4 py-3.5">
-                  <div className="min-w-0 flex-1">
-                    <p
-                      style={{
-                        fontSize: 17,
-                        fontWeight: 800,
-                        color: "#0A0F1F",
-                        margin: 0,
-                        letterSpacing: "-0.01em",
-                      }}
-                    >
-                      {label}
-                    </p>
-                    <p style={{ marginTop: 2, margin: "2px 0 0", fontSize: 13, color: "#8E8E93" }}>
-                      Record personnel
-                    </p>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 900,
-                      color: g.color,
-                      margin: 0,
-                      fontVariantNumeric: "tabular-nums",
-                      letterSpacing: "-0.02em",
-                    }}
-                    className="shrink-0 pl-3"
-                  >
-                    {value}
-                  </p>
-                </div>
-              </Fragment>
-            ))}
-          </div>
-        </div>
-      );
-    };
+    function renderMergedLineDivider(i: number) {
+      return i > 0 ? <div className="ml-4 h-px bg-[#E5E5EA]" /> : null;
+    }
 
     return (
       <div className={cn("space-y-7", className)}>
-        {customBlocks.map(({ key, rows: groupRows }) => {
-          const g = MAQUETTE_SPORT[key];
+        {(PROFILE_SPORT_RECORD_KEYS.filter((sk) => sk !== "other") as MainSportKey[]).map((sk) => {
+          const legacyEntries = legacyBlocks.find((lb) => lb.key === sk)?.entries ?? [];
+          const dbRows = customGrouped.get(sk) ?? [];
+          if (legacyEntries.length === 0 && dbRows.length === 0) return null;
+
+          const g = MAQUETTE_SPORT[sk];
+          let idx = -1;
+
           return (
-            <div key={key} className="space-y-3">
+            <div key={sk} className="space-y-3">
               <div className="flex items-center gap-2.5">
                 <div
                   className="flex shrink-0 items-center justify-center text-[18px]"
@@ -313,98 +256,142 @@ export function ProfileRecordsDisplay({
                   boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
                 }}
               >
-                {groupRows.map((row, i) => (
-                  <Fragment key={row.id}>
-                    {i > 0 ? <div className="ml-4 h-px bg-[#E5E5EA]" /> : null}
-                    <div className="flex items-center justify-between px-4 py-3.5">
-                      <div className="min-w-0 flex-1">
+                {legacyEntries.map(({ label, value }) => {
+                  idx++;
+                  return (
+                    <Fragment key={`leg-${sk}-${label}-${idx}`}>
+                      {renderMergedLineDivider(idx)}
+                      <div className="flex items-center justify-between px-4 py-3.5">
+                        <div className="min-w-0 flex-1">
+                          <p
+                            style={{
+                              fontSize: 17,
+                              fontWeight: 800,
+                              color: "#0A0F1F",
+                              margin: 0,
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            {label}
+                          </p>
+                          <p style={{ marginTop: 2, margin: "2px 0 0", fontSize: 13, color: "#8E8E93" }}>
+                            Record personnel
+                          </p>
+                        </div>
                         <p
                           style={{
-                            fontSize: 17,
-                            fontWeight: 800,
-                            color: "#0A0F1F",
+                            fontSize: 22,
+                            fontWeight: 900,
+                            color: g.color,
                             margin: 0,
-                            letterSpacing: "-0.01em",
+                            fontVariantNumeric: "tabular-nums",
+                            letterSpacing: "-0.02em",
                           }}
+                          className="shrink-0 pl-3"
                         >
+                          {value}
+                        </p>
+                      </div>
+                    </Fragment>
+                  );
+                })}
+                {dbRows.map((row) => {
+                  idx++;
+                  const formatted = formatRecordValueForProfileList(row.record_value);
+                  const split = splitMaquetteProfileRecord(formatted);
+                  return (
+                    <Fragment key={row.id}>
+                      {renderMergedLineDivider(idx)}
+                      <div className="flex items-center justify-between px-4 py-3.5">
+                        <div className="min-w-0 flex-1">
+                          <p
+                            style={{
+                              fontSize: 17,
+                              fontWeight: 800,
+                              color: "#0A0F1F",
+                              margin: 0,
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            {row.event_label}
+                          </p>
+                          {split.detail ? (
+                            <p style={{ marginTop: 2, margin: "2px 0 0", fontSize: 13, color: "#8E8E93" }}>
+                              {split.detail}
+                            </p>
+                          ) : null}
+                        </div>
+                        <p
+                          style={{
+                            fontSize: 22,
+                            fontWeight: 900,
+                            color: g.color,
+                            margin: 0,
+                            fontVariantNumeric: "tabular-nums",
+                            letterSpacing: "-0.02em",
+                          }}
+                          className="shrink-0 pl-3"
+                        >
+                          {split.main}
+                        </p>
+                      </div>
+                    </Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {otherUnified.length > 0 ? (
+          <div key="other-unified" className="space-y-3">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="flex shrink-0 items-center justify-center text-[18px]"
+                style={{ width: 36, height: 36, borderRadius: 10, background: "#8E8E93" }}
+              >
+                📌
+              </div>
+              <h2 className="m-0 text-[20px] font-extrabold tracking-tight text-[#0A0F1F]">
+                {PROFILE_SPORT_RECORD_LABELS.other}
+              </h2>
+            </div>
+            <div
+              style={{
+                background: "white",
+                borderRadius: 16,
+                overflow: "hidden",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+              }}
+            >
+              {otherUnified.map((row, i) => {
+                const formatted = formatRecordValueForProfileList(row.record_value);
+                const split = splitMaquetteProfileRecord(formatted);
+                return (
+                  <Fragment key={row.id}>
+                    {renderMergedLineDivider(i)}
+                    <div className="flex items-center justify-between px-4 py-3.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="m-0 text-[17px] font-extrabold tracking-tight text-[#0A0F1F]">
                           {row.event_label}
                         </p>
-                        {(() => {
-                          const formatted = formatRecordValueForProfileList(row.record_value);
-                          const { main, detail } = splitMaquetteProfileRecord(formatted);
-                          if (!detail) return null;
-                          return (
-                            <p style={{ marginTop: 2, margin: "2px 0 0", fontSize: 13, color: "#8E8E93" }}>
-                              {detail}
-                            </p>
-                          );
-                        })()}
+                        {split.detail ? (
+                          <p className="m-0 mt-0.5 text-[13px] text-[#8E8E93]">{split.detail}</p>
+                        ) : null}
                       </div>
                       <p
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 900,
-                          color: g.color,
-                          margin: 0,
-                          fontVariantNumeric: "tabular-nums",
-                          letterSpacing: "-0.02em",
-                        }}
-                        className="shrink-0 pl-3"
+                        style={{ fontSize: 22, fontWeight: 900, color: "#8E8E93" }}
+                        className="shrink-0 pl-3 font-black tabular-nums text-[22px]"
                       >
-                        {splitMaquetteProfileRecord(formatRecordValueForProfileList(row.record_value)).main}
+                        {split.main}
                       </p>
                     </div>
                   </Fragment>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
-
-        {otherRows.map((row) => {
-          const g = { emoji: "📌", color: "#8E8E93", label: PROFILE_SPORT_RECORD_LABELS.other };
-          const formatted = formatRecordValueForProfileList(row.record_value);
-          const split = splitMaquetteProfileRecord(formatted);
-          return (
-            <div key={row.id} className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div
-                  className="flex shrink-0 items-center justify-center text-[18px]"
-                  style={{ width: 36, height: 36, borderRadius: 10, background: g.color }}
-                >
-                  {g.emoji}
-                </div>
-                <h2 className="m-0 text-[20px] font-extrabold tracking-tight text-[#0A0F1F]">{g.label}</h2>
-              </div>
-              <div
-                style={{
-                  background: "white",
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
-                }}
-              >
-                <div className="flex items-center justify-between px-4 py-3.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="m-0 text-[17px] font-extrabold tracking-tight text-[#0A0F1F]">{row.event_label}</p>
-                    {split.detail ? (
-                      <p className="m-0 mt-0.5 text-[13px] text-[#8E8E93]">{split.detail}</p>
-                    ) : null}
-                  </div>
-                  <p
-                    style={{ fontSize: 22, fontWeight: 900, color: g.color }}
-                    className="shrink-0 pl-3 font-black tabular-nums text-[22px]"
-                  >
-                    {split.main}
-                  </p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {legacyBlocks.map(({ key, entries }) => renderLegacyGroup(key, entries))}
-
+          </div>
+        ) : null}
       </div>
     );
   }

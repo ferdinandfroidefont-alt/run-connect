@@ -4,7 +4,38 @@ import { SessionActionMenu } from "@/components/coaching/planning/SessionActionM
 import { SessionStatusAction } from "@/components/coaching/planning/SessionStatusAction";
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { cn } from "@/lib/utils";
-import { Bike, Check, ChevronRight, Clock3, Dumbbell, Footprints, Moon, Plus, Ruler, Waves } from "lucide-react";
+import type { MiniProfileBlock } from "@/lib/workoutVisualization";
+import { Bike, Check, ChevronRight, Clock, Clock3, Dumbbell, Footprints, Moon, Plus, Ruler, Waves } from "lucide-react";
+
+/** Barres schéma — `MonPlanTimeline` · RunConnect (7).jsx (`SchemaBars`). */
+const MAQUETTE_ACTION_BLUE = "#007AFF";
+const MAQUETTE_ORANGE = "#FF9500";
+
+function MonPlanSchemaBars({ blocks }: { blocks: MiniProfileBlock[] }) {
+  if (!blocks.length) return null;
+  return (
+    <div className="mt-3 flex h-14 items-end gap-[2px] px-1">
+      {blocks.map((block, i) => {
+        const inferred = Math.max(1, Math.min(6, Math.round((block.height / 24) * 5) + 1));
+        const band: number = typeof block.zoneBandLevel === "number" ? block.zoneBandLevel : inferred;
+        const heightFrac = band / 6;
+        const useBlue = band <= 3;
+        return (
+          <div
+            key={`${i}-${block.width}-${block.zoneBandLevel ?? ""}`}
+            className="min-w-0 rounded-sm"
+            style={{
+              flexGrow: Math.max(block.width, 0.0001),
+              flexBasis: 0,
+              height: `${heightFrac * 100}%`,
+              background: useBlue ? MAQUETTE_ACTION_BLUE : MAQUETTE_ORANGE,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 interface DayPlanningRowProps {
   dayLabel: string;
@@ -78,7 +109,6 @@ export function DayPlanningRow({
 
   if (athleteTimeline) {
     const isRest = session?.isRestDay;
-    const rowAccent = accentColor;
 
     return (
       <div
@@ -121,49 +151,26 @@ export function DayPlanningRow({
             >
               <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2">
                 <div className="flex min-w-0 items-center gap-1.5">
-                  {session.sportHint ? (
-                    <span style={{ color: rowAccent }}>
-                      <CoachSportIcon sport={session.sportHint} />
-                    </span>
-                  ) : null}
+                  <Footprints className="h-4 w-4 shrink-0 text-[#007AFF]" strokeWidth={2.4} aria-hidden />
                   <p className="truncate text-[15px] font-bold text-[#0A0F1F]">Détail</p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
               </div>
-              <div className="pt-3">
-                {session.miniProfile?.length ? (
-                  <div className="mb-2 h-14 px-1">
-                    <MiniWorkoutProfile
-                      blocks={session.miniProfile}
-                      isRestDay={false}
-                      compact
-                      variant="premiumCompact"
-                      zoneBandMode
-                      className="h-full w-full rounded-none border-0 bg-transparent px-0 py-0"
-                    />
-                  </div>
+              {session.miniProfile?.length ? <MonPlanSchemaBars blocks={session.miniProfile} /> : null}
+              <p className="mt-2 truncate text-[16px] font-bold text-[#0A0F1F]">{session.title}</p>
+              <div className="mt-1 flex items-center gap-3 text-[13px] text-[#8E8E93]">
+                {session.duration ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                    {session.duration}
+                  </span>
                 ) : null}
-                <p className="truncate text-[16px] font-bold text-[#0A0F1F]">{session.title}</p>
-                <div className="mt-1 flex items-center gap-3 text-[13px] text-[#8E8E93]">
-                  {session.duration ? (
-                    <span className="inline-flex items-center gap-1">
-                      <Clock3 className="h-3.5 w-3.5" aria-hidden />
-                      {session.duration}
-                    </span>
-                  ) : null}
-                  {session.distance ? (
-                    <span className="inline-flex items-center gap-1">
-                      <Ruler className="h-3.5 w-3.5" aria-hidden />
-                      {session.distance}
-                    </span>
-                  ) : null}
-                  {athleteSessionCompleted ? (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-[#34C759]/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#248a3d] dark:text-[#34C759]">
-                      <Check className="h-2.5 w-2.5 stroke-[2.8]" aria-hidden />
-                      Fait
-                    </span>
-                  ) : null}
-                </div>
+                {session.distance ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Ruler className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                    {session.distance}
+                  </span>
+                ) : null}
               </div>
             </button>
           )}

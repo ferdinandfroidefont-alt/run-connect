@@ -91,6 +91,16 @@ import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
 import { PLANIFIER_MAQUETTE_GROUPED_BG, planifierMaquetteFontStackStyle } from "@/lib/coachingPlanifierMaquette";
 
+/** Plage type maquette `MonPlanTimeline` · RunConnect (7).jsx (`27 AVR - 3 MAI`). */
+function formatMaquetteMonPlanWeekRange(weekStart: Date): string {
+  const end = addDays(weekStart, 6);
+  const piece = (d: Date) =>
+    format(d, "d MMM", { locale: fr })
+      .replace(/\./g, "")
+      .toUpperCase();
+  return `${piece(weekStart)} - ${piece(end)}`;
+}
+
 const ClubProfileDialog = lazy(() =>
   import("@/components/ClubProfileDialog").then((m) => ({ default: m.ClubProfileDialog }))
 );
@@ -3556,8 +3566,11 @@ export function CoachPlanningExperience() {
             ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <div ref={myPlanContinuousRef} className="pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-                {weekStartsContinuous.map((weekStart, weekIdx) => {
+              <div
+                ref={myPlanContinuousRef}
+                className="mt-5 -mx-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+              >
+                {weekStartsContinuous.map((weekStart) => {
                   const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
                   const weekSessions = athletePlanSessions.filter((session) => {
                     const d = new Date(session.assignedDate);
@@ -3565,28 +3578,28 @@ export function CoachPlanningExperience() {
                   });
                   const weekKm = formatCalendarDistance(weekSessions.reduce((acc, item) => acc + (item.distanceKm || 0), 0));
                   return (
-                    <div key={weekStart.toISOString()} className={cn(weekIdx > 0 && "mt-7")}>
-                      <div className="px-5 pb-3 pt-2">
+                    <div key={weekStart.toISOString()}>
+                      <div className="mb-3 mt-7 px-5">
                         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
                           <h2 className="text-[26px] font-extrabold leading-none tracking-tight text-[#0A0F1F]">
                             Semaine {getISOWeek(weekStart)}
                           </h2>
-                          <p className="text-[14px] font-medium text-[#8E8E93]">
-                            · {format(weekStart, "d", { locale: fr })} -{" "}
-                            {format(addDays(weekStart, 6), "d MMM", { locale: fr }).toUpperCase()}
-                          </p>
+                          <p className="text-[14px] font-medium text-[#8E8E93]">· {formatMaquetteMonPlanWeekRange(weekStart)}</p>
                         </div>
                         <p className="mt-1 text-[14px]">
-                          <span className="font-bold text-[#0A0F1F]">{weekKm || "—"}</span>
+                          <span className="font-bold text-[#0A0F1F]">{weekKm ?? "—"}</span>
                           <span className="text-[#8E8E93]"> · {weekSessions.length} séance(s)</span>
                         </p>
                       </div>
-                      <div className="mt-1">
+                      <div>
                         {weekDaysLocal.map((day, dayIdx) => {
                     const daySessions = athletePlanSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                     const session = daySessions[0];
                     const normalizedSegments = session
-                      ? buildWorkoutSegments(session.blocks, { sport: session.sport })
+                      ? buildWorkoutSegments(session.blocks, {
+                          sport: session.sport,
+                          athleteIntensity: session.athleteIntensity ?? undefined,
+                        })
                       : [];
                     const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
                       ? session.sport === "cycling"
@@ -3600,7 +3613,10 @@ export function CoachPlanningExperience() {
                               : "other"
                       : undefined;
                     const workoutMetrics = session
-                      ? resolveWorkoutMetrics({ segments: normalizedSegments })
+                      ? resolveWorkoutMetrics({
+                          segments: normalizedSegments,
+                          explicitDistanceKm: session.distanceKm,
+                        })
                       : null;
                     const summary = session
                       ? {

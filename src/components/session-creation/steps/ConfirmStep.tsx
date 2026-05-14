@@ -19,6 +19,7 @@ import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
 
 import { AppleStepHeader, AppleGroup } from './AppleStepChrome';
+import { WIZARD_CARD_SHADOW } from '../wizardVisualTokens';
 import { Cell, EmojiBadge } from '@/components/apple';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,6 +43,7 @@ interface ConfirmStepProps {
   /** True : pas d'en-tête ni carte récap (composition externe) */
   embedInFinalize?: boolean;
   hideFooter?: boolean;
+  wizardShellFooter?: boolean;
 }
 
 export const ConfirmStep: React.FC<ConfirmStepProps> = ({
@@ -58,6 +60,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   isCoachingMode = false,
   embedInFinalize = false,
   hideFooter = false,
+  wizardShellFooter = false,
 }) => {
   const activity = ACTIVITY_TYPES.find((a) => a.value === formData.activity_type);
   const previewTitle = resolveSessionTitle({
@@ -92,6 +95,8 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   const activityShort =
     activity?.label?.replace(/^[^\s]+\s/, '').toUpperCase() ?? 'SÉANCE';
 
+  const suppressFooter = hideFooter || wizardShellFooter;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 12 }}
@@ -110,13 +115,14 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
       >
         {!embedInFinalize && (
           <AppleStepHeader
-            step={5}
+            titleVariant="hero"
             title={isCoachingMode ? 'Programmer ma séance' : 'Tout est prêt.'}
             subtitle={
               isCoachingMode
                 ? 'Vérifie les détails pré-remplis par le coach.'
                 : 'Booste pour multiplier ta visibilité.'
             }
+            className="pb-4"
           />
         )}
 
@@ -125,10 +131,13 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         )}
 
         {!embedInFinalize && (
-          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card shadow-[var(--shadow-card)] divide-y divide-border/60">
+          <div
+            className="overflow-hidden divide-y divide-[#E5E5EA] rounded-[18px] bg-white"
+            style={{ boxShadow: WIZARD_CARD_SHADOW }}
+          >
             {/* Récap carte + infos */}
             <div>
-              <div className="relative h-40 w-full overflow-hidden bg-[#c5d9e8] dark:bg-[#1a3550]">
+              <div className="relative h-[220px] w-full overflow-hidden bg-[#c5d9e8] dark:bg-[#1a3550]">
                 {selectedLocation ? (
                   <MiniMapPreview
                     lat={selectedLocation.lat}
@@ -148,13 +157,13 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               </div>
 
               <div className="space-y-1 px-4 pb-5 pt-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.4px] text-primary">
+                <div className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#007AFF]">
                   {activityShort}
                   {formData.distance_km
                     ? ` · ${String(formData.distance_km).replace(',', '.')} km`
                     : ''}
                 </div>
-                <h3 className="font-display text-[24px] font-semibold leading-[1.12] tracking-[-0.5px] text-foreground">
+                <h3 className="m-0 text-[26px] font-black leading-[1.12] tracking-[-0.02em]" style={{ color: '#0A0F1F' }}>
                   {formData.scheduled_at
                     ? `${new Date(formData.scheduled_at).toLocaleDateString('fr-FR', {
                         weekday: 'long',
@@ -198,7 +207,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               {!imagePreview ? (
                 <Cell
                   icon={<span className="text-[15px]">📷</span>}
-                  iconBg="#34B5DA"
+                  iconBg="#5AC8FA"
                   title="Ajouter une photo"
                   subtitle="Optionnel · JPG, PNG ou WebP, max 5 Mo"
                   accessory="chevron"
@@ -227,7 +236,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   </div>
                   <Cell
                     icon={<span className="text-[15px]">📷</span>}
-                    iconBg="#34B5DA"
+                    iconBg="#5AC8FA"
                     title="Remplacer la photo"
                     subtitle="Choisir une autre image"
                     accessory="chevron"
@@ -378,7 +387,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         )}
       </div>
 
-      {!hideFooter && (
+      {!suppressFooter && (
         // Refonte handoff (mockup `ctaFloat` 12) — pill Action Blue full-width.
         // Le retour est désormais dans le NavBar parent (chevron-back). Pas de bordure
         // ni de backdrop-blur ici : le bloc de récap juste au-dessus suffit à séparer

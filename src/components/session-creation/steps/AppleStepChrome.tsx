@@ -1,56 +1,60 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { WIZARD_CARD_SHADOW, WIZARD_MUTED, WIZARD_TITLE } from '../wizardVisualTokens';
 
 type StepHeaderProps = {
-  step: number;
+  step?: number;
   total?: number;
   title: string;
   subtitle?: string;
   className?: string;
+  /** Maquette wizard : titres 36/900 (étapes 1–3, 5) ou 22/800 (étape 4). */
+  titleVariant?: 'hero' | 'compact';
 };
 
 /**
- * En-tête type Apple — refonte handoff (mockup `StepHeader` 08–12) :
- *   <progress-dots step={n}/>           // 5 segments 3px (blue / hairline)
- *   <h1 display 28/700 -0.5px>{title}</h1>
- *   <p body-15 muted>{subtitle}</p>
- *
- * Le compteur « Étape n/N » est rendu en `trailing` du NavBar parent dans
- * `CreateSessionWizard` — on évite la redondance avec les dots.
+ * En-tête étape wizard — titres / sous-titre alignés maquette `RunConnect (7).jsx`.
+ * La barre de progression segmentée est rendue dans `CreateSessionWizard` (sous le NavBar).
  */
 export const AppleStepHeader: React.FC<StepHeaderProps> = ({
-  step,
-  total = 5,
   title,
   subtitle,
   className,
+  titleVariant = 'hero',
 }) => (
-  <div className={cn('px-1 pb-5', className)}>
-    {/*
-     * Progress dots (mockup spec : flex gap-1 (4px) / h-[3px] / rounded-[2px] /
-     * Action Blue actif, hairline inactif rgba(60,60,67,0.18)).
-     */}
-    <div className="mb-3.5 flex gap-1">
-      {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            'h-[3px] flex-1 rounded-[2px] transition-colors',
-            i < step
-              ? 'bg-primary'
-              : 'bg-[rgba(60,60,67,0.18)] dark:bg-[rgba(84,84,88,0.65)]'
-          )}
-          aria-hidden
-        />
-      ))}
-    </div>
-    <h2 className="text-[28px] font-bold leading-[1.1] tracking-[-0.5px] text-foreground">
+  <div className={cn('px-0 pb-5', className)}>
+    <h2
+      className={cn(
+        'm-0',
+        titleVariant === 'hero' && 'text-[36px] font-black leading-[1.05] tracking-[-0.04em]',
+        titleVariant === 'compact' && 'text-[22px] font-extrabold leading-[1.2] tracking-[-0.02em]'
+      )}
+      style={{ color: WIZARD_TITLE }}
+    >
       {title}
     </h2>
     {subtitle ? (
-      <p className="mt-1 text-[15px] leading-[1.35] text-muted-foreground">{subtitle}</p>
+      <p
+        className="mt-1.5 text-[16px] leading-[1.4]"
+        style={{ color: WIZARD_MUTED }}
+      >
+        {subtitle}
+      </p>
     ) : null}
+  </div>
+);
+
+/** Carte blanche type liste wizard (ombre + léger contour). */
+export const WizardInsetCard: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className,
+}) => (
+  <div
+    className={cn('overflow-hidden rounded-2xl bg-white', className)}
+    style={{ boxShadow: WIZARD_CARD_SHADOW }}
+  >
+    {children}
   </div>
 );
 

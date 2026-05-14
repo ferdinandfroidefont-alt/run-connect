@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft } from 'lucide-react';
+import { X, ChevronLeft, Check } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffectiveSubscriptionInfo } from '@/hooks/useEffectiveSubscription';
 import { useAppPreview } from '@/contexts/AppPreviewContext';
@@ -21,7 +21,6 @@ import { DEFAULT_SESSION_CALENDAR_DURATION_MIN, estimateSessionDurationMinutes }
 import { normalizeBlocksForStorage, resolveSessionTotals } from '@/lib/sessionBlockCalculations';
 
 import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
-// ProgressIndicator (legacy) remplacé par les dots in-header dans AppleStepHeader.
 import { LocationStep } from './steps/LocationStep';
 import { ActivityStep } from './steps/ActivityStep';
 import { DateTimeStep } from './steps/DateTimeStep';
@@ -34,6 +33,7 @@ import {
   isPostgrestMissingSessionsVisibilitySnapshot,
   stripSessionsVisibilitySnapshot,
 } from '@/lib/sessionVisibility';
+import { WIZARD_ACTION_BLUE, WIZARD_BG, WIZARD_SEP } from './wizardVisualTokens';
 
 declare global {
   interface Window {
@@ -523,6 +523,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         })
       : null;
 
+    const shellFooter = wizard.wizardSteps.length >= 5;
+
     switch (wizard.currentStep) {
       case 'location':
         return (
@@ -531,6 +533,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             selectedLocation={wizard.selectedLocation}
             onLocationSelect={wizard.updateLocation}
             onNext={wizard.goToNextStep}
+            wizardShellFooter={shellFooter}
           />
         );
       case 'activity':
@@ -542,6 +545,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             onSessionTypeChange={(type) => wizard.updateFormData({ session_type: type })}
             onNext={wizard.goToNextStep}
             onBack={wizard.goToPreviousStep}
+            wizardShellFooter={shellFooter}
           />
         );
       case 'datetime':
@@ -553,6 +557,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             onScheduledAtChange={(value) => wizard.updateFormData({ scheduled_at: value })}
             onNext={wizard.goToNextStep}
             onBack={wizard.goToPreviousStep}
+            wizardShellFooter={shellFooter}
           />
         );
       case 'details':
@@ -567,6 +572,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             onImageRemove={handleImageRemove}
             onNext={wizard.goToNextStep}
             onBack={wizard.goToPreviousStep}
+            wizardShellFooter={shellFooter}
           />
         );
       case 'confirm':
@@ -583,6 +589,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             onSubmit={handleSubmit}
             onBack={wizard.goToPreviousStep}
             isCoachingMode={!!coachingSession}
+            wizardShellFooter={shellFooter}
           />
         );
       default:
@@ -590,73 +597,139 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
     }
   };
 
+  const totalWizardSteps = wizard.wizardSteps.length;
+  const stepIndex1 = Math.max(1, wizard.wizardSteps.indexOf(wizard.currentStep) + 1);
+  const fullWizardChrome = totalWizardSteps >= 5;
+  const isConfirmStep = wizard.currentStep === 'confirm';
+  const footerGateDisabled =
+    wizard.currentStep === 'location'
+      ? !wizard.selectedLocation
+      : wizard.currentStep === 'activity'
+        ? !wizard.formData.activity_type
+        : wizard.currentStep === 'datetime'
+          ? !wizard.formData.scheduled_at
+          : false;
+  const footerBusy = isConfirmStep && (loading || uploadingImage);
+  const footerPrimaryDisabled = footerGateDisabled || footerBusy;
+
+  const wizardFooterLabel =
+    isConfirmStep && coachingSession
+      ? 'Programmer ma séance'
+      : isConfirmStep && isEditMode
+        ? 'Enregistrer'
+        : isConfirmStep && wizard.formData.recurrence_type === 'weekly' && !coachingSession
+          ? `Créer ${wizard.formData.recurrence_count} séances`
+          : isConfirmStep
+            ? 'Programmer & booster'
+            : wizard.currentStep === 'details'
+              ? 'Aperçu'
+              : 'Continuer';
+
+  const onWizardFooterPrimary = () => {
+    if (isConfirmStep) void handleSubmit();
+    else wizard.goToNextStep();
+  };
+
+  const wizardFooterNode = fullWizardChrome ? (
+    <div
+      className="shrink-0 border-t bg-white px-5 py-3"
+      style={{
+        borderColor: WIZARD_SEP,
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
+      }}
+    >
+      <button
+        type="button"
+        disabled={footerPrimaryDisabled}
+        onClick={onWizardFooterPrimary}
+        className="flex w-full items-center justify-center gap-2 rounded-full py-4 transition-transform active:scale-[0.99] disabled:cursor-not-allowed"
+        style={{
+          background: footerGateDisabled && !footerBusy ? `${WIZARD_ACTION_BLUE}66` : WIZARD_ACTION_BLUE,
+          boxShadow:
+            footerGateDisabled && !footerBusy ? 'none' : '0 2px 8px rgba(0, 122, 255, 0.25)',
+        }}
+      >
+        {footerBusy ? (
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        ) : (
+          <>
+            {isConfirmStep ? (
+              <Check className="h-5 w-5 shrink-0 text-white" strokeWidth={3} aria-hidden />
+            ) : null}
+            <span className="text-[17px] font-extrabold tracking-[-0.01em] text-white">{wizardFooterLabel}</span>
+          </>
+        )}
+      </button>
+    </div>
+  ) : null;
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-        <DialogContent className="flex h-full max-h-full w-full max-w-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[90vh] sm:max-w-md sm:rounded-lg sm:border">
+        <DialogContent className="flex h-full max-h-full w-full max-w-full min-h-0 flex-col overflow-hidden rounded-none border-0 p-0 sm:max-h-[90vh] sm:max-w-md sm:rounded-lg sm:border sm:border-[#E5E5EA]">
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
-            headerWrapperClassName="z-40 shrink-0 border-b border-border bg-card"
+            headerWrapperClassName="z-40 shrink-0 border-b border-[#E5E5EA] bg-white"
+            footer={wizardFooterNode}
             header={
-              // Refonte handoff (mockup `StepHeader` 08–12) :
-              // NavBar slim — chevron-back (étape > 1) ou Fermer (étape 1) à gauche, titre centré,
-              // « Étape n/N » muted à droite. Les dots de progression sont déplacés dans
-              // AppleStepHeader (au-dessus du grand titre de chaque étape).
-              <IosPageHeaderBar
-                className="py-3"
-                left={
-                  wizard.wizardSteps.indexOf(wizard.currentStep) > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => wizard.goToPreviousStep()}
-                      aria-label="Étape précédente"
-                      className="flex min-w-0 items-center gap-0.5 text-primary active:opacity-60"
-                    >
-                      <ChevronLeft className="h-5 w-5 shrink-0" strokeWidth={2.4} />
-                      <span className="truncate text-[17px]">Retour</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      aria-label="Fermer"
-                      className="flex min-w-0 items-center gap-1 text-primary active:opacity-60"
-                    >
-                      <X className="h-5 w-5 shrink-0" />
-                      <span className="truncate text-[17px]">Fermer</span>
-                    </button>
-                  )
-                }
-                title={
-                  isEditMode ? 'Modifier la séance' : 'Créer une séance'
-                }
-                right={
-                  coachingSession ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (wizard.currentStep === "confirm") {
-                          void handleSubmit();
-                        } else {
-                          wizard.goToNextStep();
-                        }
-                      }}
-                      className="truncate text-[17px] font-semibold text-primary"
-                    >
-                      OK
-                    </button>
-                  ) : wizard.wizardSteps.length > 1 ? (
-                    <span className="truncate text-[15px] text-muted-foreground">
-                      Étape {Math.max(1, wizard.wizardSteps.indexOf(wizard.currentStep) + 1)}/{wizard.wizardSteps.length}
-                    </span>
-                  ) : undefined
-                }
-              />
+              <>
+                <IosPageHeaderBar
+                  className="py-3"
+                  left={
+                    wizard.wizardSteps.indexOf(wizard.currentStep) > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => wizard.goToPreviousStep()}
+                        aria-label="Étape précédente"
+                        className="flex min-w-0 items-center gap-0 font-semibold active:opacity-60"
+                        style={{ color: WIZARD_ACTION_BLUE }}
+                      >
+                        <ChevronLeft className="h-6 w-6 shrink-0 stroke-[2.6]" />
+                        <span className="truncate text-[17px]">Retour</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Fermer"
+                        className="flex min-w-0 items-center gap-1 font-semibold active:opacity-60"
+                        style={{ color: WIZARD_ACTION_BLUE }}
+                      >
+                        <X className="h-6 w-6 shrink-0 stroke-[2.6]" />
+                        <span className="truncate text-[17px]">Fermer</span>
+                      </button>
+                    )
+                  }
+                  title={
+                    isEditMode ? 'Modifier la séance' : 'Créer une séance'
+                  }
+                  right={
+                    wizard.wizardSteps.length > 1 ? (
+                      <span className="truncate text-[15px] font-medium" style={{ color: '#8E8E93' }}>
+                        Étape {stepIndex1}/{totalWizardSteps}
+                      </span>
+                    ) : undefined
+                  }
+                />
+                {fullWizardChrome ? (
+                  <div className="flex gap-1.5 px-5 pb-1 pt-3">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="h-1 flex-1 rounded-full transition-colors duration-200"
+                        style={{
+                          background: i + 1 <= stepIndex1 ? WIZARD_ACTION_BLUE : '#E5E5EA',
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </>
             }
-            scrollClassName="bg-secondary"
+            scrollClassName="min-h-0"
+            scrollProps={{ style: { background: WIZARD_BG } }}
           >
-            {/* h-full : permet au step « Lieu » de remplir la zone scroll et de centrer le bloc entre header et pied */}
-            <div className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden px-4 pb-4">
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden px-5 pb-4 pt-5">
               <AnimatePresence mode="wait">
                 <div key={wizard.currentStep} className="flex min-h-0 flex-1 flex-col">
                   {renderStep()}

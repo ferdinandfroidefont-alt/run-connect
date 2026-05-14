@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { addDays, startOfWeek } from 'date-fns';
-import { SessionFormData, SelectedLocation, type SessionBlock } from '../types';
+import { SessionFormData, SelectedLocation, type SessionBlock, ACTIVITY_TYPES } from '../types';
 import { cn } from '@/lib/utils';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
-import { AppleStepFooter } from './AppleStepChrome';
+import { AppleStepFooter, AppleStepHeader } from './AppleStepChrome';
+import { WIZARD_ACTION_BLUE, WIZARD_TITLE } from '../wizardVisualTokens';
 import { CoachingBlockEditorPanel, type CoachingSessionBlock } from '@/components/coaching/CoachingBlockEditorPanel';
 import { ModelsPage } from '@/components/coaching/models/ModelsPage';
 import type { SessionModelItem } from '@/components/coaching/models/types';
@@ -167,6 +168,7 @@ interface DetailsStepProps {
   onBack: () => void;
   /** Masque les boutons Retour / Aperçu (cas avancé) */
   hideNavigation?: boolean;
+  wizardShellFooter?: boolean;
 }
 
 export const DetailsStep: React.FC<DetailsStepProps> = ({
@@ -180,6 +182,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onNext,
   onBack,
   hideNavigation = false,
+  wizardShellFooter = false,
 }) => {
   const { user } = useAuth();
   const [builderTab, setBuilderTab] = useState<'build' | 'templates'>('build');
@@ -287,6 +290,15 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     return 'running';
   }, [formData.activity_type]);
 
+  const suppressFooter = hideNavigation || wizardShellFooter;
+
+  const activityShort =
+    ACTIVITY_TYPES.find((a) => a.value === formData.activity_type)?.label.replace(/^[^\s]+\s/, '').trim() ??
+    'Séance';
+  const locationHeadline = selectedLocation?.name?.split(',')[0]?.trim() ?? '';
+  const headline =
+    locationHeadline && activityShort ? `${activityShort} à ${locationHeadline}` : activityShort || 'Séance';
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 12 }}
@@ -300,38 +312,44 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4'
         )}
       >
-        {/* Titre inline — même style que la page coaching */}
-        <div className="px-1">
-          <input
-            className="w-full bg-transparent font-display text-[42px] font-semibold tracking-[-0.8px] text-[#1d1d1f] placeholder:text-[#7a7a7a] focus:outline-none"
-            placeholder="Nom de la séance"
-            value={formData.title}
-            onChange={(e) => onFormDataChange({ title: e.target.value })}
-          />
-        </div>
+        {!hideNavigation && wizardShellFooter && (
+          <AppleStepHeader titleVariant="compact" title={headline} className="pb-4" />
+        )}
 
-        {/* Tabs coaching-style */}
-        <div className="grid grid-cols-2 gap-2">
+        {!hideNavigation && !wizardShellFooter && (
+          <div className="px-1">
+            <input
+              className="w-full bg-transparent font-display text-[42px] font-semibold tracking-[-0.8px] text-[#1d1d1f] placeholder:text-[#7a7a7a] focus:outline-none"
+              placeholder="Nom de la séance"
+              value={formData.title}
+              onChange={(e) => onFormDataChange({ title: e.target.value })}
+            />
+          </div>
+        )}
+
+        <div className={cn('flex gap-2', wizardShellFooter && 'mt-4')}>
           <button
             type="button"
             className={cn(
-              'h-8 rounded-full border text-center text-[13px] font-semibold transition-colors',
-              builderTab === 'build'
-                ? 'border-[#0066cc] bg-[#0066cc] text-white'
-                : 'border-[#e0e0e0] bg-white text-[#1d1d1f]'
+              'flex-1 rounded-full py-3 text-center text-[16px] font-bold transition-transform active:scale-[0.98]'
             )}
+            style={
+              builderTab === 'build'
+                ? { background: WIZARD_ACTION_BLUE, color: '#fff' }
+                : { background: '#fff', color: WIZARD_TITLE, border: '1px solid #E5E5EA' }
+            }
             onClick={() => setBuilderTab('build')}
           >
             Construire
           </button>
           <button
             type="button"
-            className={cn(
-              'h-8 rounded-full border text-center text-[13px] font-semibold transition-colors',
+            className={cn('flex-1 rounded-full py-3 text-center text-[16px] font-bold transition-transform active:scale-[0.98]')}
+            style={
               builderTab === 'templates'
-                ? 'border-[#0066cc] bg-[#0066cc] text-white'
-                : 'border-[#e0e0e0] bg-white text-[#1d1d1f]'
-            )}
+                ? { background: WIZARD_ACTION_BLUE, color: '#fff' }
+                : { background: '#fff', color: WIZARD_TITLE, border: '1px solid #E5E5EA' }
+            }
             onClick={() => setBuilderTab('templates')}
           >
             Modèles
@@ -366,7 +384,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         )}
       </div>
 
-      {!hideNavigation && (
+      {!suppressFooter && (
         <AppleStepFooter
           onBack={onBack}
           onNext={onNext}

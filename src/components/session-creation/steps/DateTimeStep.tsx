@@ -1,9 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { AppleStepHeader, AppleStepFooter, AppleGroup } from './AppleStepChrome';
+import { AppleStepHeader, AppleStepFooter } from './AppleStepChrome';
+import {
+  WIZARD_ACTION_BLUE,
+  WIZARD_CARD_SHADOW,
+  WIZARD_MUTED,
+  WIZARD_TITLE,
+} from '../wizardVisualTokens';
 
 interface DateTimeStepProps {
   scheduledAt: string;
@@ -12,8 +17,8 @@ interface DateTimeStepProps {
   onScheduledAtChange: (value: string) => void;
   onNext: () => void;
   onBack: () => void;
-  /** Masque en-tête large + navigation (création rapide) */
   hideNavigation?: boolean;
+  wizardShellFooter?: boolean;
 }
 
 const QUICK_TIMES = ['07:00', '12:00', '18:30', '20:00'];
@@ -54,6 +59,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   onNext,
   onBack,
   hideNavigation = false,
+  wizardShellFooter = false,
 }) => {
   const todayStart = useMemo(() => startOfDay(new Date()), []);
 
@@ -82,10 +88,9 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
     onScheduledAtChange(`${date}T${time}`);
   };
 
-  // Calendar grid — 6 weeks anchored on `monthAnchor`
   const calendarDays = useMemo(() => {
     const firstOfMonth = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1);
-    const startWeekday = (firstOfMonth.getDay() + 6) % 7; // Monday-first
+    const startWeekday = (firstOfMonth.getDay() + 6) % 7;
     const gridStart = new Date(firstOfMonth);
     gridStart.setDate(1 - startWeekday);
     return Array.from({ length: 42 }, (_, i) => {
@@ -105,6 +110,11 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   const monthAnchorIso = isoDate(monthAnchor);
   const todayIso = isoDate(todayStart);
 
+  const suppressFooter = hideNavigation || wizardShellFooter;
+  const showHero = !hideNavigation && !wizardShellFooter;
+
+  const calendarCardStyle = { boxShadow: WIZARD_CARD_SHADOW };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 12 }}
@@ -112,112 +122,100 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
       exit={{ opacity: 0, x: -12 }}
       className={cn('flex w-full flex-col', hideNavigation ? '' : 'min-h-0 flex-1')}
     >
-      <div className={cn('px-1', hideNavigation ? '' : 'min-h-0 flex-1 overflow-y-auto pb-4')}>
-        {!hideNavigation && (
-          <AppleStepHeader
-            step={3}
-            title="Quand ?"
-            subtitle="Choisis une date et une heure de départ."
-          />
+      <div className={cn('px-0', hideNavigation ? '' : 'min-h-0 flex-1 overflow-y-auto pb-4')}>
+        {showHero && (
+          <AppleStepHeader title="Quand ?" subtitle="Choisis une date et une heure de départ." />
         )}
 
-        {hideNavigation && (
-          <h3 className="mb-3 text-[15px] font-semibold text-foreground">Date et heure</h3>
-        )}
+        {hideNavigation && <h3 className="mb-3 text-[15px] font-semibold text-foreground">Date et heure</h3>}
 
-        <div className="space-y-5">
-          {/* Calendar card */}
-          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card">
-            <div className="flex items-center justify-between px-4 pb-2 pt-4">
-              <div className="text-[17px] font-semibold tracking-tight text-foreground">
+        <div className="space-y-0">
+          <div className="rounded-[18px] bg-white p-4" style={calendarCardStyle}>
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-[22px] font-extrabold tracking-[-0.02em]" style={{ color: WIZARD_TITLE }}>
                 {MONTH_NAMES[monthAnchor.getMonth()]} {monthAnchor.getFullYear()}
-              </div>
+              </span>
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={goPrevMonth}
-                  aria-label="Mois précédent"
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-primary active:scale-[0.95]"
-                >
-                  <ChevronLeft className="h-5 w-5" />
+                <button type="button" onClick={goPrevMonth} aria-label="Mois précédent" className="p-1 active:opacity-70">
+                  <ChevronLeft className="h-5 w-5 stroke-[2.6]" color={WIZARD_ACTION_BLUE} />
                 </button>
-                <button
-                  type="button"
-                  onClick={goNextMonth}
-                  aria-label="Mois suivant"
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-primary active:scale-[0.95]"
-                >
-                  <ChevronRight className="h-5 w-5" />
+                <button type="button" onClick={goNextMonth} aria-label="Mois suivant" className="p-1 active:opacity-70">
+                  <ChevronRight className="h-5 w-5 stroke-[2.6]" color={WIZARD_ACTION_BLUE} />
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-7 gap-y-1 px-3 pb-3">
-              {WEEKDAY_LABELS.map((label, idx) => (
-                <div
-                  key={`${label}-${idx}`}
-                  className="pb-2 text-center text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80"
-                >
-                  {label}
+
+            <div className="mb-1 grid grid-cols-7">
+              {WEEKDAY_LABELS.map((d, i) => (
+                <div key={`${d}-${i}`} className="text-center text-[12px] font-semibold" style={{ color: WIZARD_MUTED }}>
+                  {d}
                 </div>
               ))}
+            </div>
+
+            <div className="grid grid-cols-7">
               {calendarDays.map((day, idx) => {
                 const iso = isoDate(day);
                 const inMonth = day.getMonth() === monthAnchor.getMonth();
                 const isPast = startOfDay(day) < todayStart;
                 const isSelected = iso === selectedDate;
-                const isToday = iso === todayIso;
+                const isOut = !inMonth;
                 return (
                   <button
                     key={`${monthAnchorIso}-${idx}`}
                     type="button"
                     disabled={isPast}
                     onClick={() => !isPast && handleDateChange(iso)}
-                    className={cn(
-                      'flex aspect-square items-center justify-center rounded-full text-[15px] tracking-tight transition-colors',
-                      'active:scale-[0.95] disabled:cursor-not-allowed',
-                      !inMonth && 'text-muted-foreground/35',
-                      inMonth && !isSelected && !isPast && 'text-foreground',
-                      isPast && 'text-muted-foreground/35',
-                      isToday && !isSelected && 'text-primary font-semibold',
-                      isSelected && 'bg-primary font-semibold text-white shadow-sm'
-                    )}
+                    className="flex items-center justify-center py-1.5 active:opacity-80 disabled:cursor-not-allowed"
                   >
-                    {day.getDate()}
+                    <div
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-[17px] font-bold tabular-nums"
+                      style={{
+                        background: isSelected ? WIZARD_ACTION_BLUE : 'transparent',
+                        color: isSelected ? '#fff' : isPast ? '#C7C7CC' : isOut ? '#C7C7CC' : WIZARD_TITLE,
+                      }}
+                    >
+                      {day.getDate()}
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Time picker — Apple grouped cell with native time input */}
-          <AppleGroup
-            title="Heure de départ"
-            footer={
-              estimatedEndTimeLabel ? (
-                <>
-                  Fin estimée à {estimatedEndTimeLabel}
-                  {isEstimatedEndTimeProvisional ? ' (estimation provisoire)' : ''} — basé sur tes
-                  records.
-                </>
-              ) : null
-            }
+          <p
+            className="mb-2.5 mt-[22px] text-[13px] font-extrabold uppercase"
+            style={{ color: WIZARD_MUTED, letterSpacing: '0.1em' }}
           >
-            <label className="flex items-center gap-3 px-4 py-3">
-              <span className="flex-1 text-[17px] tracking-tight text-foreground">Heure</span>
-              <Input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => handleTimeChange(e.target.value)}
-                className={cn(
-                  'h-9 w-auto rounded-md border-border/40 bg-secondary/50 px-3 text-right text-[17px] font-medium tracking-tight text-foreground',
-                  'focus-visible:ring-1'
-                )}
-              />
-            </label>
-          </AppleGroup>
+            Heure de départ
+          </p>
 
-          {/* Quick times — pill chips */}
-          <div className="flex flex-wrap gap-2 px-1">
+          <div className="flex items-center justify-between rounded-2xl bg-white p-4" style={calendarCardStyle}>
+            <span className="text-[18px] font-bold" style={{ color: WIZARD_TITLE }}>
+              Heure
+            </span>
+            <input
+              type="time"
+              value={selectedTime}
+              onChange={(e) => handleTimeChange(e.target.value)}
+              className="border-0 bg-transparent p-0 text-[17px] font-bold tabular-nums outline-none focus:ring-0"
+              style={{
+                color: WIZARD_TITLE,
+                background: '#F2F2F7',
+                borderRadius: 9,
+                padding: '8px 14px',
+              }}
+            />
+          </div>
+
+          {estimatedEndTimeLabel ? (
+            <p className="mt-2.5 text-[13px] leading-[1.4]" style={{ color: WIZARD_MUTED }}>
+              Fin estimée à {estimatedEndTimeLabel}
+              {isEstimatedEndTimeProvisional ? ' (estimation provisoire)' : ''} — basé sur tes records.
+            </p>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap gap-2">
             {QUICK_TIMES.map((t) => {
               const selected = selectedTime === t;
               return (
@@ -225,13 +223,13 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                   key={t}
                   type="button"
                   onClick={() => handleTimeChange(t)}
-                  className={cn(
-                    'inline-flex h-9 items-center rounded-full px-4 text-[14px] tracking-tight transition-transform',
-                    'active:scale-[0.96]',
-                    selected
-                      ? 'bg-primary text-white'
-                      : 'border border-border/60 bg-card text-foreground'
-                  )}
+                  className="rounded-full px-5 py-2.5 text-[16px] font-bold tabular-nums transition-transform active:scale-[0.96]"
+                  style={{
+                    background: selected ? WIZARD_ACTION_BLUE : '#fff',
+                    color: selected ? '#fff' : WIZARD_TITLE,
+                    boxShadow: selected ? '0 2px 8px rgba(0,122,255,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
+                    border: selected ? 'none' : undefined,
+                  }}
                 >
                   {t}
                 </button>
@@ -241,13 +239,8 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
         </div>
       </div>
 
-      {!hideNavigation && (
-        <AppleStepFooter
-          onBack={onBack}
-          onNext={onNext}
-          nextDisabled={!scheduledAt}
-          nextLabel="Continuer"
-        />
+      {!suppressFooter && (
+        <AppleStepFooter onBack={onBack} onNext={onNext} nextDisabled={!scheduledAt} nextLabel="Continuer" />
       )}
     </motion.div>
   );

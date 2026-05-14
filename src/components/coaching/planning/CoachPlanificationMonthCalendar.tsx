@@ -54,6 +54,22 @@ const STATUS_COLOR: Record<SessionStatus, string> = {
   validated: "#34C759",
 };
 
+/** Pastilles sous les dates — teintes « sport » comme COACH_SESSIONS_BY_DAY (maquette). */
+const SPORT_DOT_COLOR: Record<PlanCalendarSession["sport"], string> = {
+  running: "#007AFF",
+  cycling: "#FF9500",
+  swimming: "#5AC8FA",
+  strength: "#FF9500",
+};
+
+/** Tuile emoji séance — SEANCE_SPORTS (CreerSeancePage maquette). */
+const SPORT_TILE_BG: Record<PlanCalendarSession["sport"], string> = {
+  running: "#007AFF",
+  cycling: "#FF3B30",
+  swimming: "#5AC8FA",
+  strength: "#FF9500",
+};
+
 const SPORT_EMOJI: Record<string, string> = {
   running: "🏃",
   cycling: "🚴",
@@ -104,13 +120,13 @@ export function CoachPlanificationMonthCalendar({
     return eachDayOfInterval({ start: gridStart, end: gridEnd });
   }, [currentMonth]);
 
-  // ── Session dots per day ───────────────────────────────────────────────────
+  // ── Session dots per day (couleurs multi-sports, maquette CoachCalendar) ───
   const dotsByDate = useMemo(() => {
-    const map: Record<string, SessionStatus[]> = {};
+    const map: Record<string, string[]> = {};
     for (const s of sessions) {
       const key = s.assignedDate.slice(0, 10);
       if (!map[key]) map[key] = [];
-      map[key].push(s.status);
+      map[key].push(SPORT_DOT_COLOR[s.sport] ?? "#007AFF");
     }
     return map;
   }, [sessions]);
@@ -137,10 +153,10 @@ export function CoachPlanificationMonthCalendar({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Bloc calendrier sur fond blanc — le reste de la page (scroll) est gris groupé iOS */}
-      <div className="shrink-0 bg-white pb-2 dark:bg-background">
-      {/* ── Sub-header: mois + actions (titre + Athlète/Coach = shell PlanningHeader + CoachingRolePill) ── */}
-      <div className="flex items-center justify-between px-4 pb-3 pt-1">
+      {/* Calendrier sur fond groupé #F2F2F7 (maquette StickyPage), pas de bandeau blanc. */}
+      <div className="shrink-0 pb-2">
+      {/* ── Mois + actions (même gouttière px-5 que le <main> de la maquette) ── */}
+      <div className="mt-5 mb-3 flex items-center justify-between px-5">
         <button
           type="button"
           className="flex items-center gap-1"
@@ -149,7 +165,7 @@ export function CoachPlanificationMonthCalendar({
             /* month picker — could open a popover */
           }}
         >
-          <span className="text-[22px] font-bold leading-none tracking-[-0.01em]">
+          <span className="text-[22px] font-bold leading-none">
             {format(currentMonth, "MMMM yyyy", { locale: fr }).replace(/^\w/, (c) =>
               c.toUpperCase()
             )}
@@ -179,9 +195,9 @@ export function CoachPlanificationMonthCalendar({
         </div>
       </div>
 
-      {/* ── Calendar grid ────────────────────────────────────────────────── */}
-      <div className="px-3">
-        {/* Day-of-week labels */}
+      {/* ── Grille calendrier ─────────────────────────────────────────── */}
+      <div className="px-5">
+        {/* L … D */}
         <div className="mb-2 grid grid-cols-7">
           {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
             <span key={i} className="text-center text-[13px] font-medium" style={{ color: "#8E8E93" }}>
@@ -221,20 +237,21 @@ export function CoachPlanificationMonthCalendar({
                     onClick={() => setSelectedDay(day)}
                   >
                     <div
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-[19px] font-bold transition-colors"
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-[19px] font-bold"
                       style={{
                         background: bg,
                         color,
+                        transition: "background 0.15s, color 0.15s",
                       }}
                     >
                       {format(day, "d")}
                     </div>
                     <div className="flex h-[5px] items-center justify-center gap-[3px]">
-                      {dots.slice(0, 3).map((status, i) => (
+                      {dots.slice(0, 3).map((dotColor, i) => (
                         <div
                           key={i}
                           className="h-[5px] w-[5px] rounded-full"
-                          style={{ background: STATUS_COLOR[status] }}
+                          style={{ background: dotColor }}
                         />
                       ))}
                     </div>
@@ -247,11 +264,10 @@ export function CoachPlanificationMonthCalendar({
       </div>
       </div>
 
-      {/* ── Day detail panel (fond gris = scroll parent apple-grouped-bg) ── */}
-      <div className="mt-5 flex min-h-0 flex-1 flex-col px-4 pb-[18px] pt-0 dark:border-white/10">
-        {/* Panel header */}
+      {/* ── Détail jour (fond gris = scroll parent apple-grouped-bg) ───── */}
+      <div className="mt-5 flex min-h-0 flex-1 flex-col px-5 pb-[18px] pt-0">
         <div className="mb-3 flex items-baseline gap-2">
-          <span className="text-[24px] font-bold leading-none tracking-[-0.02em]" style={{ color: MAQUETTE_TITLE }}>
+          <span className="text-[24px] font-bold leading-none" style={{ color: MAQUETTE_TITLE }}>
             {selectedDayLabelShort}
           </span>
           <span className="text-[15px]" style={{ color: "#8E8E93" }}>
@@ -271,7 +287,7 @@ export function CoachPlanificationMonthCalendar({
               {/* Sport icon */}
               <div
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px] text-[24px] leading-none"
-                style={{ background: STATUS_COLOR[session.status] }}
+                style={{ background: SPORT_TILE_BG[session.sport] ?? "#007AFF" }}
               >
                 {SPORT_EMOJI[session.sport] ?? "🏃"}
               </div>
@@ -349,23 +365,25 @@ export function CoachPlanificationMonthCalendar({
 
       {/* ── Mes athlètes ─────────────────────────────────────────────────── */}
       {athletes.length > 0 && (
-        <div className="mt-7 border-t border-[#E5E5EA] pt-4 dark:border-white/10">
+        <div className="mt-7">
           <p
-            className="mb-3 px-4 text-[13px] font-extrabold tracking-[0.08em]"
-            style={{ color: "#8E8E93" }}
+            className="px-5 text-[13px] font-extrabold tracking-[0.08em]"
+            style={{ color: "#8E8E93", marginBottom: 12 }}
           >
             MES ATHLÈTES · {athletes.length}
           </p>
           <div
-            className="flex gap-3 overflow-x-auto pb-2 pl-4 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex gap-3 overflow-x-auto pb-2 pl-5 pr-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             style={{ scrollSnapType: "x proximity" }}
           >
             {athletes.map((athlete) => (
               <button
                 key={athlete.id}
                 type="button"
-                className="flex w-[116px] flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-3 pt-3.5 text-left transition-transform active:scale-[0.97]"
+                className="flex flex-shrink-0 flex-col items-center rounded-2xl bg-white text-left transition-transform active:scale-[0.97]"
                 style={{
+                  padding: "14px 12px 12px 12px",
+                  width: 116,
                   boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
                   scrollSnapAlign: "start",
                 }}
@@ -390,8 +408,10 @@ export function CoachPlanificationMonthCalendar({
                   )}
                   {athlete.statusColor ? (
                     <span
-                      className="absolute bottom-0.5 right-1 h-3 w-3 rounded-full border-2 border-white"
+                      className="absolute h-3 w-3 rounded-full border-2 border-white"
                       style={{
+                        bottom: 2,
+                        right: 4,
                         background:
                           athlete.statusColor === "orange"
                             ? "#FF9500"
@@ -404,10 +424,18 @@ export function CoachPlanificationMonthCalendar({
                     />
                   ) : null}
                 </div>
-                <p className="mt-2.5 w-full truncate text-center text-[15px] font-extrabold tracking-[-0.01em]" style={{ color: MAQUETTE_TITLE }}>
+                <p
+                  className="w-full truncate text-center text-[15px] font-extrabold tracking-[-0.01em]"
+                  style={{ color: MAQUETTE_TITLE, marginTop: 10 }}
+                >
                   {athlete.name.split(" ")[0]}
                 </p>
-                <p className="mt-0.5 text-center text-[12px] text-[#8E8E93]">Athlète</p>
+                <p
+                  className="text-center text-[12px] text-[#8E8E93]"
+                  style={{ marginTop: 2 }}
+                >
+                  Athlète
+                </p>
               </button>
             ))}
           </div>

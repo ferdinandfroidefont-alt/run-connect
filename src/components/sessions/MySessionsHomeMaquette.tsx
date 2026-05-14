@@ -123,6 +123,8 @@ export function MySessionsHomeMaquette(props: {
   weeklyGoalKm: number;
   upcomingRows: MySessionsHomeRow[];
   pastThisWeekRows: MySessionsHomeRow[];
+  /** Séances déjà passées (filtre Toutes). */
+  terminatedRows: MySessionsHomeRow[];
   onSessionClick: (s: MySessionsHomeRow) => void;
   onOpenCreate: () => void;
 }) {
@@ -304,26 +306,11 @@ export function MySessionsHomeMaquette(props: {
               </>
             ) : (
               <>
-                <h2 className="mb-3 mt-6 text-[20px] font-bold text-[#0A0F1F]">À venir</h2>
-                {props.upcomingRows.length === 0 ? (
-                  <p className="pb-2 text-[15px] text-[#8E8E93]">Rien à venir pour le moment.</p>
+                <h2 className="mb-3 mt-6 text-[20px] font-bold text-[#0A0F1F]">Terminées</h2>
+                {props.terminatedRows.length === 0 ? (
+                  <p className="pb-2 text-[15px] text-[#8E8E93]">Aucune séance terminée pour le moment.</p>
                 ) : (
-                  props.upcomingRows.map((session) => (
-                    <MaquetteSessionRow
-                      key={session.id}
-                      session={session}
-                      dateLine={formatSessionDateLine(session, "upcoming")}
-                      showUpcomingDot
-                      onClick={() => props.onSessionClick(session)}
-                    />
-                  ))
-                )}
-
-                <h2 className="mb-3 mt-6 text-[20px] font-bold text-[#0A0F1F]">Cette semaine</h2>
-                {props.pastThisWeekRows.length === 0 ? (
-                  <p className="pb-2 text-[15px] text-[#8E8E93]">Aucune séance passée sur cette semaine.</p>
-                ) : (
-                  props.pastThisWeekRows.map((session) => (
+                  props.terminatedRows.map((session) => (
                     <MaquetteSessionRow
                       key={session.id}
                       session={session}

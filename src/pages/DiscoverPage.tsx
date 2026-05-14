@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
@@ -7,7 +8,6 @@ import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import {
   DiscoverChromeShell,
-  ACTION_BLUE,
   type DiscoverChromeActiveChip,
 } from "@/components/discover/DiscoverChromeShell";
 import { DiscoverMapCard } from "@/components/discover/DiscoverMapCard";
@@ -32,8 +32,6 @@ import {
   type DiscoverMapPaletteId,
 } from "@/lib/discoverMapStyle";
 import { sessionIsPast, sessionLikelyLive } from "@/components/feed/FeedSessionTile";
-
-const RouteCreationEmbedded = lazy(() => import("@/pages/RouteCreation"));
 
 function discoverToDialog(session: DiscoverSession): Record<string, unknown> {
   return {
@@ -61,6 +59,7 @@ function feedToDialog(session: FeedSession): Record<string, unknown> {
 
 export function DiscoverPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [view, setView] = useState<DiscoverChromeActiveChip>("carte");
   const [feedSubTab, setFeedSubTab] = useState<"amis" | "decouvrir">("amis");
   const [friendCount, setFriendCount] = useState<number | null>(null);
@@ -120,11 +119,23 @@ export function DiscoverPage() {
     setSelectedSession(discoverToDialog(session));
   }, []);
 
+  const onChipPress = useCallback(
+    (chip: DiscoverChromeActiveChip) => {
+      /** Mapbox/WebGL peut planter sous le `translate3d` du swipe d’onglets — écran dédié hors transform. */
+      if (chip === "itineraires") {
+        navigate("/route-create");
+        return;
+      }
+      setView(chip);
+    },
+    [navigate],
+  );
+
   return (
     <>
       <DiscoverChromeShell
         activeChip={view}
-        onChipPress={setView}
+        onChipPress={onChipPress}
         enablePullRefresh
         onPullRefresh={onPullRefresh}
       >
@@ -213,21 +224,6 @@ export function DiscoverPage() {
             onOpenSession={onPin}
             joinSession={joinSession}
           />
-        ) : null}
-
-        {view === "itineraires" ? (
-          <Suspense
-            fallback={
-              <div className="flex justify-center py-16" aria-busy="true" aria-label="Chargement">
-                <div
-                  className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
-                  style={{ borderColor: `${ACTION_BLUE}44`, borderTopColor: ACTION_BLUE }}
-                />
-              </div>
-            }
-          >
-            <RouteCreationEmbedded embedDiscover />
-          </Suspense>
         ) : null}
       </DiscoverChromeShell>
 

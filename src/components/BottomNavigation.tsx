@@ -87,7 +87,12 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         icon: Compass,
         label: t("navigation.home"),
         isActive: (p) =>
-          p === "/" || p === "/feed" || p === "/discover/live" || p === "/itinerary/hub",
+          p === "/" ||
+          p === "/feed" ||
+          p === "/discover/live" ||
+          p === "/itinerary/hub" ||
+          p === "/route-create" ||
+          p === "/route-creation",
       },
       {
         path: "/my-sessions",

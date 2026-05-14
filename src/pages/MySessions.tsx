@@ -679,9 +679,10 @@ export default function MySessions() {
     return base;
   }, [mergedSessions, listFilter, user?.id, participationBySessionId, searchQuery]);
 
-  const { upcomingRows, pastThisWeekRows } = useMemo(() => {
+  const { upcomingRows, pastThisWeekRows, terminatedRows } = useMemo(() => {
     const todayStart = startOfDay(new Date());
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const nowMs = Date.now();
 
     const upcoming = [...filteredForMaquette]
       .filter((s) => new Date(s.scheduled_at) >= todayStart)
@@ -694,7 +695,11 @@ export default function MySessions() {
       })
       .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
 
-    return { upcomingRows: upcoming, pastThisWeekRows: pastWeek };
+    const terminated = [...filteredForMaquette]
+      .filter((s) => new Date(s.scheduled_at).getTime() < nowMs)
+      .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+
+    return { upcomingRows: upcoming, pastThisWeekRows: pastWeek, terminatedRows: terminated };
   }, [filteredForMaquette]);
 
   // Session detail view
@@ -1099,6 +1104,7 @@ export default function MySessions() {
             weeklyGoalKm={WEEKLY_GOAL_KM}
             upcomingRows={[]}
             pastThisWeekRows={[]}
+            terminatedRows={[]}
             onSessionClick={(s) => openSessionFromList(s as UserSession)}
             onOpenCreate={() => openCreateSession()}
           />
@@ -1132,6 +1138,7 @@ export default function MySessions() {
             weeklyGoalKm={WEEKLY_GOAL_KM}
             upcomingRows={upcomingRows}
             pastThisWeekRows={pastThisWeekRows}
+            terminatedRows={terminatedRows}
             onSessionClick={(s) => openSessionFromList(s as UserSession)}
             onOpenCreate={() => openCreateSession()}
           />

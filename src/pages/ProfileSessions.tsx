@@ -1,17 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { ArrowLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
-import {
-  FeedSessionTile,
-  sessionLikelyLive,
-  shortLocation,
-  toneHexForActivity,
-} from "@/components/feed/FeedSessionTile";
+import { FeedCard } from "@/components/feed/FeedCard";
 import { fetchFeedSessionForDiscussion, SessionDiscussionView } from "@/components/feed/SessionDiscussionView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,18 +15,10 @@ import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog"
 const PARIS_FALLBACK: MapCoord = { lat: 48.8566, lng: 2.3522 };
 const ACTION_BLUE_MAQUETTE = "#007AFF";
 
-function resolveSessionMapCoords(
-  session: Pick<PastSession, "location_lat" | "location_lng" | "route_id">,
-  routeAnchorById: Record<string, MapCoord>,
-): MapCoord {
-  const r = session.route_id ? routeAnchorById[session.route_id] : undefined;
-  return {
-    lat: pickSessionCoordinate(session.location_lat, r?.lat ?? PARIS_FALLBACK.lat),
-    lng: pickSessionCoordinate(session.location_lng, r?.lng ?? PARIS_FALLBACK.lng),
-  };
-}
+const SESSION_SELECT =
+  "id, title, scheduled_at, activity_type, location_name, location_lat, location_lng, route_id, current_participants, max_participants, description, organizer_id, created_at, calculated_level";
 
-interface PastSession {
+type RawPastSession = {
   id: string;
   title: string;
   scheduled_at: string;
@@ -47,12 +32,103 @@ interface PastSession {
   description: string | null;
   organizer_id: string;
   created_at: string;
-}
+  calculated_level?: number | null;
+};
 
 interface MeProfile {
   username: string;
   display_name: string;
   avatar_url: string | null;
+}
+
+/** Enrichit les lignes `sessions` comme le feed (organisateur, coords route, likes, commentaires). */
+async function enrichPastSessionsToFeed(sessionsIn: RawPastSession[], viewerUserId: string): Promise<FeedSession[]> {
+  if (sessionsIn.length === 0) return [];
+
+  const routeIds = [...new Set(sessionsIn.map((s) => s.route_id).filter(Boolean))] as string[];
+  const routeAnchorById = new Map<string, { lat: number; lng: number }>();
+  if (routeIds.length > 0) {
+    const { data: routes } = await supabase.from("routes").select("id, coordinates").in("id", routeIds);
+    for (const r of routes || []) {
+      const pt = firstMapPointFromRouteCoordinates(r.coordinates);
+      if (pt) routeAnchorById.set(r.id, pt);
+    }
+  }
+
+  const organizerIds = [...new Set(sessionsIn.map((s) => s.organizer_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("user_id, username, display_name, avatar_url")
+    .in("user_id", organizerIds);
+
+  const sessionIds = sessionsIn.map((s) => s.id);
+
+  const [{ data: likes }, { data: userLikes }, { data: comments }] = await Promise.all([
+    supabase.from("session_likes").select("session_id").in("session_id", sessionIds),
+    supabase.from("session_likes").select("session_id").in("session_id", sessionIds).eq("user_id", viewerUserId),
+    supabase
+      .from("session_comments")
+      .select("id, session_id, content, created_at, user_id")
+      .in("session_id", sessionIds)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const commenterIds = comments ? [...new Set(comments.map((c) => c.user_id))] : [];
+  const { data: commentProfiles } =
+    commenterIds.length > 0
+      ? await supabase.from("profiles").select("user_id, username, avatar_url").in("user_id", commenterIds)
+      : { data: [] };
+
+  return sessionsIn.map((session) => {
+    const organizer = profiles?.find((p) => p.user_id === session.organizer_id);
+    const sessionLikes = likes?.filter((l) => l.session_id === session.id).length || 0;
+    const isLiked = userLikes?.some((l) => l.session_id === session.id) || false;
+    const sessionComments = comments?.filter((c) => c.session_id === session.id) || [];
+    const anchor = session.route_id ? routeAnchorById.get(session.route_id) : undefined;
+
+    return {
+      id: session.id,
+      title: session.title,
+      activity_type: session.activity_type || "course",
+      location_name: session.location_name || "",
+      location_lat: pickSessionCoordinate(session.location_lat, anchor?.lat ?? PARIS_FALLBACK.lat),
+      location_lng: pickSessionCoordinate(session.location_lng, anchor?.lng ?? PARIS_FALLBACK.lng),
+      scheduled_at: session.scheduled_at,
+      max_participants: session.max_participants,
+      current_participants: session.current_participants ?? 0,
+      description: session.description,
+      created_at: session.created_at,
+      calculated_level: session.calculated_level != null ? Number(session.calculated_level) : undefined,
+      organizer: organizer
+        ? {
+            user_id: organizer.user_id,
+            username: organizer.username || "user",
+            display_name: organizer.display_name || organizer.username || "Utilisateur",
+            avatar_url: organizer.avatar_url || "",
+          }
+        : {
+            user_id: session.organizer_id,
+            username: "user",
+            display_name: "Utilisateur",
+            avatar_url: "",
+          },
+      likes_count: sessionLikes,
+      comments_count: sessionComments.length,
+      is_liked: isLiked,
+      latest_comments: sessionComments.slice(0, 2).map((comment) => {
+        const commenter = commentProfiles?.find((p) => p.user_id === comment.user_id);
+        return {
+          id: comment.id,
+          content: comment.content,
+          created_at: comment.created_at,
+          user: {
+            username: commenter?.username || "user",
+            avatar_url: commenter?.avatar_url || "",
+          },
+        };
+      }),
+    };
+  });
 }
 
 export default function ProfileSessions() {
@@ -66,10 +142,8 @@ export default function ProfileSessions() {
   const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
   const [showReliabilityDetail, setShowReliabilityDetail] = useState(false);
-  const [sessions, setSessions] = useState<PastSession[]>([]);
+  const [feedSessions, setFeedSessions] = useState<FeedSession[]>([]);
   const [subjectProfile, setSubjectProfile] = useState<MeProfile | null>(null);
-  const [commentCountBySession, setCommentCountBySession] = useState<Record<string, number>>({});
-  const [routeAnchorById, setRouteAnchorById] = useState<Record<string, MapCoord>>({});
 
   const [discussionSessionId, setDiscussionSessionId] = useState<string | null>(null);
   const [discussionSessionOverride, setDiscussionSessionOverride] = useState<FeedSession | null>(null);
@@ -79,31 +153,89 @@ export default function ProfileSessions() {
   const subjectUserId = routeUserId ?? user?.id ?? null;
   const viewingOther = Boolean(user && routeUserId && routeUserId !== user.id);
 
-  const bumpCommentCount = useCallback((sessionId: string) => {
-    setCommentCountBySession((prev) => ({
-      ...prev,
-      [sessionId]: (prev[sessionId] ?? 0) + 1,
-    }));
-  }, []);
-
-  const addDiscussionComment = useCallback(
+  const addCommentForFeed = useCallback(
     async (sessionId: string, content: string) => {
       if (!user || !content.trim()) return;
       try {
-        const { error } = await supabase.from("session_comments").insert({
-          session_id: sessionId,
-          user_id: user.id,
-          content: content.trim(),
-        });
+        const { data: newComment, error } = await supabase
+          .from("session_comments")
+          .insert({
+            session_id: sessionId,
+            user_id: user.id,
+            content: content.trim(),
+          })
+          .select()
+          .single();
         if (error) throw error;
-        bumpCommentCount(sessionId);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username, avatar_url")
+          .eq("user_id", user.id)
+          .single();
+
+        setFeedSessions((prev) =>
+          prev.map((item) =>
+            item.id === sessionId
+              ? {
+                  ...item,
+                  comments_count: item.comments_count + 1,
+                  latest_comments: [
+                    {
+                      id: newComment.id,
+                      content: newComment.content,
+                      created_at: newComment.created_at,
+                      user: {
+                        username: profile?.username || "user",
+                        avatar_url: profile?.avatar_url || "",
+                      },
+                    },
+                    ...item.latest_comments,
+                  ].slice(0, 2),
+                }
+              : item,
+          ),
+        );
         toast.success("Commentaire ajouté");
       } catch (e) {
         console.error("Error adding comment:", e);
         toast.error("Erreur lors de l'ajout du commentaire");
       }
     },
-    [user, bumpCommentCount],
+    [user],
+  );
+
+  const likeSession = useCallback(
+    async (sessionId: string) => {
+      if (!user) return;
+      try {
+        await supabase.from("session_likes").insert({ session_id: sessionId, user_id: user.id });
+        setFeedSessions((prev) =>
+          prev.map((item) =>
+            item.id === sessionId ? { ...item, is_liked: true, likes_count: item.likes_count + 1 } : item,
+          ),
+        );
+      } catch (e) {
+        console.error("Error liking session:", e);
+      }
+    },
+    [user],
+  );
+
+  const unlikeSession = useCallback(
+    async (sessionId: string) => {
+      if (!user) return;
+      try {
+        await supabase.from("session_likes").delete().eq("session_id", sessionId).eq("user_id", user.id);
+        setFeedSessions((prev) =>
+          prev.map((item) =>
+            item.id === sessionId ? { ...item, is_liked: false, likes_count: Math.max(0, item.likes_count - 1) } : item,
+          ),
+        );
+      } catch (e) {
+        console.error("Error unliking session:", e);
+      }
+    },
+    [user],
   );
 
   const loadData = useCallback(async () => {
@@ -140,45 +272,43 @@ export default function ProfileSessions() {
       });
 
       const nowIso = new Date().toISOString();
-      const { data: pastSessions } = await supabase
-        .from("sessions")
-        .select(
-          "id, title, scheduled_at, activity_type, location_name, location_lat, location_lng, route_id, current_participants, max_participants, description, organizer_id, created_at",
-        )
-        .eq("organizer_id", subjectUserId)
-        .lt("scheduled_at", nowIso)
-        .order("scheduled_at", { ascending: false })
-        .limit(20);
+      const nowMs = Date.now();
 
-      const cleanSessions = (pastSessions || []) as PastSession[];
-      setSessions(cleanSessions);
+      const [{ data: organizedRows }, { data: participationRows }] = await Promise.all([
+        supabase
+          .from("sessions")
+          .select(SESSION_SELECT)
+          .eq("organizer_id", subjectUserId)
+          .lt("scheduled_at", nowIso)
+          .order("scheduled_at", { ascending: false })
+          .limit(800),
+        supabase
+          .from("session_participants")
+          .select(`sessions (${SESSION_SELECT})`)
+          .eq("user_id", subjectUserId)
+          .limit(800),
+      ]);
 
-      if (cleanSessions.length === 0) {
-        setCommentCountBySession({});
-        setRouteAnchorById({});
-        return;
+      const organized = (organizedRows || []) as RawPastSession[];
+      const joined: RawPastSession[] = [];
+      for (const row of participationRows || []) {
+        const sess = row.sessions as RawPastSession | RawPastSession[] | null;
+        const s = Array.isArray(sess) ? sess[0] : sess;
+        if (!s?.id) continue;
+        if (new Date(s.scheduled_at).getTime() >= nowMs) continue;
+        joined.push(s);
       }
 
-      const routeIds = [...new Set(cleanSessions.map((s) => s.route_id).filter(Boolean))] as string[];
-      const anchors: Record<string, MapCoord> = {};
-      if (routeIds.length > 0) {
-        const { data: routes } = await supabase.from("routes").select("id, coordinates").in("id", routeIds);
-        for (const row of routes || []) {
-          const pt = firstMapPointFromRouteCoordinates(row.coordinates);
-          if (pt) anchors[row.id] = pt;
-        }
+      const byId = new Map<string, RawPastSession>();
+      for (const s of [...organized, ...joined]) {
+        if (!byId.has(s.id)) byId.set(s.id, s);
       }
-      setRouteAnchorById(anchors);
+      const merged = Array.from(byId.values()).sort(
+        (a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime(),
+      );
 
-      const sessionIds = cleanSessions.map((s) => s.id);
-      const { data: commentRows } = await supabase.from("session_comments").select("session_id").in("session_id", sessionIds);
-
-      const counts: Record<string, number> = {};
-      for (const row of commentRows || []) {
-        const sid = row.session_id as string;
-        counts[sid] = (counts[sid] ?? 0) + 1;
-      }
-      setCommentCountBySession(counts);
+      const feed = await enrichPastSessionsToFeed(merged, user.id);
+      setFeedSessions(feed);
     } finally {
       setLoading(false);
     }
@@ -194,8 +324,8 @@ export default function ProfileSessions() {
   }, [user, routeUserId, navigate, loadData]);
 
   const totalDiscussionComments = useMemo(
-    () => Object.values(commentCountBySession).reduce((acc, n) => acc + n, 0),
-    [commentCountBySession],
+    () => feedSessions.reduce((acc, s) => acc + s.comments_count, 0),
+    [feedSessions],
   );
 
   useEffect(() => {
@@ -206,7 +336,7 @@ export default function ProfileSessions() {
     }
     if (!user) return;
 
-    const inList = sessions.some((s) => s.id === discussionSessionId);
+    const inList = feedSessions.some((s) => s.id === discussionSessionId);
     if (inList) {
       setDiscussionSessionOverride(null);
       setDiscussionSessionFetching(false);
@@ -230,41 +360,15 @@ export default function ProfileSessions() {
     return () => {
       cancelled = true;
     };
-  }, [discussionSessionId, user, sessions]);
+  }, [discussionSessionId, user, feedSessions]);
 
   const discussionSession = useMemo(() => {
-    if (!discussionSessionId || !subjectProfile) return null;
-    const fromList = sessions.find((s) => s.id === discussionSessionId);
-    if (fromList) {
-      const { lat, lng } = resolveSessionMapCoords(fromList, routeAnchorById);
-      const session: FeedSession = {
-        id: fromList.id,
-        title: fromList.title,
-        activity_type: fromList.activity_type || "course",
-        location_name: fromList.location_name || "",
-        location_lat: lat,
-        location_lng: lng,
-        scheduled_at: fromList.scheduled_at,
-        max_participants: fromList.max_participants,
-        current_participants: fromList.current_participants ?? 0,
-        description: fromList.description,
-        created_at: fromList.created_at,
-        organizer: {
-          user_id: fromList.organizer_id,
-          username: subjectProfile.username || "user",
-          display_name: subjectProfile.display_name || subjectProfile.username || "Utilisateur",
-          avatar_url: subjectProfile.avatar_url || "",
-        },
-        likes_count: 0,
-        comments_count: commentCountBySession[fromList.id] ?? 0,
-        is_liked: false,
-        latest_comments: [],
-      };
-      return session;
-    }
+    if (!discussionSessionId) return null;
+    const fromList = feedSessions.find((s) => s.id === discussionSessionId);
+    if (fromList) return fromList;
     if (discussionSessionOverride?.id === discussionSessionId) return discussionSessionOverride;
     return null;
-  }, [discussionSessionId, sessions, subjectProfile, discussionSessionOverride, commentCountBySession, routeAnchorById]);
+  }, [discussionSessionId, feedSessions, discussionSessionOverride]);
 
   const waitingForDiscussionResolve =
     Boolean(discussionSessionId) && !discussionSession && (loading || discussionSessionFetching);
@@ -309,33 +413,27 @@ export default function ProfileSessions() {
           setDiscussionSessionId(null);
           setDiscussionSessionOverride(null);
         }}
-        onAddComment={addDiscussionComment}
+        onAddComment={addCommentForFeed}
       />
     );
   }
 
-  const whoLabel = viewingOther
-    ? subjectProfile?.display_name || subjectProfile?.username || "Sportif"
-    : subjectProfile?.display_name || subjectProfile?.username || "Moi";
-
-  const openDetailsForSession = (s: PastSession) => {
-    if (!user || !subjectProfile) return;
-    const { lat, lng } = resolveSessionMapCoords(s, routeAnchorById);
+  const openDetailsFromFeed = (s: FeedSession) => {
     setSelectedSessionDialog({
       ...s,
-      session_type: s.activity_type || "course",
+      session_type: s.activity_type,
       intensity: "moderate",
-      organizer_id: s.organizer_id,
-      location_lat: lat,
-      location_lng: lng,
-      location_name: s.location_name || "",
-      max_participants: s.max_participants ?? 0,
-      current_participants: s.current_participants ?? 0,
-      description: s.description ?? "",
+      organizer_id: s.organizer.user_id,
+      location_lat: s.location_lat,
+      location_lng: s.location_lng,
+      location_name: s.location_name,
+      max_participants: s.max_participants,
+      current_participants: s.current_participants,
+      description: s.description,
       profiles: {
-        username: subjectProfile.username,
-        display_name: subjectProfile.display_name,
-        avatar_url: subjectProfile.avatar_url || undefined,
+        username: s.organizer.username,
+        display_name: s.organizer.display_name,
+        avatar_url: s.organizer.avatar_url || undefined,
       },
     });
   };
@@ -354,99 +452,92 @@ export default function ProfileSessions() {
       </div>
 
       <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto bg-secondary" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 96px)" }}>
-        <div className="mx-auto w-full max-w-2xl space-y-3.5 px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-3.5">
-          <button
-            type="button"
-            onClick={() => setShowReliabilityDetail(true)}
-            className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.06] active:bg-[#F8F8F8]"
-          >
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[3px] text-[12px] font-bold"
-              style={{
-                borderColor: ACTION_BLUE_MAQUETTE,
-                color: ACTION_BLUE_MAQUETTE,
-              }}
+        <div className="mx-auto w-full max-w-2xl pb-[calc(1.5rem+var(--safe-area-bottom))] pt-3.5">
+          <div className="mb-3.5 px-4">
+            <button
+              type="button"
+              onClick={() => setShowReliabilityDetail(true)}
+              className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.06] active:bg-[#F8F8F8]"
             >
-              {Math.round(Math.max(0, Math.min(100, reliabilityRate)))}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[16px] font-bold text-[#0A0F1F]">Mes séances</p>
-              <p className="text-[12px] text-[#8E8E93]">
-                {totalSessionsCompleted}/{totalSessionsJoined} confirmées · Fiabilité{" "}
-                {Math.round(Math.max(0, Math.min(100, reliabilityRate)))}%
-              </p>
-            </div>
-            <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
-          </button>
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[3px] text-[12px] font-bold"
+                style={{
+                  borderColor: ACTION_BLUE_MAQUETTE,
+                  color: ACTION_BLUE_MAQUETTE,
+                }}
+              >
+                {Math.round(Math.max(0, Math.min(100, reliabilityRate)))}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[16px] font-bold text-[#0A0F1F]">Mes séances</p>
+                <p className="text-[12px] text-[#8E8E93]">
+                  {totalSessionsCompleted}/{totalSessionsJoined} confirmées · Fiabilité{" "}
+                  {Math.round(Math.max(0, Math.min(100, reliabilityRate)))}%
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
+            </button>
+          </div>
 
-          <div className="flex items-center justify-between px-1 pt-2">
+          <div className="mb-2 flex items-center justify-between px-5">
             <h2 className="text-[22px] font-bold tracking-tight text-foreground">Toutes les séances</h2>
             <p className="text-[13px] text-muted-foreground">{totalDiscussionComments} commentaires</p>
           </div>
 
           {loading ? (
-            <div className="flex flex-col gap-3.5">
+            <div className="flex flex-col gap-3.5 px-ios-4">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="overflow-hidden rounded-[18px] bg-card p-0 dark:bg-card">
-                  <div className="flex items-center gap-2.5 p-3.5">
-                    <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-muted" />
+                <div key={i} className="overflow-hidden bg-white">
+                  <div className="flex items-center gap-2.5 border-b border-border/40 p-4">
+                    <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-muted" />
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="h-4 w-1/2 animate-pulse rounded-full bg-muted" />
                       <div className="h-3 w-1/3 animate-pulse rounded-full bg-muted" />
                     </div>
                   </div>
-                  <div className="h-[130px] animate-pulse bg-muted/60" />
-                  <div className="flex items-center justify-between border-t border-border/50 p-3.5">
-                    <div className="h-4 w-2/3 animate-pulse rounded-full bg-muted" />
-                    <div className="h-9 w-24 animate-pulse rounded-full bg-muted" />
-                  </div>
+                  <div className="h-24 animate-pulse bg-muted/40" />
+                  <div className="h-32 animate-pulse bg-muted/60" />
                 </div>
               ))}
             </div>
-          ) : sessions.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-white p-6 text-center text-[14px] text-muted-foreground">
+          ) : feedSessions.length === 0 ? (
+            <div className="mx-4 rounded-2xl border border-border bg-white p-6 text-center text-[14px] text-muted-foreground">
               Aucune séance passée pour le moment.
             </div>
           ) : (
-            sessions.map((session) => {
-              const live = sessionLikelyLive(session.scheduled_at);
-              const loc = shortLocation(session.location_name);
-              const title = loc ? `${session.title} · ${loc}` : session.title;
-              const tone = toneHexForActivity(session.activity_type || "");
-              const whenPast = format(new Date(session.scheduled_at), "d MMM yyyy · HH:mm", { locale: fr });
-              const when = live ? "EN COURS · live" : whenPast;
-              const { lat, lng } = resolveSessionMapCoords(session, routeAnchorById);
-              const nComments = commentCountBySession[session.id] ?? 0;
-              const commentLabel = nComments > 0 ? `Commenter (${nComments})` : "Commenter";
-
-              return (
-                <FeedSessionTile
+            <div className="sm:mx-auto sm:max-w-2xl">
+              {feedSessions.map((session, index) => (
+                <FeedCard
                   key={session.id}
-                  who={whoLabel}
-                  when={when}
-                  title={title}
-                  tone={tone}
-                  live={live}
-                  actionLabel="Voir"
-                  commentLabel={commentLabel}
-                  locationLat={lat}
-                  locationLng={lng}
-                  avatarUrl={subjectProfile?.avatar_url}
-                  activityType={session.activity_type || undefined}
-                  onCardPress={() => openDetailsForSession(session)}
-                  onCommentPress={() => setDiscussionSessionId(session.id)}
-                  onActionPress={() => openDetailsForSession(session)}
+                  session={session}
+                  index={index}
+                  onLike={likeSession}
+                  onUnlike={unlikeSession}
+                  onAddComment={addCommentForFeed}
+                  onJoinSession={(sessionId) => navigate("/", { state: { openSessionId: sessionId } })}
+                  onOpenDetails={(s) => openDetailsFromFeed(s)}
                 />
-              );
-            })
+              ))}
+            </div>
           )}
         </div>
       </div>
 
       <SessionDetailsDialog
-        session={selectedSessionDialog as any}
+        session={selectedSessionDialog as never}
         onClose={() => setSelectedSessionDialog(null)}
         onSessionUpdated={() => void loadData()}
+      />
+
+      <ReliabilityDetailsDialog
+        open={showReliabilityDetail}
+        onOpenChange={setShowReliabilityDetail}
+        reliabilityRate={reliabilityRate}
+        totalSessionsCreated={totalSessionsCreated}
+        totalSessionsJoined={totalSessionsJoined}
+        totalSessionsCompleted={totalSessionsCompleted}
+        totalSessionsAbsent={totalSessionsAbsent}
+        reliabilitySubjectUserId={subjectUserId}
       />
     </div>
   );
