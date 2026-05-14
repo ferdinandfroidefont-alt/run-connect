@@ -40,6 +40,7 @@ const DonationSuccess = lazy(() => import("./pages/DonationSuccess"));
 const DonationCanceled = lazy(() => import("./pages/DonationCanceled"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Search = lazy(() => import("./pages/Search"));
+const DiscoverLocationSearch = lazy(() => import("./pages/DiscoverLocationSearch"));
 const RouteCreation = lazy(() => import("./pages/RouteCreation"));
 const ItineraryMyRoutes = lazy(() => import("./pages/ItineraryMyRoutes"));
 const ItineraryRouteDetail = lazy(() => import("./pages/ItineraryRouteDetail"));
@@ -136,6 +137,7 @@ const App = () => {
         import("./pages/DonationCanceled"),
         import("./pages/NotFound"),
         import("./pages/Search"),
+        import("./pages/DiscoverLocationSearch"),
         import("./pages/RouteCreation"),
         import("./pages/ItineraryMyRoutes"),
         import("./pages/ItineraryRouteDetail"),
@@ -421,6 +423,16 @@ const App = () => {
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
+                  <Route
+                    path="/discover/location-search"
+                    element={
+                      <PageTransition>
+                        <PageSuspense>
+                          <DiscoverLocationSearch />
+                        </PageSuspense>
+                      </PageTransition>
+                    }
+                  />
                   <Route path="/itinerary/hub" element={<Layout><PageTransition><PageSuspense><DiscoverItinerariesPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary" element={<Navigate to="/route-create" replace />} />
                   <Route path="/itinerary/my-routes" element={<Layout><PageTransition><PageSuspense><ItineraryMyRoutes /></PageSuspense></PageTransition></Layout>} />

@@ -198,7 +198,7 @@ export function DiscoverChromeShell({
             <button
               type="button"
               aria-label="Rechercher"
-              onClick={() => navigate("/search")}
+              onClick={() => navigate("/discover/location-search")}
               className="flex h-9 w-9 flex-shrink-0 items-center justify-center"
             >
               <Search style={{ width: 24, height: 24, color: ACTION_BLUE }} strokeWidth={2.4} />
