@@ -12,7 +12,8 @@ import {
   Shield,
   HelpCircle,
   Loader2,
-  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Search,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -27,8 +28,6 @@ import {
   type TutorialReplayId,
 } from "@/lib/tutorials/registry";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { Group, Cell } from "@/components/apple";
-import { ChevronGlyph } from "@/components/apple/ChevronGlyph";
 import { cn } from "@/lib/utils";
 
 // Sub-pages
@@ -112,13 +111,6 @@ const settingsCategories = [
     searchItems: ['Contact', 'Tutoriel', 'Guide', 'FAQ', 'Bug', 'Signaler problème', 'Feedback', 'Version', 'À propos', 'Mentions légales', 'Conditions', 'Déconnexion', 'Supprimer compte'],
   },
 ];
-
-/** Returns matching searchItems for a category given a query */
-function getMatchingItems(items: string[], query: string): string[] {
-  if (!query.trim()) return [];
-  const q = query.toLowerCase().trim();
-  return items.filter(item => item.toLowerCase().includes(q));
-}
 
 const SETTINGS_BOTTOM_NAV_SUPPRESSOR_ID = "settings-dialog";
 
@@ -295,120 +287,149 @@ export const SettingsDialog = ({
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -20, opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden"
+              className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-[#F2F2F7]"
             >
               <IosFixedPageHeaderShell
                 className="min-h-0 flex-1"
                 headerWrapperClassName="shrink-0"
                 contentScroll
-                scrollClassName="min-h-0 bg-secondary"
+                scrollClassName="min-h-0 bg-[#F2F2F7]"
                 header={
-                  // Refonte Apple Settings.app (mockup 20) :
-                  // - bar 44h avec "Retour" bleu à gauche
-                  // - large title 34px bold
-                  // - SearchBar iOS pill (apple-search)
-                  <div className="min-w-0 max-w-full bg-secondary">
-                    <div className="flex h-11 items-center justify-between px-4 pt-[var(--safe-area-top)]">
+                  <div className="min-w-0 max-w-full shrink-0 bg-[#F2F2F7] pb-0 [-webkit-font-smoothing:antialiased]">
+                    <div className="px-5 pb-0 pt-[calc(var(--safe-area-top)+12px)]">
                       <button
                         type="button"
                         onClick={() => handleOpenChange(false)}
-                        className="flex items-center gap-1 text-[17px] text-primary active:opacity-60"
+                        className="-ml-0.5 mb-2 flex items-center gap-0 transition-opacity active:opacity-70"
                       >
-                        <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
-                        <span>Retour</span>
+                        <ChevronLeft className="h-6 w-6 shrink-0 text-[#007AFF]" strokeWidth={2.6} aria-hidden />
+                        <span className="text-[17px] font-medium leading-none tracking-[-0.01em] text-[#007AFF]">
+                          Retour
+                        </span>
                       </button>
-                      <div className="min-w-[60px]" />
-                    </div>
-                    <div className="px-4 pt-1 pb-3">
-                      <h1 className="font-display text-[34px] font-bold leading-[1.05] tracking-[-0.5px] text-foreground">
+                      <h1 className="m-0 text-[44px] font-black leading-[1.05] tracking-[-0.03em] text-[#0A0F1F]">
                         Réglages
                       </h1>
                     </div>
-                    <div className="px-4 pb-3">
-                      <div className="apple-search">
-                        <Search className="h-3.5 w-3.5 shrink-0" />
+                    <div className="mt-4 mb-4 px-5">
+                      <label className="sr-only" htmlFor="settings-hub-search-input">
+                        Rechercher dans les réglages
+                      </label>
+                      <div
+                        className="flex items-center gap-2 rounded-[12px]"
+                        style={{
+                          background: "#E5E5EA",
+                          padding: "10px 14px",
+                        }}
+                      >
+                        <Search className="h-5 w-5 shrink-0 text-[#8E8E93]" strokeWidth={2.4} aria-hidden />
                         <input
+                          id="settings-hub-search-input"
                           type="search"
                           placeholder="Rechercher"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="min-w-0 flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+                          className="min-w-0 flex-1 bg-transparent text-[16px] font-medium leading-snug tracking-normal text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]/70"
                         />
                       </div>
                     </div>
                   </div>
                 }
               >
-              <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-                <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
+                <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+                  <div className="min-w-0 max-w-full overflow-x-hidden px-5 pb-[max(32px,env(safe-area-inset-bottom,0px))]">
                   {userProfile ? (
-                    <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
                       <button
                         type="button"
                         onClick={() => {
                           handleOpenChange(false);
                           navigate("/profile");
                         }}
-                        className="flex w-full min-w-0 items-center gap-3.5 rounded-[14px] border border-border/60 bg-card p-4 text-left shadow-[var(--shadow-card)] transition-colors active:bg-muted/40"
+                        className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition-colors active:bg-[#F8F8F8]"
+                        style={{
+                          background: "white",
+                          borderRadius: 16,
+                          boxShadow:
+                            "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                        }}
                       >
-                        <Avatar className="h-[60px] w-[60px] shrink-0">
-                          <AvatarImage src={userProfile.avatar_url || undefined} alt="" />
-                          <AvatarFallback className="bg-primary text-lg font-semibold text-primary-foreground">
+                        <Avatar className="h-14 w-14 shrink-0 rounded-full overflow-hidden">
+                          <AvatarImage
+                            src={userProfile.avatar_url || undefined}
+                            alt=""
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                          <AvatarFallback
+                            className="flex h-full w-full items-center justify-center rounded-full text-lg font-semibold text-white"
+                            style={{
+                              backgroundImage: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                              color: "#fff",
+                            }}
+                          >
                             {(userProfile.display_name?.[0] || userProfile.username?.[0] || user?.email?.[0] || "?").toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="font-display truncate text-[19px] font-semibold leading-tight tracking-[-0.4px] text-foreground">
+                          <p className="m-0 truncate text-[20px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]">
                             {userProfile.display_name || userProfile.username || "Compte"}
                           </p>
-                          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                          <p className="m-0 mt-0.5 truncate text-[14px] text-[#8E8E93]">
                             Compte
                             {userProfile.is_premium ? " · Premium" : ""}
                           </p>
                         </div>
-                        <ChevronGlyph className="apple-cell-chevron shrink-0" />
+                        <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden strokeWidth={2} />
                       </button>
-                    </div>
                   ) : null}
 
-                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-                    <Group inset={false} className="mb-0 shadow-[var(--shadow-card)]">
-                      {filteredCategories.map((category, index) => {
-                        const matches = searchQuery.trim()
-                          ? getMatchingItems(category.searchItems, searchQuery)
-                          : [];
-                        const subtitle = matches.length > 0 ? matches.join(", ") : undefined;
-                        return (
-                          <Cell
-                            key={category.id}
-                            icon={
-                              <category.icon className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />
-                            }
-                            iconBg={category.iconBg}
-                            title={category.title}
-                            subtitle={subtitle}
-                            last={index === filteredCategories.length - 1}
-                            onClick={() => setCurrentPage(category.id)}
-                          />
-                        );
-                      })}
-                    </Group>
-                  </div>
-
-                  {filteredCategories.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p className="text-[15px]">Aucun paramètre trouvé</p>
+                    <div
+                      className="mt-5 overflow-hidden min-w-0"
+                      style={{
+                        background: "white",
+                        borderRadius: 16,
+                        boxShadow:
+                          "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      {filteredCategories.length === 0 ? (
+                        <div className="px-4 py-6 text-center">
+                          <p className="text-[14px] text-[#8E8E93]">Aucun résultat</p>
+                        </div>
+                      ) : (
+                        filteredCategories.map((category, index) => {
+                          const Icon = category.icon;
+                          return (
+                            <div key={category.id}>
+                              {index > 0 ? <div className="ml-[64px] h-px bg-[#E5E5EA]" aria-hidden /> : null}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentPage(category.id)}
+                                className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors active:bg-[#F8F8F8]"
+                              >
+                                <span
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
+                                  style={{ backgroundColor: category.iconBg }}
+                                >
+                                  <Icon className="h-[19px] w-[19px] text-white" strokeWidth={2.4} aria-hidden />
+                                </span>
+                                <p className="m-0 flex-1 min-w-0 text-left text-[17px] font-bold tracking-[-0.01em] text-[#0A0F1F]" style={{ fontWeight: 700 }}>
+                                  {category.title}
+                                </p>
+                                <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden strokeWidth={2} />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
-                  )}
 
-                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-                    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
-                      <ProfileSharePanel active compact />
-                    </div>
+                    {!searchQuery.trim() ? (
+                      <div className="mt-6 min-w-0 max-w-full">
+                        <ProfileSharePanel active compact />
+                      </div>
+                    ) : null}
                   </div>
-
-                </div>
-              </ScrollArea>
+                </ScrollArea>
               </IosFixedPageHeaderShell>
             </motion.div>
           ) : (
