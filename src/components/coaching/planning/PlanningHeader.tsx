@@ -116,8 +116,15 @@ export function PlanningHeader({
       clubMarkButton
     ) : undefined;
 
+  /**
+   * Maquette Coaching (RunConnect (13).jsx · `CoachingPage`) : titre + pastille initiale (F) sur
+   * `items-center justify-between gap-3`. Pour les autres variantes (RC mark / club mark) on garde
+   * l’alignement bas existant qui s’aligne sur la baseline typographique du titre.
+   */
   const alignLargeTitleAccessory =
-    Boolean(largeTitleAccessory) && (brandBesideLargeTitle || showOnlyClubAction);
+    Boolean(largeTitleAccessory) &&
+    (brandBesideLargeTitle || showOnlyClubAction) &&
+    !userMaquetteBadge;
 
   return (
     <MainTopHeader

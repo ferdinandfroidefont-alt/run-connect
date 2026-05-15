@@ -2390,6 +2390,8 @@ const Messages = () => {
             bottom: 0,
             overscrollBehavior: "none",
             zIndex: 10,
+            fontFamily:
+              '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
           }}
         >
           <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col">
@@ -2426,17 +2428,25 @@ const Messages = () => {
                             openThreadMenu();
                           }}
                         >
-                          <Avatar className="h-9 w-9 shrink-0 rounded-full">
-                            <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                            <AvatarFallback
-                              className="rounded-full bg-[#E5E5EA] text-[13px] font-semibold text-[#0A0F1F]"
-                              style={{ fontFamily: "system-ui, sans-serif" }}
-                            >
-                              {(selectedConversation.other_participant?.username ||
-                                selectedConversation.other_participant?.display_name ||
-                                "").charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          {selectedConversation.other_participant?.avatar_url ? (
+                            <Avatar className="h-9 w-9 shrink-0 rounded-full">
+                              <AvatarImage src={selectedConversation.other_participant.avatar_url} />
+                              <AvatarFallback
+                                className="rounded-full bg-[#E5E5EA] text-[13px] font-semibold text-[#0A0F1F]"
+                                style={{ fontFamily: "system-ui, sans-serif" }}
+                              >
+                                {(selectedConversation.other_participant?.username ||
+                                  selectedConversation.other_participant?.display_name ||
+                                  "").charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <div
+                              className="h-9 w-9 shrink-0 rounded-full"
+                              aria-hidden
+                              style={{ backgroundColor: "#E5E5EA" }}
+                            />
+                          )}
                           <h1
                             className="min-w-0 flex-1 truncate"
                             style={{
@@ -2487,12 +2497,20 @@ const Messages = () => {
                             openThreadMenu();
                           }}
                         >
-                          <Avatar className="h-9 w-9 shrink-0 rounded-full">
-                            <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                            <AvatarFallback className="rounded-full bg-[#E5E5EA]">
-                              <Users className="h-4 w-4 text-[#0A0F1F]" />
-                            </AvatarFallback>
-                          </Avatar>
+                          {selectedConversation.group_avatar_url ? (
+                            <Avatar className="h-9 w-9 shrink-0 rounded-full">
+                              <AvatarImage src={selectedConversation.group_avatar_url} />
+                              <AvatarFallback className="rounded-full bg-[#E5E5EA]">
+                                <Users className="h-4 w-4 text-[#0A0F1F]" />
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <div
+                              className="h-9 w-9 shrink-0 rounded-full"
+                              style={{ backgroundColor: "#E5E5EA" }}
+                              aria-hidden
+                            />
+                          )}
                           <h1
                             className="min-w-0 flex-1 truncate"
                             style={{
@@ -2524,10 +2542,7 @@ const Messages = () => {
             footer={
               <div
                 ref={composerRef}
-                className={cn(
-                  "keyboard-input-container z-40 mx-auto w-full max-w-md shrink-0 px-3 pt-2.5",
-                  "border-t border-[#E5E5EA]"
-                )}
+                className="keyboard-input-container relative z-40 mx-auto w-full max-w-md shrink-0"
                 style={{
                   backgroundColor: chatPageBg,
                   paddingBottom: "max(env(safe-area-inset-bottom, 0px), 10px)",
@@ -2554,126 +2569,131 @@ const Messages = () => {
                     </div>
                   </div>
                 )}
-                {uploadProgress !== null && (
-                  <div className="flex items-center gap-ios-2 px-ios-3 py-ios-2">
-                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
-                  </div>
-                )}
                 <div
-                  className="flex items-center gap-2 rounded-[9999px] border border-[#E5E5EA] bg-white py-1 pl-1.5 pr-1.5"
-                  style={{ padding: "4px 4px 4px 6px" }}
+                  className="border-t border-[#E5E5EA] px-3 py-2.5"
+                  style={{ backgroundColor: chatPageBg }}
                 >
+                  {uploadProgress !== null && (
+                    <div className="mb-2 flex items-center gap-ios-2">
+                      <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <span className="text-[13px] text-[#8E8E93]">{uploadProgress}</span>
+                    </div>
+                  )}
                   {!isRecording && (
-                    <>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
-                            disabled={isLoading}
-                            type="button"
-                            aria-label="Pièces jointes"
-                          >
-                            <Plus className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.4} />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56">
-                          <DropdownMenuItem
-                            onClick={() => fileInputRef.current?.click()}
-                            className="py-ios-3"
-                          >
-                            <Paperclip className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
-                            Document
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={async () => {
-                              try {
-                                const file = await takePicture();
-                                if (file) uploadFile(file);
-                              } catch (error) {
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="flex min-w-0 flex-1 items-center rounded-[9999px] border border-[#E5E5EA] bg-white"
+                        style={{ padding: "4px 4px 4px 6px" }}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
+                              disabled={isLoading}
+                              type="button"
+                              aria-label="Pièces jointes"
+                            >
+                              <Plus className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.4} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-56">
+                            <DropdownMenuItem
+                              onClick={() => fileInputRef.current?.click()}
+                              className="py-ios-3"
+                            >
+                              <Paperclip className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
+                              Document
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={async () => {
+                                try {
+                                  const file = await takePicture();
+                                  if (file) uploadFile(file);
+                                } catch (error) {
+                                  toast({
+                                    title: "Erreur",
+                                    description: "Impossible d'accéder à la caméra",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              className="py-ios-3"
+                            >
+                              <Camera className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
+                              Caméra
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={async () => {
+                                try {
+                                  const file = await selectFromGallery();
+                                  if (file) uploadFile(file);
+                                } catch (error) {
+                                  toast({
+                                    title: "Erreur",
+                                    description: "Impossible d'accéder à la galerie",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              className="py-ios-3"
+                            >
+                              <Image className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
+                              Photo
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                              className="py-ios-3"
+                            >
+                              <Smile className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
+                              Emoji
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setTimeout(() => setShowCreatePoll(true), 300);
+                              }}
+                              className="py-ios-3"
+                            >
+                              <BarChart3 className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
+                              Sondage
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="*/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 50 * 1024 * 1024) {
                                 toast({
-                                  title: "Erreur",
-                                  description: "Impossible d'accéder à la caméra",
-                                  variant: "destructive"
+                                  title: "Fichier trop volumineux",
+                                  description: "La taille maximale est de 50 MB",
+                                  variant: "destructive",
                                 });
+                                return;
                               }
-                            }}
-                            className="py-ios-3"
-                          >
-                            <Camera className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
-                            Caméra
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={async () => {
-                              try {
-                                const file = await selectFromGallery();
-                                if (file) uploadFile(file);
-                              } catch (error) {
-                                toast({
-                                  title: "Erreur",
-                                  description: "Impossible d'accéder à la galerie",
-                                  variant: "destructive"
-                                });
-                              }
-                            }}
-                            className="py-ios-3"
-                          >
-                            <Image className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
-                            Photo
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className="py-ios-3"
-                          >
-                            <Smile className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
-                            Emoji
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setTimeout(() => setShowCreatePoll(true), 300);
-                            }}
-                            className="py-ios-3"
-                          >
-                            <BarChart3 className="h-4 w-4 mr-ios-3 text-[#0066cc]" />
-                            Sondage
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="*/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            if (file.size > 50 * 1024 * 1024) {
-                              toast({
-                                title: "Fichier trop volumineux",
-                                description: "La taille maximale est de 50 MB",
-                                variant: "destructive"
-                              });
-                              return;
+                              uploadFile(file);
                             }
-                            uploadFile(file);
-                          }
-                        }}
-                        className="hidden"
-                        disabled={isLoading}
-                      />
-                      <input
-                        type="text"
-                        enterKeyHint="send"
-                        autoComplete="off"
-                        placeholder="Message…"
-                        value={newMessage}
-                        onChange={(e) => {
-                          setNewMessage(e.target.value);
-                          handleTyping();
-                        }}
-                        onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                        className="min-w-0 flex-1 bg-transparent px-1 py-2 text-[16px] font-medium text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
-                        disabled={isLoading}
-                      />
+                          }}
+                          className="hidden"
+                          disabled={isLoading}
+                        />
+                        <input
+                          type="text"
+                          enterKeyHint="send"
+                          autoComplete="off"
+                          placeholder="Message..."
+                          value={newMessage}
+                          onChange={(e) => {
+                            setNewMessage(e.target.value);
+                            handleTyping();
+                          }}
+                          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                          className="min-w-0 flex-1 bg-transparent px-1 py-2 text-[16px] font-medium leading-normal text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+                          disabled={isLoading}
+                        />
+                      </div>
                       {newMessage.trim() ? (
                         <button
                           type="button"
@@ -2697,28 +2717,29 @@ const Messages = () => {
                           <Mic className="h-[18px] w-[18px]" strokeWidth={2.4} />
                         </button>
                       )}
-                    </>
+                    </div>
                   )}
                   {isRecording && (
                     <div className="flex w-full min-w-0 flex-1 items-center gap-ios-3 px-1">
                       <div className="flex min-w-0 flex-1 items-center gap-ios-2 rounded-full border border-destructive/30 bg-destructive/10 px-ios-4 py-ios-2">
-                        <div className="w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
+                        <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-destructive" />
                         <span className="text-[15px] font-medium text-destructive">
-                          {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                          {Math.floor(recordingDuration / 60)}:
+                          {(recordingDuration % 60).toString().padStart(2, "0")}
                         </span>
-                        <span className="text-[13px] text-muted-foreground flex-1">
-                          Enregistrement...
-                        </span>
+                        <span className="flex-1 text-[13px] text-muted-foreground">Enregistrement...</span>
                       </div>
                       <button
+                        type="button"
                         onClick={cancelRecording}
-                        className="w-8 h-8 flex items-center justify-center text-muted-foreground"
+                        className="flex h-8 w-8 items-center justify-center text-muted-foreground"
                       >
                         <X className="h-5 w-5" />
                       </button>
                       <button
+                        type="button"
                         onClick={handleVoiceRecording}
-                        className="w-8 h-8 flex items-center justify-center bg-destructive rounded-full"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive"
                       >
                         <Square className="h-4 w-4 text-white" />
                       </button>
@@ -2734,46 +2755,46 @@ const Messages = () => {
                 style={{ backgroundColor: chatPageBg }}
               >
                 <div className="flex items-center gap-2">
-                  <div className="apple-search min-h-9 min-w-0 flex-1 gap-1.5 px-2 py-0">
-                    <Search
-                      className="pointer-events-none h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                      strokeWidth={1.8}
-                      aria-hidden
-                    />
+                  <div
+                    className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-[#E5E5EA] bg-white px-3 py-1.5"
+                    style={{ boxShadow: "0 0 0 0.5px rgba(0,0,0,0.04)" }}
+                  >
+                    <Search className="h-[18px] w-[18px] shrink-0 text-[#8E8E93]" strokeWidth={2.4} aria-hidden />
                     <input
                       value={threadSearch}
                       onChange={(e) => setThreadSearch(e.target.value)}
-                      placeholder="Rechercher dans la conversation…"
-                      className="min-h-9 min-w-0 flex-1 border-0 bg-transparent py-1 text-[17px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
+                      placeholder="Rechercher dans la conversation..."
+                      className="min-h-8 min-w-0 flex-1 border-0 bg-transparent py-1 text-[16px] font-medium text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
                       autoFocus
                       autoCorrect="off"
                       autoCapitalize="none"
                     />
                   </div>
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 shrink-0"
                     onClick={() => {
                       setThreadSearch("");
                       setThreadSearchOpen(false);
                     }}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#007AFF] transition-opacity active:opacity-70"
                     aria-label="Fermer la recherche"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    <X className="h-5 w-5" strokeWidth={2.4} />
+                  </button>
                 </div>
                 {threadSearch.trim() && (
-                  <p className="mt-ios-2 text-ios-caption1 text-muted-foreground">
+                  <p className="mt-2 text-[12px] font-semibold text-[#8E8E93]">
                     {visibleMessages.length} message{visibleMessages.length !== 1 ? "s" : ""}
                   </p>
                 )}
               </div>
             )}
             <div
-              className="flex flex-1 flex-col gap-2 bg-[#f5f5f7] px-4 pb-2 pt-2 dark:bg-secondary"
-              style={{ paddingBottom: composerHeight + 8 }}
+              className="flex flex-1 flex-col gap-2 px-3 pb-2 pt-3"
+              style={{
+                backgroundColor: chatPageBg,
+                paddingBottom: composerHeight + 8,
+              }}
             >
               {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -2846,14 +2867,14 @@ const Messages = () => {
                     )}
                     
                     <div
-                      className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} py-1`}
+                      className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
                       onClick={toggleTimestamp}
                     >
                       <div className={`relative max-w-[78%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
                         {/* Show sender info only for groups, not for DMs (iMessage style) */}
                         {shouldShowSenderInfo && (
                           <div className="flex items-center gap-ios-2 mb-ios-1 ml-ios-1">
-                            <span className="text-[11px] text-muted-foreground font-medium">
+                            <span className="text-[11px] font-semibold text-[#8E8E93]">
                               {message.sender?.username ||
                                 message.sender?.display_name ||
                                 "Utilisateur"}
@@ -2863,9 +2884,9 @@ const Messages = () => {
                         
                         {/* Individual timestamp - iMessage style pill */}
                         {showIndividualTime && (
-                          <div className={`absolute -bottom-5 ${isOwnMessage ? 'right-0' : 'left-0'} z-10`}>
-                            <span className="text-[11px] text-muted-foreground">
-                              {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
+                          <div className={`absolute -bottom-5 ${isOwnMessage ? "right-0" : "left-0"} z-10`}>
+                            <span className="text-[11px] font-medium tabular-nums text-[#8E8E93]">
+                              {format(new Date(message.created_at), "HH:mm", { locale: fr })}
                             </span>
                           </div>
                         )}
@@ -2956,11 +2977,11 @@ const Messages = () => {
                             <div
                               className={cn(
                                 !sessionShareOnly &&
-                                  "max-w-[78%] rounded-[22px] px-4 py-2.5 text-[16px] leading-[1.3] tracking-normal",
+                                  "rounded-[22px] px-4 py-2.5 text-[16px] leading-[1.3] tracking-normal",
                                 !sessionShareOnly &&
                                   (isOwnMessage
                                     ? "text-white"
-                                    : "border border-[rgba(0,0,0,0.06)] bg-white text-[#0A0F1F] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"),
+                                    : "border-0 bg-white text-[#0A0F1F] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.06)]"),
                                 !sessionShareOnly &&
                                   isOwnMessage &&
                                   "shadow-[0_1px_2px_rgba(0,122,255,0.18)]",
@@ -3037,7 +3058,10 @@ const Messages = () => {
                                         handleSessionClick(message.session);
                                       }}
                                     >
-                                      <div className="relative h-20 shrink-0 overflow-hidden bg-[#f5f5f7] dark:bg-muted">
+                                      <div
+                                        className="relative h-20 shrink-0 overflow-hidden"
+                                        style={{ backgroundColor: "#F2F2F7" }}
+                                      >
                                         {/* mini « carte » + tracé type maquette */}
                                         <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 240 80">
                                           <path

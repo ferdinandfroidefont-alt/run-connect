@@ -3427,10 +3427,11 @@ export function CoachPlanningExperience() {
             {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") && !weekPlannerMode ? (
               <CoachingRolePill
                 className={cn(
-                  "sticky top-0 z-20 supports-[backdrop-filter]:backdrop-blur",
-                  /* Mon plan : scroll auto vers « aujourd’hui » (scrollIntoView) — sans sticky la barre part hors écran. */
+                  /* Maquette RunConnect (13).jsx · `CoachingPage` : toggle dans `<main pt-3>`,
+                   * sans padding inférieur ni filet. Sticky conservé côté agent pour rester accessible. */
+                  "sticky top-0 z-20 !pb-0 supports-[backdrop-filter]:backdrop-blur",
                   activeMenuKey === "my-plan" || showCoachLanding
-                    ? "border-b border-[rgba(0,0,0,0.06)] bg-[#F2F2F7] supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)]"
+                    ? "bg-[#F2F2F7] supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)]"
                     : "bg-[#F2F2F7]/95 supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)] supports-[backdrop-filter]:backdrop-blur",
                 )}
                 active={effectiveAthleteMode ? "athlete" : "coach"}

@@ -14,7 +14,7 @@ interface ReplyPreviewProps {
 export const ReplyPreview = ({ replyTo, onCancel }: ReplyPreviewProps) => {
   return (
     <div
-      className="mb-2 flex w-full flex-shrink-0 items-stretch gap-2 px-3 py-2"
+      className="flex w-full flex-shrink-0 items-stretch gap-2 px-3 py-2"
       style={{
         background: `${ACTION_BLUE}10`,
         borderTop: "0.5px solid #E5E5EA",

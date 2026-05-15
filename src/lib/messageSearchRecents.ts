@@ -1,18 +1,24 @@
-export type MessageSearchRecent =
-  | {
-      id: string;
-      type: "user";
-      name: string;
-      handle: string;
-      userId: string;
-    }
-  | {
-      id: string;
-      type: "club";
-      name: string;
-      members?: number;
-      clubId: string;
-    };
+type MessageSearchRecentUser = {
+  id: string;
+  type: "user";
+  name: string;
+  handle: string;
+  userId: string;
+};
+
+type MessageSearchRecentClub = {
+  id: string;
+  type: "club";
+  name: string;
+  members?: number;
+  clubId: string;
+};
+
+export type MessageSearchRecent = MessageSearchRecentUser | MessageSearchRecentClub;
+
+export type MessageSearchRecentInput =
+  | Omit<MessageSearchRecentUser, "id">
+  | Omit<MessageSearchRecentClub, "id">;
 
 const LS_KEY = "rc.messageSearchRecents.v1";
 const MAX = 12;
@@ -59,12 +65,12 @@ function save(items: MessageSearchRecent[]) {
   }
 }
 
-export function pushMessageSearchRecent(entry: Omit<MessageSearchRecent, "id">): MessageSearchRecent[] {
-  const id =
+export function pushMessageSearchRecent(entry: MessageSearchRecentInput): MessageSearchRecent[] {
+  const id = entry.type === "user" ? `u-${entry.userId}` : `c-${entry.clubId}`;
+  const next: MessageSearchRecent =
     entry.type === "user"
-      ? `u-${entry.userId}`
-      : `c-${entry.clubId}`;
-  const next: MessageSearchRecent = { ...entry, id };
+      ? { ...entry, id }
+      : { ...entry, id };
   const prev = loadMessageSearchRecents().filter((r) => r.id !== id);
   const merged = [next, ...prev].slice(0, MAX);
   save(merged);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format, isToday, isYesterday } from 'date-fns';
+import { format, isToday, isYesterday, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface MessageTimestampProps {
@@ -63,7 +63,7 @@ export const shouldShowSectionHeader = (currentMessage: any, previousMessage: an
   const current = new Date(currentMessage.created_at);
   const previous = new Date(previousMessage.created_at);
   
-  // Show header if messages are more than 1 hour apart
+  if (startOfDay(current).getTime() !== startOfDay(previous).getTime()) return true;
   const hoursDiff = Math.abs(current.getTime() - previous.getTime()) / (1000 * 60 * 60);
   return hoursDiff >= 1;
 };

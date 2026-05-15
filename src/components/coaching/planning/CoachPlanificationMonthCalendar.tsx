@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  addMonths,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -8,9 +9,10 @@ import {
   isSameMonth,
   startOfMonth,
   startOfWeek,
+  subMonths,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 
 /** Maquette RunConnect.jsx */
 const ACTION_BLUE = "#007AFF";
@@ -108,7 +110,7 @@ export function CoachPlanificationMonthCalendar({
   onSelectAthlete,
 }: Props) {
   const today = new Date();
-  const [currentMonth] = useState(() => startOfMonth(today));
+  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(today));
   const [selectedDay, setSelectedDay] = useState<Date>(today);
 
   // ── Calendar grid ─────────────────────────────────────────────────────────
@@ -152,28 +154,36 @@ export function CoachPlanificationMonthCalendar({
   }, [calendarDays]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Calendrier sur fond groupé #F2F2F7 (maquette StickyPage), pas de bandeau blanc. */}
-      <div className="shrink-0 pb-2">
-      {/* ── Mois + actions (même gouttière px-5 que le <main> de la maquette) ── */}
+    <div>
+      {/* Maquette RunConnect (13).jsx · `CoachCalendar` (fragment dans `<main>` StickyPage). */}
+      {/* ── Mois + actions · chevrons prev/next, libellé 22px bold ACTION_BLUE ── */}
       <div className="mt-5 mb-3 flex items-center justify-between px-5">
-        <button
-          type="button"
-          className="flex items-center gap-1"
-          style={{ color: ACTION_BLUE }}
-          onClick={() => {
-            /* month picker — could open a popover */
-          }}
-        >
-          <span className="text-[22px] font-bold leading-none">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="Mois précédent"
+            className="-ml-1 flex h-8 w-8 items-center justify-center transition-opacity active:opacity-60"
+            onClick={() => setCurrentMonth((m) => startOfMonth(subMonths(m, 1)))}
+          >
+            <ChevronLeft className="h-6 w-6" strokeWidth={2.6} style={{ color: ACTION_BLUE }} aria-hidden />
+          </button>
+          <span
+            className="text-[22px] font-bold leading-none"
+            style={{ color: ACTION_BLUE, letterSpacing: "-0.02em" }}
+          >
             {format(currentMonth, "MMMM yyyy", { locale: fr }).replace(/^\w/, (c) =>
               c.toUpperCase()
             )}
           </span>
-          <span className="text-lg leading-none" style={{ color: ACTION_BLUE }}>
-            ⌄
-          </span>
-        </button>
+          <button
+            type="button"
+            aria-label="Mois suivant"
+            className="flex h-8 w-8 items-center justify-center transition-opacity active:opacity-60"
+            onClick={() => setCurrentMonth((m) => startOfMonth(addMonths(m, 1)))}
+          >
+            <ChevronRight className="h-6 w-6" strokeWidth={2.6} style={{ color: ACTION_BLUE }} aria-hidden />
+          </button>
+        </div>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -262,10 +272,9 @@ export function CoachPlanificationMonthCalendar({
           ))}
         </div>
       </div>
-      </div>
 
-      {/* ── Détail jour (fond gris = scroll parent apple-grouped-bg) ───── */}
-      <div className="mt-5 flex min-h-0 flex-1 flex-col px-5 pb-[18px] pt-0">
+      {/* ── Détail jour (séquentiel · maquette `mt-5` sous le calendrier) ───── */}
+      <div className="mt-5 px-5 pb-[18px] pt-0">
         <div className="mb-3 flex items-baseline gap-2">
           <span className="text-[24px] font-bold leading-none" style={{ color: MAQUETTE_TITLE }}>
             {selectedDayLabelShort}
