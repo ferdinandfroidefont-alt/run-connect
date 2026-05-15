@@ -1,6 +1,7 @@
 import { Settings } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
+import { cn } from "@/lib/utils";
 
 /** Maquettes 14–15 · jeton RunConnect (32×32, dégradé #0a84ff → #5e5ce6). */
 function RunConnectHeaderMark() {
@@ -122,7 +123,11 @@ export function PlanningHeader({
     <MainTopHeader
       title={title}
       subtitle={subtitle}
-      className={surfaceClassName ?? "apple-grouped-bg"}
+      className={cn(
+        surfaceClassName ?? "apple-grouped-bg",
+        largeTitleOnlyLayout &&
+          '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif] [-webkit-font-smoothing:antialiased]',
+      )}
       disableScrollCollapse
       groupedStickyScrollBlur={largeTitleOnlyLayout}
       largeTitleOnly={largeTitleOnlyLayout}

@@ -7,19 +7,43 @@ import { cn } from "@/lib/utils";
 import type { MiniProfileBlock } from "@/lib/workoutVisualization";
 import { Bike, Check, ChevronRight, Clock, Clock3, Dumbbell, Footprints, Moon, Plus, Ruler, Waves } from "lucide-react";
 
-/** Barres schéma — `MonPlanTimeline` · RunConnect (7).jsx (`SchemaBars`). */
-const MAQUETTE_ACTION_BLUE = "#007AFF";
-const MAQUETTE_ORANGE = "#FF9500";
+/** Barres schéma — `MonPlanTimeline` / `SchemaBars` · RunConnect (12).jsx (`ZONE_COLOR` + hauteurs zone). */
+const MON_PLAN_ZONE_COLOR: Record<number, string> = {
+  1: "#8E8E93",
+  2: "#007AFF",
+  3: "#34C759",
+  4: "#FFCC00",
+  5: "#FF9500",
+  6: "#FF3B30",
+};
+
+function monPlanZoneBarHeightPct(zone: number) {
+  const z = Math.max(1, Math.min(6, Math.round(zone)));
+  return Math.max(4, ((z - 1) / 5) * 100);
+}
+
+/** Aperçu minimal façon maquette quand les blocs n’ont pas encore été résolus en mini-profils. */
+function MonPlanSchemaBarsFallback() {
+  return (
+    <div className="mt-3 flex h-14 items-end gap-[2px] px-1" aria-hidden>
+      <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "38%" }} />
+      <div className="min-w-0 flex-[2] rounded-sm bg-[#34C759]" style={{ height: "68%" }} />
+      <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "35%" }} />
+    </div>
+  );
+}
 
 function MonPlanSchemaBars({ blocks }: { blocks: MiniProfileBlock[] }) {
-  if (!blocks.length) return null;
+  if (!blocks.length) {
+    return <MonPlanSchemaBarsFallback />;
+  }
   return (
     <div className="mt-3 flex h-14 items-end gap-[2px] px-1">
       {blocks.map((block, i) => {
         const inferred = Math.max(1, Math.min(6, Math.round((block.height / 24) * 5) + 1));
-        const band: number = typeof block.zoneBandLevel === "number" ? block.zoneBandLevel : inferred;
-        const heightFrac = band / 6;
-        const useBlue = band <= 3;
+        const band = typeof block.zoneBandLevel === "number" ? block.zoneBandLevel : inferred;
+        const heightPct = monPlanZoneBarHeightPct(band);
+        const bg = MON_PLAN_ZONE_COLOR[band] ?? MON_PLAN_ZONE_COLOR[2];
         return (
           <div
             key={`${i}-${block.width}-${block.zoneBandLevel ?? ""}`}
@@ -27,8 +51,8 @@ function MonPlanSchemaBars({ blocks }: { blocks: MiniProfileBlock[] }) {
             style={{
               flexGrow: Math.max(block.width, 0.0001),
               flexBasis: 0,
-              height: `${heightFrac * 100}%`,
-              background: useBlue ? MAQUETTE_ACTION_BLUE : MAQUETTE_ORANGE,
+              height: `${heightPct}%`,
+              background: bg,
             }}
           />
         );
@@ -112,7 +136,10 @@ export function DayPlanningRow({
 
     return (
       <div
-        className={cn("relative flex items-stretch gap-3 px-5 py-2", isToday && !isRest && "rounded-none")}
+        className={cn(
+          "relative flex items-stretch gap-3 px-5 py-2 [-webkit-font-smoothing:antialiased]",
+          '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif]',
+        )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
       >
         {isToday ? (
@@ -125,14 +152,20 @@ export function DayPlanningRow({
 
         <div className="flex w-11 shrink-0 flex-col justify-center">
           <p
-            className="text-[11px] font-bold tracking-wide"
-            style={{ color: isToday ? maquetteBlue : "#8E8E93" }}
+            className={cn(
+              "text-[11px] font-bold uppercase leading-none tracking-[0.06em]",
+              !isToday && "text-[#8E8E93] dark:text-muted-foreground",
+            )}
+            style={isToday ? { color: maquetteBlue } : undefined}
           >
             {dayAbbrev}
           </p>
           <p
-            className="text-[26px] font-extrabold leading-none tracking-tight"
-            style={{ color: isToday ? maquetteBlue : "#0A0F1F" }}
+            className={cn(
+              "mt-0.5 text-[26px] font-extrabold leading-none tracking-[-0.02em]",
+              !isToday && "text-[#0A0F1F] dark:text-foreground",
+            )}
+            style={isToday ? { color: maquetteBlue } : undefined}
           >
             {dateLabel}
           </p>
@@ -140,34 +173,36 @@ export function DayPlanningRow({
 
         <div className="min-w-0 flex-1">
           {!session || isRest ? (
-            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] px-4 py-5">
-              <p className="text-[15px] font-semibold text-[#8E8E93]">{emptyLabel ?? "Repos"}</p>
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-5 dark:border-muted-foreground/35">
+              <p className="text-[15px] font-semibold leading-snug text-[#8E8E93] dark:text-muted-foreground">{emptyLabel ?? "Repos"}</p>
             </div>
           ) : (
             <button
               type="button"
               onClick={onOpen}
-              className="w-full min-w-0 overflow-hidden rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-transform active:scale-[0.98]"
+              className="w-full min-w-0 overflow-hidden rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-transform active:scale-[0.98] dark:bg-card dark:shadow-none dark:ring-1 dark:ring-white/10"
             >
-              <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2">
+              <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2 dark:border-border">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <Footprints className="h-4 w-4 shrink-0 text-[#007AFF]" strokeWidth={2.4} aria-hidden />
-                  <p className="truncate text-[15px] font-bold text-[#0A0F1F]">Détail</p>
+                  <p className="truncate text-[15px] font-bold leading-none text-[#0A0F1F] dark:text-foreground">Détail</p>
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
+                <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC] dark:text-muted-foreground/70" aria-hidden />
               </div>
-              {session.miniProfile?.length ? <MonPlanSchemaBars blocks={session.miniProfile} /> : null}
-              <p className="mt-2 truncate text-[16px] font-bold text-[#0A0F1F]">{session.title}</p>
-              <div className="mt-1 flex items-center gap-3 text-[13px] text-[#8E8E93]">
+              <MonPlanSchemaBars blocks={session.miniProfile ?? []} />
+              <p className="mt-2 truncate text-[16px] font-bold leading-snug tracking-[-0.01em] text-[#0A0F1F] dark:text-foreground">
+                {session.title}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] font-medium leading-snug text-[#8E8E93] dark:text-muted-foreground">
                 {session.duration ? (
                   <span className="inline-flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                    <Clock className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
                     {session.duration}
                   </span>
                 ) : null}
                 {session.distance ? (
                   <span className="inline-flex items-center gap-1">
-                    <Ruler className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                    <Ruler className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
                     {session.distance}
                   </span>
                 ) : null}
