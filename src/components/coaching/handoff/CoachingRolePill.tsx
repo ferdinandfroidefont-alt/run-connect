@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 type Role = "athlete" | "coach";
 
 /**
- * Sélecteur Athlète / Coach — aligné `_maquette_extract/apple-screens.jsx` (Screens Athlète · Mon plan / Planification).
- * Rendu dans le **corps scrollable**, pas dans le bloc titre (StickyPage : `<main pt-3>`).
+ * Sélecteur Athlète / Coach — aligné `RunConnect (17).jsx` · `CoachingPage` (toggle sous StickyPage).
+ * Rendu dans le **corps scrollable**, pas dans le bloc titre (`<main className="… pt-3">`).
  */
 export function CoachingRolePill({
   active,
@@ -19,9 +19,9 @@ export function CoachingRolePill({
   coachSegmentDisabled?: boolean;
 }) {
   return (
-    <div className={cn("px-4 pb-[14px] pt-3 [-webkit-tap-highlight-color:transparent]", className)}>
-      {/* Maquette `apple-screens.jsx` · ScreenAthletePlan / ScreenCoachPlan : piste 9px · pastille 7px · 13/500 · ombre sélection. */}
-      <div className="flex rounded-[9px] bg-[#E5E5EA] p-[2px] [-webkit-tap-highlight-color:transparent]">
+    <div className={cn("px-5 pt-3 pb-0 [-webkit-tap-highlight-color:transparent]", className)}>
+      {/* Maquette RunConnect (17).jsx : `rounded-xl p-1`, segment actif fond blanc + ombre ; inactif = texte #8E8E93 sur piste. */}
+      <div className="flex rounded-xl bg-[#E5E5EA] p-1 [-webkit-tap-highlight-color:transparent]">
         {(
           [
             { id: "athlete" as const, label: "Athlète" },
@@ -38,15 +38,15 @@ export function CoachingRolePill({
               aria-disabled={disabled}
               onClick={() => !disabled && onSelect(item.id)}
               className={cn(
-                "flex-1 rounded-[7px] py-1.5 text-center text-[13px] font-medium leading-snug tracking-[-0.2px] outline-none transition-colors",
+                "flex-1 rounded-lg py-2 text-center text-[15px] font-semibold leading-snug tracking-[-0.02em] outline-none transition-all",
                 "touch-manipulation [-webkit-tap-highlight-color:transparent]",
-                "focus-visible:ring-2 focus-visible:ring-[#007AFF]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#E5E5EA]",
+                "focus-visible:ring-2 focus-visible:ring-[#007AFF]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7]",
                 disabled ? "cursor-not-allowed opacity-45" : "active:opacity-[0.92]",
               )}
               style={{
                 background: selected ? "#FFFFFF" : "transparent",
-                color: "#0A0F1F",
-                boxShadow: selected ? "0 1px 2px rgba(0,0,0,0.12)" : "none",
+                color: selected ? "#0A0F1F" : "#8E8E93",
+                boxShadow: selected ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
               }}
             >
               {item.label}

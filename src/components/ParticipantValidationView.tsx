@@ -152,53 +152,62 @@ export const ParticipantValidationView = ({ session, userId, onBack, onComplete 
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col pb-[max(10px,env(safe-area-inset-bottom))]">
-      <div className="shrink-0 bg-white pb-2 pt-[calc(env(safe-area-inset-top,0px)+10px)] shadow-[0_1px_0_rgba(60,60,67,0.12)]">
+    <div
+      className="flex h-full min-h-0 flex-col pb-[max(10px,env(safe-area-inset-bottom))]"
+      style={{ background: "#F2F2F7" }}
+    >
+      <div className="shrink-0 border-b border-[#E5E5EA] bg-white pb-2 pt-[calc(env(safe-area-inset-top,0px)+10px)]">
         <header className="flex h-12 items-center justify-between px-4">
           <button
             type="button"
             onClick={onBack ?? onComplete}
             className="inline-flex min-w-0 items-center text-[17px] font-medium text-[#007AFF]"
           >
-            <ChevronLeft className="h-5 w-5 shrink-0" />
-            <span className="truncate">Séance</span>
+            <ChevronLeft className="h-6 w-6 shrink-0" strokeWidth={2.6} />
+            <span className="truncate">Séances</span>
           </button>
-          <h1 className="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-semibold tracking-[-0.4px] text-foreground">
+          <h1 className="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-extrabold tracking-[-0.4px] text-[#0A0F1F]">
             Confirmer ma séance
           </h1>
           <button
             type="button"
             onClick={onComplete}
-            className="text-[17px] font-semibold text-[#007AFF]"
+            className="text-[17px] font-extrabold text-[#007AFF]"
           >
             OK
           </button>
         </header>
 
-        <section className="mx-4 mt-2 rounded-[12px] bg-[#f5f5f7] p-[12px_14px]">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.11em] text-[#8E8E93]">
-              Séance à confirmer
-            </p>
-            <p className="mt-1 truncate text-[15px] font-semibold tracking-[-0.2px] text-foreground">
+        <div className="px-4 pt-4">
+          <div
+            className="rounded-2xl bg-white px-4 py-3.5"
+            style={{
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+            }}
+          >
+            <p className="m-0 text-[11px] font-black uppercase tracking-[0.1em] text-[#8E8E93]">Séance à confirmer</p>
+            <p className="mt-1 truncate text-[18px] font-black tracking-tight text-[#0A0F1F]" style={{ letterSpacing: "-0.02em", lineHeight: 1.25 }}>
               {session.title}
             </p>
-            <p className="text-[13px] tracking-[-0.1px] text-[rgba(60,60,67,0.6)]">
+            <p className="mt-1 text-[13.5px] font-medium text-[#8E8E93]">
               {format(new Date(session.scheduled_at), "EEE d MMM · HH'h'mm", { locale: fr })}
-              {session.distance_km ? ` · ${session.distance_km.toString().replace('.', ',')} km` : ''}
+              {session.distance_km ? ` · ${session.distance_km.toString().replace(".", ",")} km` : ""}
             </p>
           </div>
-        </section>
+        </div>
 
         <div className="px-4 pb-2 pt-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(60,60,67,0.6)]" />
+          <div
+            className="flex h-10 items-center gap-2 rounded-xl px-3"
+            style={{ background: "#E5E5EA" }}
+          >
+            <Search className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.4} />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher une activité"
-              className="h-9 w-full rounded-[10px] border border-transparent bg-[rgba(120,120,128,0.12)] pl-8 pr-3 text-[17px] tracking-[-0.4px] text-foreground placeholder:text-[rgba(60,60,67,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[16px] text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
             />
           </div>
         </div>

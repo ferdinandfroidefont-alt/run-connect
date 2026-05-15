@@ -39,8 +39,8 @@ interface PlanningHeaderProps {
   /** Grand titre (maquette RunConnect.jsx : Mon plan 40px / Planification 36px, extrablack). */
   largeTitleClassName?: string;
   /**
-   * Pastille initiale utilisateur (#007AFF) à droite du grand titre — maquette page Coaching
-   * (prioritaire sur RC / avatar club quand défini avec hideDrawerActions).
+   * Pastille initiale utilisateur (#007AFF) à droite du grand titre — maquette page Coaching.
+   * Non affichée à côté de l’avatar club sur Mon plan / Planification (évite doublon inactif).
    */
   userInitialAccentBadge?: string | null;
 }
@@ -89,6 +89,13 @@ export function PlanningHeader({
       </div>
     ) : null;
 
+  /**
+   * Mon plan / Planification : l’avatar club ouvre déjà la fiche — la pastille initiale à côté
+   * n’a aucune action et est souvent perçue comme un doublon visuel du club.
+   */
+  const userMaquetteBadgeBesideTitle =
+    brandBesideLargeTitle && showClubMark ? null : userMaquetteBadge;
+
   const clubMarkButton = (
     <button
       type="button"
@@ -103,15 +110,12 @@ export function PlanningHeader({
       )}
     </button>
   );
-  /**
-   * Mon plan / Planification : afficher **club + pastille coach** quand les deux sont définis,
-   * sinon le club seul ou la pastille seule — évite de masquer l’avatar cliquable « fiche club ».
-   */
+  /** Mon plan / Planification : avatar club cliquable seul si fiche dispo ; sinon pastille ou jeton RC. */
   const largeTitleAccessory = brandBesideLargeTitle ? (
     <div className="flex shrink-0 items-end gap-2">
       {showClubMark ? clubMarkButton : null}
-      {userMaquetteBadge ? (
-        userMaquetteBadge
+      {userMaquetteBadgeBesideTitle ? (
+        userMaquetteBadgeBesideTitle
       ) : showClubMark ? null : (
         <RunConnectHeaderMark />
       )}

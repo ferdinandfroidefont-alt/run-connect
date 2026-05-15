@@ -3,7 +3,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ArrowLeft, Plus, MessageCircle, LogOut, Navigation, Share2, Loader2 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -27,6 +27,9 @@ import {
   participationConfirmed,
   type MySessionsMaquetteFilterId,
 } from '@/components/sessions/MySessionsHomeMaquette';
+import { MySessionsSessionPicker } from '@/components/sessions/MySessionsSessionPicker';
+import { fetchFeedSessionForDiscussion, SessionDiscussionView } from '@/components/feed/SessionDiscussionView';
+import type { FeedSession } from '@/hooks/useFeed';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
@@ -113,6 +116,12 @@ export default function MySessions() {
   const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
   const [selectedSessionForDialog, setSelectedSessionForDialog] = useState<Record<string, unknown> | null>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
+
+  /** Flux maquette (17) : commentaire / confirmation depuis la liste */
+  const [sessionListPickerMode, setSessionListPickerMode] = useState<null | "comment" | "confirm">(null);
+  const [discussionSessionId, setDiscussionSessionId] = useState<string | null>(null);
+  const [discussionFeedSession, setDiscussionFeedSession] = useState<FeedSession | null>(null);
+  const [discussionSessionLoading, setDiscussionSessionLoading] = useState(false);
 
 
   // Live tracking participant states
@@ -705,6 +714,132 @@ export default function MySessions() {
     return { upcomingRows: upcoming, pastThisWeekRows: pastWeek, terminatedRows: terminated };
   }, [filteredForMaquette]);
 
+  const sessionsForCommentPicker = useMemo(() => {
+    const nowMs = Date.now();
+    return [...mergedSessions]
+      .filter((s) => new Date(s.scheduled_at).getTime() < nowMs)
+      .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+  }, [mergedSessions]);
+
+  const sessionsForConfirmPicker = useMemo(() => {
+    const nowMs = Date.now();
+    const cutoff = nowMs - 24 * 60 * 60 * 1000;
+    return [...mergedSessions]
+      .filter((s) => new Date(s.scheduled_at).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+  }, [mergedSessions]);
+
+  const closeDiscussionFlow = useCallback(() => {
+    setDiscussionSessionId(null);
+    setDiscussionFeedSession(null);
+    setDiscussionSessionLoading(false);
+  }, []);
+
+  const handleDiscussionAddComment = useCallback(
+    async (sessionId: string, content: string) => {
+      if (!user?.id || !content.trim()) return;
+      try {
+        const { error } = await supabase.from("session_comments").insert({
+          session_id: sessionId,
+          user_id: user.id,
+          content: content.trim(),
+        });
+        if (error) throw error;
+        toast({
+          title: "Commentaire ajouté",
+          description: "Ton commentaire est visible sur la séance.",
+        });
+      } catch (e) {
+        console.error(e);
+        toast({
+          title: "Erreur",
+          description: "Impossible d’envoyer le commentaire.",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast, user?.id],
+  );
+
+  const openCommentDiscussionForSession = useCallback(
+    async (sessionId: string) => {
+      setSessionListPickerMode(null);
+      setDiscussionSessionId(sessionId);
+      setDiscussionFeedSession(null);
+      setDiscussionSessionLoading(true);
+      try {
+        const fs = await fetchFeedSessionForDiscussion(sessionId);
+        if (!fs) {
+          toast({
+            title: "Séance introuvable",
+            description: "Impossible d’ouvrir la discussion pour cette séance.",
+            variant: "destructive",
+          });
+          closeDiscussionFlow();
+          return;
+        }
+        setDiscussionFeedSession(fs);
+      } finally {
+        setDiscussionSessionLoading(false);
+      }
+    },
+    [closeDiscussionFlow, toast],
+  );
+
+  // Liste — flux discussion / sélection (full screen dans l’onglet)
+  if (!selectedSession && sessionListPickerMode) {
+    const title =
+      sessionListPickerMode === "comment" ? "Commenter une séance" : "Confirmer une séance";
+    const subtitle =
+      sessionListPickerMode === "comment"
+        ? "Choisis la séance sur laquelle tu veux laisser un commentaire."
+        : "Choisis la séance dont tu veux confirmer la présence. Si tu es le créateur, tu pourras valider tous les participants ; sinon, associe ton activité Strava.";
+    const list =
+      sessionListPickerMode === "comment" ? sessionsForCommentPicker : sessionsForConfirmPicker;
+
+    return (
+      <MySessionsSessionPicker
+        mode={sessionListPickerMode}
+        sessions={list}
+        viewerUserId={user?.id}
+        title={title}
+        subtitle={subtitle}
+        onBack={() => setSessionListPickerMode(null)}
+        onPick={(row) => {
+          if (sessionListPickerMode === "comment") {
+            void openCommentDiscussionForSession(row.id);
+          } else {
+            setSessionListPickerMode(null);
+            navigate(`/confirm-presence/${row.id}`);
+          }
+        }}
+      />
+    );
+  }
+
+  if (!selectedSession && discussionSessionId && discussionSessionLoading && !discussionFeedSession) {
+    return (
+      <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#F2F2F7]">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 pb-[calc(env(safe-area-inset-bottom,0)+24px)] pt-[calc(env(safe-area-inset-top,0px)+48px)]">
+          <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
+          <p className="text-center text-[15px] font-medium text-[#8E8E93]">Ouverture de la discussion…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedSession && discussionFeedSession && discussionSessionId) {
+    return (
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+        <SessionDiscussionView
+          session={discussionFeedSession}
+          onBack={closeDiscussionFlow}
+          onAddComment={handleDiscussionAddComment}
+        />
+      </div>
+    );
+  }
+
   // Session detail view
   if (selectedSession) {
     const isUpcoming = new Date(selectedSession.scheduled_at) >= new Date();
@@ -1144,6 +1279,8 @@ export default function MySessions() {
             terminatedRows={terminatedRows}
             onSessionClick={(s) => openSessionFromList(s as UserSession)}
             onOpenCreate={() => openCreateSession()}
+            onOpenCommentPicker={() => setSessionListPickerMode("comment")}
+            onOpenConfirmPicker={() => setSessionListPickerMode("confirm")}
           />
         )}
       </div>

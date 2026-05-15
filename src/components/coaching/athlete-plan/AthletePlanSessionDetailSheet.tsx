@@ -58,9 +58,10 @@ export function AthletePlanSessionDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="flex max-h-[92vh] flex-col gap-0 overflow-hidden rounded-t-3xl border-border p-0 sm:max-w-lg sm:rounded-t-3xl"
+        showCloseButton={false}
+        className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-3xl border-border p-0 sm:max-w-lg sm:rounded-t-3xl"
       >
-        <div className="sticky top-0 z-10 border-b border-border bg-card px-4 pb-3 pt-[max(0.5rem,var(--safe-area-top))]">
+        <div className="shrink-0 border-b border-border bg-card px-4 pb-3 pt-[max(0.5rem,var(--safe-area-top))]">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -77,7 +78,7 @@ export function AthletePlanSessionDetailSheet({
           </div>
         </div>
 
-        <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-[max(1rem,var(--safe-area-bottom))]">
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,var(--safe-area-bottom))]">
           <div className="space-y-4 py-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className={cn("rounded-full border px-2.5 py-0.5 text-[12px] font-semibold", sportBadgeClass(session.sport))}>

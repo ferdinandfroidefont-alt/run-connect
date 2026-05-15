@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronRight, Filter, Plus, Search } from "lucide-react";
+import { Check, ChevronRight, Filter, MessageSquare, Plus, Search } from "lucide-react";
 import { format, isToday, isTomorrow, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getActivityEmoji, getDiscoverSportTileClass } from "@/lib/discoverSessionVisual";
@@ -127,6 +127,9 @@ export function MySessionsHomeMaquette(props: {
   terminatedRows: MySessionsHomeRow[];
   onSessionClick: (s: MySessionsHomeRow) => void;
   onOpenCreate: () => void;
+  /** Bloc actions maquette (17) — affiché sous « Cette semaine » ; omit pour masquer */
+  onOpenCommentPicker?: () => void;
+  onOpenConfirmPicker?: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headerScrolled, setHeaderScrolled] = useState(false);
@@ -266,6 +269,66 @@ export function MySessionsHomeMaquette(props: {
                   : "Fixe un objectif kilométrique hebdo dans ton profil pour suivre ta progression."}
               </p>
             </div>
+
+            {props.onOpenCommentPicker && props.onOpenConfirmPicker ? (
+              <div
+                className="mt-3 overflow-hidden rounded-2xl bg-white"
+                style={{
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div className="grid grid-cols-2 divide-x divide-[#E5E5EA]">
+                  <button
+                    type="button"
+                    onClick={props.onOpenCommentPicker}
+                    className="flex flex-col items-center justify-center gap-1.5 py-3.5 transition-colors active:bg-[#F8F8F8]"
+                  >
+                    <div
+                      className="flex items-center justify-center rounded-xl text-white"
+                      style={{
+                        width: 38,
+                        height: 38,
+                        background: ACTION_BLUE,
+                        boxShadow: `0 3px 10px ${ACTION_BLUE}40`,
+                      }}
+                      aria-hidden
+                    >
+                      <MessageSquare className="h-[18px] w-[18px]" strokeWidth={2.4} />
+                    </div>
+                    <span
+                      className="text-center text-[14px] font-extrabold tracking-tight text-[#0A0F1F]"
+                      style={{ letterSpacing: "-0.01em" }}
+                    >
+                      Commenter une séance
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={props.onOpenConfirmPicker}
+                    className="flex flex-col items-center justify-center gap-1.5 py-3.5 transition-colors active:bg-[#F8F8F8]"
+                  >
+                    <div
+                      className="flex items-center justify-center rounded-xl text-white"
+                      style={{
+                        width: 38,
+                        height: 38,
+                        background: "#34C759",
+                        boxShadow: "0 3px 10px rgba(52,199,89,0.35)",
+                      }}
+                      aria-hidden
+                    >
+                      <Check className="h-5 w-5" strokeWidth={3} />
+                    </div>
+                    <span
+                      className="text-center text-[14px] font-extrabold tracking-tight text-[#0A0F1F]"
+                      style={{ letterSpacing: "-0.01em" }}
+                    >
+                      Confirmer une séance
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             {props.listFilter === "ok" ? (
               <>
