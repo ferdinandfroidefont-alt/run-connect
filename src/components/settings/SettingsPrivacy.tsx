@@ -11,7 +11,6 @@ import {
   Download,
   Trash2,
   Check,
-  Scale,
 } from "lucide-react";
 import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +35,6 @@ import {
   setAnalyticsConsent,
 } from "@/lib/analyticsConsent";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
-import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 
 const SETTINGS_BG = "#F2F2F7";
 const ACTION_BLUE = "#007AFF";
@@ -687,26 +684,6 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
               </div>
               <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
             </button>
-            <PrivacyMaquetteInsetSep />
-            <button
-              type="button"
-              onClick={() => {
-                navigate("/legal");
-                onClose();
-              }}
-              className="flex w-full items-center gap-3 px-3 py-3 transition-colors active:bg-[#F8F8F8]"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#FF9500]">
-                <Scale className="h-[19px] w-[19px] text-white" strokeWidth={2.4} />
-              </div>
-              <div className="min-w-0 flex-1 text-left">
-                <p className="m-0 text-[17px] font-bold tracking-tight text-[#0A0F1F]" style={{ letterSpacing: "-0.01em" }}>
-                  Mentions légales
-                </p>
-                <p className="m-0 mt-0.5 text-[13px] text-[#8E8E93]">Éditeur, hébergement, contact</p>
-              </div>
-              <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
-            </button>
           </PrivacyMaquetteCard>
 
           {profile?.rgpd_accepted && profile?.security_rules_accepted ? (
@@ -753,23 +730,6 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
             </>
           ) : null}
 
-          {user ? (
-            <>
-              <PrivacyMaquetteSectionLabel>SUPPRESSION DU COMPTE</PrivacyMaquetteSectionLabel>
-              <PrivacyMaquetteCard>
-                <DeleteAccountCard onClose={onClose} />
-              </PrivacyMaquetteCard>
-            </>
-          ) : null}
-
-          {user ? (
-            <>
-              <PrivacyMaquetteSectionLabel>SOCIAL &amp; PARTAGE</PrivacyMaquetteSectionLabel>
-              <PrivacyMaquetteCard className="p-2">
-                <ProfileSharePanel active compact />
-              </PrivacyMaquetteCard>
-            </>
-          ) : null}
         </div>
       </IosFixedPageHeaderShell>
     </motion.div>

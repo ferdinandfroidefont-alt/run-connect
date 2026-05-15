@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useFeed } from "@/hooks/useFeed";
+import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { useDiscoverFeed } from "@/hooks/useDiscoverFeed";
 import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
@@ -14,7 +14,7 @@ import {
   FeedActivitiesMaquetteSynced,
   type FeedActivitiesFeedsModel,
 } from "@/components/feed/FeedActivitiesMaquette";
-import { DiscoverNearYouSection } from "@/components/discover/DiscoverNearYouSection";
+import { DiscoverFriendsSessionsSection } from "@/components/discover/DiscoverFriendsSessionsSection";
 import { DiscoverLiveMaquetteSection } from "@/components/discover/DiscoverLiveMaquetteSection";
 import {
   DiscoverMapFilterSheets,
@@ -46,6 +46,20 @@ function discoverToDialog(session: DiscoverSession): Record<string, unknown> {
   };
 }
 
+function feedSessionToDialog(session: FeedSession): Record<string, unknown> {
+  return {
+    ...session,
+    session_type: session.activity_type,
+    intensity: "moderate",
+    organizer_id: session.organizer.user_id,
+    profiles: {
+      username: session.organizer.username,
+      display_name: session.organizer.display_name,
+      avatar_url: session.organizer.avatar_url || undefined,
+    },
+  };
+}
+
 export function DiscoverPage() {
   const navigate = useNavigate();
   const [view, setView] = useState<DiscoverChromeActiveChip>("carte");
@@ -70,7 +84,6 @@ export function DiscoverPage() {
 
   const {
     sessions: discoverSessions,
-    nearYouSessions,
     loading: discoverLoading,
     refresh: refreshDiscover,
     joinSession,
@@ -186,14 +199,16 @@ export function DiscoverPage() {
             </div>
 
             {!discoverMapFullscreen ? (
-              <DiscoverNearYouSection
-                sessions={nearYouSessions}
-                loading={discoverLoading}
+              <DiscoverFriendsSessionsSection
+                sessions={feedItems}
+                loading={friendsLoading}
+                hasMore={hasMore}
+                loadMore={loadMore}
                 onRowPress={(s) => {
                   if (sessionLikelyLive(s.scheduled_at) || sessionIsPast(s.scheduled_at)) {
-                    setSelectedSession(discoverToDialog(s));
+                    setSelectedSession(feedSessionToDialog(s));
                   } else {
-                    void joinSession(s);
+                    navigate("/", { state: { openSessionId: s.id } });
                   }
                 }}
               />

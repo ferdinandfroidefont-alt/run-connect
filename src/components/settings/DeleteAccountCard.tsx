@@ -20,9 +20,11 @@ interface DeleteAccountCardProps {
   /** Fermeture éventuelle après succès (ex. dialog réglages). */
   onClose?: () => void;
   className?: string;
+  /** Ligne de contexte sous le titre (wording affiché à l’utilisateur). */
+  riskSubtitle?: string;
 }
 
-export function DeleteAccountCard({ onClose, className }: DeleteAccountCardProps) {
+export function DeleteAccountCard({ onClose, className, riskSubtitle }: DeleteAccountCardProps) {
   const { user, session, signOut } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,9 @@ export function DeleteAccountCard({ onClose, className }: DeleteAccountCardProps
               <p className="m-0 text-[17px] font-bold tracking-tight text-[#FF3B30]" style={{ letterSpacing: "-0.01em" }}>
                 Supprimer mon compte
               </p>
-              <p className="m-0 mt-0.5 text-[13px] text-[#8E8E93]">Suppression serveur, sans e-mail obligatoire</p>
+              <p className="m-0 mt-0.5 text-[13px] text-[#8E8E93]">
+                {riskSubtitle ?? "Suppression serveur, sans e-mail obligatoire"}
+              </p>
             </div>
             <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
           </button>
