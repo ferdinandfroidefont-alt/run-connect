@@ -13,7 +13,7 @@ export function CoachingRolePill({
   className?: string;
 }) {
   return (
-    <div className={cn("px-5 pb-3.5 pt-0", className)}>
+    <div className={cn("px-5 pb-3.5 pt-3", className)}>
       <div className="handoff-role-track">
         {(
           [

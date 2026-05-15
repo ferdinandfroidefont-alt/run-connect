@@ -31,6 +31,11 @@ type MainTopHeaderProps = {
    * avec gouttières px-5 pt-4 pb-3.
    */
   largeTitleOnly?: boolean;
+  /**
+   * Maquette RunConnect (12).jsx · `StickyPage` : fond groupé #F2F2F7 puis translucide + blur 20px / saturate 180%
+   * et filet 0.5px quand le scroll principal dépasse ~4px (sans changer la compaction titre).
+   */
+  groupedStickyScrollBlur?: boolean;
 };
 
 export function MainTopHeader({
@@ -47,6 +52,7 @@ export function MainTopHeader({
   className,
   disableScrollCollapse = false,
   largeTitleOnly = false,
+  groupedStickyScrollBlur = false,
 }: MainTopHeaderProps) {
   // Refonte Apple NavBar large title (mockup 13/17/19) :
   // - SF Pro Display 34px / bold / -0.5px tracking (apple-navbar-large)
@@ -54,6 +60,45 @@ export function MainTopHeader({
   // - Tabs underline → bord 0.5px hairline iOS
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [progress, setProgress] = useState(0);
+  const [groupedScrolled, setGroupedScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!groupedStickyScrollBlur) {
+      setGroupedScrolled(false);
+      return;
+    }
+    const root = containerRef.current;
+    if (!root) return;
+
+    const resolveScrollElement = (): HTMLElement | null => {
+      const host = root.closest(".flex.h-full, .flex.min-h-0, [data-tutorial]") || root.parentElement;
+      if (!host) return null;
+      return host.querySelector<HTMLElement>(".ios-scroll-region, .ios-keyboard-scroll-body");
+    };
+
+    const scrollEl = resolveScrollElement();
+    if (!scrollEl) {
+      setGroupedScrolled(false);
+      return;
+    }
+
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        const next = scrollEl.scrollTop > 4;
+        setGroupedScrolled((prev) => (prev !== next ? next : prev));
+      });
+    };
+
+    onScroll();
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      scrollEl.removeEventListener("scroll", onScroll);
+    };
+  }, [groupedStickyScrollBlur]);
 
   useEffect(() => {
     if (disableScrollCollapse) {
@@ -98,10 +143,17 @@ export function MainTopHeader({
       ref={containerRef}
       className={cn(
         "main-top-header shrink-0 pt-[env(safe-area-inset-top,0px)]",
-        className
+        className,
+        groupedStickyScrollBlur &&
+          cn(
+            "border-b-[0.5px] transition-[background-color,backdrop-filter,border-color,-webkit-backdrop-filter] duration-200 ease-out",
+            groupedScrolled
+              ? "border-[rgba(0,0,0,0.08)] bg-[rgba(242,242,247,0.72)] [backdrop-filter:blur(20px)_saturate(180%)] [-webkit-backdrop-filter:blur(20px)_saturate(180%)] dark:border-white/12 dark:bg-muted/78 dark:[backdrop-filter:blur(20px)_saturate(180%)] dark:[-webkit-backdrop-filter:blur(20px)_saturate(180%)]"
+              : "border-transparent bg-[#F2F2F7] dark:bg-background",
+          ),
       )}
       style={
-        largeTitleOnly
+        groupedStickyScrollBlur || largeTitleOnly
           ? undefined
           : {
               backgroundColor: progress > 0.02 ? `hsl(var(--muted) / ${0.22 + progress * 0.18})` : "transparent",

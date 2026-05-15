@@ -392,7 +392,10 @@ export default function MySessions() {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get('tab') === 'routes') {
-      navigate('/itinerary/my-routes', { replace: true });
+      navigate('/itinerary/my-routes', {
+        replace: true,
+        state: { itineraryBackTo: '/my-sessions' },
+      });
     }
   }, [location.search, navigate]);
 

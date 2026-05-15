@@ -5,16 +5,13 @@ const ACTION_BLUE = "#007AFF";
 
 /**
  * Liste Messages : scroll unique + titre sticky façon maquette RunConnect (3).jsx — blur au scroll.
- * `belowTitle` reste dans la zone sticky (ex. onglets filtre) pour qu’ils ne disparaissent pas au scroll.
  */
 export function MessagesInboxStickyScroll({
   onOpenCompose,
   children,
-  belowTitle,
 }: {
   onOpenCompose: () => void;
   children: ReactNode;
-  belowTitle?: ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headerScrolled, setHeaderScrolled] = useState(false);
@@ -60,7 +57,6 @@ export function MessagesInboxStickyScroll({
               <Plus className="h-7 w-7" color={ACTION_BLUE} strokeWidth={2.4} />
             </button>
           </div>
-          {belowTitle ? <div className="mt-4 min-w-0">{belowTitle}</div> : null}
         </div>
       </div>
 

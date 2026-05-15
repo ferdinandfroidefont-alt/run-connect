@@ -124,6 +124,7 @@ export function PlanningHeader({
       subtitle={subtitle}
       className={surfaceClassName ?? "apple-grouped-bg"}
       disableScrollCollapse
+      groupedStickyScrollBlur={largeTitleOnlyLayout}
       largeTitleOnly={largeTitleOnlyLayout}
       largeTitleClassName={largeTitleClassName}
       tabs={tabs}

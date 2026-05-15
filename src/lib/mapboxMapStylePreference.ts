@@ -17,15 +17,15 @@ export function getHomeMapboxStyleUrl(): string {
 }
 
 export function getStoredMapStyleId(): string {
-  // Sans préférence enregistrée : Relief (Outdoors), aligné avec le mode clair par défaut.
-  if (typeof window === 'undefined') return 'terrain';
+  // Sans préférence enregistrée : Standard (streets), vue par défaut de l’app.
+  if (typeof window === 'undefined') return 'roadmap';
   try {
     const v = window.localStorage.getItem(RUNCONNECT_MAP_STYLE_STORAGE_KEY);
     if (v && VALID_IDS.has(v)) return v;
   } catch {
     /* ignore */
   }
-  return 'terrain';
+  return 'roadmap';
 }
 
 export function persistMapStyleId(id: string): void {

@@ -3403,12 +3403,6 @@ export function CoachPlanningExperience() {
           <div className={cn("space-y-0", activeMenuKey === "planning" || activeMenuKey === "tracking" ? "pb-0" : "pb-6")}>
             {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") && !weekPlannerMode ? (
               <CoachingRolePill
-                className={cn(
-                  "sticky top-0 z-20 pt-2 supports-[backdrop-filter]:backdrop-blur",
-                  showCoachLanding
-                    ? "border-b border-[#E5E5EA]/80 apple-grouped-bg supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--muted)/0.96)]"
-                    : "bg-secondary/95 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur"
-                )}
                 active={effectiveAthleteMode ? "athlete" : "coach"}
                 onSelect={(role) => {
                   if (role === "athlete") {

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 type IosPageHeaderBarProps = {
   left?: ReactNode;
   /** Style Réglages iOS : chevron + libellé bleu (prioritaire sur `left` si les deux sont fournis). */
-  leadingBack?: { onClick: () => void; label?: string };
+  leadingBack?: { onClick: () => void; label?: string; buttonClassName?: string };
   title: ReactNode;
   right?: ReactNode;
   className?: string;
@@ -32,7 +32,10 @@ export function IosPageHeaderBar({
       type="button"
       onClick={leadingBack.onClick}
       aria-label={leadingBack.label ?? "Retour"}
-      className="flex min-w-0 items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-semibold text-[#007AFF] active:opacity-60 [-webkit-tap-highlight-color:transparent] dark:text-[#0A84FF]"
+      className={cn(
+        "flex min-w-0 items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-semibold text-[#007AFF] active:opacity-60 [-webkit-tap-highlight-color:transparent] dark:text-[#0A84FF]",
+        leadingBack.buttonClassName,
+      )}
     >
       <ChevronLeft className="h-6 w-6 shrink-0 stroke-[2.6]" aria-hidden />
       <span className="min-w-0 whitespace-nowrap">{leadingBack.label ?? "Retour"}</span>

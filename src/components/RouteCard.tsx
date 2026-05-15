@@ -14,7 +14,10 @@ const ROUTE_CARD_POINTS_SRC = 'route-card-preview-points';
 const ROUTE_CARD_POINTS_START = 'route-card-preview-start';
 const ROUTE_CARD_POINTS_END = 'route-card-preview-end';
 
-const ACCENT_PALETTE = ['#0066CC', '#34c759', '#ff9500', '#5ac8fa', '#af52de'] as const;
+const ACCENT_PALETTE = ['#007AFF', '#34c759', '#ff9500', '#5ac8fa', '#af52de'] as const;
+
+const ROUTE_CARD_ELEV_W = 100;
+const ROUTE_CARD_ELEV_H = 36;
 
 interface RouteCardProps {
   route: {
@@ -70,23 +73,23 @@ export const RouteCard = ({ route, listIndex = 0, subtitle }: RouteCardProps) =>
   }, [route.coordinates]);
 
   const elevationPath = useMemo(() => {
-    const width = 64;
-    const height = 32;
+    const width = ROUTE_CARD_ELEV_W;
+    const height = ROUTE_CARD_ELEV_H;
     if (elevations.length < 2) return `M0 ${height / 2} L${width} ${height / 2}`;
     const min = Math.min(...elevations);
     const max = Math.max(...elevations);
     const range = Math.max(1, max - min);
     const pts = elevations.map((e, i) => {
       const x = (i / (elevations.length - 1)) * width;
-      const y = height - ((e - min) / range) * height;
+      const y = height - 2 - ((e - min) / range) * (height - 4);
       return { x, y };
     });
     return smoothPathFromPoints(pts);
   }, [elevations]);
 
   const elevationFillPath = useMemo(() => {
-    const width = 64;
-    const height = 32;
+    const width = ROUTE_CARD_ELEV_W;
+    const height = ROUTE_CARD_ELEV_H;
     if (!elevationPath) return '';
     return `${elevationPath} L ${width} ${height} L 0 ${height} Z`;
   }, [elevationPath]);
@@ -140,7 +143,7 @@ export const RouteCard = ({ route, listIndex = 0, subtitle }: RouteCardProps) =>
         }
         setOrUpdateLineLayer(m, ROUTE_CARD_LINE_SRC, ROUTE_CARD_LINE_LAYER, path, {
           color: accent,
-          width: 2.6,
+          width: 2.2,
         });
         const start = path[0]!;
         const end = path[path.length - 1]!;
@@ -228,7 +231,7 @@ export const RouteCard = ({ route, listIndex = 0, subtitle }: RouteCardProps) =>
     <button
       type="button"
       onClick={() => navigate(`/itinerary/route/${route.id}`)}
-      className="flex w-full min-w-0 items-stretch gap-3 rounded-[18px] bg-card p-3 text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] active:opacity-90 dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)] [-webkit-tap-highlight-color:transparent]"
+      className="flex w-full min-w-0 items-stretch gap-3 rounded-[18px] bg-white p-3 text-left shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.06)] active:scale-[0.99] active:opacity-95 dark:bg-card dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)] [-webkit-tap-highlight-color:transparent] motion-safe:transition-transform"
       aria-label={`Voir le détail de ${route.name}`}
     >
       <div className="relative h-[78px] w-[78px] shrink-0 overflow-hidden rounded-xl bg-[#e8efe5]">
@@ -239,25 +242,39 @@ export const RouteCard = ({ route, listIndex = 0, subtitle }: RouteCardProps) =>
 
       <div className="flex min-h-[78px] min-w-0 flex-1 flex-col justify-between">
         <div className="min-w-0">
-          <h3 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-foreground">{route.name}</h3>
-          {subtitle ? <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{subtitle}</p> : null}
+          <h3 className="truncate text-[16px] font-extrabold leading-tight tracking-tight text-[#0A0F1F] dark:text-foreground">
+            {route.name}
+          </h3>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-[12px] text-[#8E8E93] dark:text-muted-foreground">{subtitle}</p>
+          ) : null}
         </div>
-        <div className="mt-2 flex items-baseline gap-2.5">
-          <span className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
+        <div className="mt-1 flex flex-wrap items-baseline">
+          <span className="text-[18px] font-black tabular-nums tracking-tight text-[#0A0F1F] dark:text-foreground">
             {kmLabel}
-            <span className="ml-0.5 text-[10px] font-medium text-muted-foreground"> km</span>
           </span>
-          <div className="h-3 w-px shrink-0 bg-border" aria-hidden />
-          <span className="text-[17px] font-semibold tabular-nums tracking-tight text-foreground">
+          <span className="ml-0 text-[11px] font-bold text-[#8E8E93] dark:text-muted-foreground"> km</span>
+          <span className="mx-1 text-[#C7C7CC] dark:text-border" aria-hidden>
+            |
+          </span>
+          <span className="text-[18px] font-black tabular-nums tracking-tight text-[#0A0F1F] dark:text-foreground">
             {dPlusLabel}
-            <span className="ml-0.5 text-[10px] font-medium text-muted-foreground"> m</span>
           </span>
+          <span className="ml-0 text-[11px] font-bold text-[#8E8E93] dark:text-muted-foreground"> m</span>
         </div>
       </div>
 
-      <div className="flex w-16 shrink-0 flex-col items-end justify-between">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">D+</div>
-        <svg viewBox="0 0 64 32" className="h-8 w-16" preserveAspectRatio="none" aria-hidden>
+      <div
+        className="flex w-[90px] shrink-0 flex-col items-end justify-between self-stretch"
+        style={{ minHeight: 78 }}
+      >
+        <div className="text-[11px] font-bold tracking-wide text-[#8E8E93] dark:text-muted-foreground">D+</div>
+        <svg
+          viewBox={`0 0 ${ROUTE_CARD_ELEV_W} ${ROUTE_CARD_ELEV_H}`}
+          className="h-9 w-full max-w-[100px]"
+          preserveAspectRatio="none"
+          aria-hidden
+        >
           <defs>
             <linearGradient id={`routeCardFill-${route.id}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={accent} stopOpacity="0.35" />
@@ -269,14 +286,19 @@ export const RouteCard = ({ route, listIndex = 0, subtitle }: RouteCardProps) =>
             d={elevationPath}
             fill="none"
             stroke={accent}
-            strokeWidth="1.4"
+            strokeWidth="1.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
         {peakM != null ? (
-          <div className="text-[11px] font-semibold tabular-nums" style={{ color: accent }}>
-            ↗{peakM}m
+          <div className="flex items-baseline gap-0.5 tabular-nums">
+            <span className="text-[12px] font-extrabold" style={{ color: accent }}>
+              ↗
+            </span>
+            <span className="text-[14px] font-black" style={{ color: accent }}>
+              {peakM}m
+            </span>
           </div>
         ) : (
           <div className="text-[11px] font-semibold tabular-nums text-muted-foreground">—</div>

@@ -148,7 +148,10 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
   const [elevationAutoExpandToken, setElevationAutoExpandToken] = useState(0);
   const elevationRequestId = useRef(0);
   const [exitDraftDialogOpen, setExitDraftDialogOpen] = useState(false);
-  const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
+  const [pendingExit, setPendingExit] = useState<{
+    path: string;
+    state?: { itineraryBackTo: string };
+  } | null>(null);
   const autoRestoreDoneRef = useRef(false);
 
   const undoHistory = useRef<
@@ -939,14 +942,18 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
     });
   }, [isMapLoaded, isEditMode, restoreRouteDraft, searchParams, setSearchParams]);
 
-  const requestExitWithRouteDraft = useCallback((to: string) => {
-    if (isEditMode || waypoints.current.length < 2) {
-      navigate(to);
-      return;
-    }
-    setPendingExitPath(to);
-    setExitDraftDialogOpen(true);
-  }, [isEditMode, navigate]);
+  const requestExitWithRouteDraft = useCallback(
+    (to: string) => {
+      const navState = to === '/itinerary/my-routes' ? { itineraryBackTo: routeCreationPathname } : undefined;
+      if (isEditMode || waypoints.current.length < 2) {
+        navigate(to, navState ? { state: navState } : undefined);
+        return;
+      }
+      setPendingExit({ path: to, ...(navState ? { state: navState } : {}) });
+      setExitDraftDialogOpen(true);
+    },
+    [isEditMode, navigate, routeCreationPathname],
+  );
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -1372,7 +1379,13 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
         loading={routeSaving}
         showCreateSessionOption={false}
       />
-      <AlertDialog open={exitDraftDialogOpen} onOpenChange={setExitDraftDialogOpen}>
+      <AlertDialog
+        open={exitDraftDialogOpen}
+        onOpenChange={(open) => {
+          setExitDraftDialogOpen(open);
+          if (!open) setPendingExit(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Enregistrer le brouillon ?</AlertDialogTitle>
@@ -1383,9 +1396,9 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={() => {
-                const to = pendingExitPath;
-                setPendingExitPath(null);
-                if (to) navigate(to);
+                const payload = pendingExit;
+                setPendingExit(null);
+                if (payload?.path) navigate(payload.path, payload.state ? { state: payload.state } : undefined);
               }}
             >
               Quitter sans enregistrer
@@ -1394,9 +1407,9 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
               onClick={() => {
                 saveRouteDraft();
                 toast.success('Brouillon d’itinéraire enregistré');
-                const to = pendingExitPath;
-                setPendingExitPath(null);
-                if (to) navigate(to);
+                const payload = pendingExit;
+                setPendingExit(null);
+                if (payload?.path) navigate(payload.path, payload.state ? { state: payload.state } : undefined);
               }}
             >
               Enregistrer et quitter

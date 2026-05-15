@@ -60,7 +60,14 @@ export default function ItineraryHub({ embedded = false }: ItineraryHubProps) {
             <div key={item.path}>
               <button
                 type="button"
-                onClick={() => navigate(item.path)}
+                onClick={() =>
+                  navigate(
+                    item.path,
+                    item.path === '/itinerary/my-routes'
+                      ? { state: { itineraryBackTo: '/itinerary/hub' } }
+                      : undefined,
+                  )
+                }
                 className={`flex w-full min-w-0 max-w-full items-center gap-2.5 py-3 transition-colors min-h-[56px] active:bg-secondary ios-shell:px-2.5 ${embedded ? "px-4" : "px-4"}`}
               >
                 <div className={`ios-list-row-icon shrink-0 ${item.color}`}>
