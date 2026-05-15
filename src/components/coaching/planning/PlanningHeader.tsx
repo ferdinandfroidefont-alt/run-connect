@@ -103,18 +103,22 @@ export function PlanningHeader({
       )}
     </button>
   );
-  const largeTitleAccessory =
-    brandBesideLargeTitle ? (
-      userMaquetteBadge ? (
+  /**
+   * Mon plan / Planification : afficher **club + pastille coach** quand les deux sont définis,
+   * sinon le club seul ou la pastille seule — évite de masquer l’avatar cliquable « fiche club ».
+   */
+  const largeTitleAccessory = brandBesideLargeTitle ? (
+    <div className="flex shrink-0 items-end gap-2">
+      {showClubMark ? clubMarkButton : null}
+      {userMaquetteBadge ? (
         userMaquetteBadge
-      ) : showClubMark ? (
-        clubMarkButton
-      ) : (
+      ) : showClubMark ? null : (
         <RunConnectHeaderMark />
-      )
-    ) : showOnlyClubAction ? (
-      clubMarkButton
-    ) : undefined;
+      )}
+    </div>
+  ) : showOnlyClubAction ? (
+    clubMarkButton
+  ) : undefined;
 
   /**
    * Maquette Coaching (RunConnect (13).jsx · `CoachingPage`) : titre + pastille initiale (F) sur
@@ -122,9 +126,7 @@ export function PlanningHeader({
    * l’alignement bas existant qui s’aligne sur la baseline typographique du titre.
    */
   const alignLargeTitleAccessory =
-    Boolean(largeTitleAccessory) &&
-    (brandBesideLargeTitle || showOnlyClubAction) &&
-    !userMaquetteBadge;
+    Boolean(largeTitleAccessory) && (brandBesideLargeTitle || showOnlyClubAction);
 
   return (
     <MainTopHeader

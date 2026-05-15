@@ -1,6 +1,4 @@
 import {
-  lazy,
-  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -80,6 +78,7 @@ import {
   type ClubSettingsMaquetteVariant,
 } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
+import { ClubProfileDialog } from "@/components/ClubProfileDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { CoachingDraftsPage, type CoachingDraftListItem } from "@/components/coaching/CoachingDraftsPage";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
@@ -112,10 +111,6 @@ function formatMaquetteMonPlanWeekRange(weekStart: Date): string {
       .toUpperCase();
   return `${piece(weekStart)} - ${piece(end)}`;
 }
-
-const ClubProfileDialog = lazy(() =>
-  import("@/components/ClubProfileDialog").then((m) => ({ default: m.ClubProfileDialog }))
-);
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -4126,8 +4121,7 @@ export function CoachPlanningExperience() {
         onPressClubAvatar={openClubProfileSheet}
       />
 
-      <Suspense fallback={null}>
-        <ClubProfileDialog
+      <ClubProfileDialog
           isOpen={clubProfileOpen}
           onClose={() => setClubProfileOpen(false)}
           conversationId={activeClubId || ""}
@@ -4156,8 +4150,7 @@ export function CoachPlanningExperience() {
             setClubProfileOpen(false);
             setCoachClubsReloadToken((t) => t + 1);
           }}
-        />
-      </Suspense>
+      />
 
       <AlertDialog open={showCoachRequiredDialog} onOpenChange={setShowCoachRequiredDialog}>
         <AlertDialogContent>

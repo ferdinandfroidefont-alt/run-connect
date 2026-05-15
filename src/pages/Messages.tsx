@@ -2374,6 +2374,15 @@ const Messages = () => {
     const msgBlue = "#007AFF";
     const openThreadMenu = () => setConversationThreadMenuOpen(true);
     const closeThreadMenu = () => setConversationThreadMenuOpen(false);
+    const openGroupClubProfileSheet = () => {
+      if (isDirectMessage) return;
+      const clubData = selectedConversation;
+      setSelectedConversation(null);
+      setTimeout(() => {
+        setGroupInfoData(clubData);
+        setShowClubProfile(true);
+      }, 100);
+    };
 
     return (
       <>
@@ -2486,43 +2495,56 @@ const Messages = () => {
                         >
                           <ChevronLeft className="h-7 w-7 text-[#0A0F1F]" strokeWidth={2.4} />
                         </button>
-                        <button
-                          type="button"
-                          className="flex min-w-0 flex-1 items-center gap-2 text-left active:opacity-80"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openThreadMenu();
-                          }}
-                        >
-                          {selectedConversation.group_avatar_url ? (
-                            <Avatar className="h-9 w-9 shrink-0 rounded-full">
-                              <AvatarImage src={selectedConversation.group_avatar_url} />
-                              <AvatarFallback className="rounded-full bg-[#E5E5EA]">
-                                <Users className="h-4 w-4 text-[#0A0F1F]" />
-                              </AvatarFallback>
-                            </Avatar>
-                          ) : (
-                            <div
-                              className="h-9 w-9 shrink-0 rounded-full"
-                              style={{ backgroundColor: "#E5E5EA" }}
-                              aria-hidden
-                            />
-                          )}
-                          <h1
-                            className="min-w-0 flex-1 truncate"
-                            style={{
-                              fontSize: 18,
-                              fontWeight: 800,
-                              color: "#0A0F1F",
-                              letterSpacing: "-0.02em",
-                              margin: 0,
-                              fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <button
+                            type="button"
+                            className="shrink-0 rounded-full active:opacity-80"
+                            aria-label="Paramètres du club"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openGroupClubProfileSheet();
                             }}
                           >
-                            {selectedConversation.group_name}
-                          </h1>
-                        </button>
+                            {selectedConversation.group_avatar_url ? (
+                              <Avatar className="h-9 w-9 rounded-full">
+                                <AvatarImage src={selectedConversation.group_avatar_url} />
+                                <AvatarFallback className="rounded-full bg-[#E5E5EA]">
+                                  <Users className="h-4 w-4 text-[#0A0F1F]" />
+                                </AvatarFallback>
+                              </Avatar>
+                            ) : (
+                              <div
+                                className="h-9 w-9 rounded-full"
+                                style={{ backgroundColor: "#E5E5EA" }}
+                                aria-hidden
+                              />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 truncate text-left active:opacity-80"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openThreadMenu();
+                            }}
+                          >
+                            <h1
+                              className="truncate"
+                              style={{
+                                fontSize: 18,
+                                fontWeight: 800,
+                                color: "#0A0F1F",
+                                letterSpacing: "-0.02em",
+                                margin: 0,
+                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+                              }}
+                            >
+                              {selectedConversation.group_name}
+                            </h1>
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={openThreadMenu}
@@ -3317,12 +3339,7 @@ const Messages = () => {
             navigate(`/profile?user=${selectedConversation.other_participant.user_id}`);
             return;
           }
-          const clubData = selectedConversation;
-          setSelectedConversation(null);
-          setTimeout(() => {
-            setGroupInfoData(clubData);
-            setShowClubProfile(true);
-          }, 100);
+          openGroupClubProfileSheet();
         }}
         onToggleMute={() => {
           if (!userNotifSettings.notifications_enabled) {
