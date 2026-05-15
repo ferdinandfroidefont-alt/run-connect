@@ -3425,15 +3425,9 @@ export function CoachPlanningExperience() {
             )}
           >
             {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") && !weekPlannerMode ? (
-              <CoachingRolePill
-                className={cn(
-                  /* Maquette RunConnect (13).jsx · `CoachingPage` : toggle dans `<main pt-3>`,
-                   * sans padding inférieur ni filet. Sticky conservé côté agent pour rester accessible. */
-                  "sticky top-0 z-20 !pb-0 supports-[backdrop-filter]:backdrop-blur",
-                  activeMenuKey === "my-plan" || showCoachLanding
-                    ? "bg-[#F2F2F7] supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)]"
-                    : "bg-[#F2F2F7]/95 supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)] supports-[backdrop-filter]:backdrop-blur",
-                )}
+              <>
+                {/* Toggle Athlète/Coach : corps scrollable (maquette `<main pt-3>`), pas le header. */}
+                <CoachingRolePill
                 active={effectiveAthleteMode ? "athlete" : "coach"}
                 onSelect={(role) => {
                   if (role === "athlete") {
@@ -3449,6 +3443,7 @@ export function CoachPlanningExperience() {
                   }
                 }}
               />
+              </>
             ) : null}
 
             {activeMenuKey === "planning" && clubs.length > 1 && (

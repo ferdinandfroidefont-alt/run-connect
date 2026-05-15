@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { MiniProfileBlock } from "@/lib/workoutVisualization";
 import { Bike, Check, ChevronRight, Clock, Clock3, Dumbbell, Footprints, Moon, Plus, Ruler, Waves } from "lucide-react";
 
-/** Barres schéma — `MonPlanTimeline` / `SchemaBars` · RunConnect (12).jsx (`ZONE_COLOR` + hauteurs zone). */
+/** Barres schéma — `MonPlanTimeline` / `SchemaBars` · RunConnect (13).jsx (`ZONE_COLOR`). */
 const MON_PLAN_ZONE_COLOR: Record<number, string> = {
   1: "#8E8E93",
   2: "#007AFF",
@@ -17,9 +17,24 @@ const MON_PLAN_ZONE_COLOR: Record<number, string> = {
   6: "#FF3B30",
 };
 
-function monPlanZoneBarHeightPct(zone: number) {
-  const z = Math.max(1, Math.min(6, Math.round(zone)));
-  return Math.max(4, ((z - 1) / 5) * 100);
+function zoneBandFromMiniBlock(block: MiniProfileBlock): number {
+  if (typeof block.zoneBandLevel === "number") {
+    return Math.max(1, Math.min(6, block.zoneBandLevel));
+  }
+  const h = block.height;
+  if (h <= 11) return 1;
+  if (h <= 15) return 2;
+  if (h <= 19) return 3;
+  if (h <= 24) return 4;
+  if (h <= 30) return 5;
+  return 6;
+}
+
+/** Maquette `SchemaBars` : barres en % de hauteur du conteneur selon l’intensité (échelle mini-profil ~34). */
+function monPlanBarHeightPct(block: MiniProfileBlock): number {
+  const maxMiniH = 34;
+  const pct = Math.round((block.height / maxMiniH) * 100);
+  return Math.max(8, Math.min(100, pct));
 }
 
 /** Aperçu minimal façon maquette quand les blocs n’ont pas encore été résolus en mini-profils. */
@@ -40,13 +55,12 @@ function MonPlanSchemaBars({ blocks }: { blocks: MiniProfileBlock[] }) {
   return (
     <div className="mt-3 flex h-14 items-end gap-[2px] px-1">
       {blocks.map((block, i) => {
-        const inferred = Math.max(1, Math.min(6, Math.round((block.height / 24) * 5) + 1));
-        const band = typeof block.zoneBandLevel === "number" ? block.zoneBandLevel : inferred;
-        const heightPct = monPlanZoneBarHeightPct(band);
+        const band = zoneBandFromMiniBlock(block);
+        const heightPct = monPlanBarHeightPct(block);
         const bg = MON_PLAN_ZONE_COLOR[band] ?? MON_PLAN_ZONE_COLOR[2];
         return (
           <div
-            key={`${i}-${block.width}-${block.zoneBandLevel ?? ""}`}
+            key={`${i}-${block.width}-${block.zoneBandLevel ?? ""}-${block.height}`}
             className="min-w-0 rounded-sm"
             style={{
               flexGrow: Math.max(block.width, 0.0001),
@@ -137,7 +151,7 @@ export function DayPlanningRow({
     return (
       <div
         className={cn(
-          "relative flex items-stretch gap-3 px-5 py-2 [-webkit-font-smoothing:antialiased]",
+          "relative flex items-stretch gap-2.5 px-5 py-2 [-webkit-font-smoothing:antialiased]",
           '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif]',
         )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
@@ -150,15 +164,15 @@ export function DayPlanningRow({
           />
         ) : null}
 
-        <div className="flex w-11 shrink-0 flex-col justify-center">
+        <div className="flex w-9 min-w-[2.25rem] shrink-0 flex-col justify-center">
           <p
-            className="text-[11px] font-bold uppercase leading-none tracking-[0.06em]"
+            className="text-[10px] font-bold uppercase leading-none tracking-wide"
             style={{ color: isToday ? maquetteBlue : "#8E8E93" }}
           >
             {dayAbbrev}
           </p>
           <p
-            className="mt-0.5 text-[26px] font-extrabold leading-none tracking-[-0.02em]"
+            className="mt-1 text-[20px] font-extrabold leading-none tracking-[-0.02em]"
             style={{ color: isToday ? maquetteBlue : "#0A0F1F" }}
           >
             {dateLabel}
@@ -167,8 +181,8 @@ export function DayPlanningRow({
 
         <div className="min-w-0 flex-1">
           {!session || isRest ? (
-            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-5">
-              <p className="text-[15px] font-semibold leading-snug text-[#8E8E93]">{emptyLabel ?? "Repos"}</p>
+            <div className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-[18px]">
+              <p className="text-center text-[15px] font-semibold leading-snug text-[#0A0F1F]">{emptyLabel ?? "Repos"}</p>
             </div>
           ) : (
             <button

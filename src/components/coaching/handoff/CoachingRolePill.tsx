@@ -2,7 +2,10 @@ import { cn } from "@/lib/utils";
 
 type Role = "athlete" | "coach";
 
-/** Segmented control identique à la maquette (fond search-fill, segments 7px, ombre segment actif). */
+/**
+ * Sélecteur Athlète / Coach — copie pixel de la maquette RunConnect (13).jsx (`CoachingPage`).
+ * Rendu dans le **corps scrollable**, pas dans le bloc titre (StickyPage : `<main pt-3>`).
+ */
 export function CoachingRolePill({
   active,
   onSelect,
@@ -13,8 +16,8 @@ export function CoachingRolePill({
   className?: string;
 }) {
   return (
-    <div className={cn("px-5 pb-3 pt-3", className)}>
-      <div className="handoff-role-track">
+    <div className={cn("px-5 pt-3 pb-0", className)}>
+      <div className="flex rounded-xl bg-[#E5E5EA] p-1">
         {(
           [
             { id: "athlete" as const, label: "Athlète" },
@@ -27,7 +30,12 @@ export function CoachingRolePill({
               key={item.id}
               type="button"
               onClick={() => onSelect(item.id)}
-              className={cn("handoff-role-thumb", selected ? "handoff-role-thumb-active" : "handoff-role-thumb-idle")}
+              className="flex-1 rounded-lg py-2 text-[15px] font-semibold transition-all"
+              style={{
+                background: selected ? "white" : "transparent",
+                color: selected ? "#0A0F1F" : "#8E8E93",
+                boxShadow: selected ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+              }}
             >
               {item.label}
             </button>
