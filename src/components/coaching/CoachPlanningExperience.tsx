@@ -101,6 +101,9 @@ import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
 import { PLANIFIER_MAQUETTE_GROUPED_BG, planifierMaquetteFontStackStyle } from "@/lib/coachingPlanifierMaquette";
 
+/** Timeline Mon plan / programmer : semaines à partir de la semaine ISO courante uniquement (sans passé), défilement vers les suivantes. */
+const COACHING_TIMELINE_WEEK_COUNT = 13;
+
 /** Plage type maquette `MonPlanTimeline` · RunConnect (7).jsx (`27 AVR - 3 MAI`). */
 function formatMaquetteMonPlanWeekRange(weekStart: Date): string {
   const end = addDays(weekStart, 6);
@@ -1055,12 +1058,11 @@ export function CoachPlanningExperience() {
   const { setBottomNavSuppressed } = useAppContext();
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const planningContinuousRef = useRef<HTMLDivElement | null>(null);
-  const myPlanContinuousRef = useRef<HTMLDivElement | null>(null);
+
   /** Scroll principal coaching (IosFixedPageHeaderShell) pour remonter en haut au changement d’écran Mon plan ⇄ Planification. */
   const coachingMainScrollRef = useRef<HTMLDivElement | null>(null);
   const weekPlannerTopRef = useRef<HTMLDivElement | null>(null);
-  const didInitialTodayCenterRef = useRef<{ planning: boolean; myPlan: boolean }>({ planning: false, myPlan: false });
+
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
   const [memberClubIds, setMemberClubIds] = useState<string[]>([]);
@@ -1459,13 +1461,13 @@ export function CoachPlanningExperience() {
     let ignore = false;
     const loadWeekSessions = async () => {
       setLoading(true);
-      const weekEnd = addDays(weekAnchor, 7);
+      const horizonEnd = addDays(weekAnchor, 7 * COACHING_TIMELINE_WEEK_COUNT);
       let query = supabase
         .from("coaching_sessions")
         .select("id, title, activity_type, scheduled_at, status, target_athletes, target_group_id, session_blocks")
         .eq("club_id", activeClubId)
         .gte("scheduled_at", weekAnchor.toISOString())
-        .lt("scheduled_at", weekEnd.toISOString());
+        .lt("scheduled_at", horizonEnd.toISOString());
       query = query.eq("coach_id", user.id);
       if (activeGroupId) query = query.eq("target_group_id", activeGroupId);
       const { data, error } = await query.order("scheduled_at", { ascending: true });
@@ -1541,7 +1543,7 @@ export function CoachPlanningExperience() {
     if (!opts?.silent) {
       setAthletePlanLoading(true);
     }
-    const weekEnd = addDays(weekAnchor, 7);
+    const horizonEnd = addDays(weekAnchor, 7 * COACHING_TIMELINE_WEEK_COUNT);
     const prevWeekStart = subWeeks(weekAnchor, 1);
     const prevWeekEnd = weekAnchor;
     try {
@@ -1554,7 +1556,7 @@ export function CoachPlanningExperience() {
         .in("coaching_sessions.club_id", memberClubIds)
         .eq("coaching_sessions.status", "sent")
         .gte("coaching_sessions.scheduled_at", weekAnchor.toISOString())
-        .lt("coaching_sessions.scheduled_at", weekEnd.toISOString())
+        .lt("coaching_sessions.scheduled_at", horizonEnd.toISOString())
         .order("scheduled_at", { ascending: true, referencedTable: "coaching_sessions" });
 
       if (error) {
@@ -1674,7 +1676,7 @@ export function CoachPlanningExperience() {
     [weekAnchor]
   );
   const weekStartsContinuous = useMemo(
-    () => Array.from({ length: 13 }, (_, idx) => addWeeks(weekAnchor, idx - 6)),
+    () => Array.from({ length: COACHING_TIMELINE_WEEK_COUNT }, (_, idx) => addWeeks(weekAnchor, idx)),
     [weekAnchor]
   );
 
@@ -2984,40 +2986,6 @@ export function CoachPlanningExperience() {
     });
   }, []);
 
-  useEffect(() => {
-    if (!weekPlannerMode) {
-      didInitialTodayCenterRef.current.planning = false;
-      return;
-    }
-    if (didInitialTodayCenterRef.current.planning) return;
-    const root = planningContinuousRef.current;
-    if (!root) return;
-    const todayKey = format(new Date(), "yyyy-MM-dd");
-    const todayRow = root.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
-    if (!todayRow) return;
-    requestAnimationFrame(() => {
-      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-      didInitialTodayCenterRef.current.planning = true;
-    });
-  }, [weekPlannerMode, enrichedFilteredSessions.length]);
-
-  useEffect(() => {
-    if (activeMenuKey !== "my-plan") {
-      didInitialTodayCenterRef.current.myPlan = false;
-      return;
-    }
-    if (didInitialTodayCenterRef.current.myPlan) return;
-    const root = myPlanContinuousRef.current;
-    if (!root) return;
-    const todayKey = format(new Date(), "yyyy-MM-dd");
-    const todayRow = root.querySelector<HTMLElement>(`[data-day-key="${todayKey}"]`);
-    if (!todayRow) return;
-    requestAnimationFrame(() => {
-      todayRow.scrollIntoView({ block: "center", behavior: "auto" });
-      didInitialTodayCenterRef.current.myPlan = true;
-    });
-  }, [activeMenuKey, athletePlanSessions.length]);
-
   const coachingHeaderTitle = useMemo(() => {
     if (!isCoachMode || effectiveAthleteMode) return "Mon plan";
     switch (activeMenuKey) {
@@ -3695,7 +3663,7 @@ export function CoachPlanningExperience() {
             ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <div ref={myPlanContinuousRef} className="mt-5 -mx-5 bg-[#F2F2F7]">
+              <div className="mt-5 -mx-5 bg-[#F2F2F7]">
                 {weekStartsContinuous.map((weekStart) => {
                   const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
                   const weekSessions = athletePlanSessions.filter((session) => {
@@ -3814,7 +3782,7 @@ export function CoachPlanningExperience() {
             ) : activeMenuKey === "planning" ? (
               <>
                 {weekPlannerMode ? (
-                  <div ref={planningContinuousRef} className="pb-[calc(2rem+env(safe-area-inset-bottom))]">
+                  <div className="pb-[calc(2rem+env(safe-area-inset-bottom))]">
                     {weekStartsContinuous.map((weekStart) => {
                       const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
                       const weekSessions = enrichedFilteredSessions.filter((session) => {
