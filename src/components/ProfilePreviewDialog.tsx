@@ -81,6 +81,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
   const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
   const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
+  const [mutualFriendsPreview, setMutualFriendsPreview] = useState<
+    Array<{ user_id: string; display_name: string | null; username: string | null }>
+  >([]);
 
   const isOwnProfile = userId === user?.id;
 
@@ -131,6 +134,56 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       fetchStats();
     }
   }, [userId, period, isFollowing, isOwnProfile]);
+
+  useEffect(() => {
+    const loadMutualFriends = async () => {
+      if (!user?.id || !userId || isOwnProfile) {
+        setMutualFriendsPreview([]);
+        return;
+      }
+      try {
+        const [{ data: myFollowing }, { data: myFollowers }, { data: theirFollowing }, { data: theirFollowers }] =
+          await Promise.all([
+            supabase.from("user_follows").select("following_id").eq("follower_id", user.id).eq("status", "accepted"),
+            supabase.from("user_follows").select("follower_id").eq("following_id", user.id).eq("status", "accepted"),
+            supabase.from("user_follows").select("following_id").eq("follower_id", userId).eq("status", "accepted"),
+            supabase.from("user_follows").select("follower_id").eq("following_id", userId).eq("status", "accepted"),
+          ]);
+
+        const iFollow = new Set(myFollowing?.map((r) => r.following_id) ?? []);
+        const followMe = new Set(myFollowers?.map((r) => r.follower_id) ?? []);
+        const mutualMine = new Set([...iFollow].filter((id) => followMe.has(id)));
+
+        const theyFollow = new Set(theirFollowing?.map((r) => r.following_id) ?? []);
+        const followThem = new Set(theirFollowers?.map((r) => r.follower_id) ?? []);
+        const mutualTheirs = new Set([...theyFollow].filter((id) => followThem.has(id)));
+
+        const commonIds = [...mutualMine].filter((id) => mutualTheirs.has(id) && id !== userId);
+
+        if (commonIds.length === 0) {
+          setMutualFriendsPreview([]);
+          return;
+        }
+
+        const { data: rpcProfiles } = await supabase.rpc("get_safe_public_profiles", {
+          profile_user_ids: commonIds.slice(0, 24),
+        });
+
+        const orderMap = new Map(commonIds.map((id, idx) => [id, idx]));
+        const rows = ((rpcProfiles ?? []) as Array<{
+          user_id: string;
+          display_name: string | null;
+          username: string | null;
+        }>).sort((a, b) => (orderMap.get(a.user_id) ?? 999) - (orderMap.get(b.user_id) ?? 999));
+
+        setMutualFriendsPreview(rows.slice(0, 12));
+      } catch {
+        setMutualFriendsPreview([]);
+      }
+    };
+
+    void loadMutualFriends();
+  }, [user?.id, userId, isOwnProfile]);
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -515,6 +568,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 }
                 onClose();
               }}
+              mutualFriends={mutualFriendsPreview}
+              onMutualFriendsPress={
+                !isOwnProfile && mutualFriendsPreview.length > 0
+                  ? () => {
+                      setFollowDialogTab("followers");
+                      setShowFollowDialog(true);
+                    }
+                  : undefined
+              }
             />
           ) : (
             <div className="flex flex-1 items-center justify-center bg-[#F2F2F7]">

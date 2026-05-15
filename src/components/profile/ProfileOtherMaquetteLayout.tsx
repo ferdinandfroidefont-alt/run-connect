@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BadgeCheck, Check, ChevronRight, Lock, MapPin, MessageCircle, Star } from "lucide-react";
+import { BadgeCheck, Check, ChevronRight, Lock, MapPin, MessageCircle } from "lucide-react";
 import { OnlineStatus } from "@/components/OnlineStatus";
 import { splitCountryLabel } from "@/lib/countryLabels";
 import {
@@ -35,6 +35,10 @@ type ProfileLike = {
   favorite_sport: string | null;
   country: string | null;
 };
+
+function mutualFriendDisplayLabel(p: { display_name: string | null; username: string | null }) {
+  return (p.display_name?.trim() || p.username?.trim() || "Membre").trim();
+}
 
 function primarySportMeta(favoriteSport: string | null | undefined): {
   emoji: string;
@@ -81,6 +85,10 @@ export function ProfileOtherMaquetteLayout(props: {
 
   onOpenRecords: () => void;
   onOpenRecentSessions: () => void;
+
+  /** Amis en commun (suivi mutuel avec toi et avec ce profil) — le bloc n’est affiché que si non vide */
+  mutualFriends: Array<{ user_id?: string; display_name: string | null; username: string | null }>;
+  onMutualFriendsPress?: () => void;
 }) {
   const {
     profile,
@@ -108,6 +116,8 @@ export function ProfileOtherMaquetteLayout(props: {
     stats,
     onOpenRecords,
     onOpenRecentSessions,
+    mutualFriends,
+    onMutualFriendsPress,
   } = props;
 
   const avatarSrc = (profile.avatar_url || "").trim();
@@ -131,7 +141,42 @@ export function ProfileOtherMaquetteLayout(props: {
     { emoji: "🤝", label: "Séances rejointes", value: stats.sessionsJoined, color: "#FF9500" },
   ] as const;
 
-  const showStoriesRow = storyHighlights.length > 0;
+  const cardShadow = "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
+  const insetDivider = <div style={{ height: 0.5, background: "#E5E5EA", marginLeft: 68 }} />;
+
+  const mutualTitlePrimary = (() => {
+    const n = mutualFriends.length;
+    if (n === 0) return null;
+    if (n === 1) {
+      return (
+        <>
+          Suivi(e) par{" "}
+          <span style={{ fontWeight: 800 }}>{mutualFriendDisplayLabel(mutualFriends[0])}</span>
+        </>
+      );
+    }
+    if (n === 2) {
+      return (
+        <>
+          Suivi(e) par{" "}
+          <span style={{ fontWeight: 800 }}>{mutualFriendDisplayLabel(mutualFriends[0])}</span>
+          {" "}et{" "}
+          <span style={{ fontWeight: 800 }}>{mutualFriendDisplayLabel(mutualFriends[1])}</span>
+        </>
+      );
+    }
+    const others = n - 1;
+    return (
+      <>
+        Suivi(e) par{" "}
+        <span style={{ fontWeight: 800 }}>{mutualFriendDisplayLabel(mutualFriends[0])}</span>
+        {" "}et{" "}
+        <span style={{ fontWeight: 800 }}>
+          {others} autre{others > 1 ? "s" : ""}
+        </span>
+      </>
+    );
+  })();
 
   return (
     <div
@@ -382,22 +427,89 @@ export function ProfileOtherMaquetteLayout(props: {
           </div>
         ) : null}
 
-        {/* Stories à la une — aligné maquette utilisateur */}
-        <div className="mt-4">
-          <div className="mb-3 flex items-center justify-between px-1">
-            <h2
+        {/* Amis en commun — uniquement s’il y en a */}
+        {mutualFriends.length > 0 ? (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={onMutualFriendsPress}
+              className={`flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left ${
+                onMutualFriendsPress ? "cursor-pointer active:bg-[#F8F8F8]" : ""
+              }`}
               style={{
-                fontSize: 20,
-                fontWeight: 900,
-                color: "#0A0F1F",
-                letterSpacing: "-0.02em",
-                margin: 0,
+                boxShadow: cardShadow,
               }}
+              disabled={!onMutualFriendsPress}
             >
-              Stories à la une
-            </h2>
+              <div className="flex shrink-0">
+                {mutualFriends.slice(0, 3).map((m, i) => (
+                  <div
+                    key={m.user_id ?? `mutual-${i}`}
+                    className="flex items-center justify-center font-extrabold text-white"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: "50%",
+                      background: HIGHLIGHT_RING_GRADIENTS[i % HIGHLIGHT_RING_GRADIENTS.length],
+                      fontSize: 12,
+                      letterSpacing: "-0.02em",
+                      border: "2.5px solid white",
+                      marginLeft: i === 0 ? 0 : -10,
+                      zIndex: 3 - i,
+                    }}
+                  >
+                    {mutualFriendDisplayLabel(m).slice(0, 1).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p
+                  className="truncate"
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#0A0F1F",
+                    letterSpacing: "-0.01em",
+                    margin: 0,
+                  }}
+                >
+                  {mutualTitlePrimary}
+                </p>
+                <p
+                  style={{
+                    fontSize: 12.5,
+                    color: "#8E8E93",
+                    margin: 0,
+                    marginTop: 1,
+                    fontWeight: 500,
+                  }}
+                >
+                  {mutualFriends.length} ami{mutualFriends.length > 1 ? "s" : ""} en commun
+                </p>
+              </div>
+              {onMutualFriendsPress ? (
+                <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" />
+              ) : null}
+            </button>
           </div>
-          {showStoriesRow ? (
+        ) : null}
+
+        {/* Stories à la une — masqué entièrement s’il n’y en a pas */}
+        {storyHighlights.length > 0 ? (
+          <div className="mt-4">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <h2
+                style={{
+                  fontSize: 20,
+                  fontWeight: 900,
+                  color: "#0A0F1F",
+                  letterSpacing: "-0.02em",
+                  margin: 0,
+                }}
+              >
+                Stories à la une
+              </h2>
+            </div>
             <div
               className="-mx-1 flex gap-3.5 overflow-x-auto px-1 pb-1"
               style={{
@@ -463,35 +575,8 @@ export function ProfileOtherMaquetteLayout(props: {
                 );
               })}
             </div>
-          ) : (
-            <div
-              className="flex flex-col items-center rounded-2xl bg-white py-5"
-              style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
-            >
-              <div
-                className="flex items-center justify-center rounded-full border-2 border-dashed"
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderColor: "#C7C7CC",
-                }}
-              >
-                <Star className="h-6 w-6 text-[#C7C7CC]" strokeWidth={2.2} aria-hidden />
-              </div>
-              <p
-                className="mt-2"
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#8E8E93",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                Aucune story à la une
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {!canViewContent && !isOwnProfile ? (
           <div
@@ -535,19 +620,12 @@ export function ProfileOtherMaquetteLayout(props: {
               </div>
             </div>
 
-            {/* Sport stats — même carte que SportStatsCard maquette */}
+            {/* Stats activité + Records + Séances — une seule carte */}
             <div className="mt-4 px-0">
-              <div
-                className="overflow-hidden rounded-2xl bg-white"
-                style={{
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
-                }}
-              >
+              <div className="overflow-hidden rounded-2xl bg-white" style={{ boxShadow: cardShadow }}>
                 {sportStatsRow.map((st, i) => (
                   <Fragment key={st.label}>
-                    {i > 0 ? (
-                      <div style={{ height: 0.5, background: "#E5E5EA", marginLeft: 68 }} />
-                    ) : null}
+                    {i > 0 ? insetDivider : null}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <div
                         className="flex shrink-0 items-center justify-center rounded-xl"
@@ -586,64 +664,68 @@ export function ProfileOtherMaquetteLayout(props: {
                     </div>
                   </Fragment>
                 ))}
-              </div>
-            </div>
-
-            {/* Liens Records + Séances */}
-            <div className="mt-4 px-0">
-              <div
-                className="overflow-hidden rounded-2xl bg-white"
-                style={{
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
-                }}
-              >
-                {(
-                  [
-                    { emoji: "🏅", label: "Records sport", color: "#FFCC00", onClick: onOpenRecords },
-                    {
-                      emoji: "📅",
-                      label: "Séances récentes",
-                      color: "#0A84FF",
-                      onClick: onOpenRecentSessions,
-                    },
-                  ] as const
-                ).map((lk, i) => (
-                  <Fragment key={lk.label}>
-                    {i > 0 ? (
-                      <div style={{ height: 0.5, background: "#E5E5EA", marginLeft: 68 }} />
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={lk.onClick}
-                      className="flex w-full items-center gap-3 px-4 py-3 active:bg-[#F8F8F8]"
-                    >
-                      <div
-                        className="flex shrink-0 items-center justify-center rounded-xl"
-                        style={{
-                          width: 40,
-                          height: 40,
-                          background: lk.color,
-                          fontSize: 20,
-                          boxShadow: `0 2px 6px ${lk.color}40`,
-                        }}
-                      >
-                        {lk.emoji}
-                      </div>
-                      <span
-                        className="min-w-0 flex-1 truncate text-left"
-                        style={{
-                          fontSize: 17,
-                          fontWeight: 700,
-                          color: "#0A0F1F",
-                          letterSpacing: "-0.01em",
-                        }}
-                      >
-                        {lk.label}
-                      </span>
-                      <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" />
-                    </button>
-                  </Fragment>
-                ))}
+                {insetDivider}
+                <button
+                  type="button"
+                  onClick={onOpenRecords}
+                  className="flex w-full items-center gap-3 px-4 py-3 active:bg-[#F8F8F8]"
+                >
+                  <div
+                    className="flex shrink-0 items-center justify-center rounded-xl"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      background: "#FFCC00",
+                      fontSize: 20,
+                      boxShadow: "0 2px 6px #FFCC0040",
+                    }}
+                  >
+                    🏅
+                  </div>
+                  <span
+                    className="min-w-0 flex-1 truncate text-left"
+                    style={{
+                      fontSize: 17,
+                      fontWeight: 700,
+                      color: "#0A0F1F",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    Records sport
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" />
+                </button>
+                {insetDivider}
+                <button
+                  type="button"
+                  onClick={onOpenRecentSessions}
+                  className="flex w-full items-center gap-3 px-4 py-3 active:bg-[#F8F8F8]"
+                >
+                  <div
+                    className="flex shrink-0 items-center justify-center rounded-xl"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      background: "#0A84FF",
+                      fontSize: 20,
+                      boxShadow: "0 2px 6px #0A84FF40",
+                    }}
+                  >
+                    📅
+                  </div>
+                  <span
+                    className="min-w-0 flex-1 truncate text-left"
+                    style={{
+                      fontSize: 17,
+                      fontWeight: 700,
+                      color: "#0A0F1F",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    Séances récentes
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" />
+                </button>
               </div>
             </div>
           </>

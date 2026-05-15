@@ -379,9 +379,9 @@ export function ProfileSelfMaquetteLayout(props: {
   const locationLabel = countryParts?.name?.trim() || undefined;
   const sportMeta = primarySportMeta(profile.favorite_sport);
 
-  const scheduledLabel =
-    nextSession &&
-    format(new Date(nextSession.scheduled_at), "EEEE · HH:mm", { locale: frLocale });
+  const scheduledLabel = nextSession
+    ? format(new Date(nextSession.scheduled_at), "EEEE · HH:mm", { locale: frLocale })
+    : "";
 
   const rateRounded = Math.round(Math.max(0, Math.min(100, reliabilityRate)));
   const reliabilityTitle =
@@ -476,151 +476,142 @@ export function ProfileSelfMaquetteLayout(props: {
             onShareSecondary={onShareProfile}
           />
 
-          {/* Prochaine séance */}
-          <div
-            role={nextSession ? "button" : undefined}
-            tabIndex={nextSession ? 0 : undefined}
-            onClick={() => nextSession && onOpenNextSessionDetail()}
-            onKeyDown={(e) => {
-              if (nextSession && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                onOpenNextSessionDetail();
-              }
-            }}
-            className={`relative mt-3 w-full overflow-hidden rounded-2xl bg-white text-left ${
-              nextSession ? "cursor-pointer active:bg-[#F8F8F8]" : ""
-            }`}
-            style={{
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
-            }}
-          >
+          {nextSession ? (
             <div
-              className="absolute bottom-0 left-0 top-0"
-              style={{ width: 4, background: nextSession ? ACTION_BLUE : "#C7C7CC" }}
-              aria-hidden
-            />
-            <div className="p-4 pl-5">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span style={{ fontSize: 14 }}>{activityEmoji(nextSession?.activity_type || "")}</span>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: ACTION_BLUE,
-                      letterSpacing: "0.12em",
-                    }}
-                  >
-                    PROCHAINE SÉANCE
-                  </p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-[#C7C7CC]" />
-              </div>
-
-              {nextSession ? (
-                <>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 24,
-                      fontWeight: 900,
-                      color: "#0A0F1F",
-                      letterSpacing: "-0.03em",
-                      lineHeight: 1.15,
-                    }}
-                  >
-                    {scheduledLabel}
-                  </p>
-                  <p
-                    style={{
-                      margin: 0,
-                      marginTop: 4,
-                      fontSize: 15,
-                      fontWeight: 600,
-                      color: "#0A0F1F",
-                    }}
-                  >
-                    {nextSession.title}
-                  </p>
-                  <div className="mt-2 flex items-center gap-1">
-                    <MapPin className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.2} />
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenNextSessionDetail()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpenNextSessionDetail();
+                }
+              }}
+              className="relative mt-3 w-full cursor-pointer overflow-hidden rounded-2xl bg-white text-left active:bg-[#F8F8F8]"
+              style={{
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+              }}
+            >
+              <div
+                className="absolute bottom-0 left-0 top-0"
+                style={{ width: 4, background: ACTION_BLUE }}
+                aria-hidden
+              />
+              <div className="p-4 pl-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: 14 }}>{activityEmoji(nextSession.activity_type || "")}</span>
                     <p
                       style={{
                         margin: 0,
-                        fontSize: 13.5,
-                        color: "#8E8E93",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: ACTION_BLUE,
+                        letterSpacing: "0.12em",
                       }}
                     >
-                      {nextSession.location_name?.trim() || "Lieu à préciser"}
+                      PROCHAINE SÉANCE
                     </p>
                   </div>
+                  <ChevronRight className="h-5 w-5 text-[#C7C7CC]" />
+                </div>
 
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="flex min-w-0 flex-1 items-center">
-                      <div className="flex shrink-0">
-                        {friendCountPreview.map((p, i) => (
-                          <div
-                            key={`${p.label}-${i}`}
-                            className="flex items-center justify-center rounded-full border-2 border-white font-extrabold text-white"
-                            style={{
-                              width: 30,
-                              height: 30,
-                              background: p.bg,
-                              fontSize: 12,
-                              marginLeft: i === 0 ? 0 : -10,
-                              zIndex: 3 - i,
-                            }}
-                          >
-                            {p.label}
-                          </div>
-                        ))}
-                      </div>
-                      <p
-                        style={{
-                          margin: 0,
-                          marginLeft: 8,
-                          fontSize: 13,
-                          color: "#8E8E93",
-                          fontWeight: 600,
-                        }}
-                        className="truncate"
-                      >
-                        {participantCaption}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onGoToNextSession();
-                      }}
-                      className="ml-2 shrink-0 transition-transform active:scale-[0.97]"
-                      style={{
-                        background: ACTION_BLUE,
-                        color: "white",
-                        borderRadius: 9999,
-                        padding: "9px 16px",
-                        fontSize: 13.5,
-                        fontWeight: 800,
-                        letterSpacing: "-0.01em",
-                        boxShadow: "0 2px 6px rgba(0,122,255,0.25)",
-                      }}
-                    >
-                      Y aller
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p className="text-[15px] font-semibold leading-snug text-[#8E8E93]">
-                  Aucune séance à venir. Planifie une sortie depuis l’accueil ou rejoins une séance découverte.
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 24,
+                    fontWeight: 900,
+                    color: "#0A0F1F",
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {scheduledLabel}
                 </p>
-              )}
+                <p
+                  style={{
+                    margin: 0,
+                    marginTop: 4,
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "#0A0F1F",
+                  }}
+                >
+                  {nextSession.title}
+                </p>
+                <div className="mt-2 flex items-center gap-1">
+                  <MapPin className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.2} />
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13.5,
+                      color: "#8E8E93",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {nextSession.location_name?.trim() || "Lieu à préciser"}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex min-w-0 flex-1 items-center">
+                    <div className="flex shrink-0">
+                      {friendCountPreview.map((p, i) => (
+                        <div
+                          key={`${p.label}-${i}`}
+                          className="flex items-center justify-center rounded-full border-2 border-white font-extrabold text-white"
+                          style={{
+                            width: 30,
+                            height: 30,
+                            background: p.bg,
+                            fontSize: 12,
+                            marginLeft: i === 0 ? 0 : -10,
+                            zIndex: 3 - i,
+                          }}
+                        >
+                          {p.label}
+                        </div>
+                      ))}
+                    </div>
+                    <p
+                      style={{
+                        margin: 0,
+                        marginLeft: 8,
+                        fontSize: 13,
+                        color: "#8E8E93",
+                        fontWeight: 600,
+                      }}
+                      className="truncate"
+                    >
+                      {participantCaption}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onGoToNextSession();
+                    }}
+                    className="ml-2 shrink-0 transition-transform active:scale-[0.97]"
+                    style={{
+                      background: ACTION_BLUE,
+                      color: "white",
+                      borderRadius: 9999,
+                      padding: "9px 16px",
+                      fontSize: 13.5,
+                      fontWeight: 800,
+                      letterSpacing: "-0.01em",
+                      boxShadow: "0 2px 6px rgba(0,122,255,0.25)",
+                    }}
+                  >
+                    Ouvrir
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Stories à la une — anneaux type maquette */}
           <div className="mt-4 -mx-5">
