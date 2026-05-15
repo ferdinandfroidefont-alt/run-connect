@@ -3609,7 +3609,59 @@ const Messages = () => {
           </MessagesMaquetteSubpageShell>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <MessagesInboxStickyScroll onOpenCompose={() => setMessagesComposeSheetOpen(true)}>
+            <MessagesInboxStickyScroll
+              onOpenCompose={() => setMessagesComposeSheetOpen(true)}
+              belowTitle={
+                !isInboxSearchMode ? (
+                  <div
+                    role="tablist"
+                    aria-label="Filtrer les conversations"
+                    className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {(
+                      [
+                        { id: "all" as const, label: "Conversations", count: null as number | null },
+                        { id: "clubs" as const, label: "Clubs", count: inboxClubCount },
+                        { id: "groups" as const, label: "Groupes", count: inboxGroupCount },
+                      ] as const
+                    ).map((chip) => {
+                      const active = messagesInboxSegment === chip.id;
+                      return (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setMessagesInboxSegment(chip.id)}
+                          className="flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-semibold transition-all active:scale-95"
+                          style={{
+                            background: active ? "#007AFF" : "#E8E8ED",
+                            color: active ? "white" : "#0A0F1F",
+                            boxShadow: active ? "0 4px 12px rgba(0, 122, 255, 0.25)" : "none",
+                          }}
+                        >
+                          <span>{chip.label}</span>
+                          {chip.count !== null && chip.count > 0 ? (
+                            <span
+                              className="text-center text-[11px] font-bold"
+                              style={{
+                                background: active ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.1)",
+                                color: active ? "white" : "#0A0F1F",
+                                padding: "2px 7px",
+                                borderRadius: 999,
+                                minWidth: 20,
+                              }}
+                            >
+                              {chip.count}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : undefined
+              }
+            >
               {isInboxSearchMode ? (
                 <>
                   <div className="flex w-full items-center gap-2">
@@ -3709,53 +3761,6 @@ const Messages = () => {
                     >
                       Toi
                     </button>
-                  </div>
-
-                  <div
-                    role="tablist"
-                    aria-label="Filtrer les conversations"
-                    className="mt-5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                  >
-                    {(
-                      [
-                        { id: "all" as const, label: "Conversations", count: null as number | null },
-                        { id: "clubs" as const, label: "Clubs", count: inboxClubCount },
-                        { id: "groups" as const, label: "Groupes", count: inboxGroupCount },
-                      ] as const
-                    ).map((chip) => {
-                      const active = messagesInboxSegment === chip.id;
-                      return (
-                        <button
-                          key={chip.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={active}
-                          onClick={() => setMessagesInboxSegment(chip.id)}
-                          className="flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-semibold transition-all active:scale-95"
-                          style={{
-                            background: active ? "#007AFF" : "#E8E8ED",
-                            color: active ? "white" : "#0A0F1F",
-                            boxShadow: active ? "0 4px 12px rgba(0, 122, 255, 0.25)" : "none",
-                          }}
-                        >
-                          <span>{chip.label}</span>
-                          {chip.count !== null && chip.count > 0 ? (
-                            <span
-                              className="text-center text-[11px] font-bold"
-                              style={{
-                                background: active ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.1)",
-                                color: active ? "white" : "#0A0F1F",
-                                padding: "2px 7px",
-                                borderRadius: 999,
-                                minWidth: 20,
-                              }}
-                            >
-                              {chip.count}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
                   </div>
 
                   <div
