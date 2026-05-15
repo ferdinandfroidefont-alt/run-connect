@@ -39,9 +39,19 @@ function monPlanBarHeightPct(block: MiniProfileBlock): number {
 }
 
 /** Aperçu minimal façon maquette quand les blocs n’ont pas encore été résolus en mini-profils. */
-function MonPlanSchemaBarsFallback({ className }: { className?: string }) {
+function MonPlanSchemaBarsFallback({
+  className,
+  size = "compact",
+}: {
+  className?: string;
+  size?: "compact" | "sheet";
+}) {
+  const row =
+    size === "sheet"
+      ? "mt-3 flex h-[110px] items-end gap-1 px-1"
+      : "mt-3 flex h-14 items-end gap-[2px] px-3";
   return (
-    <div className={cn("mt-3 flex h-14 items-end gap-[2px] px-3", className)} aria-hidden>
+    <div className={cn(row, className)} aria-hidden>
       <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "38%" }} />
       <div className="min-w-0 flex-[2] rounded-sm bg-[#34C759]" style={{ height: "68%" }} />
       <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "35%" }} />
@@ -56,6 +66,8 @@ export function MonPlanSchemaBars({
   selectedBarIndex = null,
   onSelectBarIndex,
   className,
+  /** `sheet` : même échelle que la maquette `SessionBarChart` (hauteur ~110px). */
+  size = "compact",
 }: {
   blocks: MiniProfileBlock[];
   interactive?: boolean;
@@ -63,12 +75,17 @@ export function MonPlanSchemaBars({
   onSelectBarIndex?: (index: number) => void;
   /** Ex. espacement horizontal du bandeau de barres (Mon plan carte plus aérée à droite). */
   className?: string;
+  size?: "compact" | "sheet";
 }) {
   if (!blocks.length) {
-    return <MonPlanSchemaBarsFallback className={className} />;
+    return <MonPlanSchemaBarsFallback className={className} size={size} />;
   }
+  const row =
+    size === "sheet"
+      ? "mt-3 flex h-[110px] items-end gap-1 px-1"
+      : "mt-3 flex h-14 items-end gap-[2px] px-3";
   return (
-    <div className={cn("mt-3 flex h-14 items-end gap-[2px] px-3", className)}>
+    <div className={cn(row, className)}>
       {blocks.map((block, i) => {
         const band = zoneBandFromMiniBlock(block);
         const heightPct = monPlanBarHeightPct(block);

@@ -5517,7 +5517,7 @@ export function CoachPlanningExperience() {
           side="bottom"
           showCloseButton={false}
           overlayClassName="z-[140]"
-          className="z-[140] flex max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-[24px] border-[#E5E5EA] bg-white p-0 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:max-w-lg"
+          className="z-[140] grid w-full max-h-[92dvh] grid-rows-[auto_auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-t-[24px] border-[#E5E5EA] bg-white p-0 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:mx-auto sm:max-w-lg"
         >
           {previewSessionItem ? (
             <>
@@ -5535,7 +5535,7 @@ export function CoachPlanningExperience() {
                 </button>
               </div>
 
-              <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-5 pb-[max(1rem,var(--safe-area-bottom))] [-webkit-overflow-scrolling:touch]">
+              <div className="min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-5 pb-[max(1rem,var(--safe-area-bottom))] [-webkit-overflow-scrolling:touch]">
                 <h2 className="m-0 text-[32px] font-black leading-[1.05] tracking-[-0.03em] text-[#0A0F1F]">
                   {previewSessionItem.title || "Séance sans titre"}
                 </h2>
@@ -5562,6 +5562,7 @@ export function CoachPlanningExperience() {
                     </div>
                   ) : null}
                   <MonPlanSchemaBars
+                    size="sheet"
                     blocks={previewSessionMiniBars}
                     interactive
                     selectedBarIndex={previewSessionSelectedBarIndex}
