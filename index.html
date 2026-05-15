@@ -13,8 +13,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="preload" as="image" href="/brand/runconnect-loading-splash.svg">
-
     <meta property="og:title" content="RunConnect | Réseau social sportif" />
     <meta property="og:description" content="Organisez des séances, suivez vos amis, classements et progression — communauté sportive RunConnect." />
     <meta property="og:type" content="website" />
@@ -27,7 +25,7 @@
     <meta name="twitter:image" content="/favicon.png" />
 
     <!-- Premier rendu : couleur de secours derrière le visuel de chargement ; le thème met à jour ensuite -->
-    <meta name="theme-color" content="#0066CC" />
+    <meta name="theme-color" content="#0064D6" />
     <!-- default = barre d’état opaque claire ; le thème sombre met « black » via JS -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- Anti-flash thème (next-themes / runconnect-ui-theme). Anciens modes accent / Deep Blue retirés : nettoyage localStorage + data-* -->
@@ -63,7 +61,7 @@
     </script>
   </head>
 
-  <body style="background:#0066CC url('/brand/runconnect-loading-splash.svg') center / cover no-repeat;margin:0">
+  <body style="background:linear-gradient(155deg, #0064D6 0%, #007AFF 45%, #5AC8FA 100%);margin:0">
     <style>
       html,
       body,
@@ -73,7 +71,7 @@
 
       html,
       #root {
-        background: #0066CC url('/brand/runconnect-loading-splash.svg') center / cover no-repeat;
+        background: linear-gradient(155deg, #0064D6 0%, #007AFF 45%, #5AC8FA 100%);
       }
 
       .boot-splash {
@@ -83,36 +81,11 @@
         min-height: 100dvh;
         width: 100%;
         overflow: hidden;
-        background: #0066CC url('/brand/runconnect-loading-splash.svg') center / cover no-repeat;
-      }
-
-      .boot-splash__media {
-        pointer-events: none;
-        position: absolute;
-        inset: 0;
-        display: block;
-        height: 100%;
-        width: 100%;
-        user-select: none;
-        object-fit: cover;
-        object-position: center;
+        background: linear-gradient(155deg, #0064D6 0%, #007AFF 45%, #5AC8FA 100%);
       }
     </style>
     <div id="root">
-      <div class="boot-splash" role="status" aria-busy="true" aria-live="polite">
-        <video
-          class="boot-splash__media"
-          src="/brand/runconnect-loading.mp4"
-          poster="/brand/runconnect-loading-splash.svg"
-          autoplay
-          loop
-          muted
-          playsinline
-          preload="auto"
-          disablepictureinpicture
-          aria-hidden="true"
-        ></video>
-      </div>
+      <div class="boot-splash" role="status" aria-busy="true" aria-live="polite"></div>
     </div>
     
     <script>

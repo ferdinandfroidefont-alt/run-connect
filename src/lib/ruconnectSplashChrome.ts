@@ -6,30 +6,33 @@ import {
 } from '@/lib/iosStatusBarTheme';
 import { RunConnectSplashChrome } from '@/plugins/runConnectSplashChrome';
 
+/** Dégradé plein écran (maquette splash animé, avant React). */
+export const RUCONNECT_SPLASH_GRADIENT =
+  'linear-gradient(155deg, #0064D6 0%, #007AFF 45%, #5AC8FA 100%)';
+
 /**
- * Couleur de secours du splash. Le visuel de chargement est posé au-dessus dès que possible
- * pour éviter un écran bleu nu pendant le boot.
+ * Couleur de secours / theme-color pendant le splash (dominante du dégradé).
  */
-export const RUCONNECT_SPLASH_BACKGROUND = '#0066CC';
-export const RUCONNECT_SPLASH_PRIMARY = '#0066CC';
+export const RUCONNECT_SPLASH_BACKGROUND = '#0064D6';
+export const RUCONNECT_SPLASH_PRIMARY = '#007AFF';
 
 /** Icône seule (cartes de chargement, fallback boot, etc.). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
 
-/** Boucle vidéo plein écran (`LoadingScreen` : `<video>` autoplay + `playsInline` iOS). */
+/** Legacy : ancienne boucle vidéo splash (non utilisée par `LoadingScreen`). */
 export const RUCONNECT_LOADING_SCREEN_MP4_URL = '/brand/runconnect-loading.mp4';
-/** Image fixe si la vidéo est absente ou en erreur — SVG vectoriel pour rester net sur grands écrans. */
+/** SVG vectoriel (secours marketing / anciens écrans). */
 export const RUCONNECT_LOADING_SCREEN_FALLBACK_URL = '/brand/runconnect-loading-splash.svg';
-/** GIF optionnel (non utilisé par défaut ; conserver pour tests / assets alternatifs). */
+/** GIF optionnel (tests / assets alternatifs). */
 export const RUCONNECT_LOADING_SCREEN_GIF_URL = '/brand/runconnect-loading-splash.gif';
 
 /** Photo plein écran pendant la préparation du tunnel d’arrivée (`Onboarding`). */
 export const RUCONNECT_ONBOARDING_ARRIVAL_BG_URL = '/brand/onboarding-arrival-bg.png';
 
-/** URL « principale » du splash (vidéo). */
+/** URL legacy (vidéo). */
 export const RUCONNECT_LOADING_SCREEN_URL = RUCONNECT_LOADING_SCREEN_MP4_URL;
 
-export const RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE = `${RUCONNECT_SPLASH_BACKGROUND} url("${RUCONNECT_LOADING_SCREEN_FALLBACK_URL}") center / cover no-repeat`;
+export const RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE = RUCONNECT_SPLASH_GRADIENT;
 
 /** Chrome web (Safari / in-app) pendant le splash */
 export function applyRuconnectSplashWebChrome(): void {

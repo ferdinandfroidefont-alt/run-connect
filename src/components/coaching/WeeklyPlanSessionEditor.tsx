@@ -1,9 +1,29 @@
-import { useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { mergeParsedBlocksByIndex, parseRCC, type ParsedBlock } from "@/lib/rccParser";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { addDays, startOfWeek } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import type { SessionBlock } from "@/components/session-creation/types";
+import {
+  formatDurationSeconds,
+  normalizeBlocksForStorage,
+  parseDurationSeconds,
+  parseDistanceMeters,
+  parsePaceToSecondsPerKm,
+  sessionBlocksToParsedBlocks,
+} from "@/lib/sessionBlockCalculations";
+import {
+  computeRCCSummary,
+  mergeParsedBlocksByIndex,
+  parseRCC,
+  rccToSessionBlocks,
+  serializeParsedBlocksToRcc,
+} from "@/lib/rccParser";
 import { normalizeBlockRpeLength } from "@/lib/sessionBlockRpe";
+import { WIZARD_ACTION_BLUE, WIZARD_TITLE } from "@/components/session-creation/wizardVisualTokens";
+import { CoachingBlockEditorPanel, type CoachingSessionBlock } from "./CoachingBlockEditorPanel";
+import { ModelsPage } from "./models/ModelsPage";
+import type { SessionModelItem } from "./models/types";
+import { cn } from "@/lib/utils";
 
 interface AthleteOverride {
   pace?: string;
@@ -38,63 +58,161 @@ interface WeeklyPlanSessionEditorProps {
   onDuplicate: (targetDay: number) => void;
   onDelete: () => void;
   members: ClubMember[];
+  /** Clé stable (ex. index + groupe) pour réinitialiser l’éditeur quand on change de séance. */
+  sessionSyncKey?: string | number;
 }
 
-const SPORT_OPTIONS = [
-  { key: "running", emoji: "🏃", bg: "#007AFF" },
-  { key: "cycling", emoji: "🚴", bg: "#FF3B30" },
-  { key: "swimming", emoji: "🏊", bg: "#5AC8FA" },
-  { key: "strength", emoji: "💪", bg: "#FF9500" },
-] as const;
+function uid() {
+  return Math.random().toString(36).slice(2);
+}
 
-const BLOCK_PRESETS = [
+function isCoachingPositive(value?: number): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function paceSecPerKmToRunPaceString(sec?: number): string {
+  if (!sec || sec <= 0) return "";
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function blockIntensityToZone(intensity?: string | null): NonNullable<CoachingSessionBlock["zone"]> {
+  const z = intensity?.trim().toLowerCase();
+  if (z === "z1") return "Z1";
+  if (z === "z2") return "Z2";
+  if (z === "z3") return "Z3";
+  if (z === "z4") return "Z4";
+  if (z === "z5") return "Z5";
+  if (z === "z6") return "Z6";
+  return "Z2";
+}
+
+function coachingBlocksToSessionBlocks(blocks: CoachingSessionBlock[]): SessionBlock[] {
+  return blocks.map((block) => {
+    if (block.type === "interval") {
+      const pace = paceSecPerKmToRunPaceString(block.paceSecPerKm);
+      const hasDistance = isCoachingPositive(block.distanceM);
+      return {
+        id: block.id,
+        type: "interval",
+        repetitions: Math.max(1, block.repetitions ?? 1),
+        blockRepetitions: Math.max(1, block.blockRepetitions ?? 1),
+        effortType: hasDistance ? "distance" : "time",
+        effortDistance: hasDistance ? String(Math.round(block.distanceM!)) : "",
+        effortDuration: hasDistance ? "" : formatDurationSeconds(block.durationSec),
+        effortPace: pace,
+        recoveryDuration: formatDurationSeconds(block.recoveryDurationSec),
+        recoveryType: "trot",
+        effortIntensity: block.zone ? block.zone.toLowerCase() : undefined,
+      };
+    }
+    const sessionType: "warmup" | "steady" | "cooldown" =
+      block.type === "warmup" ? "warmup" : block.type === "cooldown" ? "cooldown" : "steady";
+    const pace = paceSecPerKmToRunPaceString(block.paceSecPerKm);
+    return {
+      id: block.id,
+      type: sessionType,
+      durationType: isCoachingPositive(block.distanceM) && !isCoachingPositive(block.durationSec) ? "distance" : "time",
+      duration: formatDurationSeconds(block.durationSec),
+      distance: block.distanceM != null ? String(Math.round(block.distanceM)) : "",
+      pace,
+      intensity: block.zone?.toLowerCase(),
+    };
+  });
+}
+
+function sessionBlocksToCoachingBlocks(blocks: SessionBlock[]): CoachingSessionBlock[] {
+  return blocks.map((b, index) => {
+    if (b.type === "interval") {
+      const effortDuration = parseDurationSeconds(b.effortDuration);
+      const effortDistance = parseDistanceMeters(b.effortDistance);
+      const recoveryDuration = parseDurationSeconds(b.recoveryDuration);
+      return {
+        id: b.id || uid(),
+        order: index + 1,
+        type: "interval",
+        durationSec: b.effortType === "distance" ? undefined : effortDuration ?? undefined,
+        distanceM: effortDistance ?? undefined,
+        paceSecPerKm: parsePaceToSecondsPerKm(b.effortPace) ?? undefined,
+        repetitions: b.repetitions,
+        blockRepetitions: b.blockRepetitions,
+        recoveryDurationSec: recoveryDuration ?? undefined,
+        intensityMode: "zones",
+        zone: blockIntensityToZone(b.effortIntensity),
+      };
+    }
+    const mapType = (): CoachingSessionBlock["type"] => {
+      if (b.type === "warmup") return "warmup";
+      if (b.type === "cooldown") return "cooldown";
+      return "steady";
+    };
+    const distanceM = parseDistanceMeters(b.distance);
+    const n = Number(b.duration?.trim());
+    const legacySeconds =
+      !b.durationType && Number.isInteger(n) && n > 0 && n <= 240 ? n * 60 : undefined;
+    const fromParse = parseDurationSeconds(b.duration);
+    const durationSecResolved = legacySeconds ?? fromParse ?? undefined;
+    return {
+      id: b.id || uid(),
+      order: index + 1,
+      type: mapType(),
+      durationSec: durationSecResolved,
+      distanceM: distanceM ?? undefined,
+      paceSecPerKm: parsePaceToSecondsPerKm(b.pace) ?? undefined,
+      intensityMode: "zones",
+      zone: blockIntensityToZone(b.intensity),
+    };
+  });
+}
+
+const BASE_MODELS: SessionModelItem[] = [
   {
-    label: "Continu",
-    code: "20'>5'30",
-    svg: <rect x="2" y="9" width="40" height="6" rx="2" fill="#0066cc" />,
+    id: "base-endurance-40",
+    source: "base",
+    title: "Footing 40 min + 5 x 60m",
+    activityType: "running",
+    objective: "Z2 endurance",
+    rccCode: "15'>5'45, 5x60>3'40 r45>trot, 10'>6'00",
+    category: "endurance",
   },
   {
-    label: "Intervalle",
-    code: "6x3'>3'30",
-    svg: (
-      <>
-        <rect x="2" y="4" width="6" height="16" rx="1.5" fill="#FF9500" />
-        <rect x="11" y="14" width="3" height="6" rx="1" fill="#B5B5BA" />
-        <rect x="17" y="4" width="6" height="16" rx="1.5" fill="#FF9500" />
-        <rect x="26" y="14" width="3" height="6" rx="1" fill="#B5B5BA" />
-        <rect x="32" y="4" width="6" height="16" rx="1.5" fill="#FF9500" />
-      </>
-    ),
+    id: "base-long-90",
+    source: "base",
+    title: "Sortie longue 1h30",
+    activityType: "running",
+    objective: "Endurance",
+    rccCode: "90'>5'50",
+    category: "endurance",
   },
   {
-    label: "Pyramide",
-    code: "200>4'00, 400>4'10, 600>4'20, 400>4'10, 200>4'00",
-    svg: (
-      <>
-        <rect x="2" y="14" width="5" height="6" rx="1" fill="#34C759" />
-        <rect x="9" y="10" width="5" height="10" rx="1.2" fill="#FFCC00" />
-        <rect x="16" y="4" width="5" height="16" rx="1.5" fill="#FF9500" />
-        <rect x="23" y="4" width="5" height="16" rx="1.5" fill="#FF9500" />
-        <rect x="30" y="10" width="5" height="10" rx="1.2" fill="#FFCC00" />
-        <rect x="37" y="14" width="5" height="6" rx="1" fill="#34C759" />
-      </>
-    ),
+    id: "base-threshold-3x10",
+    source: "base",
+    title: "3 x 10 min allure seuil",
+    activityType: "running",
+    objective: "Z4 seuil",
+    rccCode: "20'>5'25, 3x10'>4'10 r2'00>trot, 10'>5'50",
+    category: "threshold",
   },
   {
-    label: "Variation",
-    code: "10'>5'30, 10'>4'45, 10'>5'15",
-    svg: (
-      <>
-        <rect x="2" y="16" width="5" height="4" rx="1" fill="#B5B5BA" />
-        <rect x="9" y="12" width="5" height="8" rx="1" fill="#34C759" />
-        <rect x="16" y="6" width="5" height="14" rx="1.3" fill="#FF9500" />
-        <rect x="23" y="14" width="5" height="6" rx="1" fill="#0066cc" />
-        <rect x="30" y="4" width="5" height="16" rx="1.5" fill="#FF3B30" />
-        <rect x="37" y="10" width="5" height="10" rx="1.2" fill="#FFCC00" />
-      </>
-    ),
+    id: "base-vo2-10x400",
+    source: "base",
+    title: "10 x 400m",
+    activityType: "running",
+    objective: "VO2",
+    rccCode: "15'>5'30, 10x400>3'30 r1'15>trot, 10'>5'55",
+    category: "vo2",
   },
-] as const;
+  {
+    id: "base-recovery-30",
+    source: "base",
+    title: "Footing léger 30 min",
+    activityType: "running",
+    objective: "Récup",
+    rccCode: "30'>6'05",
+    category: "recovery",
+  },
+];
 
 export const WeeklyPlanSessionEditor = ({
   session,
@@ -102,176 +220,200 @@ export const WeeklyPlanSessionEditor = ({
   onDuplicate: _onDuplicate,
   onDelete: _onDelete,
   members: _members,
+  sessionSyncKey,
 }: WeeklyPlanSessionEditorProps) => {
-  const [showTemplates, setShowTemplates] = useState(false);
-
+  const { user } = useAuth();
   void _onDuplicate;
   void _onDelete;
   void _members;
 
-  const update = <K extends keyof WeekSession>(key: K, value: WeekSession[K]) => onChange({ ...session, [key]: value });
+  const [builderTab, setBuilderTab] = useState<"build" | "templates">("build");
+  const [coachingBlocks, setCoachingBlocks] = useState<CoachingSessionBlock[]>([]);
+  const [schemaEditorKey, setSchemaEditorKey] = useState(0);
+  const [myModels, setMyModels] = useState<SessionModelItem[]>([]);
+  const lastSyncKey = useRef<typeof sessionSyncKey>(undefined);
 
-  const applyRccCode = (nextCode: string) => {
-    const parsed = parseRCC(nextCode).blocks;
-    const merged = mergeParsedBlocksByIndex(parsed, session.parsedBlocks || []);
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("coaching_templates")
+      .select("id, title, activity_type, objective, rcc_code, category")
+      .eq("coach_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        setMyModels(
+          data.map((row) => ({
+            id: row.id,
+            source: "mine" as const,
+            title: row.title || "",
+            activityType: row.activity_type || "running",
+            objective: row.objective || "",
+            rccCode: row.rcc_code || "",
+            category: row.category || "endurance",
+          }))
+        );
+      });
+  }, [user]);
+
+  useEffect(() => {
+    if (sessionSyncKey !== undefined && lastSyncKey.current === sessionSyncKey) {
+      return;
+    }
+    lastSyncKey.current = sessionSyncKey;
+
+    const parsed = session.parsedBlocks?.length
+      ? session.parsedBlocks
+      : parseRCC(session.rccCode).blocks;
+    const sessionRows = rccToSessionBlocks(parsed) as SessionBlock[];
+    setCoachingBlocks(sessionBlocksToCoachingBlocks(sessionRows));
+    setSchemaEditorKey((k) => k + 1);
+  }, [sessionSyncKey]);
+
+  const weekDays = useMemo(() => {
+    const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  }, []);
+
+  const sportProp = useMemo((): "running" | "cycling" | "swimming" | "strength" => {
+    const t = session.activityType;
+    if (t === "cycling" || t === "velo") return "cycling";
+    if (t === "swimming" || t === "natation") return "swimming";
+    if (t === "strength" || t === "musculation" || t === "muscu") return "strength";
+    return "running";
+  }, [session.activityType]);
+
+  const estimated = useMemo(() => {
+    const code = session.rccCode.trim();
+    if (!code) return { km: "0", min: 0 };
+    const summary = computeRCCSummary(parseRCC(code).blocks);
+    return {
+      km: summary.totalDistanceKm > 0 ? String(summary.totalDistanceKm) : "0",
+      min: summary.totalDurationMin,
+    };
+  }, [session.rccCode]);
+
+  const handleCoachingBlocksChange = (blocks: CoachingSessionBlock[]) => {
+    setCoachingBlocks(blocks);
+    const sessionBlocks = normalizeBlocksForStorage(coachingBlocksToSessionBlocks(blocks));
+    const parsed = sessionBlocksToParsedBlocks(sessionBlocks);
+    const mergedParsed = mergeParsedBlocksByIndex(parsed, session.parsedBlocks || []);
+    const rccCode = serializeParsedBlocksToRcc(parsed);
     onChange({
       ...session,
-      rccCode: nextCode,
-      parsedBlocks: merged,
-      blockRpe: normalizeBlockRpeLength(session.blockRpe, merged.length),
+      rccCode,
+      parsedBlocks: mergedParsed,
+      blockRpe: normalizeBlockRpeLength(session.blockRpe, mergedParsed.length),
     });
   };
 
-  const appendRccCode = (chunk: string) => {
-    const current = session.rccCode.trim();
-    applyRccCode(current ? `${current}, ${chunk}` : chunk);
+  const applyModelToSession = (model: SessionModelItem) => {
+    const rawParsed = parseRCC(model.rccCode).blocks;
+    const raw = rccToSessionBlocks(rawParsed) as SessionBlock[];
+    const blocks = normalizeBlocksForStorage(raw);
+    const coaching = sessionBlocksToCoachingBlocks(blocks);
+    const mergedParsed = mergeParsedBlocksByIndex(rawParsed, []);
+    const rccCode = model.rccCode.trim();
+    const obj = model.objective?.trim();
+    const notes = session.coachNotes?.trim();
+    let coachNotes = session.coachNotes;
+    if (obj && (!notes || !notes.includes(obj))) {
+      coachNotes = notes ? `${notes}\n\nObjectif : ${obj}` : `Objectif : ${obj}`;
+    }
+
+    onChange({
+      ...session,
+      rccCode,
+      parsedBlocks: mergedParsed,
+      objective: model.title?.trim() || session.objective,
+      blockRpe: normalizeBlockRpeLength([], mergedParsed.length),
+      ...(coachNotes !== session.coachNotes ? { coachNotes } : {}),
+    });
+    setCoachingBlocks(coaching);
+    setBuilderTab("build");
+    setSchemaEditorKey((k) => k + 1);
   };
 
-  const estimated = useMemo(() => {
-    const blocks: ParsedBlock[] = session.parsedBlocks || [];
-    if (!blocks.length) return { km: "11", min: 54 };
-    const totalMin = blocks.reduce((sum, b) => {
-      const oneBlock = (b.duration || 0) + (b.recoveryDuration || 0) / 60;
-      const reps = b.repetitions || 1;
-      return sum + Math.max(0, oneBlock * reps);
-    }, 0);
-    const totalKm = blocks.reduce((sum, b) => {
-      const km = (b.distance || 0) / 1000;
-      const reps = b.repetitions || 1;
-      return sum + km * reps;
-    }, 0);
-    return {
-      km: totalKm > 0 ? totalKm.toFixed(1).replace(".0", "") : "11",
-      min: Math.max(1, Math.round(totalMin || 54)),
-    };
-  }, [session.parsedBlocks]);
-
   return (
-    <div className="overflow-hidden bg-[#f5f5f7]">
-      <div className="space-y-6 p-[17px] pb-8">
-        <div className="grid grid-cols-2 gap-2 rounded-full border border-[#e0e0e0] bg-white p-1">
-          <button type="button" className="h-11 rounded-full border border-[#0066cc] bg-[#0066cc] text-[15px] font-semibold text-white">
+    <div className="overflow-hidden bg-background">
+      <div className={cn("space-y-4 px-0", "pb-4")}>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="flex-1 rounded-full py-3 text-center text-[16px] font-bold transition-transform active:scale-[0.98]"
+            style={
+              builderTab === "build"
+                ? { background: WIZARD_ACTION_BLUE, color: "#fff" }
+                : { background: "#fff", color: WIZARD_TITLE, border: "1px solid #E5E5EA" }
+            }
+            onClick={() => setBuilderTab("build")}
+          >
             Construire
           </button>
           <button
             type="button"
-            onClick={() => setShowTemplates(true)}
-            className="h-11 rounded-full border border-[#e0e0e0] bg-white text-[15px] font-semibold text-[#1d1d1f]"
+            className="flex-1 rounded-full py-3 text-center text-[16px] font-bold transition-transform active:scale-[0.98]"
+            style={
+              builderTab === "templates"
+                ? { background: WIZARD_ACTION_BLUE, color: "#fff" }
+                : { background: "#fff", color: WIZARD_TITLE, border: "1px solid #E5E5EA" }
+            }
+            onClick={() => setBuilderTab("templates")}
           >
             Modèles
           </button>
         </div>
 
-        <div className="space-y-1 pt-1">
-          <Input
-            value={session.objective}
-            onChange={(e) => update("objective", e.target.value)}
+        <div className="px-1">
+          <input
+            className="w-full bg-transparent font-display text-[42px] font-semibold tracking-[-0.8px] text-[#1d1d1f] placeholder:text-[#7a7a7a] focus:outline-none"
             placeholder="Nom de la séance"
-            className="h-auto border-0 bg-transparent px-0 py-0 font-display text-[52px] font-semibold leading-[1.04] tracking-[-0.5px] text-[#1d1d1f] placeholder:text-[#7a7a7a] shadow-none focus-visible:ring-0"
+            value={session.objective}
+            onChange={(e) => onChange({ ...session, objective: e.target.value })}
           />
-          <p className="text-[14px] text-[#7a7a7a]">{`${estimated.km} km · ~${estimated.min} min`}</p>
+          <p className="text-[14px] text-[#7a7a7a]">
+            {estimated.min > 0 ? `${estimated.km} km · ~${estimated.min} min` : "Ajoute des blocs pour estimer la charge"}
+          </p>
         </div>
 
-        <div className="grid grid-cols-4 gap-[10px]">
-          {SPORT_OPTIONS.map((sport, idx) => (
-            <button
-              key={`${sport.key}-${idx}`}
-              type="button"
-              onClick={() => update("activityType", sport.key)}
-              className="relative aspect-square rounded-[14px] text-[36px]"
-              style={{ backgroundColor: sport.bg }}
-            >
-              {session.activityType === sport.key ? (
-                <span className="pointer-events-none absolute inset-0 rounded-[14px] shadow-[0_0_0_2px_#f5f5f7,0_0_0_4px_#0066cc]" />
-              ) : null}
-              {sport.emoji}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2">
-          <p className="pl-0.5 text-[14px] font-semibold text-[#333]">Schéma de séance</p>
-          <div className="rounded-[18px] border border-[#e0e0e0] bg-white px-4 py-3">
-            <svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" className="w-full">
-              <line x1="40" y1="20" x2="360" y2="20" stroke="#e0e0e0" strokeDasharray="2 3" />
-              <line x1="40" y1="50" x2="360" y2="50" stroke="#e0e0e0" strokeDasharray="2 3" />
-              <line x1="40" y1="80" x2="360" y2="80" stroke="#e0e0e0" strokeDasharray="2 3" />
-              <line x1="40" y1="110" x2="360" y2="110" stroke="#e0e0e0" strokeDasharray="2 3" />
-              <line x1="40" y1="140" x2="360" y2="140" stroke="#e0e0e0" strokeDasharray="2 3" />
-              <line x1="40" y1="170" x2="360" y2="170" stroke="#e0e0e0" strokeDasharray="2 3" />
-              <line x1="40" y1="200" x2="360" y2="200" stroke="#1d1d1f" strokeOpacity="0.18" />
-              <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fontWeight="600" fill="#7a7a7a">
-                <text x="32" y="38" textAnchor="end">Z6</text>
-                <text x="32" y="68" textAnchor="end">Z5</text>
-                <text x="32" y="98" textAnchor="end">Z4</text>
-                <text x="32" y="128" textAnchor="end">Z3</text>
-                <text x="32" y="158" textAnchor="end">Z2</text>
-                <text x="32" y="188" textAnchor="end">Z1</text>
-              </g>
-              <rect x="40" y="170" width="144" height="30" fill="#B5B5BA" rx="3" />
-              <rect x="184" y="50" width="37" height="150" fill="#FF9500" rx="3" />
-              <rect x="221" y="170" width="6" height="30" fill="#B5B5BA" rx="2" />
-              <rect x="227" y="50" width="37" height="150" fill="#FF9500" rx="3" />
-              <rect x="264" y="170" width="59" height="30" fill="#B5B5BA" rx="3" />
-              <g fontFamily="SF Pro Text, system-ui, sans-serif" fontSize="10" fill="#7a7a7a">
-                <text x="40" y="216" textAnchor="middle">0:00</text>
-                <text x="120" y="216" textAnchor="middle">0:15</text>
-                <text x="200" y="216" textAnchor="middle">0:30</text>
-                <text x="280" y="216" textAnchor="middle">0:45</text>
-                <text x="360" y="216" textAnchor="end">1:00</text>
-              </g>
-            </svg>
-          </div>
-        </div>
+        {builderTab === "build" ? (
+          <CoachingBlockEditorPanel
+            key={schemaEditorKey}
+            sport={sportProp}
+            initialBlocks={coachingBlocks.length ? coachingBlocks : undefined}
+            onChange={handleCoachingBlocksChange}
+          />
+        ) : (
+          <ModelsPage
+            weekDays={weekDays}
+            existingSessionsByDay={{}}
+            myModels={myModels}
+            baseModels={BASE_MODELS}
+            onCreateModel={() => setBuilderTab("build")}
+            onApplyToSession={(model) => applyModelToSession(model)}
+            onEditModel={(model) => applyModelToSession(model)}
+            onDuplicateModel={() => {}}
+            onDeleteModel={async (model) => {
+              if (model.source !== "mine") return;
+              await supabase.from("coaching_templates").delete().eq("id", model.id);
+              setMyModels((prev) => prev.filter((m) => m.id !== model.id));
+            }}
+          />
+        )}
 
         <div className="space-y-2">
-          <p className="pl-0.5 text-[14px] font-semibold text-[#333]">Ajouter un bloc</p>
-          <div className="grid grid-cols-4 gap-2">
-            {BLOCK_PRESETS.map((item, idx) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => appendRccCode(item.code)}
-                className={`rounded-[14px] border bg-white px-2 py-2 ${idx === 2 ? "border-2 border-[#0066cc]" : "border-[#e0e0e0]"}`}
-              >
-                <svg viewBox="0 0 44 22" className="mx-auto h-5 w-11" fill="none">
-                  {item.svg}
-                </svg>
-                <span className="mt-1 block text-[12px]">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="pl-0.5 text-[14px] font-semibold text-[#333]">Description</p>
-          <div className="rounded-[18px] border border-[#e0e0e0] bg-white p-3">
-            <Textarea
+          <p className="pl-0.5 text-[12px] font-medium uppercase tracking-[0.16em] text-muted-foreground/85">Notes coach</p>
+          <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card p-3">
+            <textarea
               value={session.coachNotes}
-              onChange={(e) => update("coachNotes", e.target.value)}
-              placeholder="27' à 5'30/km + 2 × 2 km à 3'30/km (récup 1 min) + 11' à 5'30/km"
+              onChange={(e) => onChange({ ...session, coachNotes: e.target.value })}
+              placeholder="Consignes, variantes, repères d’intensité…"
               rows={3}
-              className="resize-none border-0 bg-transparent p-0 text-[14px] leading-[1.4] text-[#333] shadow-none focus-visible:ring-0"
+              className="w-full resize-none border-0 bg-transparent p-0 text-[14px] leading-[1.4] text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
           </div>
         </div>
       </div>
-
-      <div className="border-t border-[#e0e0e0] bg-[#f5f5f7] px-[17px] pb-7 pt-[14px]">
-        <button type="button" className="h-[50px] w-full rounded-full bg-[#0066cc] text-[17px] font-semibold text-white">
-          Enregistrer la séance
-        </button>
-      </div>
-
-      <CoachingTemplatesDialog
-        isOpen={showTemplates}
-        onClose={() => setShowTemplates(false)}
-        onSelect={(code, objective) => {
-          applyRccCode(code);
-          if (objective) update("objective", objective);
-          setShowTemplates(false);
-        }}
-      />
     </div>
   );
 };

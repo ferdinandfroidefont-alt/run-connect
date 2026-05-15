@@ -233,7 +233,7 @@ export function DayPlanningRow({
 
           <div className="min-w-0 flex-1">
             {!session || isRest ? (
-              <div className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-[18px]">
+              <div className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-black bg-transparent px-4 py-[18px]">
                 <p className="text-center text-[15px] font-semibold leading-snug text-[#0A0F1F]">{emptyLabel ?? "Repos"}</p>
               </div>
             ) : (
@@ -325,7 +325,7 @@ export function DayPlanningRow({
 
         <div className="min-w-0 flex-1">
           {!session || isRest ? (
-            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-[1.5px] border-dashed border-[#C7C7CC] bg-transparent px-3 py-4">
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-[1.5px] border-dashed border-black bg-transparent px-3 py-4">
               <p className="text-[15px] font-semibold text-[#8E8E93]">{emptyLabel ?? "Repos"}</p>
             </div>
           ) : (

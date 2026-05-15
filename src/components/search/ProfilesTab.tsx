@@ -6,6 +6,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  gradientForSearchLetter,
+  messageSearchResultCardStyle,
+  MESSAGE_SEARCH_MAQUETTE_BLUE,
+} from '@/lib/messageSearchMaquette';
 
 interface Profile {
   user_id: string;
@@ -156,75 +161,17 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
     }
   };
 
-  const handleStartConversation = async (profile: Profile) => {
-    if (!user) return;
-
-    try {
-      // IMPORTANT: Vérifier si les utilisateurs sont amis mutuels
-      const { data: areFriends } = await supabase.rpc('are_users_friends', {
-        user1_id: user.id,
-        user2_id: profile.user_id
-      });
-
-      if (!areFriends) {
-        toast({
-          title: "Impossible d'envoyer un message",
-          description: "Vous devez être amis pour envoyer un message. Attendez que votre demande de suivi soit acceptée.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Vérifier si une conversation existe déjà
-      const { data: existingConversation } = await supabase
-        .from('conversations')
-        .select('id')
-        .or(`and(participant_1.eq.${user.id},participant_2.eq.${profile.user_id}),and(participant_1.eq.${profile.user_id},participant_2.eq.${user.id})`)
-        .eq('is_group', false)
-        .single();
-
-      if (existingConversation) {
-        navigate(`/messages?conversation=${existingConversation.id}`);
-        return;
-      }
-
-      // Créer une nouvelle conversation
-      const { data: newConversation, error } = await supabase
-        .from('conversations')
-        .insert([{
-          participant_1: user.id,
-          participant_2: profile.user_id,
-          is_group: false
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      navigate(`/messages?conversation=${newConversation.id}`);
-    } catch (error) {
-      console.error('Error starting conversation:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de démarrer la conversation",
-        variant: "destructive"
-      });
-    }
-  };
-
   if (loading) {
     return (
-      <div className="bg-white">
+      <div className="space-y-2 px-3 pb-6 pt-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3.5 w-32" />
-                <Skeleton className="h-3 w-28" />
-              </div>
-              <Skeleton className="h-7 w-16 rounded-full" />
+          <div key={i} className="flex items-center gap-3 px-3 py-3" style={messageSearchResultCardStyle}>
+            <Skeleton className="h-[50px] w-[50px] shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3.5 w-28" />
             </div>
+            <Skeleton className="h-9 w-20 shrink-0 rounded-full" />
           </div>
         ))}
       </div>
@@ -245,72 +192,97 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
 
   if (profiles.length === 0 && !loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <User className="h-16 w-16 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Aucun résultat</h3>
-        <p className="text-sm text-muted-foreground">
-          Aucun utilisateur trouvé pour "{searchQuery}"
+      <div className="flex flex-col items-center px-8 py-16 text-center">
+        <div
+          className="mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#F2F2F7]"
+          aria-hidden
+        >
+          <User className="h-9 w-9 text-[#8E8E93]" strokeWidth={1.8} />
+        </div>
+        <p className="m-0 text-[19px] font-extrabold tracking-tight text-[#0A0F1F]">Aucun profil trouvé</p>
+        <p className="mb-0 mt-1.5 max-w-[280px] text-[15px] leading-snug text-[#8E8E93]">
+          Aucun résultat pour « {searchQuery} »
         </p>
       </div>
     );
   }
 
+  const letterFor = (profile: Profile) =>
+    (profile.display_name || profile.username || "?").trim()[0] ?? "?";
+
   return (
-    <>
-    <div className="bg-white">
-      {profiles.map((profile, index) => {
-        const canOpen = friendIds.has(profile.user_id);
+    <div className="space-y-2 px-3 pb-6 pt-3">
+      {profiles.map((profile) => {
+        const isFriend = friendIds.has(profile.user_id);
+        const initial = letterFor(profile).toUpperCase();
+        const subtitleSuffix = profile.country?.trim() || "Athlète";
+
         return (
-          <div key={profile.user_id} className="relative">
-            <div
-              className="flex cursor-pointer items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary/60"
-              onClick={() => handleProfileClick(profile.user_id)}
-            >
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback>{profile.username[0]?.toUpperCase()}</AvatarFallback>
-              </Avatar>
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-semibold text-foreground">{profile.display_name}</p>
-                <p className="truncate text-[12px] text-muted-foreground">
-                  Athlete · {profile.country || 'Ville a renseigner'}
-                </p>
-                <p className="text-[11px] text-muted-foreground/90">{profile.follower_count || 0} abonnes</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (canOpen) {
-                    void handleStartConversation(profile);
-                  } else {
-                    void handleFollow(profile.user_id);
-                  }
-                }}
-                disabled={followLoadingIds.has(profile.user_id)}
-                className={`h-7 rounded-full px-3 text-[11px] font-semibold transition-colors ${
-                  canOpen
-                    ? 'bg-secondary text-foreground active:bg-secondary/80'
-                    : 'bg-[#2563EB] text-white active:bg-[#1D4ED8]'
-                } disabled:opacity-60`}
-              >
-                {followLoadingIds.has(profile.user_id) ? '...' : canOpen ? 'Ouvrir' : 'Suivre'}
-              </button>
+          <div
+            key={profile.user_id}
+            className="flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left transition-transform active:scale-[0.99]"
+            style={messageSearchResultCardStyle}
+            onClick={() => handleProfileClick(profile.user_id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleProfileClick(profile.user_id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="relative h-[50px] w-[50px] shrink-0">
+              {profile.avatar_url ? (
+                <Avatar className="h-[50px] w-[50px] border-0 shadow-[0_2px_6px_rgba(0,0,0,0.12)]">
+                  <AvatarImage src={profile.avatar_url} className="object-cover" />
+                  <AvatarFallback
+                    className="text-xl font-black text-white"
+                    style={{ background: gradientForSearchLetter(initial) }}
+                  >
+                    {initial}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <div
+                  className="flex h-[50px] w-[50px] items-center justify-center rounded-full text-xl font-black tracking-tight text-white shadow-[0_2px_6px_rgba(0,0,0,0.12)]"
+                  style={{ background: gradientForSearchLetter(initial) }}
+                >
+                  {initial}
+                </div>
+              )}
             </div>
 
-            {index < profiles.length - 1 && (
-              <div
-                aria-hidden
-                className="pointer-events-none absolute bottom-0 left-[62px] right-4 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_10%,rgba(0,0,0,0.08)_90%,rgba(0,0,0,0))]"
-              />
-            )}
+            <div className="min-w-0 flex-1">
+              <p className="m-0 truncate text-base font-extrabold leading-tight tracking-tight text-[#0A0F1F]">
+                {profile.display_name}
+              </p>
+              <p className="m-0 mt-0.5 truncate text-[13px] font-semibold text-[#8E8E93]">
+                @{profile.username}
+                <span className="opacity-60"> · </span>
+                {subtitleSuffix}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isFriend) void handleFollow(profile.user_id);
+              }}
+              disabled={isFriend || followLoadingIds.has(profile.user_id)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-extrabold tracking-tight transition-transform active:scale-95 ${
+                isFriend ? "text-[#0A0F1F]" : "text-white shadow-[0_3px_10px_rgba(0,122,255,0.25)]"
+              } disabled:opacity-60`}
+              style={{
+                background: isFriend ? "#F2F2F7" : MESSAGE_SEARCH_MAQUETTE_BLUE,
+              }}
+            >
+              {followLoadingIds.has(profile.user_id) ? "…" : isFriend ? "Ami" : "Suivre"}
+            </button>
           </div>
         );
       })}
     </div>
-
-    </>
   );
 };

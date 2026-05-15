@@ -24,7 +24,8 @@ import { AuthLandingAppleGallery } from "@/components/auth/AuthLandingAppleGalle
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
-import { RUCONNECT_ONBOARDING_ARRIVAL_BG_URL } from "@/lib/ruconnectSplashChrome";
+import { RunConnectAnimatedSplash } from "@/components/RunConnectAnimatedSplash";
+import { navigateAfterAuthCommit } from "@/lib/navigateAfterAuthCommit";
 import appIcon from "@/assets/app-icon.png";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
@@ -128,7 +129,7 @@ const Auth = () => {
       const current = await readSession();
       if (current?.user) {
         console.log(`[Auth] Session ready (${source}) -> /`);
-        navigate("/", { replace: true });
+        navigateAfterAuthCommit(navigate, "/");
         return;
       }
     } catch (e) {
@@ -152,7 +153,7 @@ const Auth = () => {
       const navigateHome = () => {
         if (done) return;
         console.log(`[Auth] Session confirmed (${source}) -> /`);
-        navigate("/", { replace: true });
+        navigateAfterAuthCommit(navigate, "/");
         finish();
       };
 
@@ -195,7 +196,7 @@ const Auth = () => {
           if (session) {
             if (authArrivalPreview) return;
             console.log('🔥 [Auth] Profil créé + session active, redirection vers /');
-            navigate('/', { replace: true });
+            navigateAfterAuthCommit(navigate, "/");
           } else {
             console.log('⚠️ [Auth] Profil créé mais pas de session');
             localStorage.removeItem('profileCreatedSuccessfully');
@@ -296,13 +297,13 @@ const Auth = () => {
             }
             // Nouveau compte OAuth / profil pas encore créé : l’accueil gère l’onboarding — ne pas déconnecter.
             console.log('[Auth] Session sans ligne profiles — redirection accueil (onboarding / setup)');
-            navigate('/', { replace: true });
+            navigateAfterAuthCommit(navigate, "/");
             return;
           }
         } catch (error) {
           console.error('Error checking profile:', error);
         }
-        navigate('/', { replace: true });
+        navigateAfterAuthCommit(navigate, "/");
       }
     });
   }, [toast, navigate, wantsArrivalPreview, authArrivalPreview, profileLoading]);
@@ -1618,27 +1619,15 @@ const Auth = () => {
 
   if (authLoading) {
     return (
-      <div
-        className="fixed inset-0 z-[130] overflow-hidden"
-        style={{
-          paddingTop: "env(safe-area-inset-top, 0px)",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        }}
-      >
-        <img
-          src={RUCONNECT_ONBOARDING_ARRIVAL_BG_URL}
-          alt=""
-          draggable={false}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_30%]"
+      <div role="status" aria-busy="true" aria-live="polite">
+        <RunConnectAnimatedSplash
+          className="z-[130]"
+          style={{
+            paddingTop: "env(safe-area-inset-top, 0px)",
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          }}
         />
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-black/15"
-          aria-hidden
-        />
-        <div className="relative flex h-full flex-col items-center justify-center px-6">
-          <Loader2 className="mb-4 h-9 w-9 animate-spin text-white" />
-          <p className="text-center text-sm font-medium text-white/90 drop-shadow-sm">Vérification de la session…</p>
-        </div>
+        <span className="sr-only">Vérification de la session…</span>
       </div>
     );
   }
@@ -1761,7 +1750,7 @@ const Auth = () => {
           // Fermeture Dialog + changement de route : enchaîner après le frame courant évite des blocages
           // (focus trap Radix / WebView). Repli hard si la SPA reste sur /auth.
           requestAnimationFrame(() => {
-            navigate('/', { replace: true });
+            navigateAfterAuthCommit(navigate, "/");
             window.setTimeout(() => {
               if (window.location.pathname.startsWith('/auth')) {
                 console.warn('[Auth] Redirection SPA inefficace après inscription — window.location.replace');

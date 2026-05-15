@@ -1,3 +1,4 @@
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { hasCompletedOnboarding } from '@/lib/arrivalFlowStorage';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
@@ -9,12 +10,8 @@ import { PreviewModeBanner } from '@/components/preview/PreviewModeBanner';
 import { ConsentDialog } from './ConsentDialog';
 import { lazy, Suspense, useState, useEffect, type CSSProperties } from 'react';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
-import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
-import {
-  RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
-  RUCONNECT_SPLASH_ICON_URL,
-} from '@/lib/ruconnectSplashChrome';
+import { RunConnectAnimatedSplash } from '@/components/RunConnectAnimatedSplash';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
 interface LayoutProps {
@@ -23,6 +20,11 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
+  /**
+   * Filet : session déjà en stockage mais `useAuth.user` pas encore commit (ex. juste après OAuth).
+   * Sans ça, `<Navigate to="/auth" />` flash une fraction de seconde.
+   */
+  const [sessionCatchup, setSessionCatchup] = useState(false);
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const { isPreviewMode } = useAppPreview();
   const { removeMainBottomInset } = useAppContext();
@@ -38,6 +40,27 @@ export const Layout = ({ children }: LayoutProps) => {
   useEffect(() => {
     if (isHome) setHomeMapPrimed(true);
   }, [isHome]);
+
+  useEffect(() => {
+    if (loading || user) {
+      setSessionCatchup(false);
+      return;
+    }
+    let alive = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!alive) return;
+      if (session?.user) setSessionCatchup(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [loading, user]);
+
+  useEffect(() => {
+    if (!sessionCatchup || user) return;
+    const t = window.setTimeout(() => setSessionCatchup(false), 1200);
+    return () => window.clearTimeout(t);
+  }, [sessionCatchup, user]);
 
   // Précharge la carte (+ centre notif en parallèle) : immédiat sur l’accueil, sinon après délai pour ne pas gêner l’onglet courant.
   useEffect(() => {
@@ -110,32 +133,16 @@ export const Layout = ({ children }: LayoutProps) => {
 
   // Hook "ready" — MUST be before any conditional return
 
-  /* Un seul splash premium (LoadingScreen) : ne pas bloquer sur profileLoading sinon double plein écran. */
-  if (loading) {
+  /* Même splash animé que la maquette ; ne pas bloquer sur profileLoading sinon double plein écran. */
+  if (loading || (sessionCatchup && !user)) {
     return (
-      <div
-        className="fixed inset-0 z-[99] flex items-center justify-center px-5"
+      <RunConnectAnimatedSplash
+        className="z-[99]"
         style={{
-          background: RUCONNECT_LOADING_SCREEN_BACKGROUND_STYLE,
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: '0px',
         }}
-      >
-        <div className="flex flex-col items-center">
-          <img
-            src={RUCONNECT_SPLASH_ICON_URL}
-            alt="RunConnect"
-            draggable={false}
-            className="mb-5 block h-[128px] w-[128px] select-none object-contain"
-          />
-          <p className="text-[26px] font-bold tracking-[0.08em] text-white">
-            RUNCONNECT
-          </p>
-          <p className="mt-2 text-[12px] font-medium tracking-[0.22em] text-white/70">
-            TROUVE. CONNECTE. PARTAGE.
-          </p>
-        </div>
-      </div>
+      />
     );
   }
 

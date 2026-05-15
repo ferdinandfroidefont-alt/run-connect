@@ -8,8 +8,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
-import { Users, UserPlus, Copy, Check, Filter, ChevronsUpDown } from "lucide-react";
+import { Users, Copy, Check, Filter, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  gradientForSearchLetter,
+  messageSearchResultCardStyle,
+  MESSAGE_SEARCH_MAQUETTE_BLUE,
+} from "@/lib/messageSearchMaquette";
 
 interface Club {
   id: string;
@@ -326,17 +331,15 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   if (loading && clubs.length === 0) {
     return (
-      <div className="bg-white">
+      <div className="space-y-2 px-3 pb-6 pt-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3.5 w-32" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-              <Skeleton className="h-7 w-16 rounded-full" />
+          <div key={i} className="flex items-center gap-3 px-3 py-3" style={messageSearchResultCardStyle}>
+            <Skeleton className="h-[50px] w-[50px] shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3.5 w-32" />
             </div>
+            <Skeleton className="h-9 w-24 shrink-0 rounded-full" />
           </div>
         ))}
       </div>
@@ -344,7 +347,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
   }
 
   return (
-    <div className="bg-white">
+    <div className="min-w-0">
       <div className="space-y-3 px-4 py-3">
         {!codeQuery && (
           <div className="flex items-center gap-2">
@@ -423,12 +426,17 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       )}
 
       {!loading && clubs.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <Users className="mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-lg font-semibold">
+        <div className="flex flex-col items-center px-8 py-16 text-center">
+          <div
+            className="mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#F2F2F7]"
+            aria-hidden
+          >
+            <Users className="h-9 w-9 text-[#8E8E93]" strokeWidth={1.8} />
+          </div>
+          <p className="m-0 text-[19px] font-extrabold tracking-tight text-[#0A0F1F]">
             {codeQuery ? "Aucun club trouvé" : "Aucun club public disponible"}
-          </h3>
-          <p className="text-sm text-muted-foreground">
+          </p>
+          <p className="mb-0 mt-1.5 max-w-[300px] text-[15px] leading-snug text-[#8E8E93]">
             {codeQuery
               ? `Aucun club avec le code « ${codeQuery} ». Vérifie le code ou demande un code à l’organisateur.`
               : selectedDepartment
@@ -438,60 +446,106 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
         </div>
       )}
 
-      {!loading &&
-        clubs.map((club, index) => (
-          <div key={club.id} className="relative">
-            <div className="flex items-center gap-2.5 px-4 py-2.5">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={club.group_avatar_url || undefined} />
-                <AvatarFallback>
-                  <Users className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
+      {!loading ? (
+        <div className="space-y-2 px-3 pb-6 pt-1">
+          {clubs.map((club) => {
+            const initial = (club.group_name?.trim()?.[0] || "C").toUpperCase();
+            const loc = club.location?.trim() || "Club";
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-semibold text-foreground">{club.group_name}</p>
-                <p className="truncate text-[12px] text-muted-foreground">
-                  Club · {club.location || "Ville a renseigner"}
-                </p>
-                <p className="text-[11px] text-muted-foreground/90">{club.member_count || 0} abonnes</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => copyClubCode(club.club_code)}
-                  className="h-7 px-2 text-[11px]"
-                >
-                  {copiedCode === club.club_code ? (
-                    <Check className="mr-1 h-3 w-3" />
-                  ) : (
-                    <Copy className="mr-1 h-3 w-3" />
-                  )}
-                  <span className="font-mono text-[10px]">{club.club_code}</span>
-                </Button>
-
-                {!club.is_member && user && (
-                  <Button size="sm" onClick={() => handleJoinClub(club)} className="h-7 rounded-full px-3 text-[11px]">
-                    <UserPlus className="mr-1 h-3.5 w-3.5" />
-                    Suivre
-                  </Button>
-                )}
-                {club.is_member && (
-                  <span className="rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-foreground">Ouvrir</span>
-                )}
-              </div>
-            </div>
-
-            {index < clubs.length - 1 && (
+            return (
               <div
-                aria-hidden
-                className="pointer-events-none absolute bottom-0 left-[62px] right-4 h-px bg-[linear-gradient(to_right,rgba(0,0,0,0),rgba(0,0,0,0.08)_10%,rgba(0,0,0,0.08)_90%,rgba(0,0,0,0))]"
-              />
-            )}
-          </div>
-        ))}
+                key={club.id}
+                className={`flex w-full items-center gap-3 px-3 py-3 text-left transition-transform ${
+                  club.is_member ? "cursor-pointer active:scale-[0.99]" : ""
+                }`}
+                style={messageSearchResultCardStyle}
+                onClick={() => {
+                  if (club.is_member) navigate(`/messages?conversation=${club.id}`);
+                }}
+                onKeyDown={(e) => {
+                  if (!club.is_member) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    navigate(`/messages?conversation=${club.id}`);
+                  }
+                }}
+                role={club.is_member ? "button" : undefined}
+                tabIndex={club.is_member ? 0 : undefined}
+              >
+                <div className="relative h-[50px] w-[50px] shrink-0">
+                  {club.group_avatar_url ? (
+                    <Avatar className="h-[50px] w-[50px] border-0 shadow-[0_2px_6px_rgba(0,0,0,0.12)]">
+                      <AvatarImage src={club.group_avatar_url} className="object-cover" />
+                      <AvatarFallback
+                        className="text-lg font-black text-white"
+                        style={{ background: gradientForSearchLetter(initial) }}
+                      >
+                        <Users className="h-6 w-6 text-white" strokeWidth={2.4} />
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div
+                      className="flex h-[50px] w-[50px] items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.12)]"
+                      style={{ background: gradientForSearchLetter(initial) }}
+                    >
+                      <Users className="h-6 w-6 text-white" strokeWidth={2.4} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-base font-extrabold leading-tight tracking-tight text-[#0A0F1F]">
+                    {club.group_name}
+                  </p>
+                  <p className="m-0 mt-0.5 truncate text-[13px] font-semibold text-[#8E8E93]">
+                    {club.member_count ?? 0} membres
+                    <span className="opacity-60"> · </span>
+                    {loc}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9 text-[#8E8E93]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void copyClubCode(club.club_code);
+                    }}
+                    aria-label={`Copier le code ${club.club_code}`}
+                  >
+                    {copiedCode === club.club_code ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+
+                  {club.is_member ? (
+                    <span className="rounded-full bg-[#F2F2F7] px-4 py-2 text-sm font-extrabold tracking-tight text-[#0A0F1F]">
+                      Membre
+                    </span>
+                  ) : user ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleJoinClub(club);
+                      }}
+                      className="rounded-full px-4 py-2 text-sm font-extrabold tracking-tight text-white shadow-[0_3px_10px_rgba(0,122,255,0.25)] transition-transform active:scale-95"
+                      style={{ background: MESSAGE_SEARCH_MAQUETTE_BLUE }}
+                    >
+                      Rejoindre
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 };

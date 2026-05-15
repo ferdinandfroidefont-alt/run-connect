@@ -314,6 +314,53 @@ function newBlockId(): string {
   return `b-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Produit un code RCC depuis des blocs parsés (inverse partiel de `parseRCC`). */
+export function serializeParsedBlocksToRcc(blocks: ParsedBlock[]): string {
+  const paceColonToRcc = (pace: string | undefined): string => {
+    if (!pace) return "5'00";
+    const colon = pace.match(/^(\d+):(\d{2})$/);
+    if (colon) return `${colon[1]}'${colon[2]}`;
+    return pace.replace(":", "'");
+  };
+
+  const recoveryToRcc = (seconds: number | undefined, type: ParsedBlock["recoveryType"]): string => {
+    if (seconds == null || seconds <= 0) return "";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    const body = m > 0 ? `${m}'${String(s).padStart(2, "0")}` : String(seconds);
+    const t = type === "marche" ? "marche" : type === "statique" ? "statique" : "trot";
+    return ` r${body}>${t}`;
+  };
+
+  const parts: string[] = [];
+  for (const b of blocks) {
+    if (b.type === "interval") {
+      const paceFrag = paceColonToRcc(b.pace);
+      const rec = recoveryToRcc(b.recoveryDuration, b.recoveryType);
+      if (b.distance != null) {
+        parts.push(`${b.repetitions ?? 1}x${b.distance}>${paceFrag}${rec}`);
+      } else if (b.duration != null) {
+        parts.push(`${b.repetitions ?? 1}x${b.duration}'>${paceFrag}${rec}`);
+      } else if (b.raw?.trim()) {
+        parts.push(b.raw.trim());
+      }
+      continue;
+    }
+    if (b.duration != null && b.pace) {
+      parts.push(`${b.duration}'>${paceColonToRcc(b.pace)}`);
+      continue;
+    }
+    if (b.duration != null) {
+      parts.push(`${b.duration}'`);
+      continue;
+    }
+    if (b.raw?.trim()) {
+      parts.push(b.raw.trim());
+    }
+  }
+  return parts.join(", ");
+}
+
 // Convert ParsedBlock[] to the SessionBlock format used in the DB
 export function rccToSessionBlocks(blocks: ParsedBlock[]): any[] {
   return blocks.map((b) => {

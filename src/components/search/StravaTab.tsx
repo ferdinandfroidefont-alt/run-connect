@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { StravaConnectButton, StravaPoweredBy } from '@/components/strava/StravaBrand';
+import { gradientForSearchLetter, messageSearchResultCardStyle } from '@/lib/messageSearchMaquette';
 
 interface Profile {
   user_id: string;
@@ -140,16 +141,15 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
 
   if (loading) {
     return (
-      <div className="p-ios-3 space-y-ios-3">
+      <div className="space-y-2 px-3 pb-6 pt-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="ios-card p-ios-4">
-              <div className="flex items-center gap-ios-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-              </div>
+          <div key={i} className="flex items-center gap-3 px-3 py-3" style={messageSearchResultCardStyle}>
+            <Skeleton className="h-[50px] w-[50px] shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3.5 w-28" />
+            </div>
+            <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
           </div>
         ))}
       </div>
@@ -197,43 +197,76 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
     : friends;
 
   return (
-    <div className="p-ios-3 space-y-ios-3">
-      {filteredFriends.map((friend) => (
-        <div
-          key={friend.user_id}
-          className="ios-card cursor-pointer p-ios-4 transition-colors active:bg-secondary"
-          onClick={() => navigate(`/profile/${friend.user_id}`)}
-        >
-            <div className="flex items-center gap-ios-3">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={friend.avatar_url || undefined} />
-                <AvatarFallback>{friend.username[0]?.toUpperCase()}</AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold truncate">{friend.display_name}</h4>
-                <p className="text-sm text-muted-foreground truncate">@{friend.username}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <svg className="h-3 w-3 text-[#FC4C02]" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
-                  </svg>
-                  <span className="text-xs text-muted-foreground">Ami Strava</span>
+    <div className="space-y-2 px-3 pb-6 pt-3">
+      {filteredFriends.map((friend) => {
+        const initial = (friend.display_name || friend.username || "?")[0]?.toUpperCase() ?? "?";
+        return (
+          <div
+            key={friend.user_id}
+            className="flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left transition-transform active:scale-[0.99]"
+            style={messageSearchResultCardStyle}
+            onClick={() => navigate(`/profile/${friend.user_id}`)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate(`/profile/${friend.user_id}`);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="relative h-[50px] w-[50px] shrink-0">
+              {friend.avatar_url ? (
+                <Avatar className="h-[50px] w-[50px] border-0 shadow-[0_2px_6px_rgba(0,0,0,0.12)]">
+                  <AvatarImage src={friend.avatar_url || undefined} className="object-cover" />
+                  <AvatarFallback
+                    className="text-xl font-black text-white"
+                    style={{ background: gradientForSearchLetter(initial) }}
+                  >
+                    {initial}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <div
+                  className="flex h-[50px] w-[50px] items-center justify-center rounded-full text-xl font-black tracking-tight text-white shadow-[0_2px_6px_rgba(0,0,0,0.12)]"
+                  style={{ background: gradientForSearchLetter(initial) }}
+                >
+                  {initial}
                 </div>
-              </div>
-
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartConversation(friend);
-                }}
-              >
-                <MessageCircle className="h-5 w-5" />
-              </Button>
+              )}
             </div>
-        </div>
-      ))}
+
+            <div className="min-w-0 flex-1">
+              <p className="m-0 truncate text-base font-extrabold leading-tight tracking-tight text-[#0A0F1F]">
+                {friend.display_name}
+              </p>
+              <p className="m-0 mt-0.5 truncate text-[13px] font-semibold text-[#8E8E93]">
+                @{friend.username}
+              </p>
+              <div className="mt-0.5 flex items-center gap-1">
+                <svg className="h-3 w-3 shrink-0 text-[#FC4C02]" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171" />
+                </svg>
+                <span className="text-[12px] font-semibold text-[#8E8E93]">Ami Strava</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 shrink-0 rounded-full text-[#007AFF]"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleStartConversation(friend);
+              }}
+              aria-label="Envoyer un message"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Button>
+          </div>
+        );
+      })}
     </div>
   );
 };

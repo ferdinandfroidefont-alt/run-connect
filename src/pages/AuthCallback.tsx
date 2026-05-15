@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle } from "lucide-react";
+import { navigateAfterAuthCommit } from "@/lib/navigateAfterAuthCommit";
+import { AlertCircle } from "lucide-react";
+import { RunConnectAnimatedSplash } from "@/components/RunConnectAnimatedSplash";
 
 const AUTH_CALLBACK_TIMEOUT_MS = 8000;
 const AUTH_CALLBACK_POLL_MS = 250;
@@ -38,7 +40,11 @@ const AuthCallback = () => {
       if (navigatedRef.current || cancelled) return;
       navigatedRef.current = true;
       console.log(`[AuthCallback] navigate -> ${path} (${source})`);
-      navigate(path, { replace: true });
+      if (path === "/" || path === "") {
+        navigateAfterAuthCommit(navigate, path || "/");
+      } else {
+        navigate(path, { replace: true });
+      }
     };
 
     const cleanup = () => {
@@ -132,9 +138,9 @@ const AuthCallback = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
-      <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground text-center mb-4">{status}</p>
+    <div role="status" aria-busy="true" aria-live="polite">
+      <RunConnectAnimatedSplash className="z-[100]" />
+      <span className="sr-only">{status}</span>
     </div>
   );
 };

@@ -994,6 +994,7 @@ export const WeeklyPlanDialog = ({
           {isEditingSession ? (
             <WeeklyPlanSessionEditor
               session={selectedSession}
+              sessionSyncKey={`${activeGroupId}-${selectedIndex}`}
               onChange={(s) => updateSession(selectedIndex!, s)}
               onDuplicate={(targetDay) => duplicateToDay(selectedIndex!, targetDay)}
               onDelete={() => deleteSession(selectedIndex!)}
@@ -1242,6 +1243,7 @@ export const WeeklyPlanDialog = ({
                 <div className="mt-4 rounded-[16px] border border-border bg-card shadow-sm">
                   <WeeklyPlanSessionEditor
                     session={selectedSession}
+                    sessionSyncKey={`${activeGroupId}-${selectedIndex}`}
                     onChange={(s) => updateSession(selectedIndex, s)}
                     onDuplicate={(targetDay) => duplicateToDay(selectedIndex, targetDay)}
                     onDelete={() => deleteSession(selectedIndex)}

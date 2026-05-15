@@ -16,6 +16,7 @@ import {
   Check,
   Clock3,
   Crosshair,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   Download,
@@ -3364,15 +3365,19 @@ export function CoachPlanningExperience() {
           }
           header={
             weekPlannerMode ? (
-              <div className="px-4 pb-3 pt-[max(12px,calc(var(--safe-area-top)-4px))]">
-                <IosPageHeaderBar
-                  leadingBack={{
-                    onClick: clearWeekPlannerTarget,
-                    label: "Planification",
-                  }}
-                  title="Programmer la semaine"
-                  right={null}
-                />
+              <div className="px-4 pb-[14px] pt-[max(12px,calc(var(--safe-area-top)-4px))]">
+                {/* Maquette apple-screens · ScreenCoachWeek : retour puis titre display 28px / 700 (pas titre nav 17px centré). */}
+                <button
+                  type="button"
+                  onClick={clearWeekPlannerTarget}
+                  className="flex min-w-0 items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-semibold text-[#007AFF] active:opacity-60 [-webkit-tap-highlight-color:transparent] dark:text-[#0A84FF]"
+                >
+                  <ChevronLeft className="h-6 w-6 shrink-0 stroke-[2.6]" aria-hidden />
+                  <span className="min-w-0 whitespace-nowrap">Planification</span>
+                </button>
+                <h1 className="font-display mt-1 text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#0A0F1F] dark:text-foreground">
+                  Programmer la semaine
+                </h1>
               </div>
             ) : activeMenuKey === "club" ? (
               <div className="pt-[calc(var(--safe-area-top)-4px)]">

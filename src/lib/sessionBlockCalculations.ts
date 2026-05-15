@@ -1,4 +1,5 @@
 import type { SessionBlock } from '@/components/session-creation/types';
+import type { ParsedBlock } from '@/lib/rccParser';
 
 export type BlockMetricField =
   | 'pace'
@@ -498,4 +499,86 @@ export function sessionBlocksToZoneChartSegments(rawBlocks: unknown): { z: numbe
     pct[byFrac[k % byFrac.length].idx] += 1;
   }
   return entries.map(([z], idx) => ({ z, pct: pct[idx] }));
+}
+
+/** Reconstruit des blocs parsés RCC à partir du format `SessionBlock` (symétrique de `rccToSessionBlocks` + éditeur coaching). */
+export function sessionBlocksToParsedBlocks(blocks: SessionBlock[]): ParsedBlock[] {
+  const simpleDurationMinutes = (row: SessionBlock): number | undefined => {
+    const raw = row.duration?.trim();
+    if (!raw) return undefined;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0) return undefined;
+    if (row.durationType === 'distance') return undefined;
+    if (!row.durationType && Number.isInteger(n) && n > 0 && n <= 240) {
+      return n;
+    }
+    const sec = parseDurationSeconds(raw);
+    if (sec == null) return undefined;
+    return Math.max(1, Math.round(sec / 60));
+  };
+
+  return blocks.map((row) => {
+    if (row.type === 'interval') {
+      const pace = row.effortPace || undefined;
+      const reps = row.repetitions ?? 1;
+      const recoveryDuration = parseDurationSeconds(row.recoveryDuration) ?? undefined;
+      const recoveryType = (row.recoveryType as ParsedBlock['recoveryType']) || 'trot';
+      const rpe = row.rpe;
+      const recoveryRpe = row.recoveryRpe;
+      if (row.effortType === 'distance') {
+        const distance = parseDistanceMeters(row.effortDistance) ?? undefined;
+        return {
+          type: 'interval' as const,
+          raw: '',
+          distance,
+          repetitions: reps,
+          pace,
+          recoveryDuration,
+          recoveryType,
+          rpe,
+          recoveryRpe,
+        };
+      }
+      const durSec = parseDurationSeconds(row.effortDuration);
+      const duration = durSec != null ? Math.max(1, Math.round(durSec / 60)) : undefined;
+      return {
+        type: 'interval' as const,
+        raw: '',
+        duration,
+        repetitions: reps,
+        pace,
+        recoveryDuration,
+        recoveryType,
+        rpe,
+        recoveryRpe,
+      };
+    }
+
+    const durationMin = simpleDurationMinutes(row);
+    const distanceM = parseDistanceMeters(row.distance) ?? undefined;
+    const pace = row.pace || undefined;
+    const rpe = row.rpe;
+
+    if (row.durationType === 'distance' && distanceM && pace) {
+      return {
+        type: 'interval' as const,
+        raw: '',
+        distance: distanceM,
+        repetitions: 1,
+        pace,
+        rpe,
+      };
+    }
+
+    const blockType: ParsedBlock['type'] =
+      row.type === 'warmup' ? 'warmup' : row.type === 'cooldown' ? 'cooldown' : row.type === 'recovery' ? 'recovery' : 'steady';
+
+    return {
+      type: blockType,
+      raw: '',
+      duration: durationMin,
+      pace,
+      rpe,
+    };
+  });
 }
