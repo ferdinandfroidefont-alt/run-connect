@@ -6,15 +6,15 @@ import {
 } from '@/lib/iosStatusBarTheme';
 import { RunConnectSplashChrome } from '@/plugins/runConnectSplashChrome';
 
-/** Dégradé plein écran (maquette splash animé, avant React). */
+/** Dégradé plein écran — maquette splash (19), avant React. */
 export const RUCONNECT_SPLASH_GRADIENT =
-  'linear-gradient(155deg, #0064D6 0%, #007AFF 45%, #5AC8FA 100%)';
+  'linear-gradient(180deg, #1B6FE6 0%, #2D81F0 50%, #4090F5 100%)';
 
 /**
  * Couleur de secours / theme-color pendant le splash (dominante du dégradé).
  */
-export const RUCONNECT_SPLASH_BACKGROUND = '#0064D6';
-export const RUCONNECT_SPLASH_PRIMARY = '#007AFF';
+export const RUCONNECT_SPLASH_BACKGROUND = '#1B6FE6';
+export const RUCONNECT_SPLASH_PRIMARY = '#2D81F0';
 
 /** Icône seule (cartes de chargement, fallback boot, etc.). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';

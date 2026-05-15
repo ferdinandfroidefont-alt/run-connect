@@ -14,10 +14,10 @@ interface LoadingScreenProps {
 }
 
 /**
- * Durée minimale alignée sur la maquette splash (~2 s avant fade-out).
+ * Durée minimale alignée sur la maquette (19) : duration 2200 ms puis fade-out.
  * Plafond d’attente session : doit rester > MIN_SPLASH_MS.
  */
-const MIN_SPLASH_MS = 2000;
+const MIN_SPLASH_MS = 2200;
 const MAX_WAIT_SESSION_MS = 12000;
 const EXIT_FADE_MS = 400;
 
@@ -80,7 +80,11 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
   return (
     <div role="status" aria-busy="true" aria-live="polite">
-      <RunConnectAnimatedSplash className="z-[100]" exiting={exiting} />
+      <RunConnectAnimatedSplash
+        className="z-[100]"
+        exiting={exiting}
+        barFillDurationMs={MIN_SPLASH_MS - 200}
+      />
       <span className="sr-only">{t("loading.splashAria")}</span>
     </div>
   );
