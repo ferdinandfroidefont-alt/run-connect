@@ -3428,10 +3428,8 @@ export function CoachPlanningExperience() {
             !weekPlannerMode &&
             (isCoachMode || activeMenuKey === "my-plan") ? (
               <>
-                {/* Segmenté hors MainTopHeader : sticky dans le flux scroll pour rester sous le titre. */}
-                <CoachingRolePill
-                  className="sticky top-0 z-[19] bg-[#F2F2F7]"
-                  coachSegmentDisabled={!isCoachMode}
+                {/* Segmenté : uniquement dans le scroll (jamais dans MainTopHeader). Pas de sticky pour ne pas fusionner visuellement avec le header iOS. */}
+                <CoachingRolePill coachSegmentDisabled={!isCoachMode}
                   active={effectiveAthleteMode ? "athlete" : "coach"}
                   onSelect={(role) => {
                     if (role === "athlete") {
@@ -3594,7 +3592,7 @@ export function CoachPlanningExperience() {
             ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <div ref={myPlanContinuousRef} className="mt-5 bg-[#F2F2F7] px-6">
+              <div ref={myPlanContinuousRef} className="mt-5 -mx-5 bg-[#F2F2F7]">
                 {weekStartsContinuous.map((weekStart) => {
                   const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
                   const weekSessions = athletePlanSessions.filter((session) => {
@@ -3605,7 +3603,7 @@ export function CoachPlanningExperience() {
                   const kmLineDisplay = weekSessions.length === 0 ? "—" : weekKm ?? "0 km";
                   return (
                     <div key={weekStart.toISOString()}>
-                      <div className="mb-3 mt-7">
+                      <div className="mb-3 mt-7 px-5">
                         <div className="flex min-w-0 items-baseline gap-2">
                           <h2 className="text-[26px] font-extrabold leading-none tracking-[-0.02em] text-[#0A0F1F]">
                             Semaine {getISOWeek(weekStart)}

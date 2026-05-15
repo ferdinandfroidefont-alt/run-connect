@@ -151,35 +151,34 @@ export function DayPlanningRow({
     return (
       <div
         className={cn(
-          "relative flex items-stretch gap-2.5 px-0 py-2 [-webkit-font-smoothing:antialiased]",
+          "flex items-stretch pl-5 pr-5 py-[11px] [-webkit-font-smoothing:antialiased]",
           '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif]',
         )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
       >
-        {isToday ? (
-          <div
-            className="pointer-events-none absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r"
-            style={{ background: maquetteBlue }}
-            aria-hidden
-          />
-        ) : null}
-
-        <div className="flex w-9 min-w-[2.25rem] shrink-0 flex-col justify-center">
-          <p
-            className="text-[10px] font-bold uppercase leading-none tracking-wide"
-            style={{ color: isToday ? maquetteBlue : "#8E8E93" }}
-          >
-            {dayAbbrev}
-          </p>
-          <p
-            className="mt-1 text-[20px] font-extrabold leading-none tracking-[-0.02em]"
-            style={{ color: isToday ? maquetteBlue : "#0A0F1F" }}
-          >
-            {dateLabel}
-          </p>
+        <div className="mr-5 flex w-7 shrink-0 flex-col justify-center py-0.5" aria-hidden={!isToday}>
+          {isToday ? (
+            <div className="mx-auto h-11 min-h-[2.75rem] w-[3px] shrink-0 rounded-full bg-[#007AFF]" aria-hidden />
+          ) : null}
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 items-stretch gap-4">
+          <div className="flex w-11 shrink-0 flex-col justify-center">
+            <p
+              className="text-[11px] font-bold leading-none tracking-wide"
+              style={{ color: isToday ? maquetteBlue : "#8E8E93" }}
+            >
+              {dayAbbrev}
+            </p>
+            <p
+              className="mt-0.5 text-[26px] font-extrabold leading-none tracking-[-0.02em]"
+              style={{ color: isToday ? maquetteBlue : "#0A0F1F" }}
+            >
+              {dateLabel}
+            </p>
+          </div>
+
+          <div className="min-w-0 flex-1">
           {!session || isRest ? (
             <div className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-[18px]">
               <p className="text-center text-[15px] font-semibold leading-snug text-[#0A0F1F]">{emptyLabel ?? "Repos"}</p>
@@ -217,6 +216,7 @@ export function DayPlanningRow({
               </div>
             </button>
           )}
+        </div>
         </div>
       </div>
     );
