@@ -79,6 +79,7 @@ import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { CoachingDraftsPage, type CoachingDraftListItem } from "@/components/coaching/CoachingDraftsPage";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
+import { CoachingRolePill } from "@/components/coaching/handoff/CoachingRolePill";
 import { CoachPlanificationLanding, type CoachUpcomingSessionRow, type LandingAthleteCard } from "@/components/coaching/handoff/CoachPlanificationLanding";
 import { CoachPlanificationMonthCalendar, type PlanCalendarSession, type PlanCalendarAthlete } from "@/components/coaching/planning/CoachPlanificationMonthCalendar";
 import { Group } from "@/components/apple/Group";
@@ -2981,36 +2982,6 @@ export function CoachPlanningExperience() {
     return "?";
   }, [userProfile?.display_name, user?.email]);
 
-  /** Onglets façon iOS sous le grand titre — même logique que l’ancien pill Coach / Athlète. */
-  const coachPlanificationTabs = useMemo(() => {
-    if (!isCoachMode || weekPlannerMode) return undefined;
-    if (activeMenuKey !== "planning" && activeMenuKey !== "my-plan") return undefined;
-    return [
-      {
-        id: "planning",
-        label: "Planification",
-        active: !effectiveAthleteMode,
-        onClick: () => {
-          setViewAsAthlete(false);
-          setActiveAthleteId(undefined);
-          setActiveGroupId(undefined);
-          setCoachWeekProgrammerOpen(false);
-          setActiveMenuKey("planning");
-          setSearch("");
-        },
-      },
-      {
-        id: "my-plan",
-        label: "Mon plan",
-        active: effectiveAthleteMode,
-        onClick: () => {
-          setViewAsAthlete(true);
-          setActiveMenuKey("my-plan");
-        },
-      },
-    ];
-  }, [isCoachMode, weekPlannerMode, activeMenuKey, effectiveAthleteMode]);
-
   const clearWeekPlannerTarget = useCallback(() => {
     setActiveAthleteId(undefined);
     setActiveGroupId(undefined);
@@ -3388,7 +3359,6 @@ export function CoachPlanningExperience() {
                 hideDrawerActions={
                   coachingHeaderTitle === "Mon plan" || coachingHeaderTitle === "Planification"
                 }
-                tabs={coachPlanificationTabs}
                 largeTitleClassName={
                   coachingHeaderTitle === "Mon plan"
                     ? "text-[40px] font-black leading-none tracking-[-0.04em] text-[#0A0F1F]"
@@ -3431,6 +3401,31 @@ export function CoachPlanningExperience() {
           footer={null}
         >
           <div className={cn("space-y-0", activeMenuKey === "planning" || activeMenuKey === "tracking" ? "pb-0" : "pb-6")}>
+            {isCoachMode && (activeMenuKey === "planning" || activeMenuKey === "my-plan") && !weekPlannerMode ? (
+              <CoachingRolePill
+                className={cn(
+                  "sticky top-0 z-20 pt-2 supports-[backdrop-filter]:backdrop-blur",
+                  showCoachLanding
+                    ? "border-b border-[#E5E5EA]/80 apple-grouped-bg supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--muted)/0.96)]"
+                    : "bg-secondary/95 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur"
+                )}
+                active={effectiveAthleteMode ? "athlete" : "coach"}
+                onSelect={(role) => {
+                  if (role === "athlete") {
+                    setViewAsAthlete(true);
+                    setActiveMenuKey("my-plan");
+                  } else {
+                    setViewAsAthlete(false);
+                    setActiveAthleteId(undefined);
+                    setActiveGroupId(undefined);
+                    setCoachWeekProgrammerOpen(false);
+                    setActiveMenuKey("planning");
+                    setSearch("");
+                  }
+                }}
+              />
+            ) : null}
+
             {activeMenuKey === "planning" && clubs.length > 1 && (
               <div className="border-b border-border bg-card">
                 <p className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>

@@ -190,11 +190,10 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
   const addWaypointRef = useRef<(latLng: MapCoord) => Promise<void>>(async () => {});
   const previousWaypointCountRef = useRef(0);
 
-  // MainTabsSwipeHost : la page reste montée en arrière-plan — se fier à la route active.
+  // MainTabsSwipeHost : l’instance RouteCreation (embedDiscover) reste montée hors onglet actif.
+  // Ne jamais utiliser seul `embedDiscover` pour la suppression : sinon la tab bar reste masquée sur Coaching, Messages, etc.
   const isActiveRouteCreation =
-    embedDiscover ||
-    routeCreationPathname === "/route-create" ||
-    routeCreationPathname === "/route-creation";
+    routeCreationPathname === "/route-create" || routeCreationPathname === "/route-creation";
   useEffect(() => {
     setBottomNavSuppressed("route-creation", isActiveRouteCreation);
     return () => setBottomNavSuppressed("route-creation", false);
