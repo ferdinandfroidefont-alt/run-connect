@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 type Role = "athlete" | "coach";
 
 /**
- * Sélecteur Athlète / Coach — aligné `RunConnect (17).jsx` · `CoachingPage` (toggle sous StickyPage).
+ * Sélecteur Athlète / Coach — aligné capture maquette (piste groupe #F2F2F7, pilule active).
  * Rendu dans le **corps scrollable**, pas dans le bloc titre (`<main className="… pt-3">`).
  */
 export function CoachingRolePill({
@@ -20,8 +20,8 @@ export function CoachingRolePill({
 }) {
   return (
     <div className={cn("px-5 pt-3 pb-0 [-webkit-tap-highlight-color:transparent]", className)}>
-      {/* Maquette RunConnect (17).jsx : `rounded-xl p-1`, segment actif fond blanc + ombre ; inactif = texte #8E8E93 sur piste. */}
-      <div className="flex rounded-xl bg-[#E5E5EA] p-1 [-webkit-tap-highlight-color:transparent]">
+      {/* Capture maquette : piste #F2F2F7, segment inactif = texte #8E8E93 medium sans fond ; actif = pilule #FFF très arrondie, texte #000 semibold, ombre très douce. */}
+      <div className="flex w-full rounded-[14px] bg-[#F2F2F7] p-[3px] [-webkit-tap-highlight-color:transparent]">
         {(
           [
             { id: "athlete" as const, label: "Athlète" },
@@ -38,15 +38,16 @@ export function CoachingRolePill({
               aria-disabled={disabled}
               onClick={() => !disabled && onSelect(item.id)}
               className={cn(
-                "flex-1 rounded-lg py-2 text-center text-[15px] font-semibold leading-snug tracking-[-0.02em] outline-none transition-all",
+                "flex min-h-[42px] flex-1 items-center justify-center rounded-[11px] text-center text-[15px] leading-none tracking-[-0.02em] outline-none transition-[background-color,box-shadow,color,opacity] duration-150 ease-out",
+                selected ? "font-semibold" : "font-medium",
                 "touch-manipulation [-webkit-tap-highlight-color:transparent]",
                 "focus-visible:ring-2 focus-visible:ring-[#007AFF]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7]",
                 disabled ? "cursor-not-allowed opacity-45" : "active:opacity-[0.92]",
               )}
               style={{
                 background: selected ? "#FFFFFF" : "transparent",
-                color: selected ? "#0A0F1F" : "#8E8E93",
-                boxShadow: selected ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                color: selected ? "#000000" : "#8E8E93",
+                boxShadow: selected ? "0 1px 4px rgba(0, 0, 0, 0.07), 0 0 1px rgba(0, 0, 0, 0.04)" : "none",
               }}
             >
               {item.label}
