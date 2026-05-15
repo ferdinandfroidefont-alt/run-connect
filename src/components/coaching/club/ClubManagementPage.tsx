@@ -1,5 +1,7 @@
 import { EllipsisVertical } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,8 +13,8 @@ import {
 import {
   ClubSettingsMaquetteView,
   type ClubMaquetteMember,
-  type ClubMaquetteNextEvent,
   type ClubMaquettePendingInvite,
+  type ClubMaquetteTrainingGroup,
   type ClubSettingsMaquetteVariant,
 } from "@/components/club/ClubSettingsMaquetteView";
 
@@ -34,6 +36,8 @@ export interface ClubGroupItem {
   name: string;
   athletesCount: number;
   coachName?: string;
+  /** Couleur tuile groupe (club_groups.color) */
+  color?: string;
 }
 
 export interface ClubInvitationItem {
@@ -47,21 +51,24 @@ export interface ClubInvitationItem {
 interface ClubManagementPageProps {
   variant: ClubSettingsMaquetteVariant;
   clubName: string;
-  /** Créateur du club (fondateur) — étoile ★ maquette */
   clubCreatedBy?: string | null;
   clubDescription?: string | null;
   clubLocation?: string | null;
   clubAvatarUrl?: string | null;
+  /** ISO created_at conversation — « Depuis yyyy » */
+  clubCreatedAt?: string | null;
   coachesCount: number;
-  groupsCount: number;
+  trainingGroups: ClubGroupItem[];
   members: ClubMemberItem[];
   invitations: ClubInvitationItem[];
-  nextEvent?: ClubMaquetteNextEvent | null;
   currentUserId?: string | null;
+  /** Créateur du club — zone rouge Supprimer */
+  isClubOwner: boolean;
+  notificationsMuted: boolean;
+  onToggleNotifications: () => void;
   onInviteAthlete: () => void;
   onInviteCoach: () => void;
   onEditClub: () => void;
-  onViewGroups: () => void;
   onOpenMemberProfile: (userId: string) => void;
   onSendMessage: (userId: string) => void;
   onChangeRole: (userId: string, role: ClubRole) => void;
@@ -69,23 +76,20 @@ interface ClubManagementPageProps {
   onResendInvitation: (invitationId: string) => void;
   onCancelInvitation: (invitationId: string) => void;
   onShareClubCode?: () => void;
-  onAdminArchive?: () => void;
-  onAdminDeleteClub?: () => void;
-  onAdminExport?: () => void;
+  onDeleteClub?: () => void;
+  onCreateTrainingGroup?: () => void;
+  onOpenTrainingGroup?: (groupId: string) => void;
+  onClubStatistics?: () => void;
+  onClubShop?: () => void;
+  onReportClub?: () => void;
   /** Vue athlète — quitter le club */
   onLeaveClub?: () => void;
 }
 
-function clubTagFromName(name: string): string {
+function clubInitialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0]![0] + parts[1]![0]).toUpperCase();
   return name.slice(0, 2).toUpperCase() || "RC";
-}
-
-function roleLabel(role: ClubRole, userId: string, createdBy?: string | null): string {
-  if (role === "admin") return userId === createdBy ? "Coach principal" : "Administrateur";
-  if (role === "coach") return "Coach";
-  return "Athlète";
 }
 
 export function ClubManagementPage({
@@ -95,16 +99,18 @@ export function ClubManagementPage({
   clubDescription,
   clubLocation,
   clubAvatarUrl,
+  clubCreatedAt,
   coachesCount,
-  groupsCount,
+  trainingGroups,
   members,
   invitations,
-  nextEvent,
   currentUserId,
+  isClubOwner,
+  notificationsMuted,
+  onToggleNotifications,
   onInviteAthlete,
   onInviteCoach,
   onEditClub,
-  onViewGroups,
   onOpenMemberProfile,
   onSendMessage,
   onChangeRole,
@@ -112,9 +118,12 @@ export function ClubManagementPage({
   onResendInvitation,
   onCancelInvitation,
   onShareClubCode,
-  onAdminArchive,
-  onAdminDeleteClub,
-  onAdminExport,
+  onDeleteClub,
+  onCreateTrainingGroup,
+  onOpenTrainingGroup,
+  onClubStatistics,
+  onClubShop,
+  onReportClub,
   onLeaveClub,
 }: ClubManagementPageProps) {
   const [memberListExpanded, setMemberListExpanded] = useState(false);
@@ -122,6 +131,8 @@ export function ClubManagementPage({
   useEffect(() => {
     setMemberListExpanded(false);
   }, [variant, members.length, clubName]);
+
+  const showCoachChrome = variant === "admin";
 
   const sortedMembers = useMemo(() => {
     const copy = [...members];
@@ -137,25 +148,32 @@ export function ClubManagementPage({
 
   const maquetteMembers: ClubMaquetteMember[] = useMemo(() => {
     return sortedMembers.map((m) => {
-      const rl = roleLabel(m.role, m.userId, clubCreatedBy);
+      const handle = m.username ? `@${m.username}` : undefined;
+      const subtitle = handle || m.groupLabel || undefined;
       return {
         userId: m.userId,
         displayName: m.displayName,
-        roleLabel: m.groupLabel ? `${rl} · ${m.groupLabel}` : rl,
+        subtitle,
+        chipRole: m.role,
         avatarUrl: m.avatarUrl,
         isYou: currentUserId ? m.userId === currentUserId : false,
-        isAdminStar: Boolean(clubCreatedBy && m.userId === clubCreatedBy),
       };
     });
-  }, [sortedMembers, currentUserId, clubCreatedBy]);
+  }, [sortedMembers, currentUserId]);
 
-  const maquetteMembersVisible =
-    variant === "athlete" && !memberListExpanded ? maquetteMembers.slice(0, 4) : maquetteMembers;
+  const groupsUi: ClubMaquetteTrainingGroup[] = useMemo(() => {
+    return trainingGroups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      athletesCount: g.athletesCount,
+      color: g.color || "#5856D6",
+    }));
+  }, [trainingGroups]);
 
   const pendingInvites: ClubMaquettePendingInvite[] = useMemo(() => {
     return invitations
       .filter((i) => i.status === "pending")
-      .slice(0, 6)
+      .slice(0, 12)
       .map((i) => ({
         id: i.id,
         initials: i.displayLabel
@@ -169,70 +187,74 @@ export function ClubManagementPage({
       }));
   }, [invitations]);
 
-  const subtitleParts = [clubDescription?.trim(), clubLocation?.trim()].filter(Boolean);
-  const subtitleLine = subtitleParts.length ? subtitleParts.join(" · ") : "Club RunConnect";
+  const bioParts = [clubDescription?.trim(), clubLocation?.trim()].filter(Boolean);
+  const bio = bioParts.length ? bioParts.join("\n") : "Club RunConnect";
 
-  const tag = clubTagFromName(clubName);
+  const foundedLabel = clubCreatedAt
+    ? format(new Date(clubCreatedAt), "yyyy", { locale: fr })
+    : null;
 
   return (
     <ClubSettingsMaquetteView
       variant={variant}
       clubName={clubName}
-      clubTag={tag}
       clubAvatarUrl={clubAvatarUrl}
-      subtitleLine={subtitleLine}
+      clubInitials={clubInitialsFromName(clubName)}
+      bio={bio}
       statsMembers={members.length}
       statsCoaches={coachesCount}
-      statsPrograms={groupsCount}
-      nextEvent={nextEvent}
-      members={maquetteMembersVisible}
+      foundedLabel={foundedLabel}
+      members={maquetteMembers}
       totalMemberCount={members.length}
-      pendingInvites={variant === "admin" ? pendingInvites : []}
-      onQuickInvite={variant === "admin" ? onInviteAthlete : undefined}
-      onQuickAddCoach={variant === "admin" ? onInviteCoach : undefined}
-      onQuickShareLink={variant === "admin" ? onShareClubCode : undefined}
-      onMemberRowClick={onOpenMemberProfile}
-      onViewAllMembers={variant === "athlete" && maquetteMembers.length > 4 ? () => setMemberListExpanded(true) : undefined}
+      memberPreviewCount={4}
+      membersExpanded={memberListExpanded || variant === "admin"}
+      onExpandMembers={variant === "athlete" && maquetteMembers.length > 4 ? () => setMemberListExpanded(true) : undefined}
+      trainingGroups={groupsUi}
+      onOpenTrainingGroup={onOpenTrainingGroup}
+      onCreateTrainingGroup={showCoachChrome ? onCreateTrainingGroup : undefined}
+      notificationsMuted={notificationsMuted}
+      onToggleNotifications={onToggleNotifications}
+      showCoachChrome={showCoachChrome}
+      isClubOwner={isClubOwner}
+      onEditClubPhoto={showCoachChrome ? onEditClub : undefined}
+      onMemberPress={(userId) => onOpenMemberProfile(userId)}
       renderMemberTrailing={
-        variant === "admin"
-          ? (m) => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" aria-label="Actions membre">
-                    <EllipsisVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => onOpenMemberProfile(m.userId)}>Voir le profil</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onSendMessage(m.userId)}>Envoyer un message</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onChangeRole(m.userId, "athlete")}>Définir comme Athlète</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onChangeRole(m.userId, "coach")}>Définir comme Coach</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onChangeRole(m.userId, "admin")}>Définir comme Admin</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onRemoveMember(m.userId)}>
-                    Retirer du club
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )
+        showCoachChrome
+          ? (row) =>
+              row.userId !== currentUserId ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" aria-label="Actions membre">
+                      <EllipsisVertical className="h-4 w-4 text-[#C7C7CC]" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => onOpenMemberProfile(row.userId)}>Voir le profil</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onSendMessage(row.userId)}>Envoyer un message</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onChangeRole(row.userId, "athlete")}>Définir comme Athlète</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onChangeRole(row.userId, "coach")}>Définir comme Coach</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onChangeRole(row.userId, "admin")}>Définir comme Admin</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onRemoveMember(row.userId)}>
+                      Retirer du club
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null
           : undefined
       }
-      onAdminSettingInfos={variant === "admin" ? onEditClub : undefined}
-      onAdminSettingPrivacy={variant === "admin" ? onEditClub : undefined}
-      onAdminSettingNotifications={variant === "admin" ? onEditClub : undefined}
-      onAdminSettingCalendar={variant === "admin" ? onViewGroups : undefined}
-      onAdminSettingPrograms={variant === "admin" ? onViewGroups : undefined}
-      onAdminCoAdmins={variant === "admin" ? onEditClub : undefined}
-      onAdminExport={variant === "admin" ? onAdminExport : undefined}
-      onAdminArchive={variant === "admin" ? onAdminArchive : undefined}
-      onAdminDelete={variant === "admin" ? onAdminDeleteClub : undefined}
+      onInviteMembers={showCoachChrome ? () => onInviteAthlete() : undefined}
+      onManageRoles={showCoachChrome ? onEditClub : undefined}
+      onClubStatistics={showCoachChrome ? onClubStatistics : undefined}
+      onClubShop={showCoachChrome ? onClubShop : undefined}
+      onShareClub={onShareClubCode}
+      onReportClub={onReportClub}
+      onLeaveClub={onLeaveClub}
+      onDeleteClub={showCoachChrome && isClubOwner ? onDeleteClub : undefined}
+      pendingInvites={showCoachChrome ? pendingInvites : []}
       onPendingPrimary={(id) => onResendInvitation(id)}
       onPendingSecondary={(id) => onCancelInvitation(id)}
-      athleteNotificationsOn
-      onAthleteCalendar={variant === "athlete" ? onViewGroups : undefined}
-      onAthletePrograms={variant === "athlete" ? onViewGroups : undefined}
-      onAthleteLeaveClub={variant === "athlete" ? onLeaveClub : undefined}
     />
   );
 }

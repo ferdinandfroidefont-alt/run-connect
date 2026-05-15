@@ -52,7 +52,7 @@ export function DiscoverPage() {
   const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
   const [discoverMapFullscreen, setDiscoverMapFullscreen] = useState(false);
   const [liveMapFullscreen, setLiveMapFullscreen] = useState(false);
-  const [discoverMapPaletteId, setDiscoverMapPaletteId] = useState<DiscoverMapPaletteId>("standard");
+  const [discoverMapPaletteId, setDiscoverMapPaletteId] = useState<DiscoverMapPaletteId>("terrain");
   const [discoverFilterPanel, setDiscoverFilterPanel] = useState<DiscoverFilterPanel>(null);
   const [discoverStyleSheetOpen, setDiscoverStyleSheetOpen] = useState(false);
 

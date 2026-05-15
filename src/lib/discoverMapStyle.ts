@@ -1,4 +1,5 @@
 import { MAPBOX_STYLE_BY_UI_ID } from "@/lib/mapboxConfig";
+import { DEFAULT_MAP_STYLE_ID } from "@/lib/mapboxMapStylePreference";
 
 /** Styles palette « Découvrir » (carte embarquée) — alignés maquette + 3D + sombre. */
 export type DiscoverMapPaletteId = "standard" | "satellite" | "terrain" | "standard3d" | "dark";
@@ -13,7 +14,7 @@ const PALETTE_TO_MAPBOX_KEY: Record<DiscoverMapPaletteId, keyof typeof MAPBOX_ST
 
 export function discoverPaletteToStyleUrl(id: DiscoverMapPaletteId): string {
   const key = PALETTE_TO_MAPBOX_KEY[id];
-  return MAPBOX_STYLE_BY_UI_ID[key] ?? MAPBOX_STYLE_BY_UI_ID.roadmap;
+  return MAPBOX_STYLE_BY_UI_ID[key] ?? MAPBOX_STYLE_BY_UI_ID[DEFAULT_MAP_STYLE_ID];
 }
 
 export const DISCOVER_MAP_PALETTE_ROWS: {
@@ -23,9 +24,9 @@ export const DISCOVER_MAP_PALETTE_ROWS: {
   label: string;
   hint: string;
 }[] = [
-  { id: "standard", emoji: "🗺️", accent: "#34C759", label: "Standard", hint: "Vue par défaut" },
+  { id: "standard", emoji: "🗺️", accent: "#34C759", label: "Standard", hint: "Rues et lieux" },
   { id: "satellite", emoji: "🛰️", accent: "#0A0F1F", label: "Satellite", hint: "Vue aérienne" },
-  { id: "terrain", emoji: "⛰️", accent: "#8B5E3C", label: "Terrain", hint: "Relief et reliefs" },
+  { id: "terrain", emoji: "⛰️", accent: "#8B5E3C", label: "Terrain", hint: "Relief — vue par défaut" },
   { id: "standard3d", emoji: "🏙️", accent: "#5856D6", label: "3D", hint: "Bâtiments et perspective" },
   { id: "dark", emoji: "🌙", accent: "#1D1D60", label: "Sombre", hint: "Carte nocturne" },
 ];

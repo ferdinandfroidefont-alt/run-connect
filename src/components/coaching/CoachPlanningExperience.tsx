@@ -77,7 +77,6 @@ import {
   type ClubGroupItem,
   type ClubInvitationItem,
   type ClubRole,
-  type ClubMaquetteNextEvent,
   type ClubSettingsMaquetteVariant,
 } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
@@ -1143,11 +1142,11 @@ export function CoachPlanningExperience() {
   const [clubCode, setClubCode] = useState<string | null>(null);
   const [clubCreatedBy, setClubCreatedBy] = useState<string | null>(null);
   const [clubAvatarUrl, setClubAvatarUrl] = useState<string | null>(null);
-  const [nextClubEvent, setNextClubEvent] = useState<ClubMaquetteNextEvent | null>(null);
   const [trackingSelectedAthleteId, setTrackingSelectedAthleteId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [clubProfileOpen, setClubProfileOpen] = useState(false);
   const [clubProfileNotifMuted, setClubProfileNotifMuted] = useState(false);
+  const [clubSettingsMuted, setClubSettingsMuted] = useState(false);
   const [clubConversationCreatedAt, setClubConversationCreatedAt] = useState("");
   const [coachClubsReloadToken, setCoachClubsReloadToken] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1343,13 +1342,13 @@ export function CoachPlanningExperience() {
     if (!activeClubId) return;
     let ignore = false;
     const loadClubAdmin = async () => {
-      const [{ data: clubRow }, { data: groupRows }, { data: gmRows }, { data: invitationRows }, nextRes] = await Promise.all([
+      const [{ data: clubRow }, { data: groupRows }, { data: gmRows }, { data: invitationRows }] = await Promise.all([
         supabase
           .from("conversations")
           .select("group_name, group_avatar_url, location, group_description, club_code, created_by, created_at")
           .eq("id", activeClubId)
           .maybeSingle(),
-        supabase.from("club_groups").select("id, name").eq("club_id", activeClubId).order("name", { ascending: true }),
+        supabase.from("club_groups").select("id, name, color").eq("club_id", activeClubId).order("name", { ascending: true }),
         supabase.from("group_members").select("user_id, is_admin, is_coach").eq("conversation_id", activeClubId),
         supabase
           .from("club_invitations")
@@ -1357,14 +1356,6 @@ export function CoachPlanningExperience() {
           .eq("club_id", activeClubId)
           .order("created_at", { ascending: false })
           .limit(20),
-        supabase
-          .from("coaching_sessions")
-          .select("title, scheduled_at, default_location_name")
-          .eq("club_id", activeClubId)
-          .gte("scheduled_at", new Date().toISOString())
-          .order("scheduled_at", { ascending: true })
-          .limit(1)
-          .maybeSingle(),
       ]);
 
       const memberIds = (gmRows || []).map((m) => m.user_id);
@@ -1415,6 +1406,7 @@ export function CoachPlanningExperience() {
           name: group.name,
           athletesCount: memberIdsInGroup.length,
           coachName: coachRef?.displayName,
+          color: group.color || "#5856D6",
         };
       });
 
@@ -1439,21 +1431,15 @@ export function CoachPlanningExperience() {
       setClubCreatedBy(clubRow?.created_by || null);
       setClubAvatarUrl(clubRow?.group_avatar_url || null);
       setClubConversationCreatedAt(clubRow?.created_at || "");
-      const nextSess = nextRes.data;
-      if (nextSess?.scheduled_at) {
-        setNextClubEvent({
-          title: nextSess.title || "Séance club",
-          detail: format(new Date(nextSess.scheduled_at), "EEE d MMM · HH:mm", { locale: fr }),
-          place: nextSess.default_location_name || undefined,
-        });
-      } else {
-        setNextClubEvent(null);
-      }
     };
     void loadClubAdmin();
     return () => {
       ignore = true;
     };
+  }, [activeClubId]);
+
+  useEffect(() => {
+    setClubSettingsMuted(false);
   }, [activeClubId]);
 
   useEffect(() => {
@@ -3400,18 +3386,20 @@ export function CoachPlanningExperience() {
                     onClick: () => setActiveMenuKey(effectiveAthleteMode ? "my-plan" : "planning"),
                     label: "Coaching",
                   }}
-                  title=""
-                  titleClassName="sr-only"
+                  title="Paramètres"
+                  titleClassName="text-[17px] font-extrabold tracking-[-0.01em]"
                   right={
                     <button
                       type="button"
-                      className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#0066cc] active:opacity-60"
+                      className={`border-0 bg-transparent px-1 text-[17px] leading-none text-[#007AFF] active:opacity-60 dark:text-primary ${
+                        clubPageVariant === "admin" ? "font-bold" : "font-normal"
+                      }`}
                       onClick={() => {
                         if (clubPageVariant === "admin") void editClubInfo();
                         else void shareClubFromCoaching();
                       }}
                     >
-                      {clubPageVariant === "admin" ? <span className="font-semibold">Modifier</span> : "Partager"}
+                      {clubPageVariant === "admin" ? "Modifier" : "Partager"}
                     </button>
                   }
                 />
@@ -4065,26 +4053,43 @@ export function CoachPlanningExperience() {
                 clubDescription={clubDescription}
                 clubLocation={clubLocation}
                 clubAvatarUrl={clubAvatarUrl}
+                clubCreatedAt={clubConversationCreatedAt}
                 coachesCount={clubMembers.filter((m) => m.role === "coach" || m.role === "admin").length}
-                groupsCount={clubGroupsAdmin.length}
+                trainingGroups={clubGroupsAdmin}
                 members={clubMembers}
                 invitations={clubInvitations}
-                nextEvent={nextClubEvent}
                 currentUserId={user?.id}
+                isClubOwner={clubCreatedBy === user?.id}
+                notificationsMuted={clubSettingsMuted}
+                onToggleNotifications={() => {
+                  const newMuted = !clubSettingsMuted;
+                  setClubSettingsMuted(newMuted);
+                  if (user) {
+                    void supabase.from("profiles").update({ notif_message: !newMuted }).eq("user_id", user.id);
+                  }
+                }}
                 onInviteAthlete={() => setInviteDialogOpen(true)}
                 onInviteCoach={() => setInviteDialogOpen(true)}
                 onEditClub={() => void editClubInfo()}
-                onViewGroups={() => setActiveMenuKey("groups")}
-                onOpenMemberProfile={(userId) => navigate(`/profile/${userId}`)}
-                onSendMessage={(userId) => void openDirectMessage(userId)}
-                onChangeRole={(userId, role) => void updateMemberRole(userId, role)}
-                onRemoveMember={(userId) => void removeMemberFromClub(userId)}
+                onOpenMemberProfile={(uid) => navigate(`/profile/${uid}`)}
+                onSendMessage={(uid) => void openDirectMessage(uid)}
+                onChangeRole={(uid, role) => void updateMemberRole(uid, role)}
+                onRemoveMember={(uid) => void removeMemberFromClub(uid)}
                 onResendInvitation={(invitationId) => void resendInvitation(invitationId)}
                 onCancelInvitation={(invitationId) => void cancelInvitation(invitationId)}
                 onShareClubCode={() => void shareClubFromCoaching()}
-                onAdminArchive={() => toast.success("Archivage : fonction à venir")}
-                onAdminDeleteClub={() => void deleteClubAsAdmin()}
-                onAdminExport={() => toast.success("Export : fonction à venir")}
+                onDeleteClub={() => void deleteClubAsAdmin()}
+                onCreateTrainingGroup={() => void createGroup()}
+                onOpenTrainingGroup={() => setActiveMenuKey("groups")}
+                onClubStatistics={() => setActiveMenuKey("dashboard")}
+                onClubShop={() => toast.success("Boutique du club : à venir")}
+                onReportClub={() =>
+                  window.confirm(
+                    "Signaler ce club ? Notre équipe examinera votre signalement sous 24h."
+                  )
+                    ? toast.success("Merci pour votre retour.")
+                    : undefined
+                }
                 onLeaveClub={() => void leaveClubFromCoaching()}
               />
             ) : (
@@ -4142,7 +4147,6 @@ export function CoachPlanningExperience() {
               void supabase.from("profiles").update({ notif_message: !newMuted }).eq("user_id", user.id);
             }
           }}
-          groupsCount={clubGroupsAdmin.length}
           dismissBackLabel="Coaching"
           onEditClub={() => {
             setClubProfileOpen(false);
@@ -4151,11 +4155,6 @@ export function CoachPlanningExperience() {
           onClubLeftOrDeleted={() => {
             setClubProfileOpen(false);
             setCoachClubsReloadToken((t) => t + 1);
-          }}
-          onOpenManageClubInCoaching={() => {
-            if (!activeClubId || !clubCode) return;
-            setClubProfileOpen(false);
-            goToCoachSection("club");
           }}
         />
       </Suspense>

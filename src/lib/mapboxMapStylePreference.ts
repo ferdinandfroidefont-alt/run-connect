@@ -16,16 +16,18 @@ export function getHomeMapboxStyleUrl(): string {
   return MAPBOX_STYLE_BY_UI_ID[id] ?? MAPBOX_NAVIGATION_DAY_STYLE;
 }
 
+/** Style carte par défaut (Relief / Outdoors) — utilisé partout sans préférence enregistrée. */
+export const DEFAULT_MAP_STYLE_ID = 'terrain';
+
 export function getStoredMapStyleId(): string {
-  // Sans préférence enregistrée : Standard (streets), vue par défaut de l’app.
-  if (typeof window === 'undefined') return 'roadmap';
+  if (typeof window === 'undefined') return DEFAULT_MAP_STYLE_ID;
   try {
     const v = window.localStorage.getItem(RUNCONNECT_MAP_STYLE_STORAGE_KEY);
     if (v && VALID_IDS.has(v)) return v;
   } catch {
     /* ignore */
   }
-  return 'roadmap';
+  return DEFAULT_MAP_STYLE_ID;
 }
 
 export function persistMapStyleId(id: string): void {

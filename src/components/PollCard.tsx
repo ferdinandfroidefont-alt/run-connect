@@ -20,27 +20,35 @@ export const PollCard = ({ pollId, className }: PollCardProps) => {
   const { user } = useAuth();
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<PollOption[]>([]);
+  const [multipleAnswers, setMultipleAnswers] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
 
-  const totalVotes = options.reduce((acc, opt) => acc + opt.votes.length, 0);
-  const userVotedOptionId = options.find((o) => user && o.votes.includes(user.id))?.id;
+  const totalVoteTicks = options.reduce((acc, opt) => acc + opt.votes.length, 0);
+  const uniqueVoters = new Set(options.flatMap((o) => o.votes)).size;
+  const userVotedIds = new Set(
+    options.filter((o) => user && o.votes.includes(user.id)).map((o) => o.id),
+  );
+  const hasVoted = user ? userVotedIds.size > 0 : false;
 
   useEffect(() => {
-    fetchPoll();
+    void fetchPoll();
   }, [pollId]);
 
   const fetchPoll = async () => {
     try {
       const { data, error } = await supabase
-        .from('polls' as any)
-        .select('question, options')
+        .from('polls')
+        .select('question, options, multiple_answers, anonymous')
         .eq('id', pollId)
         .single();
 
       if (error || !data) return;
-      setQuestion((data as any).question);
-      setOptions((data as any).options as PollOption[]);
+      setQuestion(data.question);
+      setOptions((data.options as unknown as PollOption[]) ?? []);
+      setMultipleAnswers(!!data.multiple_answers);
+      setAnonymous(!!data.anonymous);
     } catch (err) {
       console.error('Error fetching poll:', err);
     } finally {
@@ -53,18 +61,28 @@ export const PollCard = ({ pollId, className }: PollCardProps) => {
 
     setVoting(true);
     try {
-      const updatedOptions = options.map((opt) => {
-        const filteredVotes = opt.votes.filter((v) => v !== user.id);
-        if (opt.id === optionId) {
-          return { ...opt, votes: [...filteredVotes, user.id] };
-        }
-        return { ...opt, votes: filteredVotes };
-      });
+      let updatedOptions: PollOption[];
 
-      const { error } = await supabase
-        .from('polls' as any)
-        .update({ options: updatedOptions })
-        .eq('id', pollId);
+      if (multipleAnswers) {
+        updatedOptions = options.map((opt) => {
+          if (opt.id !== optionId) return opt;
+          const has = opt.votes.includes(user.id);
+          return {
+            ...opt,
+            votes: has ? opt.votes.filter((v) => v !== user.id) : [...opt.votes, user.id],
+          };
+        });
+      } else {
+        updatedOptions = options.map((opt) => {
+          const filteredVotes = opt.votes.filter((v) => v !== user.id);
+          if (opt.id === optionId) {
+            return { ...opt, votes: [...filteredVotes, user.id] };
+          }
+          return { ...opt, votes: filteredVotes };
+        });
+      }
+
+      const { error } = await supabase.from('polls').update({ options: updatedOptions }).eq('id', pollId);
 
       if (error) throw error;
       setOptions(updatedOptions);
@@ -87,23 +105,31 @@ export const PollCard = ({ pollId, className }: PollCardProps) => {
     );
   }
 
+  const summaryLabel = multipleAnswers
+    ? `${totalVoteTicks} vote${totalVoteTicks !== 1 ? 's' : ''}`
+    : `${uniqueVoters} vote${uniqueVoters !== 1 ? 's' : ''}`;
+
   return (
     <div className={cn('rounded-xl bg-background border border-border overflow-hidden', className)}>
       <div className="p-3">
-        <div className="flex items-center gap-2 mb-2.5">
-          <BarChart3 className="h-4 w-4 text-primary" />
-          <p className="text-[15px] font-semibold text-foreground">{question}</p>
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <BarChart3 className="h-[14px] w-[14px] shrink-0 text-[#8E8E93]" strokeWidth={2.4} aria-hidden />
+          <span className="text-[13px] font-semibold text-muted-foreground">
+            Sondage{anonymous ? ' · Anonyme' : ''}
+          </span>
         </div>
+        <p className="mb-2.5 text-[15px] font-semibold text-foreground">{question}</p>
 
         <div className="space-y-1.5">
           {options.map((opt) => {
-            const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
-            const isVoted = opt.id === userVotedOptionId;
-            const hasVoted = !!userVotedOptionId;
+            const pct =
+              totalVoteTicks > 0 ? Math.round((opt.votes.length / totalVoteTicks) * 100) : 0;
+            const isVoted = user ? opt.votes.includes(user.id) : false;
 
             return (
               <button
                 key={opt.id}
+                type="button"
                 onClick={() => handleVote(opt.id)}
                 disabled={voting}
                 className={cn(
@@ -114,7 +140,6 @@ export const PollCard = ({ pollId, className }: PollCardProps) => {
                     : 'bg-secondary border border-transparent hover:border-border'
                 )}
               >
-                {/* Progress bar background */}
                 {hasVoted && (
                   <motion.div
                     initial={{ width: 0 }}
@@ -128,21 +153,12 @@ export const PollCard = ({ pollId, className }: PollCardProps) => {
                 )}
 
                 <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {isVoted && (
-                      <Check className="h-3.5 w-3.5 text-primary" />
-                    )}
-                    <span className={cn(
-                      'text-foreground',
-                      isVoted && 'font-medium'
-                    )}>
-                      {opt.text}
-                    </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isVoted && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                    <span className={cn('text-foreground truncate', isVoted && 'font-medium')}>{opt.text}</span>
                   </div>
                   {hasVoted && (
-                    <span className="text-[12px] text-muted-foreground font-medium ml-2">
-                      {pct}%
-                    </span>
+                    <span className="text-[12px] text-muted-foreground font-medium ml-2 shrink-0">{pct}%</span>
                   )}
                 </div>
               </button>
@@ -150,9 +166,7 @@ export const PollCard = ({ pollId, className }: PollCardProps) => {
           })}
         </div>
 
-        <p className="text-[11px] text-muted-foreground mt-2">
-          {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
-        </p>
+        <p className="text-[11px] text-muted-foreground mt-2">{summaryLabel}</p>
       </div>
     </div>
   );

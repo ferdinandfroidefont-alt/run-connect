@@ -8,15 +8,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
-  Share2,
   GraduationCap,
   Search,
   AlertTriangle,
   UserMinus,
-  Building2,
-  Loader2,
   EllipsisVertical,
-  ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
@@ -39,7 +36,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
-import { ClubSettingsMaquetteView, type ClubMaquetteMember } from "@/components/club/ClubSettingsMaquetteView";
+import { ClubSettingsMaquetteView, type ClubMaquetteMember, type ClubMaquetteTrainingGroup } from "@/components/club/ClubSettingsMaquetteView";
 
 interface Profile {
   user_id: string;
@@ -69,13 +66,9 @@ interface ClubProfileDialogProps {
   isClub?: boolean;
   isMuted?: boolean;
   onToggleMute?: () => void;
-  /** Stats maquette · nombre de programmes / groupes */
-  groupsCount?: number;
   onEditClub?: () => void;
   /** Après suppression du club (admin) ou départ (membre), pour rafraîchir la liste sans recharger la page. */
   onClubLeftOrDeleted?: () => void;
-  /** Ouvre l’onglet Coaching « Gérer le club » pour ce conversation id (coachs / admins). */
-  onOpenManageClubInCoaching?: () => void;
   /** Libellé du bouton retour (défaut : Messages). */
   dismissBackLabel?: string;
 }
@@ -95,9 +88,6 @@ export const ClubProfileDialog = ({
   isMuted = false,
   onToggleMute,
   onClubLeftOrDeleted,
-  onOpenManageClubInCoaching,
-  groupsCount = 0,
-  onEditClub,
   dismissBackLabel = "Messages",
 }: ClubProfileDialogProps) => {
   const { user } = useAuth();
@@ -113,6 +103,73 @@ export const ClubProfileDialog = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<GroupMember | null>(null);
   const [showLeaveClubDialog, setShowLeaveClubDialog] = useState(false);
+  const [clubTrainingGroups, setClubTrainingGroups] = useState<ClubMaquetteTrainingGroup[]>([]);
+  const [memberListExpanded, setMemberListExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setMemberListExpanded(false);
+  }, [isOpen, conversationId]);
+
+  useEffect(() => {
+    if (!isOpen || !conversationId || !isClub) {
+      setClubTrainingGroups([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data: rows, error } = await supabase
+        .from("club_groups")
+        .select("id, name, color")
+        .eq("club_id", conversationId)
+        .order("name");
+      if (error || !rows?.length) {
+        if (!cancelled) setClubTrainingGroups([]);
+        return;
+      }
+      const ids = rows.map((r) => r.id);
+      const { data: gm } = ids.length
+        ? await supabase.from("club_group_members").select("group_id").in("group_id", ids)
+        : { data: [] as { group_id: string }[] };
+      const counts = new Map<string, number>();
+      (gm || []).forEach((r) => {
+        counts.set(r.group_id, (counts.get(r.group_id) || 0) + 1);
+      });
+      if (!cancelled) {
+        setClubTrainingGroups(
+          rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            athletesCount: counts.get(r.id) || 0,
+            color: r.color || "#5856D6",
+          }))
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, conversationId, isClub]);
+
+  const createTrainingGroupFromDialog = async () => {
+    if (!conversationId || !isClub) return;
+    const name = window.prompt("Nom du groupe", "Nouveau groupe");
+    if (!name?.trim()) return;
+    const { data, error } = await supabase
+      .from("club_groups")
+      .insert({ club_id: conversationId, name: name.trim(), color: "#3B82F6" })
+      .select("id, name, color")
+      .single();
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    setClubTrainingGroups((prev) => [
+      ...prev,
+      { id: data.id, name: data.name, athletesCount: 0, color: data.color || "#3B82F6" },
+    ]);
+    toast({ title: "Groupe créé" });
+  };
 
   const loadGroupMembers = async () => {
     if (!conversationId) return;
@@ -303,8 +360,6 @@ export const ClubProfileDialog = ({
   const maquetteVariant = currentUserIsCoach ? "admin" : "athlete";
   const createdDate = createdAt ? format(new Date(createdAt), "d MMMM yyyy", { locale: fr }) : null;
   const entityLabel = isClub ? "club" : "groupe";
-  const showManageClubCoaching =
-    isClub && currentUserIsCoach && Boolean(onOpenManageClubInCoaching);
 
   const sortedMembers = useMemo(() => {
     const copy = [...members];
@@ -327,51 +382,50 @@ export const ClubProfileDialog = ({
   const maquetteMembers: ClubMaquetteMember[] = sortedMembers.map((m) => ({
     userId: m.user_id,
     displayName: m.display_name || m.username || "Membre",
-    roleLabel: roleLabelForMember(m),
+    subtitle: m.username ? `@${m.username}` : roleLabelForMember(m),
+    chipRole: m.is_admin ? "admin" : m.is_coach ? "coach" : "athlete",
     avatarUrl: m.avatar_url,
     isYou: m.user_id === user?.id,
-    isAdminStar: m.user_id === createdBy,
   }));
 
-  const clubTag =
-    groupName
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 3) || "RC";
-
-  const subtitleLine =
-    [groupDescription?.trim(), createdDate ? `Créé le ${createdDate}` : null].filter(Boolean).join(" · ") ||
+  const bio =
+    [groupDescription?.trim(), createdDate ? `Créé le ${createdDate}` : null].filter(Boolean).join("\n") ||
     (isClub ? "Club RunConnect" : "Groupe");
+
+  const foundedLabel = createdAt ? format(new Date(createdAt), "yyyy", { locale: fr }) : null;
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent fullScreen hideCloseButton className="flex flex-col gap-0 bg-background p-0">
-          <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-[hsl(var(--muted))]">
+          <div className="sticky top-0 z-10 shrink-0 border-b border-[#E5E5EA] bg-card">
             <div
-              className="bg-white dark:bg-card"
+              className="bg-card"
               style={{ height: "max(env(safe-area-inset-top, 0px), 12px)" }}
               aria-hidden="true"
             />
             <IosPageHeaderBar
               leadingBack={{ onClick: onClose, label: dismissBackLabel }}
-              title=""
-              titleClassName="sr-only"
+              title="Paramètres"
+              titleClassName="text-[17px] font-extrabold tracking-[-0.01em]"
               right={
-                <button
-                  type="button"
-                  className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-primary active:opacity-60"
-                  onClick={() => {
-                    if (currentUserIsCoach) onEditClub?.();
-                    else void handleShare();
-                  }}
-                >
-                  {currentUserIsCoach ? <span className="font-semibold">Modifier</span> : "Partager"}
-                </button>
+                currentUserIsCoach ? (
+                  <button
+                    type="button"
+                    className="border-0 bg-transparent px-1 text-[17px] font-bold leading-none text-[#007AFF] active:opacity-60 dark:text-primary"
+                    onClick={() => onEditClub?.()}
+                  >
+                    Modifier
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="border-0 bg-transparent px-1 text-[17px] font-normal leading-none text-[#007AFF] active:opacity-60 dark:text-primary"
+                    onClick={() => void handleShare()}
+                  >
+                    Partager
+                  </button>
+                )
               }
             />
           </div>
@@ -382,120 +436,103 @@ export const ClubProfileDialog = ({
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-label="Chargement" />
               </div>
             ) : (
-              <>
-                <ClubSettingsMaquetteView
-                  variant={maquetteVariant}
-                  clubName={groupName}
-                  clubTag={clubTag}
-                  clubAvatarUrl={groupAvatarUrl}
-                  subtitleLine={subtitleLine}
-                  statsMembers={memberCount}
-                  statsCoaches={coachesCount}
-                  statsPrograms={groupsCount}
-                  members={maquetteMembers}
-                  totalMemberCount={memberCount}
-                  conversationMute={
-                    maquetteVariant === "admin" && onToggleMute
-                      ? { muted: isMuted, onToggle: () => onToggleMute() }
-                      : undefined
-                  }
-                  onQuickInvite={
-                    currentUserIsCoach && isClub
-                      ? () => {
-                          setSearchQuery("");
-                          setSearchResults([]);
-                          setShowInviteDialog(true);
-                        }
-                      : undefined
-                  }
-                  onQuickAddCoach={
-                    currentUserIsCoach && isClub
-                      ? () => {
-                          setSearchQuery("");
-                          setSearchResults([]);
-                          setShowInviteDialog(true);
-                        }
-                      : undefined
-                  }
-                  onQuickShareLink={isClub ? () => void handleShare() : undefined}
-                  onMemberRowClick={(userId) => navigateToProfile(userId)}
-                  renderMemberTrailing={
-                    currentUserIsCoach
-                      ? (row) =>
-                          row.userId !== user?.id ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" aria-label="Actions">
-                                  <EllipsisVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    const member = members.find((mm) => mm.user_id === row.userId);
-                                    if (member) void toggleCoach(member.user_id, member.is_coach);
-                                  }}
-                                >
-                                  <GraduationCap className="mr-2 h-4 w-4" />
-                                  {members.find((mm) => mm.user_id === row.userId)?.is_coach
-                                    ? "Retirer coach"
-                                    : "Promouvoir coach"}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => {
-                                    const member = members.find((mm) => mm.user_id === row.userId);
-                                    if (member) {
-                                      setMemberToDelete(member);
-                                      setShowDeleteDialog(true);
-                                    }
-                                  }}
-                                >
-                                  <UserMinus className="mr-2 h-4 w-4" />
-                                  Retirer du {entityLabel}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : (
-                            <span className="pb-1 text-[18px] tracking-[2px] text-muted-foreground/40">···</span>
-                          )
-                      : undefined
-                  }
-                  onAdminSettingInfos={() => onEditClub?.()}
-                  onAdminSettingPrivacy={() => onEditClub?.()}
-                  onAdminSettingNotifications={() => onEditClub?.()}
-                  onAdminSettingCalendar={() => onEditClub?.()}
-                  onAdminSettingPrograms={() => onEditClub?.()}
-                  onAdminCoAdmins={() => onEditClub?.()}
-                  onAdminExport={() => toast({ title: "Export à venir" })}
-                  onAdminArchive={isAdmin ? () => toast({ title: "Archivage à venir" }) : undefined}
-                  onAdminDelete={isAdmin ? () => setShowDeleteGroupDialog(true) : undefined}
-                  athleteNotificationsOn={!isMuted}
-                  onAthleteToggleNotifications={() => onToggleMute?.()}
-                  onAthleteCalendar={() => onEditClub?.()}
-                  onAthletePrograms={() => onEditClub?.()}
-                  onAthleteLeaveClub={() => setShowLeaveClubDialog(true)}
-                />
-
-                {showManageClubCoaching ? (
-                  <div className="px-4 pb-10">
-                    <button
-                      type="button"
-                      onClick={() => onOpenManageClubInCoaching?.()}
-                      className="flex w-full items-center gap-3 overflow-hidden rounded-[10px] bg-card px-4 py-3 text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] active:bg-muted/60"
-                    >
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-[rgba(10,132,255,0.12)] text-primary">
-                        <Building2 className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[16px] font-medium tracking-[-0.02em] text-foreground">Coaching</div>
-                        <div className="text-[12px] text-muted-foreground">Ouvrir la gestion avancée du club</div>
-                      </div>
-                      <ChevronRight className="h-[18px] w-4 shrink-0 text-muted-foreground/45" />
-                    </button>
-                  </div>
-                ) : null}
-              </>
+              <ClubSettingsMaquetteView
+                variant={maquetteVariant}
+                clubName={groupName}
+                clubAvatarUrl={groupAvatarUrl}
+                bio={bio}
+                statsMembers={memberCount}
+                statsCoaches={coachesCount}
+                foundedLabel={foundedLabel}
+                members={maquetteMembers}
+                totalMemberCount={memberCount}
+                memberPreviewCount={4}
+                membersExpanded={memberListExpanded || maquetteVariant === "admin"}
+                onExpandMembers={
+                  maquetteVariant === "athlete" && sortedMembers.length > 4
+                    ? () => setMemberListExpanded(true)
+                    : undefined
+                }
+                trainingGroups={clubTrainingGroups}
+                onOpenTrainingGroup={() =>
+                  toast({
+                    title: "Groupes d'entraînement",
+                    description: "Ouvre Coaching depuis le menu pour gérer les groupes en détail.",
+                  })
+                }
+                onCreateTrainingGroup={
+                  currentUserIsCoach && isClub ? () => void createTrainingGroupFromDialog() : undefined
+                }
+                notificationsMuted={isMuted}
+                onToggleNotifications={() => onToggleMute?.()}
+                showCoachChrome={currentUserIsCoach}
+                isClubOwner={isAdmin}
+                onEditClubPhoto={currentUserIsCoach ? () => onEditClub?.() : undefined}
+                onMemberPress={(userId) => navigateToProfile(userId)}
+                omitTrainingGroupsSection={!isClub}
+                renderMemberTrailing={
+                  currentUserIsCoach
+                    ? (row) =>
+                        row.userId !== user?.id ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" aria-label="Actions">
+                                <EllipsisVertical className="h-4 w-4 text-[#C7C7CC]" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  const member = members.find((mm) => mm.user_id === row.userId);
+                                  if (member) void toggleCoach(member.user_id, member.is_coach);
+                                }}
+                              >
+                                <GraduationCap className="mr-2 h-4 w-4" />
+                                {members.find((mm) => mm.user_id === row.userId)?.is_coach
+                                  ? "Retirer coach"
+                                  : "Promouvoir coach"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                  const member = members.find((mm) => mm.user_id === row.userId);
+                                  if (member) {
+                                    setMemberToDelete(member);
+                                    setShowDeleteDialog(true);
+                                  }
+                                }}
+                              >
+                                <UserMinus className="mr-2 h-4 w-4" />
+                                Retirer du {entityLabel}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null
+                    : undefined
+                }
+                onInviteMembers={
+                  currentUserIsCoach && isClub
+                    ? () => {
+                        setSearchQuery("");
+                        setSearchResults([]);
+                        setShowInviteDialog(true);
+                      }
+                    : undefined
+                }
+                onManageRoles={() => onEditClub?.()}
+                onClubStatistics={() => toast({ title: "Statistiques", description: "À venir dans une prochaine version." })}
+                onClubShop={() => toast({ title: "Boutique du club", description: "Bientôt disponible." })}
+                onShareClub={() => void handleShare()}
+                onReportClub={() =>
+                  window.confirm(
+                    "Signaler ce club ? Notre équipe examinera votre signalement sous 24h."
+                  )
+                    ? toast({ title: "Signalement envoyé", description: "Merci pour votre retour." })
+                    : undefined
+                }
+                onLeaveClub={() => setShowLeaveClubDialog(true)}
+                onDeleteClub={isAdmin ? () => setShowDeleteGroupDialog(true) : undefined}
+              />
             )}
           </div>
         </DialogContent>

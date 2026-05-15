@@ -899,31 +899,37 @@ export type Database = {
       }
       polls: {
         Row: {
+          anonymous: boolean
           conversation_id: string
           created_at: string
           creator_id: string
           expires_at: string | null
           id: string
+          multiple_answers: boolean
           options: Json
           question: string
           session_id: string | null
         }
         Insert: {
+          anonymous?: boolean
           conversation_id: string
           created_at?: string
           creator_id: string
           expires_at?: string | null
           id?: string
+          multiple_answers?: boolean
           options?: Json
           question: string
           session_id?: string | null
         }
         Update: {
+          anonymous?: boolean
           conversation_id?: string
           created_at?: string
           creator_id?: string
           expires_at?: string | null
           id?: string
+          multiple_answers?: boolean
           options?: Json
           question?: string
           session_id?: string | null

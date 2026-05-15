@@ -1,110 +1,32 @@
 import type { ReactNode } from "react";
-import { Calendar, ChevronRight } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  Camera,
+  ChevronRight,
+  Flag,
+  Gift,
+  LogOut,
+  Plus,
+  Share2,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Maquettes 19–20 · écran club (admin vs athlète) — specs apple-screens ScreenClubSettings */
+/** Maquette RunConnect (16) · Paramètres club — vue coach / vue athlète */
 
 export type ClubSettingsMaquetteVariant = "admin" | "athlete";
-
-function hueFromId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
-  return h;
-}
-
-function initialsFromName(name: string): string {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  if (p.length >= 2) return (p[0]![0] + p[1]![0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase() || "?";
-}
-
-function MaquetteGroup({ title, footer, children }: { title?: string; footer?: string; children: ReactNode }) {
-  return (
-    <div className="mb-6 px-4">
-      {title ? (
-        <div className="px-4 pb-1.5 text-[13px] font-normal uppercase leading-none tracking-[0.3px] text-muted-foreground">
-          {title}
-        </div>
-      ) : null}
-      <div className="overflow-hidden rounded-[10px] bg-card shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)]">{children}</div>
-      {footer ? <div className="mt-1.5 px-4 text-[13px] leading-snug text-muted-foreground">{footer}</div> : null}
-    </div>
-  );
-}
-
-function ChevronSmall() {
-  return <ChevronRight className="h-[18px] w-[18px] shrink-0 text-[hsl(var(--muted-foreground)/0.45)]" strokeWidth={2} />;
-}
-
-const iconInvite = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M19 8v6M22 11h-6" />
-  </svg>
-);
-const iconCoach = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M2 21a8 8 0 1116 0M10 13a4 4 0 100-8 4 4 0 000 8z" />
-    <path d="M19 7l1.5 1.5L23 6" />
-  </svg>
-);
-const iconLink = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5" />
-    <path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.5-1.5" />
-  </svg>
-);
-
-const settingIcons: Record<string, ReactNode> = {
-  edit: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  ),
-  lock: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0110 0v4" />
-    </svg>
-  ),
-  bell: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" />
-    </svg>
-  ),
-  calendar: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-      <path d="M3 9h18M8 3v4M16 3v4" />
-    </svg>
-  ),
-  program: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M9 5H4a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" />
-      <path d="M14 4l6 6-9 9H5v-6l9-9z" />
-    </svg>
-  ),
-  shield: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" />
-    </svg>
-  ),
-  export: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 3v12M7 8l5-5 5 5M5 21h14" />
-    </svg>
-  ),
-};
 
 export interface ClubMaquetteMember {
   userId: string;
   displayName: string;
-  roleLabel: string;
+  /** Ligne 2 type maquette (@pseudo) — sinon libellé de rôle court */
+  subtitle?: string | null;
+  chipRole: "admin" | "coach" | "athlete";
   avatarUrl?: string | null;
   isYou?: boolean;
-  isAdminStar?: boolean;
 }
 
 export interface ClubMaquettePendingInvite {
@@ -114,307 +36,463 @@ export interface ClubMaquettePendingInvite {
   sub: string;
 }
 
-export interface ClubMaquetteNextEvent {
-  title: string;
-  detail?: string;
-  place?: string;
+export interface ClubMaquetteTrainingGroup {
+  id: string;
+  name: string;
+  athletesCount: number;
+  /** Couleur tuile (hex) */
+  color: string;
+}
+
+const ACTION_BLUE = "#007AFF";
+const HAIRLINE = "#E5E5EA";
+const LABEL_GRAY = "#8E8E93";
+const PRIMARY_TEXT = "#0A0F1F";
+
+const ROLE_META: Record<
+  ClubMaquetteMember["chipRole"],
+  { label: string; color: string; bg: string }
+> = {
+  admin: { label: "Admin", color: "#FF2D55", bg: "#FF2D5520" },
+  coach: { label: "Coach", color: "#5856D6", bg: "#5856D620" },
+  athlete: { label: "Athlète", color: "#8E8E93", bg: "#8E8E9320" },
+};
+
+const GROUP_EMOJIS = ["🏃", "⭐", "😎", "🌱", "⚡", "🎯", "💪", "🔥"];
+
+function emojiForGroupId(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return GROUP_EMOJIS[h % GROUP_EMOJIS.length];
+}
+
+function initialsFromName(name: string): string {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  if (p.length >= 2) return (p[0]![0] + p[1]![0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase() || "?";
+}
+
+function hueFromId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+  return h;
+}
+
+function gradientForClub(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  const h2 = (h + 42) % 360;
+  return `linear-gradient(135deg, hsl(${h}, 82%, 52%), hsl(${h2}, 68%, 46%))`;
+}
+
+function SectionHeader({ label }: { label: string }) {
+  const trimmed = label.trim();
+  if (!trimmed) return null;
+  return (
+    <p
+      className="mb-1.5 mt-[22px] px-7 text-[12.5px] font-bold uppercase leading-none tracking-[0.05em]"
+      style={{ color: LABEL_GRAY }}
+    >
+      {trimmed}
+    </p>
+  );
+}
+
+function FormCard({ children, padding }: { children: ReactNode; padding?: boolean }) {
+  return (
+    <div
+      className="mx-4 overflow-hidden rounded-2xl bg-card"
+      style={{
+        boxShadow: "0 0.5px 0 rgba(0,0,0,0.05)",
+        padding: padding ? "14px 16px" : 0,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FormRowDivider({ ml }: { ml: number }) {
+  return <div className="h-px" style={{ marginLeft: ml, background: HAIRLINE }} />;
+}
+
+function RoleChip({ role }: { role: ClubMaquetteMember["chipRole"] }) {
+  const meta = ROLE_META[role] ?? ROLE_META.athlete;
+  return (
+    <div
+      className="shrink-0 text-[11px] font-extrabold uppercase tracking-[-0.01em]"
+      style={{
+        padding: "3px 9px",
+        background: meta.bg,
+        color: meta.color,
+        borderRadius: 9999,
+      }}
+    >
+      {meta.label}
+    </div>
+  );
+}
+
+function IOSToggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className="relative shrink-0 transition-colors"
+      style={{
+        width: 51,
+        height: 31,
+        borderRadius: 9999,
+        background: on ? "#34C759" : "#E9E9EB",
+        padding: 2,
+      }}
+      aria-pressed={on}
+    >
+      <div
+        style={{
+          width: 27,
+          height: 27,
+          borderRadius: "50%",
+          background: "white",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.06)",
+          transform: on ? "translateX(20px)" : "translateX(0)",
+          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
+      />
+    </button>
+  );
+}
+
+function ClubStat({ value, label }: { value: number; label: string }) {
+  return (
+    <span className="text-[13px] font-semibold" style={{ color: LABEL_GRAY }}>
+      <span style={{ color: PRIMARY_TEXT, fontWeight: 800 }}>{value}</span> {label}
+    </span>
+  );
+}
+
+function ClubActionRow({
+  icon,
+  iconBg,
+  label,
+  subtitle,
+  labelColor = PRIMARY_TEXT,
+  onClick,
+}: {
+  icon: ReactNode;
+  iconBg: string;
+  label: string;
+  subtitle?: string;
+  labelColor?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[#F8F8F8]/80 dark:active:bg-muted/50"
+    >
+      <div
+        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-xl"
+        style={{ background: iconBg }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="m-0 text-[16px] font-semibold tracking-[-0.01em]" style={{ color: labelColor }}>
+          {label}
+        </p>
+        {subtitle ? (
+          <p className="m-0 mt-px text-[13px] font-medium" style={{ color: LABEL_GRAY }}>
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
+    </button>
+  );
 }
 
 export interface ClubSettingsMaquetteViewProps {
   variant: ClubSettingsMaquetteVariant;
   clubName: string;
-  clubTag: string;
   clubAvatarUrl?: string | null;
-  subtitleLine: string;
+  /** Initiales centre avatar si pas d’image */
+  clubInitials?: string;
+  /** Texte sous le nom (bio / création) — maquette: paragraphe 14px */
+  bio: string;
   statsMembers: number;
   statsCoaches: number;
-  statsPrograms: number;
-  nextEvent?: ClubMaquetteNextEvent | null;
+  /** Affiché après les stats : « Depuis {foundedLabel} » */
+  foundedLabel?: string | null;
   members: ClubMaquetteMember[];
   totalMemberCount: number;
-  pendingInvites?: ClubMaquettePendingInvite[];
-  /** Row actions admin — retourne le menu d’actions (···) */
+  /** Nombre de lignes membres avant expansion (maquette : 4) */
+  memberPreviewCount?: number;
+  membersExpanded?: boolean;
+  onExpandMembers?: () => void;
+  trainingGroups: ClubMaquetteTrainingGroup[];
+  onOpenTrainingGroup?: (groupId: string) => void;
+  onCreateTrainingGroup?: () => void;
+  /** Sourdine : activée = toggle vert ON */
+  notificationsMuted: boolean;
+  onToggleNotifications?: () => void;
+  /** Coach / staff : sections et chrome admin */
+  showCoachChrome: boolean;
+  /** Créateur du club — « Supprimer » vs « Quitter » pour les autres */
+  isClubOwner: boolean;
+  onEditClubPhoto?: () => void;
+  onMemberPress?: (userId: string) => void;
   renderMemberTrailing?: (member: ClubMaquetteMember) => ReactNode;
-  onMemberRowClick?: (userId: string) => void;
-  onViewAllMembers?: () => void;
-  /** Actions rapides (admin) */
-  onQuickInvite?: () => void;
-  onQuickAddCoach?: () => void;
-  onQuickShareLink?: () => void;
-  /** Réglages (lignes cliquables) */
-  onAdminSettingInfos?: () => void;
-  onAdminSettingPrivacy?: () => void;
-  onAdminSettingNotifications?: () => void;
-  onAdminSettingCalendar?: () => void;
-  onAdminSettingPrograms?: () => void;
-  onAdminCoAdmins?: () => void;
-  onAdminExport?: () => void;
-  onAdminArchive?: () => void;
-  onAdminDelete?: () => void;
-  /** Athlète */
-  athleteNotificationsOn?: boolean;
-  onAthleteToggleNotifications?: () => void;
-  onAthleteCalendar?: () => void;
-  onAthletePrograms?: () => void;
-  onAthleteLeaveClub?: () => void;
+  /** Bloc administration coach */
+  onInviteMembers?: () => void;
+  onManageRoles?: () => void;
+  onClubStatistics?: () => void;
+  onClubShop?: () => void;
+  onShareClub?: () => void;
+  /** Si absent, la ligne « Signaler » est masquée */
+  onReportClub?: () => void;
+  onLeaveClub?: () => void;
+  onDeleteClub?: () => void;
+  pendingInvites?: ClubMaquettePendingInvite[];
   onPendingPrimary?: (invitationId: string) => void;
   onPendingSecondary?: (invitationId: string) => void;
-  /** Conversation (ex. Messages) — rangée type Réglages iOS */
-  conversationMute?: { muted: boolean; onToggle: () => void };
+  /** Masque tout le bloc « Groupes d'entraînement » (ex. conversation hors club structuré) */
+  omitTrainingGroupsSection?: boolean;
   className?: string;
 }
 
 export function ClubSettingsMaquetteView({
   variant,
   clubName,
-  clubTag,
   clubAvatarUrl,
-  subtitleLine,
+  clubInitials,
+  bio,
   statsMembers,
   statsCoaches,
-  statsPrograms,
-  nextEvent,
+  foundedLabel,
   members,
   totalMemberCount,
-  pendingInvites = [],
+  memberPreviewCount = 4,
+  membersExpanded = false,
+  onExpandMembers,
+  trainingGroups,
+  onOpenTrainingGroup,
+  onCreateTrainingGroup,
+  notificationsMuted,
+  onToggleNotifications,
+  showCoachChrome,
+  isClubOwner,
+  onEditClubPhoto,
+  onMemberPress,
   renderMemberTrailing,
-  onMemberRowClick,
-  onViewAllMembers,
-  onQuickInvite,
-  onQuickAddCoach,
-  onQuickShareLink,
-  onAdminSettingInfos,
-  onAdminSettingPrivacy,
-  onAdminSettingNotifications,
-  onAdminSettingCalendar,
-  onAdminSettingPrograms,
-  onAdminCoAdmins,
-  onAdminExport,
-  onAdminArchive,
-  onAdminDelete,
-  athleteNotificationsOn = true,
-  onAthleteToggleNotifications,
-  onAthleteCalendar,
-  onAthletePrograms,
-  onAthleteLeaveClub,
+  onInviteMembers,
+  onManageRoles,
+  onClubStatistics,
+  onClubShop,
+  onShareClub,
+  onReportClub,
+  onLeaveClub,
+  onDeleteClub,
+  pendingInvites = [],
   onPendingPrimary,
   onPendingSecondary,
-  conversationMute,
+  omitTrainingGroupsSection = false,
   className,
 }: ClubSettingsMaquetteViewProps) {
-  const isAdmin = variant === "admin";
-  const displayedMembers = members;
+  const initials = (clubInitials || initialsFromName(clubName)).slice(0, 3).toUpperCase();
+  const gradient = gradientForClub(clubName);
+  const visibleMembers = membersExpanded ? members : members.slice(0, memberPreviewCount);
+  const canExpand = !membersExpanded && totalMemberCount > memberPreviewCount;
+
+  const showAdministration = showCoachChrome && (onInviteMembers || onManageRoles || onClubStatistics || onClubShop);
+
+  const dangerDelete = variant === "admin" && isClubOwner ? onDeleteClub : undefined;
+  const dangerLeave = dangerDelete ? undefined : onLeaveClub;
 
   return (
-    <div className={cn("pb-24 pt-0", className)}>
-      {/* Hero — club crest + name (mockup: 88×88, radius 22) */}
-      <div className="px-4 pb-[18px] text-center">
-        <div className="mx-auto flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-[22px] bg-gradient-to-br from-[#0a84ff] to-[#5e5ce6] text-[30px] font-bold tracking-[0.02em] text-white shadow-[0_8px_24px_-6px_rgba(10,132,255,0.45)]">
-          {clubAvatarUrl ? (
-            <img src={clubAvatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="font-[system-ui]">{clubTag.slice(0, 3).toUpperCase()}</span>
-          )}
+    <div
+      className={cn("pb-8", className)}
+      style={{
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+      }}
+    >
+      {/* Hero */}
+      <div className="flex flex-col items-center px-5 pb-2 pt-5">
+        <div className="relative">
+          <div
+            className="flex items-center justify-center text-white"
+            style={{
+              width: 104,
+              height: 104,
+              borderRadius: "50%",
+              background: clubAvatarUrl ? undefined : gradient,
+              fontSize: 38,
+              fontWeight: 900,
+              letterSpacing: "-0.03em",
+              border: "3px solid white",
+              boxShadow: "0 8px 24px rgba(10,132,255,0.25)",
+              overflow: "hidden",
+            }}
+          >
+            {clubAvatarUrl ? (
+              <img src={clubAvatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              initials
+            )}
+          </div>
+          {showCoachChrome && onEditClubPhoto ? (
+            <button
+              type="button"
+              className="absolute flex items-center justify-center transition-transform active:scale-95"
+              style={{
+                bottom: -2,
+                right: -2,
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: ACTION_BLUE,
+                border: "3px solid white",
+                boxShadow: "0 2px 8px rgba(0,122,255,0.35)",
+              }}
+              aria-label="Modifier la photo du club"
+              onClick={onEditClubPhoto}
+            >
+              <Camera className="h-4 w-4 text-white" strokeWidth={2.4} />
+            </button>
+          ) : null}
         </div>
-        <div className="mt-3 font-[system-ui] text-[26px] font-bold leading-tight tracking-[-0.02em] text-foreground">{clubName}</div>
-        <div className="mt-0.5 text-[13px] text-muted-foreground">{subtitleLine}</div>
-
-        <div className="mx-auto mt-[14px] flex max-w-[320px] items-stretch justify-center gap-[22px]">
-          <div className="text-center">
-            <div className="font-[system-ui] text-[22px] font-bold leading-none tracking-[-0.02em] text-foreground">{statsMembers}</div>
-            <div className="mt-px text-[11px] text-muted-foreground">Membres</div>
-          </div>
-          <div className="w-px shrink-0 bg-border" />
-          <div className="text-center">
-            <div className="font-[system-ui] text-[22px] font-bold leading-none tracking-[-0.02em] text-foreground">{statsCoaches}</div>
-            <div className="mt-px text-[11px] text-muted-foreground">Coachs</div>
-          </div>
-          <div className="w-px shrink-0 bg-border" />
-          <div className="text-center">
-            <div className="font-[system-ui] text-[22px] font-bold leading-none tracking-[-0.02em] text-foreground">{statsPrograms}</div>
-            <div className="mt-px text-[11px] text-muted-foreground">Programmes</div>
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            "mx-auto mt-[14px] inline-flex items-center gap-1.5 rounded-[10px] px-2.5 py-[5px] text-[12px] font-semibold tracking-[-0.01em]",
-            isAdmin ? "bg-[rgba(10,132,255,0.12)] text-primary" : "bg-muted text-muted-foreground"
-          )}
+        <h2
+          className="mt-3 text-center"
+          style={{
+            fontSize: 26,
+            fontWeight: 900,
+            color: PRIMARY_TEXT,
+            letterSpacing: "-0.03em",
+            margin: 0,
+            lineHeight: 1.1,
+          }}
         >
-          {isAdmin ? <>★ Vous êtes administrateur</> : <>Vous êtes athlète membre</>}
+          {clubName}
+        </h2>
+        <p
+          className="mt-2 px-3 text-center"
+          style={{
+            fontSize: 14,
+            color: "#3C3C43",
+            fontWeight: 500,
+            lineHeight: 1.35,
+            margin: 0,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {bio}
+        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <ClubStat value={statsMembers} label="membres" />
+          <span style={{ color: "#C7C7CC" }}>·</span>
+          <ClubStat value={statsCoaches} label="coachs" />
+          {foundedLabel ? (
+            <>
+              <span style={{ color: "#C7C7CC" }}>·</span>
+              <span className="text-[13px] font-semibold" style={{ color: LABEL_GRAY }}>
+                Depuis {foundedLabel}
+              </span>
+            </>
+          ) : null}
         </div>
       </div>
 
-      {conversationMute ? (
-        <div className="px-4 pb-3">
-          <button
-            type="button"
-            onClick={conversationMute.onToggle}
-            className="flex w-full items-center gap-3 rounded-[10px] bg-card px-3 py-2.5 text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] active:opacity-90"
-          >
-            <div className="text-[15px] font-medium text-foreground">Sourdine</div>
-            <div className="min-w-0 flex-1 text-[12px] text-muted-foreground">
-              {conversationMute.muted ? "Conversations masquées" : "Notifications normales"}
-            </div>
-            <MaquetteToggle on={!conversationMute.muted} />
-          </button>
-        </div>
-      ) : null}
-
-      {isAdmin && (onQuickInvite || onQuickAddCoach || onQuickShareLink) && (
-        <div className="px-4 pb-4">
-          <div className="grid grid-cols-3 gap-2">
+      {/* Membres */}
+      <SectionHeader label={`Membres (${totalMemberCount})`} />
+      <FormCard>
+        {visibleMembers.map((m, i) => (
+          <div key={m.userId}>
+            {i > 0 ? <FormRowDivider ml={60} /> : null}
             <button
               type="button"
-              onClick={onQuickInvite}
-              className="flex flex-col items-center gap-1.5 rounded-xl bg-card px-2 py-3 text-center shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] active:scale-[0.98] transition-transform"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[#F8F8F8]/80 dark:active:bg-muted/50"
+              onClick={() => onMemberPress?.(m.userId)}
             >
-              <span className="text-primary">{iconInvite}</span>
-              <span className="text-[11px] font-semibold tracking-[-0.01em] text-foreground">Inviter</span>
-            </button>
-            <button
-              type="button"
-              onClick={onQuickAddCoach}
-              className="flex flex-col items-center gap-1.5 rounded-xl bg-card px-2 py-3 text-center shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] active:scale-[0.98] transition-transform"
-            >
-              <span className="text-primary">{iconCoach}</span>
-              <span className="text-[11px] font-semibold tracking-[-0.01em] text-foreground">Ajouter coach</span>
-            </button>
-            <button
-              type="button"
-              onClick={onQuickShareLink}
-              className="flex flex-col items-center gap-1.5 rounded-xl bg-card px-2 py-3 text-center shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] active:scale-[0.98] transition-transform"
-            >
-              <span className="text-primary">{iconLink}</span>
-              <span className="text-[11px] font-semibold tracking-[-0.01em] text-foreground">Lien partage</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {nextEvent ? (
-        <div className="px-4 pb-4">
-          <button
-            type="button"
-            className="flex w-full items-center gap-3 rounded-[14px] bg-card p-[14px] text-left shadow-[0_0_0_0.5px_rgba(0,0,0,0.06)] active:opacity-90"
-          >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[rgba(255,69,58,0.12)] text-[#ff453a]">
-              <Calendar className="h-5 w-5" strokeWidth={2} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-medium uppercase tracking-[0.3px] text-muted-foreground">Prochain événement</div>
-              <div className="text-[15px] font-semibold tracking-[-0.02em] text-foreground">{nextEvent.title}</div>
-              {nextEvent.detail || nextEvent.place ? (
-                <div className="mt-px text-[12px] text-muted-foreground">
-                  {[nextEvent.place, nextEvent.detail].filter(Boolean).join(" · ")}
-                </div>
-              ) : null}
-            </div>
-            <ChevronSmall />
-          </button>
-        </div>
-      ) : null}
-
-      <MaquetteGroup title={isAdmin ? `Membres · ${totalMemberCount}` : "Coachs & athlètes"}>
-        {displayedMembers.map((m, i) => {
-          const last = i === displayedMembers.length - 1;
-          const hue = hueFromId(m.userId);
-          return (
-            <div
-              key={m.userId}
-              className={cn(
-                "flex items-center gap-3 px-4 py-2.5",
-                !last && "border-b border-border/60"
-              )}
-            >
-              <button
-                type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[13px] font-semibold text-white"
-                style={{ backgroundColor: m.avatarUrl ? undefined : `hsl(${hue}, 85%, 52%)` }}
-                onClick={() => onMemberRowClick?.(m.userId)}
-                aria-label={m.displayName}
+              <div
+                className="flex shrink-0 items-center justify-center overflow-hidden text-[15px] font-extrabold tracking-[-0.02em] text-white"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  backgroundColor: m.avatarUrl ? undefined : `hsl(${hueFromId(m.userId)}, 85%, 52%)`,
+                }}
               >
-                {m.avatarUrl ? <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" /> : initialsFromName(m.displayName)}
-              </button>
-              <button
-                type="button"
-                className="min-w-0 flex-1 text-left"
-                onClick={() => onMemberRowClick?.(m.userId)}
-              >
-                <div className="flex flex-wrap items-center gap-1.5 text-[16px] font-medium tracking-[-0.02em] text-foreground">
+                {m.avatarUrl ? (
+                  <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  initialsFromName(m.displayName)
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p
+                  className="truncate"
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: PRIMARY_TEXT,
+                    letterSpacing: "-0.01em",
+                    margin: 0,
+                  }}
+                >
                   {m.displayName}
                   {m.isYou ? (
-                    <span className="rounded px-1.5 py-px text-[10px] font-semibold text-muted-foreground bg-muted">VOUS</span>
+                    <span className="text-[13px] font-medium" style={{ color: LABEL_GRAY }}>
+                      {" "}
+                      · Toi
+                    </span>
                   ) : null}
-                  {m.isAdminStar ? <span className="text-[12px] text-[#ff9500]">★</span> : null}
-                </div>
-                <div className="text-[13px] text-muted-foreground">{m.roleLabel}</div>
-              </button>
-              {isAdmin ? (
-                (renderMemberTrailing?.(m) ?? <span className="pb-1 text-[18px] tracking-[2px] text-muted-foreground/40">···</span>)
-              ) : (
-                <ChevronSmall />
-              )}
-            </div>
-          );
-        })}
-      </MaquetteGroup>
-
-      {!isAdmin && onViewAllMembers && totalMemberCount > members.length ? (
-        <div className="-mt-4 px-4 pb-2">
-          <button type="button" onClick={onViewAllMembers} className="py-2 pl-1 text-[13px] font-normal text-primary">
-            Voir tous les membres ({totalMemberCount}) <span className="inline opacity-70">›</span>
-          </button>
-        </div>
-      ) : null}
-
-      {isAdmin ? (
-        <>
-          <MaquetteGroup title="Paramètres du club">
-            <MaquetteSettingRow
-              iconKey="edit"
-              label="Infos du club"
-              sub="Nom, ville, disciplines, photo"
-              onClick={onAdminSettingInfos}
-            />
-            <MaquetteSettingRow
-              iconKey="lock"
-              label="Confidentialité"
-              sub="Public · ouvert sur invitation"
-              onClick={onAdminSettingPrivacy}
-            />
-            <MaquetteSettingRow
-              iconKey="bell"
-              label="Notifications"
-              sub="Annonces, nouvelles séances"
-              onClick={onAdminSettingNotifications}
-            />
-            <MaquetteSettingRow
-              iconKey="calendar"
-              label="Calendrier club"
-              sub="Événements à venir"
-              onClick={onAdminSettingCalendar}
-            />
-            <MaquetteSettingRow
-              iconKey="program"
-              label="Programmes partagés"
-              sub="Programmes actifs"
-              last
-              onClick={onAdminSettingPrograms}
-            />
-          </MaquetteGroup>
-
-          {pendingInvites.length > 0 ? (
-            <MaquetteGroup title="Demandes en attente">
-              {pendingInvites.map((p, idx) => (
-                <div
-                  key={p.id}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2.5",
-                    idx < pendingInvites.length - 1 && "border-b border-border/60"
-                  )}
+                </p>
+                <p
+                  className="truncate"
+                  style={{
+                    fontSize: 13,
+                    color: LABEL_GRAY,
+                    margin: 0,
+                    marginTop: 1,
+                    fontWeight: 500,
+                  }}
                 >
+                  {m.subtitle || ROLE_META[m.chipRole].label}
+                </p>
+              </div>
+              <RoleChip role={m.chipRole} />
+              {showCoachChrome && !m.isYou ? (
+                (renderMemberTrailing?.(m) ?? <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />)
+              ) : null}
+            </button>
+          </div>
+        ))}
+        {canExpand && onExpandMembers ? (
+          <>
+            <FormRowDivider ml={16} />
+            <button
+              type="button"
+              onClick={onExpandMembers}
+              className="w-full py-3 text-center active:bg-[#F8F8F8]/80 dark:active:bg-muted/50"
+            >
+              <span className="text-[15px] font-bold tracking-[-0.01em]" style={{ color: ACTION_BLUE }}>
+                Voir les {totalMemberCount} membres
+              </span>
+            </button>
+          </>
+        ) : null}
+      </FormCard>
+
+      {/* Invitations (données réelles, hors maquette statique mais même carte) */}
+      {showCoachChrome && pendingInvites.length > 0 ? (
+        <>
+          <SectionHeader label="Invitations" />
+          <FormCard>
+            {pendingInvites.map((p, idx) => (
+              <div key={p.id}>
+                {idx > 0 ? <FormRowDivider ml={60} /> : null}
+                <div className="flex items-center gap-3 px-4 py-2.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-[13px] font-semibold text-muted-foreground">
                     {p.initials}
                   </div>
@@ -439,149 +517,225 @@ export function ClubSettingsMaquetteView({
                     </button>
                   </div>
                 </div>
-              ))}
-            </MaquetteGroup>
-          ) : null}
-
-          {(onAdminCoAdmins || onAdminExport || onAdminArchive || onAdminDelete) ? (
-            <MaquetteGroup title="Zone administrateur">
-              {onAdminCoAdmins ? (
-                <MaquetteSettingRow
-                  iconKey="shield"
-                  label="Co-administrateurs"
-                  sub="Gérer les rôles"
-                  last={!onAdminExport && !onAdminArchive && !onAdminDelete}
-                  onClick={onAdminCoAdmins}
-                />
-              ) : null}
-              {onAdminExport ? (
-                <MaquetteSettingRow
-                  iconKey="export"
-                  label="Exporter les données"
-                  sub="Membres, séances, statistiques"
-                  last={!onAdminArchive && !onAdminDelete}
-                  onClick={onAdminExport}
-                />
-              ) : null}
-              {onAdminArchive ? (
-                <MaquetteDangerRow label="Archiver le club" onClick={onAdminArchive} last={!onAdminDelete} />
-              ) : null}
-              {onAdminDelete ? (
-                <MaquetteDangerRow label="Supprimer le club" destructive last onClick={onAdminDelete} />
-              ) : null}
-            </MaquetteGroup>
-          ) : null}
+              </div>
+            ))}
+          </FormCard>
         </>
-      ) : (
-        <MaquetteGroup title="Adhésion">
-          <MaquetteSettingRow
-            iconKey="bell"
-            label="Notifications du club"
-            sub={athleteNotificationsOn ? "Activées" : "Désactivées"}
-            trailing={
-              onAthleteToggleNotifications ? (
+      ) : null}
+
+      {/* Groupes d'entraînement */}
+      {!omitTrainingGroupsSection ? (
+        <>
+          <SectionHeader label="Groupes d'entraînement" />
+          <FormCard>
+            {trainingGroups.map((g, i) => (
+              <div key={g.id}>
+                {i > 0 ? <FormRowDivider ml={60} /> : null}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAthleteToggleNotifications();
-                  }}
-                  className="shrink-0"
-                  aria-label="Notifications"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[#F8F8F8]/80 dark:active:bg-muted/50"
+                  onClick={() => onOpenTrainingGroup?.(g.id)}
                 >
-                  <MaquetteToggle on={athleteNotificationsOn} />
+                  <div
+                    className="flex shrink-0 items-center justify-center rounded-xl text-[18px]"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      background: g.color,
+                      boxShadow: `0 2px 6px ${g.color}40`,
+                    }}
+                  >
+                    {emojiForGroupId(g.id)}
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p
+                      className="truncate"
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: PRIMARY_TEXT,
+                        letterSpacing: "-0.01em",
+                        margin: 0,
+                      }}
+                    >
+                      {g.name}
+                    </p>
+                    <p className="m-0 mt-px text-[13px] font-medium" style={{ color: LABEL_GRAY }}>
+                      {g.athletesCount} membres
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
                 </button>
-              ) : undefined
-            }
-          />
-          <MaquetteSettingRow
-            iconKey="calendar"
-            label="Calendrier des événements"
-            sub="À venir"
-            onClick={onAthleteCalendar}
-          />
-          <MaquetteSettingRow iconKey="program" label="Programmes partagés" sub="Disponibles" onClick={onAthletePrograms} />
-          <MaquetteDangerRow label="Quitter le club" destructive last onClick={onAthleteLeaveClub} />
-        </MaquetteGroup>
-      )}
+              </div>
+            ))}
+            {showCoachChrome && onCreateTrainingGroup ? (
+              <>
+                {trainingGroups.length > 0 ? <FormRowDivider ml={60} /> : null}
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[#F8F8F8]/80 dark:active:bg-muted/50"
+                  onClick={onCreateTrainingGroup}
+                >
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{
+                      background: "#F2F2F7",
+                      border: "1.5px dashed #C7C7CC",
+                    }}
+                  >
+                    <Plus className="h-5 w-5" color={ACTION_BLUE} strokeWidth={2.6} />
+                  </div>
+                  <span
+                    className="flex-1 text-left text-[16px] font-bold tracking-[-0.01em]"
+                    style={{ color: ACTION_BLUE }}
+                  >
+                    Créer un groupe
+                  </span>
+                </button>
+              </>
+            ) : null}
+          </FormCard>
+        </>
+      ) : null}
+
+      {/* Préférences */}
+      <SectionHeader label="Préférences" />
+      <FormCard padding>
+        <div className="flex items-center gap-3">
+          <div
+            className="flex shrink-0 items-center justify-center rounded-md"
+            style={{ width: 30, height: 30, background: "#FF9500" }}
+          >
+            <Bell className="h-[18px] w-[18px] text-white" strokeWidth={2.4} />
+          </div>
+          <span className="flex-1 text-[17px] font-semibold tracking-[-0.01em]" style={{ color: PRIMARY_TEXT }}>
+            Notifications en sourdine
+          </span>
+          <IOSToggle on={notificationsMuted} onChange={() => onToggleNotifications?.()} />
+        </div>
+        <p className="m-0 mt-2.5 text-[13px] font-medium leading-snug" style={{ color: LABEL_GRAY }}>
+          {notificationsMuted
+            ? "Tu ne recevras pas de notifications pour ce club."
+            : "Tu reçois les nouvelles séances, messages et annonces."}
+        </p>
+      </FormCard>
+
+      {/* Administration */}
+      {showAdministration ? (
+        <>
+          <SectionHeader label="Administration" />
+          <FormCard>
+            {onInviteMembers ? (
+              <>
+                <ClubActionRow
+                  icon={<UserPlus className="h-5 w-5 text-white" strokeWidth={2.4} />}
+                  iconBg={ACTION_BLUE}
+                  label="Inviter des membres"
+                  subtitle="Athlètes, coachs ou parents"
+                  onClick={onInviteMembers}
+                />
+                {onManageRoles || onClubStatistics || onClubShop ? <FormRowDivider ml={60} /> : null}
+              </>
+            ) : null}
+            {onManageRoles ? (
+              <>
+                <ClubActionRow
+                  icon={<Users className="h-5 w-5 text-white" strokeWidth={2.4} />}
+                  iconBg="#5856D6"
+                  label="Gérer les rôles"
+                  subtitle="Athlète · Coach · Admin"
+                  onClick={onManageRoles}
+                />
+                {onClubStatistics || onClubShop ? <FormRowDivider ml={60} /> : null}
+              </>
+            ) : null}
+            {onClubStatistics ? (
+              <>
+                <ClubActionRow
+                  icon={<BarChart3 className="h-5 w-5 text-white" strokeWidth={2.4} />}
+                  iconBg="#34C759"
+                  label="Statistiques du club"
+                  onClick={onClubStatistics}
+                />
+                {onClubShop ? <FormRowDivider ml={60} /> : null}
+              </>
+            ) : null}
+            {onClubShop ? (
+              <ClubActionRow
+                icon={<Gift className="h-5 w-5 text-white" strokeWidth={2.4} />}
+                iconBg="#FF9500"
+                label="Boutique du club"
+                subtitle="Équipements, abonnements"
+                onClick={onClubShop}
+              />
+            ) : null}
+          </FormCard>
+        </>
+      ) : null}
+
+      {/* Actions générales */}
+      {onShareClub || onReportClub ? (
+        <>
+          <SectionHeader label=" " />
+          <FormCard>
+            {onShareClub ? (
+              <>
+                <ClubActionRow
+                  icon={<Share2 className="h-5 w-5" strokeWidth={2.4} style={{ color: PRIMARY_TEXT }} />}
+                  iconBg="#F2F2F7"
+                  label="Partager le club"
+                  labelColor={PRIMARY_TEXT}
+                  onClick={onShareClub}
+                />
+                {onReportClub ? <FormRowDivider ml={60} /> : null}
+              </>
+            ) : null}
+            {onReportClub ? (
+              <ClubActionRow
+                icon={<Flag className="h-5 w-5 text-[#FF9500]" strokeWidth={2.4} />}
+                iconBg="#FF950020"
+                label="Signaler un problème"
+                labelColor="#FF9500"
+                onClick={onReportClub}
+              />
+            ) : null}
+          </FormCard>
+        </>
+      ) : null}
+
+      {/* Zone rouge */}
+      {dangerDelete || dangerLeave ? (
+        <>
+          <SectionHeader label=" " />
+          <FormCard>
+            {dangerDelete ? (
+              <ClubActionRow
+                icon={<Trash2 className="h-5 w-5 text-[#FF3B30]" strokeWidth={2.4} />}
+                iconBg="#FF3B3020"
+                label="Supprimer le club"
+                subtitle="Action irréversible"
+                labelColor="#FF3B30"
+                onClick={dangerDelete}
+              />
+            ) : dangerLeave ? (
+              <ClubActionRow
+                icon={<LogOut className="h-5 w-5 text-[#FF3B30]" strokeWidth={2.4} />}
+                iconBg="#FF3B3020"
+                label="Quitter le club"
+                labelColor="#FF3B30"
+                onClick={dangerLeave}
+              />
+            ) : null}
+          </FormCard>
+        </>
+      ) : null}
     </div>
   );
 }
 
-function MaquetteSettingRow({
-  iconKey,
-  label,
-  sub,
-  last,
-  trailing,
-  onClick,
-}: {
-  iconKey: keyof typeof settingIcons;
-  label: string;
-  sub?: string;
-  last?: boolean;
-  trailing?: ReactNode;
-  onClick?: () => void;
-}) {
-  const inner = (
-    <>
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-[rgba(10,132,255,0.12)] text-primary">
-        {settingIcons[iconKey]}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[16px] font-medium tracking-[-0.02em] text-foreground">{label}</div>
-        {sub ? <div className="text-[12px] text-muted-foreground leading-snug">{sub}</div> : null}
-      </div>
-      {trailing ?? <ChevronSmall />}
-    </>
-  );
-  const cls = cn("flex min-h-[48px] items-center gap-3 px-4 py-2.5 text-left", !last && "border-b border-border/60");
-  if (onClick) {
-    return (
-      <button type="button" className={cn(cls, "w-full active:bg-muted/60")} onClick={onClick}>
-        {inner}
-      </button>
-    );
-  }
-  return <div className={cls}>{inner}</div>;
-}
-
-function MaquetteDangerRow({
-  label,
-  destructive,
-  last,
-  onClick,
-}: {
-  label: string;
-  destructive?: boolean;
-  last?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full px-4 py-[13px] text-left text-[16px] font-medium tracking-[-0.02em] active:bg-muted/60",
-        !last && "border-b border-border/60",
-        destructive ? "text-[#ff453a]" : "text-primary"
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function MaquetteToggle({ on }: { on: boolean }) {
-  return (
-    <div
-      className="relative h-[31px] w-[51px] shrink-0 rounded-2xl transition-colors"
-      style={{ background: on ? "#34c759" : "#e9e9eb" }}
-    >
-      <div
-        className="absolute top-0.5 rounded-full bg-white shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-[left]"
-        style={{ width: 27, height: 27, left: on ? 22 : 2 }}
-      />
-    </div>
-  );
+/** Conservé pour compat imports (écran coaching — événement optionnel) */
+export interface ClubMaquetteNextEvent {
+  title: string;
+  detail?: string;
+  place?: string;
 }

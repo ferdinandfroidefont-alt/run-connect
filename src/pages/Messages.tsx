@@ -23,7 +23,6 @@ import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderS
 import { MainTopHeader } from "@/components/layout/MainTopHeader";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SwipeableConversationItem } from "@/components/SwipeableConversationItem";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
@@ -41,7 +40,6 @@ import {
   Paperclip,
   Check,
   CheckCheck,
-  Image,
   UserPlus,
   Settings,
   MoreVertical,
@@ -53,8 +51,6 @@ import {
   Square,
   X,
   Smile,
-  BarChart3,
-  Camera,
   ChevronRight,
   Landmark,
 } from "lucide-react";
@@ -76,6 +72,7 @@ import { MessagesInboxStickyScroll } from "@/components/messages/MessagesInboxSt
 import { MessagesMaquetteSubpageShell } from "@/components/messages/MessagesMaquetteSubpageShell";
 import { MessageSearchSheet } from "@/components/messages/MessageSearchSheet";
 import { ConversationMenuSheet } from "@/components/messages/ConversationMenuSheet";
+import { ChatAttachPopover } from "@/components/messages/ChatAttachPopover";
 import { StoryReplyBubble } from "@/components/StoryReplyBubble";
 import { parseStoryReplyContent } from "@/lib/storyReplyMessage";
 
@@ -266,6 +263,7 @@ const Messages = () => {
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [chatAttachOpen, setChatAttachOpen] = useState(false);
   const [showCoachCreate, setShowCoachCreate] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
@@ -2585,79 +2583,16 @@ const Messages = () => {
                         className="flex min-w-0 flex-1 items-center rounded-[9999px] border border-[#E5E5EA] bg-white"
                         style={{ padding: "4px 4px 4px 6px" }}
                       >
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
-                              disabled={isLoading}
-                              type="button"
-                              aria-label="Pièces jointes"
-                            >
-                              <Plus className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.4} />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-56">
-                            <DropdownMenuItem
-                              onClick={() => fileInputRef.current?.click()}
-                              className="py-ios-3"
-                            >
-                              <Paperclip className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
-                              Document
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={async () => {
-                                try {
-                                  const file = await takePicture();
-                                  if (file) uploadFile(file);
-                                } catch (error) {
-                                  toast({
-                                    title: "Erreur",
-                                    description: "Impossible d'accéder à la caméra",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                              className="py-ios-3"
-                            >
-                              <Camera className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
-                              Caméra
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={async () => {
-                                try {
-                                  const file = await selectFromGallery();
-                                  if (file) uploadFile(file);
-                                } catch (error) {
-                                  toast({
-                                    title: "Erreur",
-                                    description: "Impossible d'accéder à la galerie",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                              className="py-ios-3"
-                            >
-                              <Image className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
-                              Photo
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                              className="py-ios-3"
-                            >
-                              <Smile className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
-                              Emoji
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setTimeout(() => setShowCreatePoll(true), 300);
-                              }}
-                              className="py-ios-3"
-                            >
-                              <BarChart3 className="mr-ios-3 h-4 w-4" style={{ color: msgBlue }} />
-                              Sondage
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <button
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
+                          disabled={isLoading}
+                          type="button"
+                          aria-label="Pièces jointes"
+                          aria-expanded={chatAttachOpen}
+                          onClick={() => setChatAttachOpen((v) => !v)}
+                        >
+                          <Plus className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.4} />
+                        </button>
                         <input
                           ref={fileInputRef}
                           type="file"
@@ -2693,7 +2628,48 @@ const Messages = () => {
                           className="min-w-0 flex-1 bg-transparent px-1 py-2 text-[16px] font-medium leading-normal text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
                           disabled={isLoading}
                         />
+                        <button
+                          type="button"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
+                          aria-label="Emoji"
+                          aria-expanded={showEmojiPicker}
+                          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        >
+                          <Smile className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.4} />
+                        </button>
                       </div>
+                      <ChatAttachPopover
+                        open={chatAttachOpen}
+                        onClose={() => setChatAttachOpen(false)}
+                        onDocument={() => fileInputRef.current?.click()}
+                        onCamera={async () => {
+                          try {
+                            const file = await takePicture();
+                            if (file) uploadFile(file);
+                          } catch {
+                            toast({
+                              title: "Erreur",
+                              description: "Impossible d'accéder à la caméra",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        onPhoto={async () => {
+                          try {
+                            const file = await selectFromGallery();
+                            if (file) uploadFile(file);
+                          } catch {
+                            toast({
+                              title: "Erreur",
+                              description: "Impossible d'accéder à la galerie",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        onPoll={() => {
+                          setTimeout(() => setShowCreatePoll(true), 280);
+                        }}
+                      />
                       {newMessage.trim() ? (
                         <button
                           type="button"
@@ -4012,17 +3988,10 @@ const Messages = () => {
               setGroupInfoData(null);
               void loadConversations();
             }}
-            onOpenManageClubInCoaching={() => {
-              const id = groupInfoData?.id;
-              if (!id || !groupInfoData?.club_code) return;
-              setShowClubProfile(false);
-              navigate("/coaching", { state: { coachingClubManage: { clubId: id } } });
-            }}
             onEditClub={() => {
               setShowClubProfile(false);
               setTimeout(() => setShowEditGroup(true), 0);
             }}
-            groupsCount={0}
           />
         </Suspense>
         
