@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { DayEmptyStateInline } from "@/components/coaching/planning/DayEmptyStateInline";
 import { DaySessionSummary, type SessionSummaryView } from "@/components/coaching/planning/DaySessionSummary";
 import { SessionActionMenu } from "@/components/coaching/planning/SessionActionMenu";
@@ -40,7 +41,7 @@ function monPlanBarHeightPct(block: MiniProfileBlock): number {
 /** Aperçu minimal façon maquette quand les blocs n’ont pas encore été résolus en mini-profils. */
 function MonPlanSchemaBarsFallback() {
   return (
-    <div className="mt-3 flex h-14 items-end gap-[2px] px-1" aria-hidden>
+    <div className="mt-3 flex h-14 items-end gap-[2px] px-3" aria-hidden>
       <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "38%" }} />
       <div className="min-w-0 flex-[2] rounded-sm bg-[#34C759]" style={{ height: "68%" }} />
       <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "35%" }} />
@@ -48,26 +49,57 @@ function MonPlanSchemaBarsFallback() {
   );
 }
 
-function MonPlanSchemaBars({ blocks }: { blocks: MiniProfileBlock[] }) {
+/** Barres type maquette RunConnect.jsx (`SessionBarChart` / `SchemaBars`, zones FCOLOR). */
+export function MonPlanSchemaBars({
+  blocks,
+  interactive = false,
+  selectedBarIndex = null,
+  onSelectBarIndex,
+}: {
+  blocks: MiniProfileBlock[];
+  interactive?: boolean;
+  selectedBarIndex?: number | null;
+  onSelectBarIndex?: (index: number) => void;
+}) {
   if (!blocks.length) {
     return <MonPlanSchemaBarsFallback />;
   }
   return (
-    <div className="mt-3 flex h-14 items-end gap-[2px] px-1">
+    <div className="mt-3 flex h-14 items-end gap-[2px] px-3">
       {blocks.map((block, i) => {
         const band = zoneBandFromMiniBlock(block);
         const heightPct = monPlanBarHeightPct(block);
         const bg = MON_PLAN_ZONE_COLOR[band] ?? MON_PLAN_ZONE_COLOR[2];
+        const selected = interactive && selectedBarIndex === i;
+        const grow = Math.max(block.width, 0.0001);
+        const style: CSSProperties = {
+          flexGrow: grow,
+          flexBasis: 0,
+          height: `${heightPct}%`,
+          background: bg,
+        };
+        const className = cn(
+          "min-w-0 rounded-sm transition-[box-shadow,transform] duration-150",
+          interactive && "cursor-pointer active:scale-y-[0.98]",
+          selected && "ring-2 ring-[#007AFF] ring-offset-1 ring-offset-white",
+        );
+        if (!interactive) {
+          return (
+            <div
+              key={`${i}-${block.width}-${block.zoneBandLevel ?? ""}-${block.height}`}
+              className={className}
+              style={style}
+            />
+          );
+        }
         return (
-          <div
+          <button
             key={`${i}-${block.width}-${block.zoneBandLevel ?? ""}-${block.height}`}
-            className="min-w-0 rounded-sm"
-            style={{
-              flexGrow: Math.max(block.width, 0.0001),
-              flexBasis: 0,
-              height: `${heightPct}%`,
-              background: bg,
-            }}
+            type="button"
+            className={className}
+            style={style}
+            aria-label={`Bloc ${i + 1}`}
+            onClick={() => onSelectBarIndex?.(i)}
           />
         );
       })}
@@ -156,14 +188,14 @@ export function DayPlanningRow({
         )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
       >
-        <div className="mr-5 flex w-7 shrink-0 flex-col justify-center py-0.5" aria-hidden={!isToday}>
+        <div className="mr-3 flex w-5 shrink-0 flex-col justify-center py-0.5" aria-hidden={!isToday}>
           {isToday ? (
             <div className="mx-auto h-11 min-h-[2.75rem] w-[3px] shrink-0 rounded-full bg-[#007AFF]" aria-hidden />
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 items-stretch gap-4">
-          <div className="flex w-11 shrink-0 flex-col justify-center">
+        <div className="flex min-w-0 flex-1 items-stretch gap-3">
+          <div className="flex w-10 shrink-0 flex-col justify-center">
             <p
               className="text-[11px] font-bold leading-none tracking-wide"
               style={{ color: isToday ? maquetteBlue : "#8E8E93" }}

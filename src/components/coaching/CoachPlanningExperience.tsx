@@ -14,10 +14,13 @@ import { fr } from "date-fns/locale";
 import {
   Activity,
   Bike,
+  CalendarDays,
+  Check,
   Clock3,
   Crosshair,
   ChevronRight,
   ChevronDown,
+  Download,
   Dumbbell,
   Flame,
   Gauge,
@@ -28,8 +31,10 @@ import {
   MoreHorizontal,
   Plus,
   Ruler,
+  Settings,
   Trash2,
   Waves,
+  X,
   Zap,
 } from "lucide-react";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
@@ -58,7 +63,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
 import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
 import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
-import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
+import { DayPlanningRow, MonPlanSchemaBars } from "@/components/coaching/planning/DayPlanningRow";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
@@ -85,7 +90,12 @@ import { CoachPlanificationMonthCalendar, type PlanCalendarSession, type PlanCal
 import { Group } from "@/components/apple/Group";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
-import { formatCalendarDistance, isExplicitRestDay, toCalendarSummarySport } from "@/components/coaching/athlete-plan/planUtils";
+import {
+  formatCalendarDistance,
+  isExplicitRestDay,
+  mapParticipationToUiStatus,
+  toCalendarSummarySport,
+} from "@/components/coaching/athlete-plan/planUtils";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
@@ -226,6 +236,23 @@ type TrainingSession = {
   athleteParticipationStatus?: string | null;
   athleteCompletedAt?: string | null;
 };
+
+function athletePlanSessionToTrainingSession(s: AthletePlanSessionModel): TrainingSession {
+  const sport: SportType =
+    s.sport === "cycling" || s.sport === "swimming" || s.sport === "strength" || s.sport === "running"
+      ? s.sport
+      : "running";
+  return {
+    id: s.id,
+    title: s.title,
+    sport,
+    assignedDate: s.assignedDate,
+    sent: true,
+    blocks: s.blocks as unknown as SessionBlock[],
+    athleteIntensity: s.athleteIntensity ?? undefined,
+    athleteParticipationStatus: s.participationStatus,
+  };
+}
 
 type SessionPreviewState = {
   sessionId: string;
@@ -1049,6 +1076,12 @@ export function CoachPlanningExperience() {
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [sessionPreview, setSessionPreview] = useState<SessionPreviewState | null>(null);
+  /** Compte-rendu type maquette `PlanSessionDetailSheet` (vue athlète Mon plan). */
+  const [sessionPreviewCrStatus, setSessionPreviewCrStatus] = useState<"done" | "skipped" | null>(null);
+  const [sessionPreviewCrFeeling, setSessionPreviewCrFeeling] = useState<"easy" | "ok" | "hard" | null>(null);
+  const [sessionPreviewCrComment, setSessionPreviewCrComment] = useState("");
+  const [sessionPreviewExportOpen, setSessionPreviewExportOpen] = useState(false);
+  const [sessionPreviewCrSaving, setSessionPreviewCrSaving] = useState(false);
   const [activeAthleteId, setActiveAthleteId] = useState<string | undefined>(undefined);
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>(undefined);
   /** Maquette 16 · ouverture « Programmer la semaine » sans athlète (ex. FAB Créer une séance). */
@@ -1772,9 +1805,24 @@ export function CoachPlanningExperience() {
     setSessionPreview(null);
   }, []);
 
-  const previewSessionItem = useMemo(
-    () => (sessionPreview ? sessions.find((item) => item.id === sessionPreview.sessionId) : null),
-    [sessionPreview, sessions]
+  useEffect(() => {
+    setSessionPreviewCrStatus(null);
+    setSessionPreviewCrFeeling(null);
+    setSessionPreviewCrComment("");
+    setSessionPreviewExportOpen(false);
+  }, [sessionPreview?.sessionId]);
+
+  const previewSessionItem = useMemo(() => {
+    if (!sessionPreview) return null;
+    const fromCoachList = sessions.find((item) => item.id === sessionPreview.sessionId);
+    if (fromCoachList) return fromCoachList;
+    const fromAthlete = athletePlanSessions.find((s) => s.id === sessionPreview.sessionId);
+    return fromAthlete ? athletePlanSessionToTrainingSession(fromAthlete) : null;
+  }, [sessionPreview, sessions, athletePlanSessions]);
+
+  const previewAthletePlanSession = useMemo(
+    () => (sessionPreview ? athletePlanSessions.find((s) => s.id === sessionPreview.sessionId) ?? null : null),
+    [sessionPreview, athletePlanSessions]
   );
 
   const previewSessionSegments = useMemo(
@@ -1797,6 +1845,20 @@ export function CoachPlanningExperience() {
     () => resolveWorkoutMetrics({ segments: previewSessionSegments }),
     [previewSessionSegments]
   );
+
+  const previewSessionSelectedBarIndex = useMemo(() => {
+    if (!sessionPreview?.blockId || !previewSessionItem?.blocks.length || !previewSessionMiniBars.length) return null;
+    return Math.round(
+      (Math.max(0, previewSessionItem.blocks.findIndex((b) => b.id === sessionPreview.blockId)) /
+        Math.max(1, previewSessionItem.blocks.length - 1)) *
+        Math.max(1, previewSessionMiniBars.length - 1)
+    );
+  }, [previewSessionItem, previewSessionMiniBars, sessionPreview?.blockId]);
+
+  const previewAthleteParticipationUi = useMemo(() => {
+    if (!previewAthletePlanSession) return null;
+    return mapParticipationToUiStatus(previewAthletePlanSession.participationStatus, previewAthletePlanSession.hasConflict);
+  }, [previewAthletePlanSession]);
 
   const previewSessionFocusedBlock = useMemo(() => {
     if (!previewSessionItem || !sessionPreview?.blockId) return null;
@@ -3051,6 +3113,47 @@ export function CoachPlanningExperience() {
     toast.success("Retour enregistré");
     await loadAthleteWeek({ silent: true });
   };
+
+  const sendSessionPreviewCompteRendu = useCallback(async () => {
+    const a = previewAthletePlanSession;
+    if (!a?.participationId || !sessionPreviewCrStatus) return;
+    setSessionPreviewCrSaving(true);
+    try {
+      const parts: string[] = [];
+      if (sessionPreviewCrStatus === "done" && sessionPreviewCrFeeling) {
+        parts.push(
+          `Ressenti: ${
+            sessionPreviewCrFeeling === "easy" ? "Facile" : sessionPreviewCrFeeling === "ok" ? "Correct" : "Difficile"
+          }`
+        );
+      }
+      if (sessionPreviewCrComment.trim()) parts.push(sessionPreviewCrComment.trim());
+      const note = parts.length ? parts.join("\n") : null;
+      const update = {
+        athlete_note: note,
+        status: sessionPreviewCrStatus === "done" ? ("completed" as const) : ("missed" as const),
+        completed_at: sessionPreviewCrStatus === "done" ? new Date().toISOString() : null,
+      };
+      const { error } = await supabase.from("coaching_participations").update(update).eq("id", a.participationId);
+      if (error) {
+        toast.error("Envoi impossible", error.message);
+        return;
+      }
+      toast.success("Compte-rendu envoyé au coach");
+      await loadAthleteWeek({ silent: true });
+      closeSessionPreview();
+    } finally {
+      setSessionPreviewCrSaving(false);
+    }
+  }, [
+    previewAthletePlanSession,
+    sessionPreviewCrStatus,
+    sessionPreviewCrFeeling,
+    sessionPreviewCrComment,
+    closeSessionPreview,
+    toast,
+    loadAthleteWeek,
+  ]);
 
   const updateMemberRole = async (memberId: string, role: ClubRole) => {
     if (!activeClubId) return;
@@ -5453,95 +5556,289 @@ export function CoachPlanningExperience() {
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="flex h-[88dvh] flex-col overflow-hidden rounded-t-[24px] border-border bg-[#e7e8ed] p-0"
+          className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-[24px] border-[#E5E5EA] bg-white p-0 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:max-w-lg"
         >
           {previewSessionItem ? (
             <>
-              <div className="px-5 pb-2 pt-3">
-                <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-[#c9cad2]" />
+              <div className="flex-shrink-0 pt-2.5 pb-1.5" aria-hidden>
+                <div className="mx-auto h-[5px] w-10 rounded-full bg-[#D1D1D6]" />
+              </div>
+              <div className="flex-shrink-0 px-5 pt-1">
                 <button
                   type="button"
-                  className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-transform active:scale-95"
                   onClick={closeSessionPreview}
                   aria-label="Fermer"
                 >
-                  <Plus className="h-5 w-5 rotate-45" />
+                  <X className="h-7 w-7 text-[#0A0F1F]" strokeWidth={2.4} />
                 </button>
-                <h3 className="text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground">{previewSessionItem.title}</h3>
-                <div className="mt-2 flex items-center gap-5 text-[21px] font-semibold text-foreground">
+              </div>
+
+              <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-5 pb-[max(1rem,var(--safe-area-bottom))] [-webkit-overflow-scrolling:touch]">
+                <h2 className="m-0 text-[32px] font-black leading-[1.05] tracking-[-0.03em] text-[#0A0F1F]">
+                  {previewSessionItem.title || "Séance sans titre"}
+                </h2>
+
+                <div className="mt-3 flex flex-wrap items-center gap-5">
                   {previewSessionMetrics.durationLabel ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock3 className="h-4 w-4 text-muted-foreground" />
+                    <span className="inline-flex items-center gap-1.5 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">
+                      <Clock3 className="h-5 w-5 shrink-0 text-[#0A0F1F]" strokeWidth={2.2} />
                       {previewSessionMetrics.durationLabel}
                     </span>
                   ) : null}
                   {previewSessionMetrics.distanceLabel ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Ruler className="h-4 w-4 text-muted-foreground" />
+                    <span className="inline-flex items-center gap-1.5 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">
+                      <Ruler className="h-5 w-5 shrink-0 text-[#0A0F1F]" strokeWidth={2.2} />
                       {previewSessionMetrics.distanceLabel}
                     </span>
                   ) : null}
                 </div>
-              </div>
 
-              <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-5 pb-[max(1rem,var(--safe-area-bottom))] [-webkit-overflow-scrolling:touch]">
-                <div className="rounded-[24px] bg-card p-4">
-                  <div className="relative mb-5 rounded-[12px] bg-white p-2">
-                    {previewSessionBubbleLabel && sessionPreview ? (
-                      <div
-                        className="absolute z-10 -translate-x-1/2 rounded-[12px] bg-[#1c1d21] px-3 py-1.5 text-[12px] font-semibold text-white shadow-md"
-                        style={{ left: `${Math.max(12, Math.min(sessionPreview.anchorX, 280))}px`, top: `${Math.max(-6, sessionPreview.anchorTop - 36)}px` }}
-                      >
-                        {previewSessionBubbleLabel}
-                      </div>
-                    ) : null}
-                    <MiniWorkoutProfile
-                      blocks={previewSessionMiniBars}
-                      variant="premiumCompact"
-                      zoneBandMode
-                      flatSurface
-                      className="h-20 w-full rounded-none border-0 bg-transparent px-0 py-0"
-                      selectedBlockIndex={
-                        !sessionPreview?.blockId || !previewSessionItem.blocks.length || !previewSessionMiniBars.length
-                          ? null
-                          : Math.round(
-                              (Math.max(0, previewSessionItem.blocks.findIndex((b) => b.id === sessionPreview.blockId)) /
-                                Math.max(1, previewSessionItem.blocks.length - 1)) *
-                                Math.max(1, previewSessionMiniBars.length - 1)
-                            )
-                      }
-                      onBlockTap={({ index, anchorX, anchorTop }) => {
-                        if (!previewSessionItem.blocks.length || !previewSessionMiniBars.length) return;
-                        const mapped = Math.round((index / Math.max(1, previewSessionMiniBars.length - 1)) * (previewSessionItem.blocks.length - 1));
-                        const targetBlock = previewSessionItem.blocks[Math.max(0, Math.min(mapped, previewSessionItem.blocks.length - 1))];
-                        if (!targetBlock) return;
-                        setSessionPreview((prev) =>
-                          prev ? { ...prev, blockId: targetBlock.id, anchorX, anchorTop } : prev
-                        );
-                      }}
-                    />
+                <div className="mt-3.5">
+                  {previewSessionBubbleLabel ? (
+                    <div className="mb-2 rounded-xl bg-[#1c1d21] px-3 py-1.5 text-center text-[12px] font-semibold text-white">
+                      {previewSessionBubbleLabel}
+                    </div>
+                  ) : null}
+                  <MonPlanSchemaBars
+                    blocks={previewSessionMiniBars}
+                    interactive
+                    selectedBarIndex={previewSessionSelectedBarIndex}
+                    onSelectBarIndex={(index) => {
+                      if (!previewSessionItem.blocks.length || !previewSessionMiniBars.length) return;
+                      const mapped = Math.round(
+                        (index / Math.max(1, previewSessionMiniBars.length - 1)) * (previewSessionItem.blocks.length - 1)
+                      );
+                      const targetBlock =
+                        previewSessionItem.blocks[Math.max(0, Math.min(mapped, previewSessionItem.blocks.length - 1))];
+                      if (!targetBlock) return;
+                      setSessionPreview((prev) => (prev ? { ...prev, blockId: targetBlock.id, anchorX: 0, anchorTop: 0 } : prev));
+                    }}
+                  />
+                  <p className="mt-1 text-center text-[12px] font-medium text-[#8E8E93]">
+                    Touche un bloc pour voir l&apos;allure et la durée
+                  </p>
+                </div>
+
+                <div className="mt-[18px] space-y-[18px] pb-1">
+                  {previewSessionSections.map((section) => (
+                    <div key={section.id}>
+                      <h3 className="m-0 mb-2 text-[22px] font-black tracking-[-0.02em] text-[#0A0F1F]">{section.title}</h3>
+                      {section.lines.map((line, idx) => (
+                        <p key={`${section.id}-${idx}`} className="m-0 mb-1 text-[17px] font-medium leading-snug text-[#0A0F1F] last:mb-0">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                {previewAthletePlanSession && previewAthleteParticipationUi === "conflict" ? (
+                  <div className="mt-4 rounded-xl border border-violet-400/40 bg-violet-500/10 px-3 py-2 text-[13px] text-violet-950 dark:text-violet-100">
+                    Deux séances sont proches sur cette plage horaire. Parlez-en avec votre coach.
                   </div>
+                ) : null}
 
-                  <div className="space-y-4">
-                    {previewSessionSections.map((section) => (
-                      <div key={section.id}>
-                        <h4 className="text-[22px] font-bold tracking-[-0.01em] text-foreground">{section.title}</h4>
-                        <div className="mt-1.5 space-y-0.5">
-                          {section.lines.map((line, idx) => (
-                            <p key={`${section.id}-${idx}`} className="text-[17px] text-foreground">
-                              - {line}
-                            </p>
+                {previewAthletePlanSession &&
+                previewAthleteParticipationUi &&
+                previewAthleteParticipationUi !== "done" &&
+                previewAthleteParticipationUi !== "missed" &&
+                previewAthleteParticipationUi !== "conflict" ? (
+                  <div className="mt-4 rounded-[18px] bg-[#F2F2F7] p-4">
+                    <h3 className="m-0 text-[18px] font-black tracking-[-0.02em] text-[#0A0F1F]">Compte-rendu au coach</h3>
+                    <div className="mt-3 flex gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setSessionPreviewCrStatus((s) => (s === "done" ? null : "done"))}
+                        className={cn(
+                          "flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-3 text-[15px] font-extrabold tracking-[-0.01em] transition-transform active:scale-[0.97]",
+                          sessionPreviewCrStatus === "done" ? "bg-[#34C759] text-white" : "border-[1.5px] border-[#E5E5EA] bg-white text-[#0A0F1F]"
+                        )}
+                      >
+                        <Check className="h-5 w-5" strokeWidth={2.6} />
+                        Fait
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSessionPreviewCrStatus((s) => (s === "skipped" ? null : "skipped"))}
+                        className={cn(
+                          "flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-3 text-[15px] font-extrabold tracking-[-0.01em] transition-transform active:scale-[0.97]",
+                          sessionPreviewCrStatus === "skipped" ? "bg-[#FF3B30] text-white" : "border-[1.5px] border-[#E5E5EA] bg-white text-[#0A0F1F]"
+                        )}
+                      >
+                        <X className="h-5 w-5" strokeWidth={2.6} />
+                        Pas fait
+                      </button>
+                    </div>
+
+                    {sessionPreviewCrStatus === "done" ? (
+                      <div className="mt-3.5">
+                        <p className="m-0 mb-2 text-[14px] font-bold text-[#0A0F1F]">Ressenti à la fin</p>
+                        <div className="flex gap-2">
+                          {(
+                            [
+                              { id: "easy" as const, label: "Facile", emoji: "😎" },
+                              { id: "ok" as const, label: "Correct", emoji: "🙂" },
+                              { id: "hard" as const, label: "Difficile", emoji: "😮‍💨" },
+                            ] as const
+                          ).map((f) => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => setSessionPreviewCrFeeling((cur) => (cur === f.id ? null : f.id))}
+                              className={cn(
+                                "flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2.5 text-[13px] font-bold transition-transform active:scale-[0.97]",
+                                sessionPreviewCrFeeling === f.id
+                                  ? "bg-[#007AFF] text-white"
+                                  : "border-[1.5px] border-[#E5E5EA] bg-white text-[#0A0F1F]"
+                              )}
+                            >
+                              <span className="text-[18px]" aria-hidden>
+                                {f.emoji}
+                              </span>
+                              {f.label}
+                            </button>
                           ))}
                         </div>
                       </div>
-                    ))}
+                    ) : null}
+
+                    {sessionPreviewCrStatus ? (
+                      <div className="mt-3.5">
+                        <p className="m-0 mb-2 text-[14px] font-bold text-[#0A0F1F]">
+                          {sessionPreviewCrStatus === "skipped" ? "Pourquoi ?" : "Un mot pour le coach (optionnel)"}
+                        </p>
+                        <textarea
+                          value={sessionPreviewCrComment}
+                          onChange={(e) => setSessionPreviewCrComment(e.target.value)}
+                          placeholder={
+                            sessionPreviewCrStatus === "skipped"
+                              ? "Ex : Trop fatigué, douleur au mollet…"
+                              : "Ex : J'ai eu du mal sur les 400m, allure trop rapide pour moi."
+                          }
+                          rows={3}
+                          className="w-full resize-none rounded-xl border-[1.5px] border-[#E5E5EA] bg-white px-3 py-2.5 text-[15px] font-medium text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+                        />
+                        <button
+                          type="button"
+                          disabled={sessionPreviewCrSaving}
+                          onClick={() => void sendSessionPreviewCompteRendu()}
+                          className="mt-2.5 w-full rounded-full bg-[#007AFF] py-3 text-[16px] font-extrabold tracking-[-0.01em] text-white shadow-[0_4px_14px_rgba(0,122,255,0.3)] transition-transform active:scale-[0.98] disabled:opacity-60"
+                        >
+                          Envoyer au coach
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
+                ) : previewAthletePlanSession && (previewAthleteParticipationUi === "done" || previewAthleteParticipationUi === "missed") ? (
+                  <p className="mt-4 text-center text-[14px] text-[#8E8E93]">
+                    {previewAthleteParticipationUi === "done"
+                      ? "Cette séance est déjà enregistrée comme réalisée."
+                      : "Cette séance est déjà enregistrée comme non réalisée."}
+                  </p>
+                ) : null}
+
+                <div className="mt-3 overflow-hidden rounded-[18px] border border-[#E5E5EA] bg-white">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-[#F8F8F8]"
+                    onClick={() => {
+                      if (previewAthletePlanSession) {
+                        toast.info("Seul le coach peut modifier cette séance.");
+                        return;
+                      }
+                      if (!previewSessionItem) return;
+                      openEditSession(previewSessionItem.id);
+                      closeSessionPreview();
+                    }}
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F2F2F7]">
+                      <Settings className="h-[18px] w-[18px] text-[#0A0F1F]" strokeWidth={2.2} />
+                    </div>
+                    <span className="min-w-0 flex-1 text-[16px] font-bold tracking-[-0.01em] text-[#0A0F1F]">Modifier la séance</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
+                  </button>
+                  <div className="ml-[60px] h-px bg-[#E5E5EA]" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-[#F8F8F8]"
+                    onClick={() => {
+                      toast.info("Utilisez la planification avec votre coach pour reprogrammer.");
+                    }}
+                  >
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                      style={{ background: "rgba(0, 122, 255, 0.1)" }}
+                    >
+                      <CalendarDays className="h-[18px] w-[18px] text-[#007AFF]" strokeWidth={2.2} />
+                    </div>
+                    <span className="min-w-0 flex-1 text-[16px] font-bold tracking-[-0.01em] text-[#0A0F1F]">Planifier cette séance</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
+                  </button>
+                  <div className="ml-[60px] h-px bg-[#E5E5EA]" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-[#F8F8F8]"
+                    onClick={() => setSessionPreviewExportOpen(true)}
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F2F2F7]">
+                      <Download className="h-[18px] w-[18px] text-[#0A0F1F]" strokeWidth={2.2} />
+                    </div>
+                    <span className="min-w-0 flex-1 text-[16px] font-bold tracking-[-0.01em] text-[#0A0F1F]">Exporter la séance</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
+                  </button>
                 </div>
               </div>
             </>
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {sessionPreviewExportOpen ? (
+        <div
+          className="fixed inset-0 z-[10050] flex flex-col justify-end bg-black/45"
+          role="presentation"
+          onClick={() => setSessionPreviewExportOpen(false)}
+        >
+          <div
+            className="rounded-t-[22px] bg-white px-4 pt-[18px]"
+            style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
+            role="dialog"
+            aria-label="Exporter vers"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-3.5 h-[5px] w-10 rounded-full bg-[#D1D1D6]" />
+            <h3 className="m-0 mb-3 text-center text-[20px] font-black tracking-[-0.02em] text-[#0A0F1F]">Exporter vers</h3>
+            {(
+              [
+                { id: "garmin", label: "Garmin Connect", color: "#000000" },
+                { id: "strava", label: "Strava", color: "#FC4C02" },
+                { id: "coros", label: "Coros", color: "#E31E26" },
+                { id: "polar", label: "Polar Flow", color: "#D6001C" },
+                { id: "fit", label: "Fichier .FIT", color: "#007AFF" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-colors active:bg-[#F8F8F8]"
+                onClick={() => setSessionPreviewExportOpen(false)}
+              >
+                <div className="h-9 w-9 shrink-0 rounded-[10px]" style={{ background: opt.color }} />
+                <span className="min-w-0 flex-1 text-[16px] font-bold text-[#0A0F1F]">{opt.label}</span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" aria-hidden />
+              </button>
+            ))}
+            <button
+              type="button"
+              className="mt-2 w-full rounded-full bg-[#F2F2F7] py-3.5 text-[16px] font-extrabold text-[#0A0F1F] transition-transform active:scale-[0.98]"
+              onClick={() => setSessionPreviewExportOpen(false)}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <WheelValuePickerModal
         open={wheelOpen}
