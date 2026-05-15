@@ -183,8 +183,8 @@ export function DayPlanningRow({
     return (
       <div
         className={cn(
-          /** Barre « aujourd’hui » en bord gauche du bandeau (pl-0) ; carte gagne la largeur perdue avant le jour. */
-          "flex items-stretch py-[11px] pl-0 pr-5 [-webkit-font-smoothing:antialiased]",
+          /** Marge gauche/droite comme les titres de semaine (`px-5`) pour ne pas coller aux bords écran. Barre « aujourd’hui » après ce retrait. */
+          "flex items-stretch px-5 py-[11px] [-webkit-font-smoothing:antialiased]",
           '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif]',
         )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
