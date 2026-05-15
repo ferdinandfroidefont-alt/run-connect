@@ -3674,7 +3674,7 @@ export function CoachPlanningExperience() {
                   const kmLineDisplay = weekSessions.length === 0 ? "—" : weekKm ?? "0 km";
                   return (
                     <div key={weekStart.toISOString()}>
-                      <div className="mb-3 mt-7 px-5">
+                      <div className="mb-3 mt-7 pl-[calc(1.25rem+12px+3px)] pr-7">
                         <div className="flex min-w-0 items-baseline gap-2">
                           <h2 className="text-[26px] font-extrabold leading-none tracking-[-0.02em] text-[#0A0F1F]">
                             Semaine {getISOWeek(weekStart)}
