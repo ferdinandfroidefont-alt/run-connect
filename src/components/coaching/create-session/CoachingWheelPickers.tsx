@@ -67,16 +67,78 @@ export function formatDistanceWheel(v: DistanceWheelValue): string {
   return `${v.km},${trimmed} km`;
 }
 
-function WheelModalChrome({ children }: { children: React.ReactNode }) {
+function useWheelBodyScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const body = document.body;
+    const html = document.documentElement;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const prev = {
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+      htmlOverflow: html.style.overflow,
+    };
+
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    html.style.overflow = "hidden";
+
+    return () => {
+      body.style.overflow = prev.bodyOverflow;
+      body.style.position = prev.bodyPosition;
+      body.style.top = prev.bodyTop;
+      body.style.width = prev.bodyWidth;
+      html.style.overflow = prev.htmlOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [active]);
+}
+
+/**
+ * Portail modale aligné maquette RunConnect (11).jsx : fond 40 %, carte centrée, z-index 9999.
+ */
+export function WheelPickerPortal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  useWheelBodyScrollLock(true);
+
   return createPortal(
     <div
-      className="relative fixed inset-0 z-[200] flex items-center justify-center p-6"
-      style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif" }}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+      }}
     >
+      <button
+        type="button"
+        aria-label="Fermer"
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          margin: 0,
+          padding: 0,
+          border: "none",
+          cursor: "pointer",
+          background: "rgba(0,0,0,0.4)",
+          animation: "coachingWheelFadeIn 0.2s ease-out",
+        }}
+      />
       {children}
       <style>{`
-        .coaching-wheel-scroll::-webkit-scrollbar { display: none; }
-        .coaching-wheel-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+        .wheel-scroll::-webkit-scrollbar { display: none; }
+        .wheel-scroll { scrollbar-width: none; -ms-overflow-style: none; }
         @keyframes coachingWheelFadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
     </div>,
@@ -84,7 +146,10 @@ function WheelModalChrome({ children }: { children: React.ReactNode }) {
   );
 }
 
-function WheelColumn({
+/**
+ * Colonne roue iOS (scroll-snap) — identique au WheelColumn de la maquette.
+ */
+export function CoachingWheelColumn({
   unit,
   value,
   max,
@@ -105,6 +170,7 @@ function WheelColumn({
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncingRef = useRef(false);
 
+  // Sync uniquement au montage (comportement maquette)
   useEffect(() => {
     if (!containerRef.current) return;
     const target = value * ITEM_HEIGHT;
@@ -115,7 +181,8 @@ function WheelColumn({
         syncingRef.current = false;
       }, 60);
     }
-  }, [value, max]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- aligné maquette : init uniquement
+  }, []);
 
   const handleScroll = () => {
     if (!containerRef.current) return;
@@ -151,12 +218,14 @@ function WheelColumn({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="coaching-wheel-scroll box-border h-full overflow-y-scroll"
+        data-wheel-column="true"
+        className="wheel-scroll box-border h-full overflow-y-scroll"
         style={{
           scrollSnapType: "y mandatory",
           WebkitOverflowScrolling: "touch",
           paddingTop: PADDING,
           paddingBottom: PADDING,
+          boxSizing: "border-box",
         }}
       >
         {Array.from({ length: max + 1 }, (_, i) => {
@@ -209,6 +278,21 @@ function WheelColumn({
   );
 }
 
+/** Pied Annuler | OK — maquette iOS RunConnect (11). */
+export function WheelPickerFooter({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="flex border-t" style={{ borderColor: "#E5E5EA" }}>
+      <button type="button" onClick={onCancel} className="flex-1 py-3.5 text-[16px] font-semibold text-[#0A0F1F]">
+        Annuler
+      </button>
+      <div style={{ width: 1, background: "#E5E5EA" }} />
+      <button type="button" onClick={onConfirm} className="flex-1 py-3.5 text-[16px] font-bold" style={{ color: COACHING_ACTION_BLUE }}>
+        OK
+      </button>
+    </div>
+  );
+}
+
 export function TimeWheelPicker({
   title,
   value,
@@ -225,43 +309,36 @@ export function TimeWheelPicker({
   const [s, setS] = useState(value.s || 0);
 
   return (
-    <WheelModalChrome>
-      <button type="button" aria-label="Fermer" className="absolute inset-0 bg-black/40" style={{ animation: "coachingWheelFadeIn 0.2s ease-out" }} onClick={onClose} />
+    <WheelPickerPortal onClose={onClose}>
       <div
-        className="relative z-10 w-full max-w-[360px] overflow-hidden bg-white"
+        className="relative z-10 w-full overflow-hidden bg-white"
         style={{
+          maxWidth: 360,
           borderRadius: 20,
           boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
         }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="coaching-time-wheel-title"
       >
         <div className="pb-3 pt-5 text-center">
-          <p className="text-[18px] font-extrabold text-[#0A0F1F]">{title}</p>
+          <p id="coaching-time-wheel-title" className="text-[18px] font-extrabold text-[#0A0F1F]">
+            {title}
+          </p>
         </div>
 
         <div className="px-3 pb-4">
           <div className="grid grid-cols-3 gap-2">
-            <WheelColumn unit="h" value={h} max={23} onChange={setH} />
-            <WheelColumn unit="m" value={m} max={59} onChange={setM} />
-            <WheelColumn unit="s" value={s} max={59} onChange={setS} />
+            <CoachingWheelColumn unit="h" value={h} max={23} onChange={setH} />
+            <CoachingWheelColumn unit="m" value={m} max={59} onChange={setM} />
+            <CoachingWheelColumn unit="s" value={s} max={59} onChange={setS} />
           </div>
         </div>
 
-        <div className="flex border-t border-[#E5E5EA]">
-          <button type="button" onClick={onClose} className="flex-1 py-3.5 text-[16px] font-semibold text-[#0A0F1F]">
-            Annuler
-          </button>
-          <div className="w-px bg-[#E5E5EA]" />
-          <button
-            type="button"
-            onClick={() => onConfirm({ h, m, s })}
-            className="flex-1 py-3.5 text-[16px] font-bold"
-            style={{ color: COACHING_ACTION_BLUE }}
-          >
-            OK
-          </button>
-        </div>
+        <WheelPickerFooter onCancel={onClose} onConfirm={() => onConfirm({ h, m, s })} />
       </div>
-    </WheelModalChrome>
+    </WheelPickerPortal>
   );
 }
 
@@ -280,14 +357,17 @@ export function PaceWheelPicker({
   const [s, setS] = useState(value.s ?? 0);
 
   return (
-    <WheelModalChrome>
-      <button type="button" aria-label="Fermer" className="absolute inset-0 bg-black/40" style={{ animation: "coachingWheelFadeIn 0.2s ease-out" }} onClick={onClose} />
+    <WheelPickerPortal onClose={onClose}>
       <div
-        className="relative z-10 w-full max-w-[320px] overflow-hidden bg-white"
+        className="relative z-10 w-full overflow-hidden bg-white"
         style={{
+          maxWidth: 320,
           borderRadius: 20,
           boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
         }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <div className="pb-1 pt-5 text-center">
           <p className="text-[18px] font-extrabold text-[#0A0F1F]">{title}</p>
@@ -296,27 +376,14 @@ export function PaceWheelPicker({
 
         <div className="px-3 pb-4 pt-2">
           <div className="grid grid-cols-2 gap-2">
-            <WheelColumn unit="'" value={m} max={15} onChange={setM} />
-            <WheelColumn unit="''" value={s} max={59} onChange={setS} />
+            <CoachingWheelColumn unit="'" value={m} max={15} onChange={setM} />
+            <CoachingWheelColumn unit="''" value={s} max={59} onChange={setS} />
           </div>
         </div>
 
-        <div className="flex border-t border-[#E5E5EA]">
-          <button type="button" onClick={onClose} className="flex-1 py-3.5 text-[16px] font-semibold text-[#0A0F1F]">
-            Annuler
-          </button>
-          <div className="w-px bg-[#E5E5EA]" />
-          <button
-            type="button"
-            onClick={() => onConfirm({ m, s })}
-            className="flex-1 py-3.5 text-[16px] font-bold"
-            style={{ color: COACHING_ACTION_BLUE }}
-          >
-            OK
-          </button>
-        </div>
+        <WheelPickerFooter onCancel={onClose} onConfirm={() => onConfirm({ m, s })} />
       </div>
-    </WheelModalChrome>
+    </WheelPickerPortal>
   );
 }
 
@@ -338,14 +405,17 @@ export function DistanceWheelPicker({
   const [mIdx, setMIdx] = useState(Math.min(19, Math.max(0, initialMIdx)));
 
   return (
-    <WheelModalChrome>
-      <button type="button" aria-label="Fermer" className="absolute inset-0 bg-black/40" style={{ animation: "coachingWheelFadeIn 0.2s ease-out" }} onClick={onClose} />
+    <WheelPickerPortal onClose={onClose}>
       <div
-        className="relative z-10 w-full max-w-[320px] overflow-hidden bg-white"
+        className="relative z-10 w-full overflow-hidden bg-white"
         style={{
+          maxWidth: 320,
           borderRadius: 20,
           boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
         }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <div className="pb-3 pt-5 text-center">
           <p className="text-[18px] font-extrabold text-[#0A0F1F]">{title}</p>
@@ -353,8 +423,8 @@ export function DistanceWheelPicker({
 
         <div className="px-3 pb-4">
           <div className="grid grid-cols-2 gap-2">
-            <WheelColumn unit="km" value={km} max={50} onChange={setKm} />
-            <WheelColumn
+            <CoachingWheelColumn unit="km" value={km} max={50} onChange={setKm} />
+            <CoachingWheelColumn
               unit="m"
               value={mIdx}
               max={19}
@@ -364,21 +434,8 @@ export function DistanceWheelPicker({
           </div>
         </div>
 
-        <div className="flex border-t border-[#E5E5EA]">
-          <button type="button" onClick={onClose} className="flex-1 py-3.5 text-[16px] font-semibold text-[#0A0F1F]">
-            Annuler
-          </button>
-          <div className="w-px bg-[#E5E5EA]" />
-          <button
-            type="button"
-            onClick={() => onConfirm({ km, m: mIdx * 50 })}
-            className="flex-1 py-3.5 text-[16px] font-bold"
-            style={{ color: COACHING_ACTION_BLUE }}
-          >
-            OK
-          </button>
-        </div>
+        <WheelPickerFooter onCancel={onClose} onConfirm={() => onConfirm({ km, m: mIdx * 50 })} />
       </div>
-    </WheelModalChrome>
+    </WheelPickerPortal>
   );
 }

@@ -1,40 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { cn } from "@/lib/utils";
-import { lightHaptic } from "@/lib/haptics";
-
-const ITEM_HEIGHT = 44;
-const VISIBLE_ITEMS = 5;
-const PAD_ROWS = Math.floor(VISIBLE_ITEMS / 2);
-const MODAL_ROOT_CLASS =
-  "fixed inset-0 z-[1200] flex items-center justify-center overscroll-none px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))] pointer-events-auto";
-const MODAL_PANEL_CLASS =
-  "relative z-10 w-full max-w-sm -translate-y-6 animate-in slide-in-from-bottom-4 duration-300 rounded-3xl bg-card shadow-2xl";
+import { useEffect, useState } from "react";
+import { CoachingWheelColumn, WheelPickerFooter, WheelPickerPortal } from "@/components/coaching/create-session/CoachingWheelPickers";
 
 type WheelOption = { value: string; label: string };
-
-interface PickerColumnProps {
-  items: WheelOption[];
-  value: string;
-  onChange: (next: string) => void;
-  suffix?: string;
-  disabled?: boolean;
-}
-
-interface PickerFooterProps {
-  onCancel: () => void;
-  onConfirm: () => void;
-  accentColor: string;
-}
-
-interface PickerOverlayProps {
-  accentColor: string;
-}
 
 interface SmartPerformancePickerProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Sous-titre type maquette (ex. « par kilomètre ») */
+  subtitle?: string;
   columns: Array<{
     items: WheelOption[];
     value: string;
@@ -48,6 +22,7 @@ interface WheelValuePickerModalProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  subtitle?: string;
   columns: Array<{
     items: WheelOption[];
     value: string;
@@ -72,46 +47,6 @@ interface PacePickerModalProps {
   initialSecondsPerKm?: number;
 }
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
-function useBodyScrollLock(active: boolean) {
-  useEffect(() => {
-    if (!active) return;
-    const body = document.body;
-    const html = document.documentElement;
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-    const prev = {
-      bodyOverflow: body.style.overflow,
-      bodyTouchAction: body.style.touchAction,
-      bodyPosition: body.style.position,
-      bodyTop: body.style.top,
-      bodyWidth: body.style.width,
-      htmlOverflow: html.style.overflow,
-      htmlOverscroll: html.style.overscrollBehavior,
-    };
-
-    body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-    html.style.overflow = "hidden";
-    html.style.overscrollBehavior = "none";
-
-    return () => {
-      body.style.overflow = prev.bodyOverflow;
-      body.style.touchAction = prev.bodyTouchAction;
-      body.style.position = prev.bodyPosition;
-      body.style.top = prev.bodyTop;
-      body.style.width = prev.bodyWidth;
-      html.style.overflow = prev.htmlOverflow;
-      html.style.overscrollBehavior = prev.htmlOverscroll;
-      window.scrollTo(0, scrollY);
-    };
-  }, [active]);
-}
-
 function eventFromWheelColumn(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   return !!target.closest("[data-wheel-column='true']");
@@ -122,186 +57,19 @@ function eventFromPickerPanel(target: EventTarget | null) {
   return !!target.closest("[data-wheel-panel='true']");
 }
 
-function resolveAccentColor(title: string) {
-  const key = title.toLowerCase();
-  if (key.includes("allure")) return "#8B5CF6";
-  if (key.includes("vitesse")) return "#3B82F6";
-  if (key.includes("puissance")) return "#EAB308";
-  if (key.includes("récup")) return "#22C55E";
-  return "#2563EB";
-}
-
-function PickerValue({ active, label, suffix }: { active: boolean; label: string; suffix?: string }) {
-  return (
-    <div
-      className={cn(
-        "flex h-11 items-center justify-center tabular-nums transition-all",
-        active ? "text-[23px] font-semibold text-foreground" : "text-[17px] font-medium text-muted-foreground/55"
-      )}
-    >
-      <span>{label}</span>
-      {suffix ? <span className="ml-1 text-[12px] font-medium text-muted-foreground">{suffix}</span> : null}
-    </div>
-  );
-}
-
-export function PickerOverlay({ accentColor }: PickerOverlayProps) {
-  return (
-    <>
-      <div
-        className="pointer-events-none absolute inset-x-0 z-10 rounded-lg border-y bg-primary/5"
-        style={{ top: PAD_ROWS * ITEM_HEIGHT, height: ITEM_HEIGHT, borderColor: `${accentColor}66` }}
-      />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-card via-card/85 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-card via-card/85 to-transparent" />
-    </>
-  );
-}
-
-export function PickerColumn({ items, value, onChange, suffix, disabled = false }: PickerColumnProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef(0);
-  const snapTimerRef = useRef<number | null>(null);
-  const lastHapticIndex = useRef<number>(-1);
-  const lastHapticTime = useRef<number>(0);
-  const isSnappingRef = useRef(false);
-  const [displayValue, setDisplayValue] = useState(value);
-  const selectedIndex = useMemo(() => Math.max(0, items.findIndex((item) => item.value === value)), [items, value]);
-
-  // Sync local display when external value changes
-  useEffect(() => {
-    setDisplayValue(value);
-    lastHapticIndex.current = selectedIndex;
-  }, [value, selectedIndex]);
-
-  const scrollToIndex = useCallback((idx: number, behavior: ScrollBehavior) => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (behavior === "smooth") isSnappingRef.current = true;
-    el.scrollTo({ top: idx * ITEM_HEIGHT, behavior });
-    if (behavior === "smooth") {
-      window.setTimeout(() => {
-        isSnappingRef.current = false;
-      }, 220);
-    }
-  }, []);
-
-  const commitNearest = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const idx = clamp(Math.round(el.scrollTop / ITEM_HEIGHT), 0, items.length - 1);
-    const next = items[idx]?.value;
-    if (!next) return;
-    scrollToIndex(idx, "smooth");
-    if (next !== value) onChange(next);
-  }, [items, onChange, scrollToIndex, value]);
-
-  const handleScroll = useCallback(() => {
-    if (isSnappingRef.current) return;
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      const idx = clamp(Math.round(el.scrollTop / ITEM_HEIGHT), 0, items.length - 1);
-      const next = items[idx]?.value;
-      if (!next) return;
-
-      // Update local UI instantly without re-rendering parent on every frame
-      setDisplayValue((prev) => (prev === next ? prev : next));
-
-      // Throttled haptic feedback
-      const now = performance.now();
-      if (idx !== lastHapticIndex.current && now - lastHapticTime.current > 35) {
-        lastHapticIndex.current = idx;
-        lastHapticTime.current = now;
-        void lightHaptic();
-      }
-
-      if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current);
-      snapTimerRef.current = window.setTimeout(commitNearest, 90);
-    });
-  }, [commitNearest, items]);
-
-  useEffect(() => {
-    scrollToIndex(selectedIndex, "auto");
-  }, [scrollToIndex, selectedIndex]);
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current);
-    };
-  }, []);
-
-  return (
-    <div className="relative min-w-0 flex-1">
-      <div
-        ref={containerRef}
-        className={cn("no-scrollbar relative py-[88px]", disabled ? "overflow-hidden" : "overflow-y-auto overscroll-contain")}
-        onScroll={disabled ? undefined : handleScroll}
-        onTouchEnd={disabled ? undefined : commitNearest}
-        onMouseUp={disabled ? undefined : commitNearest}
-        onWheel={disabled ? undefined : handleScroll}
-        onTouchMove={(e) => e.stopPropagation()}
-        onWheelCapture={(e) => e.stopPropagation()}
-        data-wheel-column="true"
-        style={{
-          height: ITEM_HEIGHT * VISIBLE_ITEMS,
-          touchAction: disabled ? "none" : "pan-y",
-          overscrollBehavior: "contain",
-          WebkitOverflowScrolling: "touch",
-          willChange: "scroll-position",
-        }}
-      >
-        {items.map((item) => (
-          <button
-            type="button"
-            key={item.value}
-            onClick={() => {
-              if (disabled) return;
-              const idx = items.findIndex((it) => it.value === item.value);
-              if (idx >= 0) scrollToIndex(idx, "smooth");
-              onChange(item.value);
-            }}
-            className={cn("block w-full", disabled && "cursor-default")}
-            style={{ touchAction: "manipulation" }}
-          >
-            <PickerValue active={item.value === displayValue} label={item.label} suffix={suffix} />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function PickerFooter({ onCancel, onConfirm, accentColor }: PickerFooterProps) {
-  return (
-    <div className="flex items-center justify-between border-t border-border/60 px-4 py-3">
-      <button onClick={onCancel} className="text-[17px] text-muted-foreground active:opacity-70">
-        Annuler
-      </button>
-      <span aria-hidden="true" className="w-16" />
-      <button onClick={onConfirm} className="text-[17px] font-semibold active:opacity-70" style={{ color: accentColor }}>
-        OK
-      </button>
-    </div>
-  );
-}
-
 export function SmartPerformancePicker({
   open,
   onClose,
   title,
+  subtitle,
   columns,
   onConfirm,
 }: SmartPerformancePickerProps) {
-  useBodyScrollLock(open);
+  const maxWidth = columns.length >= 3 ? 360 : 320;
 
   useEffect(() => {
     if (!open) return;
 
-    // Force-scroll lock at document level to prevent any underlying page scroll,
-    // while keeping wheel columns scrollable.
     const blockBackgroundScroll = (event: TouchEvent | WheelEvent) => {
       if (eventFromPickerPanel(event.target) || eventFromWheelColumn(event.target)) return;
       event.preventDefault();
@@ -318,66 +86,63 @@ export function SmartPerformancePicker({
 
   if (!open) return null;
 
-  const accentColor = resolveAccentColor(title);
-  const modal = (
-    <div
-      className={MODAL_ROOT_CLASS}
-      onTouchMoveCapture={(event) => {
-        if (!eventFromPickerPanel(event.target) && !eventFromWheelColumn(event.target)) {
-          event.preventDefault();
-        }
-      }}
-      onWheelCapture={(event) => {
-        if (!eventFromPickerPanel(event.target) && !eventFromWheelColumn(event.target)) {
-          event.preventDefault();
-        }
-      }}
-    >
-      <button
-        type="button"
-        aria-label="Fermer"
-        className="absolute inset-0 bg-black/45 backdrop-blur-sm dark:bg-black/65"
-        onClick={onClose}
-      />
+  return (
+    <WheelPickerPortal onClose={onClose}>
       <div
         data-wheel-panel="true"
-        className={cn(MODAL_PANEL_CLASS, "border border-border/60 dark:bg-[#0a0a0a]")}
+        className="relative z-10 w-full overflow-hidden bg-white"
+        style={{
+          maxWidth,
+          borderRadius: 20,
+          boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
+        }}
         onClick={(e) => e.stopPropagation()}
-        onPointerDownCapture={(e) => e.stopPropagation()}
-        onTouchStartCapture={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
-        <div className="px-4 pb-2 pt-4 text-center">
-          <span className="text-[17px] font-semibold text-foreground">{title}</span>
+        <div className={subtitle ? "pb-1 pt-5 text-center" : "pb-3 pt-5 text-center"}>
+          <p className="text-[18px] font-extrabold text-[#0A0F1F]">{title}</p>
+          {subtitle ? <p className="mt-0.5 text-[13px] text-[#8E8E93]">{subtitle}</p> : null}
         </div>
-        <div className="relative px-4 py-2">
-          <PickerOverlay accentColor={accentColor} />
-          <div className="relative z-0 flex items-center gap-1">
-            {columns.map((column, idx) => (
-              <PickerColumn
-                key={`${title}-${idx}`}
-                items={column.items}
-                value={column.value}
-                onChange={column.onChange}
-                suffix={column.suffix}
-                disabled={column.items.length <= 1}
-              />
-            ))}
+
+        <div className={subtitle ? "px-3 pb-4 pt-2" : "px-3 pb-4"}>
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
+          >
+            {columns.map((column, idx) => {
+              const maxIdx = Math.max(0, column.items.length - 1);
+              const selectedIdx = Math.max(0, column.items.findIndex((it) => it.value === column.value));
+              return (
+                <CoachingWheelColumn
+                  key={`${title}-${idx}-${column.suffix ?? ""}`}
+                  unit={column.suffix ?? ""}
+                  value={Math.min(selectedIdx, maxIdx)}
+                  max={maxIdx}
+                  onChange={(i) => {
+                    const v = column.items[i]?.value;
+                    if (v != null) column.onChange(v);
+                  }}
+                  formatValue={(i) => column.items[i]?.label ?? String(i)}
+                />
+              );
+            })}
           </div>
         </div>
-        <PickerFooter onCancel={onClose} onConfirm={onConfirm} accentColor={accentColor} />
-      </div>
-    </div>
-  );
 
-  return createPortal(modal, document.body);
+        <WheelPickerFooter onCancel={onClose} onConfirm={onConfirm} />
+      </div>
+    </WheelPickerPortal>
+  );
 }
 
-export function WheelValuePickerModal({ open, onClose, title, columns, onConfirm }: WheelValuePickerModalProps) {
+export function WheelValuePickerModal({ open, onClose, title, subtitle, columns, onConfirm }: WheelValuePickerModalProps) {
   return (
     <SmartPerformancePicker
       open={open}
       onClose={onClose}
       title={title}
+      subtitle={subtitle}
       columns={columns}
       onConfirm={onConfirm}
     />
@@ -387,7 +152,7 @@ export function WheelValuePickerModal({ open, onClose, title, columns, onConfirm
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 const SECONDS = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
-const PACE_MIN = Array.from({ length: 30 }, (_, i) => String(i).padStart(2, "0"));
+const PACE_MIN = Array.from({ length: 16 }, (_, i) => String(i).padStart(2, "0"));
 const PACE_SEC = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 
 export function TimePickerModal({ open, onClose, onConfirm, initialSeconds = 0, showHours = true }: TimePickerModalProps) {
@@ -420,7 +185,8 @@ export function TimePickerModal({ open, onClose, onConfirm, initialSeconds = 0, 
       columns={columns}
       onConfirm={() => {
         const totalSec = h * 3600 + m * 60 + s;
-        const formatted = showHours && h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+        const formatted =
+          showHours && h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
         onConfirm(formatted, totalSec);
       }}
     />
@@ -429,13 +195,13 @@ export function TimePickerModal({ open, onClose, onConfirm, initialSeconds = 0, 
 
 export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm = 300 }: PacePickerModalProps) {
   const total = Math.max(0, Math.round(initialSecondsPerKm));
-  const [m, setM] = useState(Math.floor(total / 60));
+  const [m, setM] = useState(Math.min(15, Math.floor(total / 60)));
   const [s, setS] = useState(total % 60);
 
   useEffect(() => {
     if (!open) return;
     const t = Math.max(0, Math.round(initialSecondsPerKm));
-    setM(Math.min(29, Math.floor(t / 60)));
+    setM(Math.min(15, Math.floor(t / 60)));
     setS(t % 60);
   }, [open, initialSecondsPerKm]);
 
@@ -450,6 +216,7 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
       open={open}
       onClose={onClose}
       title="Allure"
+      subtitle="par kilomètre"
       columns={columns}
       onConfirm={() => {
         const totalSec = m * 60 + s;
