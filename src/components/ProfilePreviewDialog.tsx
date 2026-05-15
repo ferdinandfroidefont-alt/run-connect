@@ -2,18 +2,13 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, BadgeCheck, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Lock, Share2, ShieldBan, Info } from "lucide-react";
-import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
+import { UserMinus, Loader2, Flag, ChevronLeft, Share2, ShieldBan, Info } from "lucide-react";
 import { PersonalRecords } from "@/components/PersonalRecords";
-import { getCountryLabel } from "@/lib/countryLabels";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { FollowDialog } from "./FollowDialog";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -21,6 +16,10 @@ import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "./QRShareDialog";
 import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { AvatarViewer } from "@/components/AvatarViewer";
+import { ProfileOtherMaquetteLayout } from "@/components/profile/ProfileOtherMaquetteLayout";
+import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
+
+const ACTION_BLUE = "#007AFF";
 
 interface Profile {
   user_id: string;
@@ -81,6 +80,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
   const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
+  const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
 
   const isOwnProfile = userId === user?.id;
 
@@ -401,342 +401,124 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const canViewContent = isFollowing || isOwnProfile;
   const headerTitleText = profile?.display_name?.trim() || profile?.username?.trim() || "Profil";
 
-  const periodTabs: { key: PeriodFilter; label: string }[] = [
-    { key: 'total', label: 'Totaux' },
-    { key: '30d', label: '30 jours' },
-    { key: '7d', label: '7 jours' },
-  ];
+  const getInitials = (fullName: string | null | undefined, username: string | null | undefined) => {
+    const source = (fullName || username || "U").trim();
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+    }
+    return source.slice(0, 2).toUpperCase();
+  };
 
-  // Build meta line: country + age
-  const countryLabel = profile ? getCountryLabel(profile.country) : null;
-  const ageLine = profile?.age ? `${profile.age} ans` : null;
-  const metaParts = [countryLabel, ageLine].filter(Boolean);
-  const statsCards = [
-    {
-      key: "created",
-      title: "Séances créées",
-      emoji: "🏃",
-      bg: "#007AFF",
-      value: statsLoading ? "…" : String(stats.sessionsCreated),
-    },
-    {
-      key: "routes",
-      title: "Itinéraires créés",
-      emoji: "🗺️",
-      bg: "#34C759",
-      value: statsLoading ? "…" : String(stats.routesCreated),
-    },
-    {
-      key: "joined",
-      title: "Séances rejointes",
-      emoji: "🤝",
-      bg: "#FF9500",
-      value: statsLoading ? "…" : String(stats.sessionsJoined),
-    },
-  ] as const;
+  const seancesDisplay = String(stats.sessionsCreated + stats.sessionsJoined);
 
   return (
     <>
       <Dialog open={!!userId} onOpenChange={() => onClose()}>
-        <DialogContent hideCloseButton className="flex h-full max-h-full w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl sm:border">
+        <DialogContent hideCloseButton className="flex h-full max-h-full w-full min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-[#F2F2F7] p-0 sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl sm:border sm:border-black/[0.06]">
 
-          {/* ── Header ── */}
-          <div className="min-w-0 shrink-0 border-b border-border/50 bg-card pt-[max(env(safe-area-inset-top),12px)]">
-            <div className="grid min-w-0 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 pb-2.5 ios-shell:px-2.5">
+          {/* Header — même barre que maquette Profil utilisateur */}
+          <div className="min-w-0 shrink-0 border-b border-[#E5E5EA] bg-white pt-[max(env(safe-area-inset-top),12px)]">
+            <div className="flex items-center gap-2 px-4 pb-3 pt-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex shrink-0 items-center gap-0.5 px-1 py-1 text-primary transition-opacity active:opacity-60"
+                className="flex flex-shrink-0 items-center gap-0 active:opacity-60"
               >
-                <ChevronLeft className="h-5 w-5 shrink-0" />
-                <span className="text-[17px] font-medium">Retour</span>
+                <ChevronLeft className="h-6 w-6 shrink-0" color={ACTION_BLUE} strokeWidth={2.6} />
+                <span className="text-[17px] font-semibold" style={{ color: ACTION_BLUE }}>
+                  Retour
+                </span>
               </button>
-              <h1
-                className="min-w-0 truncate text-center text-[17px] font-semibold leading-snug text-foreground"
+              <p
+                className="min-w-0 flex-1 truncate px-1 text-center text-[17px] font-bold text-[#0A0F1F]"
                 title={headerTitleText}
               >
                 {headerTitleText}
-              </h1>
-              <div className="flex w-10 shrink-0 justify-end">
-                {!isOwnProfile ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowActionSheet(true)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
-                    aria-label="Plus d'actions"
-                  >
-                    <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                  </button>
-                ) : (
-                  <span className="inline-block w-9" aria-hidden />
-                )}
-              </div>
+              </p>
+              {!isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={() => setShowActionSheet(true)}
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center active:opacity-60"
+                  aria-label="Plus d'actions"
+                >
+                  <span className="text-[22px] leading-none text-[#0A0F1F]">⋮</span>
+                </button>
+              ) : (
+                <span className="inline-block h-9 w-9 shrink-0" aria-hidden />
+              )}
             </div>
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center flex-1">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex flex-1 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-[#007AFF]" />
             </div>
           ) : profile ? (
-            <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-               <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-0">
-                <div className="box-border min-w-0 w-full max-w-full space-y-0 pb-[max(2rem,env(safe-area-inset-bottom))]">
-
-                {/* ── Identity - Instagram layout: avatar + stats side by side ── */}
-                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
-                  <div className="flex items-center gap-5">
-                    {/* Avatar — agrandir (même sans stories à la une) */}
-                    <div className="relative shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setShowAvatarFullscreen(true)}
-                        className="relative rounded-full ring-offset-2 ring-offset-card transition-opacity active:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                        aria-label="Agrandir la photo de profil"
-                      >
-                        <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
-                          <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                          <AvatarFallback className="text-2xl bg-secondary">
-                            {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                      </button>
-                      {!isOwnProfile && areFriends && (
-                        <OnlineStatus userId={profile.user_id} />
-                      )}
-                    </div>
-
-                    {/* Stats à droite de l'avatar */}
-                    <div className="flex flex-1 min-w-0 items-center justify-around">
-                      <div className="text-center">
-                        <p className="text-[18px] font-bold text-foreground leading-none">{stats.sessionsCreated + stats.sessionsJoined}</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">Séances</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setFollowDialogTab('followers'); setShowFollowDialog(true); }}
-                        className="text-center touch-manipulation transition-colors active:opacity-70"
-                      >
-                        <p className="text-[18px] font-bold text-foreground leading-none">{followerCount}</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnés</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
-                        className="text-center touch-manipulation transition-colors active:opacity-70"
-                      >
-                        <p className="text-[18px] font-bold text-foreground leading-none">{followingCount}</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnements</p>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Nom + meta line */}
-                  <div className="mt-3 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
-                        {profile.display_name || profile.username}
-                      </h2>
-                      {profile.is_admin ? (
-                        <BadgeCheck className="h-4 w-4 shrink-0 fill-amber-500 text-white" />
-                      ) : profile.is_premium ? (
-                        <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" />
-                      ) : null}
-                    </div>
-                    <p className="truncate text-[13px] text-muted-foreground">
-                      @{profile.username}
-                    </p>
-                    {metaParts.length > 0 && (
-                      <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-                        {metaParts.join(" · ")}
-                      </p>
-                    )}
-                    {profile.bio && (
-                      <p className="mt-2 text-[14px] leading-relaxed text-foreground/80 line-clamp-3 break-words">
-                        {profile.bio}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Boutons Abonné / Message */}
-                  {!isOwnProfile && (
-                    <div className="mt-3 flex gap-2">
-                      <Button
-                        onClick={handleFollowToggle}
-                        disabled={actionLoading}
-                        variant={isFollowing ? "secondary" : "default"}
-                        size="sm"
-                        className={`flex-1 rounded-lg text-[13px] font-semibold ${
-                          followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
-                        }`}
-                      >
-                        {actionLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
-                          <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
-                        )}
-                      </Button>
-                      {isFollowing && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
-                          onClick={handleMessage}
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          Message
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Stories à la une ── */}
-                <div className="bg-card border-b border-border px-4 py-3">
-                  <div className="flex gap-3 overflow-x-auto pb-1">
-                    {storyHighlights.length > 0 ? (
-                      storyHighlights.map((item) => (
-                        <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5">
-                          <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-primary/30 bg-muted">
-                            {highlightPreviewByStoryId[item.story_id] ? (
-                              <img src={highlightPreviewByStoryId[item.story_id]} alt={item.title} className="h-full w-full object-cover" />
-                            ) : (
-                              <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
-                            )}
-                          </div>
-                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title?.trim() || "Sans titre"}</p>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="flex w-16 shrink-0 flex-col items-center gap-1.5">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 bg-secondary/30">
-                          <span className="text-[10px] text-muted-foreground/50">∅</span>
-                        </div>
-                        <p className="w-full truncate text-center text-[10px] text-muted-foreground/60">Aucune</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── Content (visible if following or own) ── */}
-                {canViewContent ? (
-                  <>
-                    {/* Period Filter */}
-                    <div className="border-b border-border/60 bg-card px-4 py-3">
-                      <div className="flex min-w-0 rounded-[8px] bg-muted p-0.5">
-                        {periodTabs.map(tab => (
-                          <button
-                            key={tab.key}
-                            onClick={() => setPeriod(tab.key)}
-                            className={`flex-1 py-1.5 text-[13px] font-medium rounded-[7px] transition-all ${
-                              period === tab.key
-                                ? 'bg-card text-foreground shadow-sm'
-                                : 'text-muted-foreground'
-                            }`}
-                          >
-                            {tab.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Activity Stats */}
-                    <div className="min-w-0 border-b border-border/60 bg-card px-4 py-3">
-                      <div className="space-y-2.5">
-                        {statsCards.map((card) => (
-                          <div
-                            key={card.key}
-                            className="flex min-w-0 items-center gap-3 rounded-[14px] border border-border/60 bg-white px-4 py-3.5"
-                          >
-                            <span
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
-                              style={{ backgroundColor: card.bg }}
-                              aria-hidden
-                            >
-                              {card.emoji}
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-[17px] text-foreground">
-                              {card.title}
-                            </span>
-                            <span className="shrink-0 text-[17px] font-semibold text-foreground">
-                              {card.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Records & Recent */}
-                    <div className="min-w-0 border-b border-border/60 bg-card px-4 py-3">
-                      <div className="space-y-2.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isOwnProfile) {
-                              navigate("/profile/records");
-                              onClose();
-                            } else {
-                              setShowRecordsSheet(true);
-                            }
-                          }}
-                          className="flex w-full min-w-0 items-center gap-3 rounded-[14px] border border-border/60 bg-white px-4 py-3.5 text-left transition-colors active:bg-secondary/60"
-                        >
-                          <span
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
-                            style={{ backgroundColor: "#FFCC00" }}
-                            aria-hidden
-                          >
-                            🏅
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-[17px] text-foreground">Records sport</span>
-                          <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground/50" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!userId) return;
-                            if (isOwnProfile) {
-                              navigate("/profile/sessions");
-                            } else {
-                              navigate(`/profile/${userId}/sessions`);
-                            }
-                            onClose();
-                          }}
-                          className="flex w-full min-w-0 items-center gap-3 rounded-[14px] border border-border/60 bg-white px-4 py-3.5 text-left transition-colors active:bg-secondary/60"
-                        >
-                          <span
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
-                            style={{ backgroundColor: "#0A84FF" }}
-                            aria-hidden
-                          >
-                            📅
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-[17px] text-foreground">Séances récentes</span>
-                          <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground/50" />
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                ) : !isOwnProfile ? (
-                  <div className="border-b border-border/60 bg-card">
-                    <div className="flex flex-col items-center px-6 py-8">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                        <Lock className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <p className="mt-3 text-[15px] font-semibold text-foreground">Profil privé</p>
-                      <p className="mt-1 text-[13px] text-muted-foreground text-center">
-                        Suivez cette personne pour voir ses activités
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-                </div>
-              </div>
-            </ScrollArea>
+            <ProfileOtherMaquetteLayout
+              profile={{
+                user_id: profile.user_id,
+                username: profile.username,
+                display_name: profile.display_name,
+                avatar_url: profile.avatar_url,
+                age: profile.age,
+                bio: profile.bio,
+                is_premium: profile.is_premium,
+                is_admin: profile.is_admin,
+                favorite_sport: profile.favorite_sport,
+                country: profile.country,
+              }}
+              getInitials={getInitials}
+              showOnlineOnAvatar={!isOwnProfile && areFriends}
+              followerCount={followerCount}
+              followingCount={followingCount}
+              seancesDisplay={seancesDisplay}
+              onOpenSeances={() => {
+                if (!userId || !canViewContent) return;
+                navigate(`/profile/${userId}/sessions`);
+                onClose();
+              }}
+              openFollowDialog={(type) => {
+                setFollowDialogTab(type);
+                setShowFollowDialog(true);
+              }}
+              isOwnProfile={isOwnProfile}
+              isFollowing={isFollowing}
+              followRequestSent={followRequestSent}
+              actionLoading={actionLoading}
+              onFollowToggle={handleFollowToggle}
+              onMessage={handleMessage}
+              onAvatarClick={() => setShowAvatarFullscreen(true)}
+              storyHighlights={storyHighlights}
+              highlightPreviewByStoryId={highlightPreviewByStoryId}
+              onOpenHighlight={(sid) => setSelectedHighlightStoryId(sid)}
+              canViewContent={canViewContent}
+              period={period}
+              onPeriodChange={setPeriod}
+              statsLoading={statsLoading}
+              stats={stats}
+              onOpenRecords={() => {
+                if (isOwnProfile) {
+                  navigate("/profile/records");
+                  onClose();
+                  return;
+                }
+                setShowRecordsSheet(true);
+              }}
+              onOpenRecentSessions={() => {
+                if (!userId) return;
+                if (isOwnProfile) {
+                  navigate("/profile/sessions");
+                } else {
+                  navigate(`/profile/${userId}/sessions`);
+                }
+                onClose();
+              }}
+            />
           ) : (
-            <div className="text-center flex-1 flex items-center justify-center">
-              <p className="text-muted-foreground">Profil non trouvé</p>
+            <div className="flex flex-1 items-center justify-center bg-[#F2F2F7]">
+              <p className="text-[15px] font-medium text-[#8E8E93]">Profil non trouvé</p>
             </div>
           )}
 
@@ -930,6 +712,21 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           stackNested
         />
       )}
+
+      <SessionStoryDialog
+        open={!!selectedHighlightStoryId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedHighlightStoryId(null);
+        }}
+        authorId={profile?.user_id ?? null}
+        viewerUserId={user?.id ?? null}
+        storyId={selectedHighlightStoryId}
+        stackNested
+        onOpenFeed={() => {
+          setSelectedHighlightStoryId(null);
+          navigate("/feed");
+        }}
+      />
     </>
   );
 };

@@ -1134,40 +1134,35 @@ export const RouteCreation = ({ embedDiscover = false }: RouteCreationProps) => 
 
   const body = (
     <div className={scrollInnerClassName}>
-            <div
-              className="rounded-[14px] p-1 shadow-[0_0_0_0.5px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.08)]"
-              style={{ background: 'hsl(var(--card))' }}
-            >
-              <div className="flex">
-                <button
-                  type="button"
-                  onClick={() => (isManualMode ? handleModeToggle() : undefined)}
-                  className={cn(
-                    'min-w-0 flex-1 rounded-lg py-[7px] text-center text-[13px] font-semibold transition-colors',
-                    !isManualMode
-                      ? 'bg-background text-foreground shadow-[0_0_0_0.5px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]'
-                      : 'bg-transparent text-muted-foreground',
-                  )}
-                >
-                  Guidé
-                </button>
-                <button
-                  type="button"
-                  onClick={() => (!isManualMode ? handleModeToggle() : undefined)}
-                  className={cn(
-                    'min-w-0 flex-1 rounded-lg py-[7px] text-center text-[13px] font-semibold transition-colors',
-                    isManualMode
-                      ? 'bg-background text-foreground shadow-[0_0_0_0.5px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]'
-                      : 'bg-transparent text-muted-foreground',
-                  )}
-                >
-                  Manuel
-                </button>
-              </div>
+            <div className="flex rounded-xl bg-white p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:bg-card dark:shadow-[0_1px_2px_rgba(255,255,255,0.06)]">
+              <button
+                type="button"
+                onClick={() => (isManualMode ? handleModeToggle() : undefined)}
+                className={cn(
+                  'min-w-0 flex-1 rounded-lg py-2.5 text-center text-[16px] font-bold transition-all',
+                  !isManualMode
+                    ? 'bg-white text-[#0A0F1F] shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:bg-background dark:text-foreground dark:shadow-[0_1px_3px_rgba(0,0,0,0.35)]'
+                    : 'bg-transparent text-[#8E8E93] shadow-none dark:text-muted-foreground',
+                )}
+              >
+                Guidé
+              </button>
+              <button
+                type="button"
+                onClick={() => (!isManualMode ? handleModeToggle() : undefined)}
+                className={cn(
+                  'min-w-0 flex-1 rounded-lg py-2.5 text-center text-[16px] font-bold transition-all',
+                  isManualMode
+                    ? 'bg-white text-[#0A0F1F] shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:bg-background dark:text-foreground dark:shadow-[0_1px_3px_rgba(0,0,0,0.35)]'
+                    : 'bg-transparent text-[#8E8E93] shadow-none dark:text-muted-foreground',
+                )}
+              >
+                Manuel
+              </button>
             </div>
 
-            <p className="text-center text-[13px] text-muted-foreground">
-              {isManualMode ? 'Tracé libre hors-piste' : 'Suit les chemins et sentiers'}
+            <p className="mt-3 text-center text-[15px] text-[#8E8E93] dark:text-muted-foreground">
+              {isManualMode ? 'Tracé libre' : 'Suit les chemins et sentiers'}
             </p>
 
             <div

@@ -18,7 +18,6 @@ import { ReportUserDialog } from "@/components/ReportUserDialog";
 import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
-import { estimateSessionDurationMinutes } from "@/lib/estimateSessionDurationMinutes";
 import { ProfileSelfMaquetteLayout } from "@/components/profile/ProfileSelfMaquetteLayout";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import type {
@@ -26,7 +25,6 @@ import type {
   ProfileMaquetteParticipantChip,
 } from "@/components/profile/ProfileSelfMaquetteLayout";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
-import { startOfWeek, endOfWeek } from "date-fns";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
@@ -67,11 +65,6 @@ interface ProfileStoryHighlight {
 
 const SESSION_DASHBOARD_SELECT =
   "id, title, scheduled_at, activity_type, location_name, location_lat, location_lng, current_participants, max_participants, organizer_id, description, distance_km, pace_general, session_blocks, intensity, created_at";
-
-function profileMondayIndex(d: Date): number {
-  const j = d.getDay();
-  return j === 0 ? 6 : j - 1;
-}
 
 function profileChipInitials(displayName: string | null, username: string | null) {
   const source = (displayName || username || "U").trim();
@@ -143,10 +136,6 @@ const Profile = () => {
     avatar_url: string | null;
   } | null>(null);
   const [participantChips, setParticipantChips] = useState<ProfileMaquetteParticipantChip[]>([]);
-  const [weekKm, setWeekKm] = useState(0);
-  const [weekSessionsCount, setWeekSessionsCount] = useState(0);
-  const [weekMinutesTotal, setWeekMinutesTotal] = useState<number | null>(null);
-  const [weekBarLevels, setWeekBarLevels] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
   const [profileSessionDetail, setProfileSessionDetail] = useState<Record<string, unknown> | null>(null);
   const {
     toast
@@ -274,11 +263,6 @@ const Profile = () => {
       const uid = user.id;
       const now = new Date();
       const nowIso = now.toISOString();
-      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-      const weekCap = now < weekEnd ? now : weekEnd;
-      const weekStartIso = weekStart.toISOString();
-      const weekEndIso = weekCap.toISOString();
 
       const { data: organizedUp } = await supabase
         .from("sessions")
@@ -374,57 +358,6 @@ const Profile = () => {
         }
         setParticipantChips(chips);
       }
-
-      const { data: organizedPast } = await supabase
-        .from("sessions")
-        .select(SESSION_DASHBOARD_SELECT)
-        .eq("organizer_id", uid)
-        .gte("scheduled_at", weekStartIso)
-        .lte("scheduled_at", weekEndIso)
-        .lt("scheduled_at", nowIso);
-
-      let joinedPast: Record<string, unknown>[] = [];
-      if (pidList.length > 0) {
-        const { data } = await supabase
-          .from("sessions")
-          .select(SESSION_DASHBOARD_SELECT)
-          .in("id", pidList)
-          .gte("scheduled_at", weekStartIso)
-          .lte("scheduled_at", weekEndIso)
-          .lt("scheduled_at", nowIso);
-        joinedPast = data ?? [];
-      }
-
-      const byId = new Map<string, Record<string, unknown>>();
-      for (const s of [...(organizedPast ?? []), ...joinedPast]) {
-        const id = String((s as { id: unknown }).id);
-        byId.set(id, s as Record<string, unknown>);
-      }
-      const weekSessions = [...byId.values()];
-
-      let kmSum = 0;
-      let minSum = 0;
-      let inferredMin = false;
-      const dayKm = [0, 0, 0, 0, 0, 0, 0];
-      for (const s of weekSessions) {
-        const dk = Number(s.distance_km) || 0;
-        kmSum += dk;
-        const est = estimateSessionDurationMinutes(s as Parameters<typeof estimateSessionDurationMinutes>[0]);
-        if (est != null) {
-          minSum += est;
-          inferredMin = true;
-        }
-        const d = new Date(String(s.scheduled_at));
-        const idx = profileMondayIndex(d);
-        dayKm[idx] += dk;
-      }
-      const maxDay = Math.max(...dayKm, 0);
-      const levels = maxDay <= 0 ? [0, 0, 0, 0, 0, 0, 0] : dayKm.map((k) => (k > 0 ? k / maxDay : 0));
-
-      setWeekKm(kmSum);
-      setWeekSessionsCount(weekSessions.length);
-      setWeekMinutesTotal(inferredMin && minSum > 0 ? minSum : null);
-      setWeekBarLevels(levels);
     } catch (e) {
       console.error("Error loading profile dashboard:", e);
     }
@@ -903,18 +836,13 @@ const Profile = () => {
         friendCountPreview={participantChips}
         onOpenNextSessionDetail={() => dashNextSummary && openNextSessionDetailModal()}
         onGoToNextSession={() => dashNextSummary && openNextSessionDetailModal()}
-        weekKm={weekKm}
-        weekSessionsCount={weekSessionsCount}
-        weekMinutes={weekMinutesTotal}
-        weekBarLevels={weekBarLevels}
-        referenceDate={new Date()}
-        onWeekVoirTout={() => navigate("/profile/sessions")}
         storyHighlights={storyHighlights.slice(0, 8)}
         highlightPreviewByStoryId={highlightPreviewByStoryId}
         onOpenHighlight={(sid) => setSelectedHighlightStoryId(sid)}
         reliabilityRate={reliabilityRate}
         totalSessionsJoined={totalSessionsJoined}
         totalSessionsCompleted={totalSessionsCompleted}
+        totalSessionsAbsent={totalSessionsAbsent}
         onOpenReliabilityDetail={() => setShowReliabilityDialog(true)}
         userIdForRecords={user.id}
         legacyRecords={{

@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useFeed, type FeedSession } from "@/hooks/useFeed";
+import { useFeed } from "@/hooks/useFeed";
 import { useDiscoverFeed } from "@/hooks/useDiscoverFeed";
 import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
@@ -12,7 +10,10 @@ import {
 } from "@/components/discover/DiscoverChromeShell";
 import { DiscoverMapCard } from "@/components/discover/DiscoverMapCard";
 import { DiscoverMapMaquetteToolbar } from "@/components/discover/DiscoverMapMaquetteToolbar";
-import { DiscoverFeedInlineSection } from "@/components/discover/DiscoverFeedInlineSection";
+import {
+  FeedActivitiesMaquetteSynced,
+  type FeedActivitiesFeedsModel,
+} from "@/components/feed/FeedActivitiesMaquette";
 import { DiscoverNearYouSection } from "@/components/discover/DiscoverNearYouSection";
 import { DiscoverLiveMaquetteSection } from "@/components/discover/DiscoverLiveMaquetteSection";
 import {
@@ -45,24 +46,9 @@ function discoverToDialog(session: DiscoverSession): Record<string, unknown> {
   };
 }
 
-function feedToDialog(session: FeedSession): Record<string, unknown> {
-  return {
-    ...session,
-    session_type: session.activity_type,
-    profiles: {
-      username: session.organizer.username,
-      display_name: session.organizer.display_name,
-      avatar_url: session.organizer.avatar_url,
-    },
-  };
-}
-
 export function DiscoverPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState<DiscoverChromeActiveChip>("carte");
-  const [feedSubTab, setFeedSubTab] = useState<"amis" | "decouvrir">("amis");
-  const [friendCount, setFriendCount] = useState<number | null>(null);
   const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
   const [discoverMapFullscreen, setDiscoverMapFullscreen] = useState(false);
   const [liveMapFullscreen, setLiveMapFullscreen] = useState(false);
@@ -79,6 +65,7 @@ export function DiscoverPage() {
     hasMore,
     loadMore,
     refresh: refreshFeed,
+    addComment,
   } = useFeed();
 
   const {
@@ -92,6 +79,8 @@ export function DiscoverPage() {
     selectedActivities,
     toggleActivity,
     toggleAllActivities,
+    hasLocation,
+    resetFilters,
   } = useDiscoverFeed();
 
   const liveSessions = useMemo(
@@ -99,17 +88,46 @@ export function DiscoverPage() {
     [discoverSessions],
   );
 
-  useEffect(() => {
-    if (!user?.id) return;
-    void (async () => {
-      const { count, error } = await supabase
-        .from("user_follows")
-        .select("*", { count: "exact", head: true })
-        .eq("follower_id", user.id)
-        .eq("status", "accepted");
-      if (!error) setFriendCount(count ?? 0);
-    })();
-  }, [user?.id]);
+  const feedActivitiesFeeds = useMemo<FeedActivitiesFeedsModel>(
+    () => ({
+      feedItems,
+      friendsLoading,
+      hasMore,
+      loadMore,
+      refreshFriends: refreshFeed,
+      addComment,
+      discoverSessions,
+      discoverLoading,
+      hasLocation,
+      maxDistance,
+      setMaxDistance,
+      selectedActivities,
+      toggleActivity,
+      toggleAllActivities,
+      joinSession,
+      refreshDiscover,
+      resetFilters,
+    }),
+    [
+      feedItems,
+      friendsLoading,
+      hasMore,
+      loadMore,
+      refreshFeed,
+      addComment,
+      discoverSessions,
+      discoverLoading,
+      hasLocation,
+      maxDistance,
+      setMaxDistance,
+      selectedActivities,
+      toggleActivity,
+      toggleAllActivities,
+      joinSession,
+      refreshDiscover,
+      resetFilters,
+    ],
+  );
 
   const onPullRefresh = useCallback(async () => {
     await Promise.allSettled([refreshFeed(), refreshDiscover()]);
@@ -184,25 +202,7 @@ export function DiscoverPage() {
         ) : null}
 
         {view === "feed" ? (
-          <DiscoverFeedInlineSection
-            subTab={feedSubTab}
-            onSubTabChange={setFeedSubTab}
-            friendCount={friendCount}
-            feedItems={feedItems}
-            friendsLoading={friendsLoading}
-            hasMore={hasMore}
-            loadMore={loadMore}
-            discoverSessions={discoverSessions}
-            discoverLoading={discoverLoading}
-            maxDistance={maxDistance}
-            setMaxDistance={setMaxDistance}
-            selectedActivities={selectedActivities}
-            toggleActivity={toggleActivity}
-            toggleAllActivities={toggleAllActivities}
-            joinSession={joinSession}
-            onOpenDiscoverSession={(s) => setSelectedSession(discoverToDialog(s))}
-            onOpenFriendSession={(s) => setSelectedSession(feedToDialog(s))}
-          />
+          <FeedActivitiesMaquetteSynced embeddedInDiscoverChrome feeds={feedActivitiesFeeds} />
         ) : null}
 
         {view === "live" ? (

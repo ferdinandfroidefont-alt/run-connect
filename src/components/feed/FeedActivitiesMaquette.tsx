@@ -31,9 +31,35 @@ type FeedActivitiesMaquetteProps = {
   embeddedInDiscoverChrome?: boolean;
 };
 
-export function FeedActivitiesMaquette({
+/** Données pilotées par la page Découvrir pour éviter un double `useFeed` / `useDiscoverFeed`. */
+export type FeedActivitiesFeedsModel = {
+  feedItems: FeedSession[];
+  friendsLoading: boolean;
+  hasMore: boolean;
+  loadMore: () => void;
+  refreshFriends: () => void | Promise<void>;
+  addComment: (sessionId: string, content: string) => Promise<void>;
+  discoverSessions: DiscoverSession[];
+  discoverLoading: boolean;
+  hasLocation: boolean;
+  maxDistance: number;
+  setMaxDistance: (distance: number) => void;
+  selectedActivities: string[];
+  toggleActivity: (activity: string) => void;
+  toggleAllActivities: () => void;
+  joinSession: (session: DiscoverSession) => void | Promise<void>;
+  refreshDiscover: () => void | Promise<void>;
+  resetFilters: () => void;
+};
+
+type FeedActivitiesMaquetteInnerProps = FeedActivitiesMaquetteProps & {
+  feeds: FeedActivitiesFeedsModel;
+};
+
+function FeedActivitiesMaquetteInner({
   embeddedInDiscoverChrome = false,
-}: FeedActivitiesMaquetteProps) {
+  feeds,
+}: FeedActivitiesMaquetteInnerProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -45,11 +71,15 @@ export function FeedActivitiesMaquette({
   const [discussionSessionOverride, setDiscussionSessionOverride] = useState<FeedSession | null>(null);
   const [discussionSessionFetching, setDiscussionSessionFetching] = useState(false);
 
-  const { feedItems, loading: friendsLoading, hasMore, loadMore, refresh: refreshFriends, addComment } = useFeed();
-
   const {
-    sessions: discoverSessions,
-    loading: discoverLoading,
+    feedItems,
+    friendsLoading,
+    hasMore,
+    loadMore,
+    refreshFriends,
+    addComment,
+    discoverSessions,
+    discoverLoading,
     hasLocation,
     maxDistance,
     setMaxDistance,
@@ -57,9 +87,9 @@ export function FeedActivitiesMaquette({
     toggleActivity,
     toggleAllActivities,
     joinSession,
-    refresh: refreshDiscover,
+    refreshDiscover,
     resetFilters,
-  } = useDiscoverFeed();
+  } = feeds;
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -596,4 +626,38 @@ export function FeedActivitiesMaquette({
       {dialogs}
     </IosFixedPageHeaderShell>
   );
+}
+
+/** Page `/feed` : hooks internes. */
+export function FeedActivitiesMaquette(props: FeedActivitiesMaquetteProps) {
+  const feed = useFeed();
+  const discover = useDiscoverFeed();
+  const feeds: FeedActivitiesFeedsModel = {
+    feedItems: feed.feedItems,
+    friendsLoading: feed.loading,
+    hasMore: feed.hasMore,
+    loadMore: feed.loadMore,
+    refreshFriends: feed.refresh,
+    addComment: feed.addComment,
+    discoverSessions: discover.sessions,
+    discoverLoading: discover.loading,
+    hasLocation: discover.hasLocation,
+    maxDistance: discover.maxDistance,
+    setMaxDistance: discover.setMaxDistance,
+    selectedActivities: discover.selectedActivities,
+    toggleActivity: discover.toggleActivity,
+    toggleAllActivities: discover.toggleAllActivities,
+    joinSession: discover.joinSession,
+    refreshDiscover: discover.refresh,
+    resetFilters: discover.resetFilters,
+  };
+  return <FeedActivitiesMaquetteInner {...props} feeds={feeds} />;
+}
+
+/** Onglet Feed sur `/` : même jeu de données que la carte / live (pas de double fetch). */
+export function FeedActivitiesMaquetteSynced(
+  props: FeedActivitiesMaquetteProps & { feeds: FeedActivitiesFeedsModel },
+) {
+  const { feeds, ...rest } = props;
+  return <FeedActivitiesMaquetteInner {...rest} feeds={feeds} />;
 }
