@@ -148,8 +148,8 @@ export function MainTopHeader({
           cn(
             "border-b-[0.5px] transition-[background-color,backdrop-filter,border-color,-webkit-backdrop-filter] duration-200 ease-out",
             groupedScrolled
-              ? "border-[rgba(0,0,0,0.08)] bg-[rgba(242,242,247,0.72)] [backdrop-filter:blur(20px)_saturate(180%)] [-webkit-backdrop-filter:blur(20px)_saturate(180%)] dark:border-white/12 dark:bg-muted/78 dark:[backdrop-filter:blur(20px)_saturate(180%)] dark:[-webkit-backdrop-filter:blur(20px)_saturate(180%)]"
-              : "border-transparent bg-[#F2F2F7] dark:bg-background",
+              ? "border-[rgba(0,0,0,0.08)] bg-[rgba(242,242,247,0.72)] [backdrop-filter:blur(20px)_saturate(180%)] [-webkit-backdrop-filter:blur(20px)_saturate(180%)]"
+              : "border-transparent bg-[#F2F2F7]",
           ),
       )}
       style={

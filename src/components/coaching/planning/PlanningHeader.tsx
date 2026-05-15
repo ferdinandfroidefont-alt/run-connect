@@ -124,7 +124,7 @@ export function PlanningHeader({
       title={title}
       subtitle={subtitle}
       className={cn(
-        surfaceClassName ?? "apple-grouped-bg",
+        surfaceClassName ?? "bg-[#F2F2F7]",
         largeTitleOnlyLayout &&
           '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif] [-webkit-font-smoothing:antialiased]',
       )}

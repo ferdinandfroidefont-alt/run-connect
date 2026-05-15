@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format, isToday, isYesterday, startOfWeek, isSameWeek } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface MessageTimestampProps {
@@ -34,28 +34,25 @@ export const MessageSectionHeader: React.FC<MessageSectionHeaderProps> = ({ time
   const date = new Date(timestamp);
   
   const formatSectionDate = (date: Date) => {
+    const time = format(date, "HH:mm", { locale: fr });
     if (isToday(date)) {
-      return `Aujourd'hui ${format(date, 'HH:mm', { locale: fr })}`;
+      return `Aujourd'hui · ${time}`;
     }
-    
     if (isYesterday(date)) {
-      return `Hier ${format(date, 'HH:mm', { locale: fr })}`;
+      return `Hier · ${time}`;
     }
-    
-    if (isSameWeek(date, new Date(), { weekStartsOn: 1 })) {
-      return format(date, 'eee. HH:mm', { locale: fr });
-    }
-    
-    return format(date, 'dd/MM HH:mm', { locale: fr });
+    const raw = format(date, "EEEE d MMMM '·' HH:mm", { locale: fr });
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
   };
 
   return (
-    <div className="flex justify-center my-4">
-      <div className="bg-[#E5E5EA]/60 px-3 py-1 rounded-full">
-        <span className="text-[11px] text-[#8E8E93] font-medium">
-          {formatSectionDate(date)}
-        </span>
-      </div>
+    <div className="flex items-center justify-center py-2">
+      <span
+        className="text-center text-[12px] font-bold text-[#8E8E93]"
+        style={{ letterSpacing: "-0.01em" }}
+      >
+        {formatSectionDate(date)}
+      </span>
     </div>
   );
 };

@@ -152,20 +152,14 @@ export function DayPlanningRow({
 
         <div className="flex w-11 shrink-0 flex-col justify-center">
           <p
-            className={cn(
-              "text-[11px] font-bold uppercase leading-none tracking-[0.06em]",
-              !isToday && "text-[#8E8E93] dark:text-muted-foreground",
-            )}
-            style={isToday ? { color: maquetteBlue } : undefined}
+            className="text-[11px] font-bold uppercase leading-none tracking-[0.06em]"
+            style={{ color: isToday ? maquetteBlue : "#8E8E93" }}
           >
             {dayAbbrev}
           </p>
           <p
-            className={cn(
-              "mt-0.5 text-[26px] font-extrabold leading-none tracking-[-0.02em]",
-              !isToday && "text-[#0A0F1F] dark:text-foreground",
-            )}
-            style={isToday ? { color: maquetteBlue } : undefined}
+            className="mt-0.5 text-[26px] font-extrabold leading-none tracking-[-0.02em]"
+            style={{ color: isToday ? maquetteBlue : "#0A0F1F" }}
           >
             {dateLabel}
           </p>
@@ -173,27 +167,27 @@ export function DayPlanningRow({
 
         <div className="min-w-0 flex-1">
           {!session || isRest ? (
-            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-5 dark:border-muted-foreground/35">
-              <p className="text-[15px] font-semibold leading-snug text-[#8E8E93] dark:text-muted-foreground">{emptyLabel ?? "Repos"}</p>
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-5">
+              <p className="text-[15px] font-semibold leading-snug text-[#8E8E93]">{emptyLabel ?? "Repos"}</p>
             </div>
           ) : (
             <button
               type="button"
               onClick={onOpen}
-              className="w-full min-w-0 overflow-hidden rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-transform active:scale-[0.98] dark:bg-card dark:shadow-none dark:ring-1 dark:ring-white/10"
+              className="w-full min-w-0 overflow-hidden rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-transform active:scale-[0.98]"
             >
-              <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2 dark:border-border">
+              <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <Footprints className="h-4 w-4 shrink-0 text-[#007AFF]" strokeWidth={2.4} aria-hidden />
-                  <p className="truncate text-[15px] font-bold leading-none text-[#0A0F1F] dark:text-foreground">Détail</p>
+                  <p className="truncate text-[15px] font-bold leading-none text-[#0A0F1F]">Détail</p>
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC] dark:text-muted-foreground/70" aria-hidden />
+                <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
               </div>
               <MonPlanSchemaBars blocks={session.miniProfile ?? []} />
-              <p className="mt-2 truncate text-[16px] font-bold leading-snug tracking-[-0.01em] text-[#0A0F1F] dark:text-foreground">
+              <p className="mt-2 truncate text-[16px] font-bold leading-snug tracking-[-0.01em] text-[#0A0F1F]">
                 {session.title}
               </p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] font-medium leading-snug text-[#8E8E93] dark:text-muted-foreground">
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] font-medium leading-snug text-[#8E8E93]">
                 {session.duration ? (
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
@@ -239,13 +233,13 @@ export function DayPlanningRow({
       <div
         className={cn(
           "flex items-center gap-2.5 rounded-2xl transition-colors",
-          isToday && "-mx-2 bg-[#E5F0FF] py-1 pl-1 pr-2 dark:bg-[#1a2535]"
+          isToday && "-mx-2 bg-[#E5F0FF] py-1 pl-1 pr-2"
         )}
       >
         <div
           className={cn(
             "flex w-[52px] shrink-0 flex-col items-center justify-center rounded-xl px-1 py-2",
-            isToday ? "bg-[#CDE2FF] dark:bg-[#243047]" : "bg-transparent"
+            isToday ? "bg-[#CDE2FF]" : "bg-transparent"
           )}
         >
           <p
@@ -264,17 +258,17 @@ export function DayPlanningRow({
 
         <div className="min-w-0 flex-1">
           {!session || isRest ? (
-            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-[1.5px] border-dashed border-[#C7C7CC] bg-transparent px-3 py-4 dark:border-muted-foreground/40">
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl border-[1.5px] border-dashed border-[#C7C7CC] bg-transparent px-3 py-4">
               <p className="text-[15px] font-semibold text-[#8E8E93]">{emptyLabel ?? "Repos"}</p>
             </div>
           ) : (
             <button
               type="button"
               onClick={onOpen}
-              className="w-full min-w-0 overflow-hidden rounded-2xl border border-black/[0.06] bg-white text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-border dark:bg-card"
+              className="w-full min-w-0 overflow-hidden rounded-2xl border border-black/[0.06] bg-white text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
             >
-              <div className="flex items-center justify-between border-b border-[#F2F2F7] px-3 py-2.5 dark:border-border">
-                <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-[#0A0F1F] dark:text-foreground">
+              <div className="flex items-center justify-between border-b border-[#F2F2F7] px-3 py-2.5">
+                <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-[#0A0F1F]">
                   {session.sportHint ? (
                     <span style={{ color: rowAccent }}>
                       <CoachSportIcon sport={session.sportHint} />
@@ -297,22 +291,22 @@ export function DayPlanningRow({
                     />
                   </div>
                 ) : null}
-                <p className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[#0A0F1F] dark:text-foreground">{session.title}</p>
+                <p className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[#0A0F1F]">{session.title}</p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[12px] text-[#8E8E93]">
                   {session.duration ? (
                     <span className="inline-flex items-center gap-1">
                       <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
-                      <span className="font-semibold text-[#0A0F1F]/85 dark:text-foreground/85">{session.duration}</span>
+                      <span className="font-semibold text-[#0A0F1F]/85">{session.duration}</span>
                     </span>
                   ) : null}
                   {session.distance ? (
                     <span className="inline-flex items-center gap-1">
                       <Ruler className="h-3 w-3 shrink-0" aria-hidden />
-                      <span className="font-semibold text-[#0A0F1F]/85 dark:text-foreground/85">{session.distance}</span>
+                      <span className="font-semibold text-[#0A0F1F]/85">{session.distance}</span>
                     </span>
                   ) : null}
                   {athleteSessionCompleted ? (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-[#34C759]/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#248a3d] dark:text-[#34C759]">
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-[#34C759]/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#248a3d]">
                       <Check className="h-2.5 w-2.5 stroke-[2.8]" aria-hidden />
                       Fait
                     </span>

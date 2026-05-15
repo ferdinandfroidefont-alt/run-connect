@@ -160,7 +160,7 @@ export function CoachingPreviewExperience({ identity }: Props) {
       headerWrapperClassName="shrink-0"
       contentTopOffsetPx={0}
       contentScroll
-      scrollClassName="min-h-0 bg-background"
+      scrollClassName="min-h-0 bg-[#F2F2F7]"
       header={
         <PlanningHeader
           onOpenMenu={previewAction}

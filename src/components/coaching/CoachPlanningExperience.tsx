@@ -3288,7 +3288,11 @@ export function CoachPlanningExperience() {
       <div
         className="coaching-flat flex h-full min-h-0 flex-col overflow-hidden"
         data-tutorial="tutorial-coaching"
-        style={weekPlannerMode ? planifierMaquetteFontStackStyle : undefined}
+        style={
+          weekPlannerMode || activeMenuKey === "planning" || activeMenuKey === "my-plan"
+            ? planifierMaquetteFontStackStyle
+            : undefined
+        }
       >
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
@@ -3301,10 +3305,10 @@ export function CoachPlanningExperience() {
               : activeMenuKey === "club"
                 ? "shrink-0 border-b border-border apple-grouped-bg"
                 : activeMenuKey === "my-plan"
-                  ? "shrink-0 border-0 z-50 bg-[#F2F2F7] dark:bg-background"
+                  ? "shrink-0 border-0 z-50 bg-[#F2F2F7]"
                   : showCoachLanding
-                    ? "shrink-0 border-0 z-50 apple-grouped-bg"
-                    : "shrink-0 border-0 z-50 apple-grouped-bg"
+                    ? "shrink-0 border-0 z-50 bg-[#F2F2F7]"
+                    : "shrink-0 border-0 z-50 bg-[#F2F2F7]"
           }
           header={
             weekPlannerMode ? (
@@ -3375,11 +3379,9 @@ export function CoachPlanningExperience() {
                 clubName={activeClubId ? activeClubName : undefined}
                 onPressClubAvatar={activeClubId ? openClubProfileSheet : undefined}
                 surfaceClassName={
-                  coachingHeaderTitle === "Mon plan"
-                    ? "bg-[#F2F2F7] dark:bg-background"
-                    : showCoachLanding
-                      ? "apple-grouped-bg"
-                      : undefined
+                  coachingHeaderTitle === "Mon plan" || coachingHeaderTitle === "Planification"
+                    ? "bg-[#F2F2F7]"
+                    : undefined
                 }
               />
             )
@@ -3387,11 +3389,11 @@ export function CoachPlanningExperience() {
           scrollClassName={cn(
             weekPlannerMode
               ? ""
-              : activeMenuKey === "my-plan"
-                ? "bg-[#F2F2F7] dark:bg-background"
-                : activeMenuKey === "club" || activeMenuKey === "tracking" || showCoachLanding
+              : activeMenuKey === "my-plan" || activeMenuKey === "planning"
+                ? "bg-[#F2F2F7]"
+                : activeMenuKey === "club" || activeMenuKey === "tracking"
                   ? "apple-grouped-bg"
-                  : "bg-white dark:bg-background"
+                  : "bg-white"
           )}
           scrollProps={
             weekPlannerMode
@@ -3401,7 +3403,7 @@ export function CoachPlanningExperience() {
                     WebkitOverflowScrolling: "touch",
                   },
                 }
-              : activeMenuKey === "my-plan"
+              : activeMenuKey === "my-plan" || activeMenuKey === "planning"
                 ? {
                     style: {
                       ...planifierMaquetteFontStackStyle,
@@ -3428,8 +3430,8 @@ export function CoachPlanningExperience() {
                   "sticky top-0 z-20 supports-[backdrop-filter]:backdrop-blur",
                   /* Mon plan : scroll auto vers « aujourd’hui » (scrollIntoView) — sans sticky la barre part hors écran. */
                   activeMenuKey === "my-plan" || showCoachLanding
-                    ? "border-b border-[rgba(0,0,0,0.06)] bg-[#F2F2F7] supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)] dark:border-white/10 dark:bg-background dark:supports-[backdrop-filter]:bg-background/92"
-                    : "bg-secondary/95 supports-[backdrop-filter]:bg-secondary/85 supports-[backdrop-filter]:backdrop-blur",
+                    ? "border-b border-[rgba(0,0,0,0.06)] bg-[#F2F2F7] supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)]"
+                    : "bg-[#F2F2F7]/95 supports-[backdrop-filter]:bg-[rgba(242,242,247,0.92)] supports-[backdrop-filter]:backdrop-blur",
                 )}
                 active={effectiveAthleteMode ? "athlete" : "coach"}
                 onSelect={(role) => {
@@ -3588,7 +3590,7 @@ export function CoachPlanningExperience() {
             ) : null}
 
             {activeMenuKey === "my-plan" ? (
-              <div ref={myPlanContinuousRef} className="mt-5 -mx-5 bg-[#F2F2F7] dark:bg-background">
+              <div ref={myPlanContinuousRef} className="mt-5 -mx-5 bg-[#F2F2F7]">
                 {weekStartsContinuous.map((weekStart) => {
                   const weekDaysLocal = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
                   const weekSessions = athletePlanSessions.filter((session) => {
@@ -3601,16 +3603,16 @@ export function CoachPlanningExperience() {
                     <div key={weekStart.toISOString()}>
                       <div className="mb-3 mt-7 px-5">
                         <div className="flex min-w-0 items-baseline gap-2">
-                          <h2 className="text-[26px] font-extrabold leading-none tracking-[-0.02em] text-[#0A0F1F] dark:text-foreground">
+                          <h2 className="text-[26px] font-extrabold leading-none tracking-[-0.02em] text-[#0A0F1F]">
                             Semaine {getISOWeek(weekStart)}
                           </h2>
-                          <p className="min-w-0 truncate text-[14px] font-medium leading-none tracking-[-0.01em] text-[#8E8E93] dark:text-muted-foreground">
+                          <p className="min-w-0 truncate text-[14px] font-medium leading-none tracking-[-0.01em] text-[#8E8E93]">
                             · {formatMaquetteMonPlanWeekRange(weekStart)}
                           </p>
                         </div>
                         <p className="mt-1 text-[14px] leading-normal">
-                          <span className="font-bold text-[#0A0F1F] dark:text-foreground">{kmLineDisplay}</span>
-                          <span className="font-medium text-[#8E8E93] dark:text-muted-foreground">
+                          <span className="font-bold text-[#0A0F1F]">{kmLineDisplay}</span>
+                          <span className="font-medium text-[#8E8E93]">
                             {" "}
                             · {weekSessions.length} séance(s)
                           </span>

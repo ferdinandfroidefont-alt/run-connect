@@ -226,7 +226,7 @@ export function AthleteMyPlanView(props: Props) {
   }, []);
 
   return (
-    <div className="apple-grouped-bg pb-28 pt-0">
+    <div className='bg-[#F2F2F7] pb-28 pt-0 [font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif] [-webkit-font-smoothing:antialiased]'>
       <section className="px-4 pb-3 pt-2">
         <div className="rounded-[18px] border-[0.5px] border-[rgba(60,60,67,0.12)] bg-card p-[18px] text-card-foreground shadow-none dark:border-[rgba(84,84,88,0.45)]">
           <p className="text-[12px] font-medium uppercase tracking-[0.4px] text-muted-foreground">

@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
-
 interface TypingIndicatorProps {
   isTyping: boolean;
   username?: string;
-  /** caption = ligne centrée maquette RC · bubble = bulle à points (historique iMessage) */
+  /** caption = ligne centrée · bubble = bulle à points (maquette Messages) */
   variant?: "bubble" | "caption";
 }
 
@@ -11,18 +9,6 @@ export const TypingIndicator = ({
   isTyping,
   variant = "bubble",
 }: TypingIndicatorProps) => {
-  const [dots, setDots] = useState(1);
-
-  useEffect(() => {
-    if (!isTyping) return;
-
-    const interval = setInterval(() => {
-      setDots((prev) => (prev >= 3 ? 1 : prev + 1));
-    }, 400);
-
-    return () => clearInterval(interval);
-  }, [isTyping]);
-
   if (!isTyping) return null;
 
   if (variant === "caption") {
@@ -38,28 +24,27 @@ export const TypingIndicator = ({
   }
 
   return (
-    <div className="flex items-start gap-2 px-1 py-1">
-      <div className="inline-flex items-center gap-1 rounded-[18px] border border-[#E2DBD0] bg-white px-4 py-2.5 dark:border-[#1f1f1f] dark:bg-[#2c2c2e]">
-        <div className="flex items-center gap-0.5">
-          <span
-            className={`h-2 w-2 rounded-full bg-[#7A7771] transition-opacity duration-200 dark:bg-muted-foreground ${
-              dots >= 1 ? "opacity-100" : "opacity-40"
-            }`}
-            style={{ animationDelay: "0ms" }}
+    <div className="flex justify-start px-1 py-1">
+      <div
+        className="inline-flex items-center gap-[5px] bg-white px-[18px] py-3"
+        style={{
+          borderRadius: 22,
+          boxShadow:
+            "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#8E8E93",
+              animation: `typingDot 1.2s ease-in-out ${i * 0.18}s infinite`,
+            }}
           />
-          <span
-            className={`h-2 w-2 rounded-full bg-[#7A7771] transition-opacity duration-200 dark:bg-muted-foreground ${
-              dots >= 2 ? "opacity-100" : "opacity-40"
-            }`}
-            style={{ animationDelay: "150ms" }}
-          />
-          <span
-            className={`h-2 w-2 rounded-full bg-[#7A7771] transition-opacity duration-200 dark:bg-muted-foreground ${
-              dots >= 3 ? "opacity-100" : "opacity-40"
-            }`}
-            style={{ animationDelay: "300ms" }}
-          />
-        </div>
+        ))}
       </div>
     </div>
   );

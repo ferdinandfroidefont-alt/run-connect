@@ -97,7 +97,7 @@ export function AthleteMaquettePlanDayRow({
           <div className="min-w-0 flex-1 pt-0.5">
             {isRest ? (
               <>
-                <div className="text-[16px] font-semibold tracking-[-0.3px] text-[rgba(60,60,67,0.4)] dark:text-muted-foreground/80">
+                <div className="text-[16px] font-semibold tracking-[-0.3px] text-[rgba(60,60,67,0.4)]">
                   Repos
                 </div>
                 <div className="mt-px text-[12px] leading-snug text-muted-foreground">Aucune séance prévue</div>
@@ -131,7 +131,7 @@ export function AthleteMaquettePlanDayRow({
               Démarrer
             </button>
           ) : (
-            <ChevronRight className="h-[18px] w-[18px] shrink-0 text-[rgba(60,60,67,0.3)] dark:text-muted-foreground/35" aria-hidden />
+            <ChevronRight className="h-[18px] w-[18px] shrink-0 text-[rgba(60,60,67,0.3)]" aria-hidden />
           )}
         </div>
       </div>

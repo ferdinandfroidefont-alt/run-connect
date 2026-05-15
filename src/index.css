@@ -905,9 +905,6 @@ html, body {
     padding: 4px;
     background: #e5e5ea;
   }
-  .dark .handoff-role-track {
-    background: rgba(118, 118, 128, 0.24);
-  }
   .handoff-role-thumb {
     flex: 1;
     border: none;
@@ -1080,6 +1077,20 @@ html, body {
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+/* Bulle « en train d’écrire » — maquette Messages */
+@keyframes typingDot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
   }
 }
 

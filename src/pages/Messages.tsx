@@ -74,11 +74,8 @@ import { SignedImage } from "@/components/SignedImage";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 import { MessagesInboxStickyScroll } from "@/components/messages/MessagesInboxStickyScroll";
 import { MessagesMaquetteSubpageShell } from "@/components/messages/MessagesMaquetteSubpageShell";
-import { MessagesDiscoveryTabsMaquette } from "@/components/messages/MessagesDiscoveryTabsMaquette";
-import { ProfilesTab } from "@/components/search/ProfilesTab";
-import { ClubsTab } from "@/components/search/ClubsTab";
-import { StravaTab } from "@/components/search/StravaTab";
-import { ContactsTab } from "@/components/search/ContactsTab";
+import { MessageSearchSheet } from "@/components/messages/MessageSearchSheet";
+import { ConversationMenuSheet } from "@/components/messages/ConversationMenuSheet";
 import { StoryReplyBubble } from "@/components/StoryReplyBubble";
 import { parseStoryReplyContent } from "@/lib/storyReplyMessage";
 
@@ -201,7 +198,6 @@ interface PastSessionCommentTarget {
 }
 
 type MessagesRootTab = "conversations" | "create-club" | "create-group";
-type MessageDiscoveryTab = "profiles" | "clubs" | "strava" | "contacts";
 
 const Messages = () => {
   const { user } = useAuth();
@@ -217,9 +213,7 @@ const Messages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
   const [conversationsHydrated, setConversationsHydrated] = useState(false);
-  const [conversationSearch, setConversationSearch] = useState("");
-  const [isInboxSearchMode, setIsInboxSearchMode] = useState(false);
-  const [messageDiscoveryTab, setMessageDiscoveryTab] = useState<MessageDiscoveryTab>("profiles");
+  const [messageSearchOpen, setMessageSearchOpen] = useState(false);
   /** Filtre liste inbox (maquette 17) — chips Conversations / Clubs / Groupes */
   const [messagesInboxSegment, setMessagesInboxSegment] = useState<"all" | "clubs" | "groups">("all");
   const [activeRootTab, setActiveRootTab] = useState<MessagesRootTab>("conversations");
@@ -284,6 +278,7 @@ const Messages = () => {
   // Conversation settings states
   const [isMuted, setIsMuted] = useState(false);
   const [showConversationInfo, setShowConversationInfo] = useState(false);
+  const [conversationThreadMenuOpen, setConversationThreadMenuOpen] = useState(false);
   const [userNotifSettings, setUserNotifSettings] = useState<{ notifications_enabled: boolean; notif_message: boolean }>({ notifications_enabled: false, notif_message: true });
   const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
     try {
@@ -496,7 +491,8 @@ const Messages = () => {
     const inNewMessageCompose = onMessagesPage && showNewConversation;
     const inClubComposer =
       onMessagesPage && (activeRootTab === "create-club" || activeRootTab === "create-group");
-    const suppressTabBar = inThread || inNewMessageCompose || inClubComposer;
+    const inMessageSearch = onMessagesPage && messageSearchOpen;
+    const suppressTabBar = inThread || inNewMessageCompose || inClubComposer || inMessageSearch;
     setBottomNavSuppressed("messages-thread", suppressTabBar);
 
     const root = document.documentElement;
@@ -525,7 +521,7 @@ const Messages = () => {
       document.body.style.overscrollBehavior = '';
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
-  }, [selectedConversation, showNewConversation, activeRootTab, setBottomNavSuppressed, location.pathname]);
+  }, [selectedConversation, showNewConversation, activeRootTab, messageSearchOpen, setBottomNavSuppressed, location.pathname]);
 
   useEffect(() => {
     return () => {
@@ -876,17 +872,6 @@ const Messages = () => {
         if (messagesInboxSegment === "groups") return !!(conv.is_group && !conv.club_code);
         return true;
       })
-      .filter((conv) => {
-        if (!conversationSearch.trim()) return true;
-        const query = conversationSearch.toLowerCase();
-        if (conv.is_group) {
-          return (conv.group_name ?? "").toLowerCase().includes(query);
-        }
-        return (
-          (conv.other_participant?.username ?? "").toLowerCase().includes(query) ||
-          (conv.other_participant?.display_name ?? "").toLowerCase().includes(query)
-        );
-      })
       .sort((a, b) => {
         const aPinned = pinnedConversations.has(a.id);
         const bPinned = pinnedConversations.has(b.id);
@@ -896,7 +881,7 @@ const Messages = () => {
       });
 
     return { inboxClubCount, inboxGroupCount, filteredAndSortedConversations: list };
-  }, [conversations, conversationSearch, pinnedConversations, messagesInboxSegment]);
+  }, [conversations, pinnedConversations, messagesInboxSegment]);
 
   const handleLongPressEnd = () => {
     if (longPressTimer) {
@@ -2387,18 +2372,23 @@ const Messages = () => {
 
   if (selectedConversation && !isCommentsTab) {
     const isDirectMessage = !selectedConversation.is_group;
-    
+    const chatPageBg = "#F2F2F7";
+    const msgBlue = "#007AFF";
+    const openThreadMenu = () => setConversationThreadMenuOpen(true);
+    const closeThreadMenu = () => setConversationThreadMenuOpen(false);
+
     return (
       <>
         <div
-          className="flex min-h-0 flex-col overflow-hidden bg-[#f5f5f7] dark:bg-secondary"
+          className="flex min-h-0 flex-col overflow-hidden"
           style={{
-            position: 'fixed',
+            backgroundColor: chatPageBg,
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            overscrollBehavior: 'none',
+            overscrollBehavior: "none",
             zIndex: 10,
           }}
         >
@@ -2407,298 +2397,127 @@ const Messages = () => {
               className="min-h-0 flex-1"
               pinHeader={false}
               scrollRef={threadScrollRef}
-              headerWrapperClassName="z-50 shrink-0 border-b border-[#e0e0e0] bg-white dark:border-border dark:bg-card"
+              headerWrapperClassName="z-50 shrink-0 !bg-[#F2F2F7]"
               header={
                 <>
-                  <div
-                    className="bg-white dark:bg-card"
-                    style={{ height: "max(env(safe-area-inset-top, 0px), 12px)" }}
-                    aria-hidden="true"
-                  />
-                {isDirectMessage ? (
-                  <div className="flex items-center gap-2.5 px-4 py-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedConversation(null)}
-                      className="h-9 w-9 shrink-0 rounded-full p-0 hover:bg-transparent dark:hover:bg-secondary"
-                      aria-label="Retour"
-                    >
-                      <ChevronLeft className="h-4 w-4 text-[#1d1d1f] dark:text-foreground" strokeWidth={2.5} />
-                    </Button>
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowConversationInfo(true);
-                      }}
-                    >
-                      <Avatar className="h-9 w-9 shrink-0">
-                        <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
-                        <AvatarFallback className="bg-[#f5f5f7] text-[13px] font-semibold text-[#1d1d1f] dark:bg-secondary dark:text-foreground">
-                          {(selectedConversation.other_participant?.username ||
-                            selectedConversation.other_participant?.display_name ||
-                            "").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className="truncate font-bold leading-tight text-[15px] tracking-tight text-[#1d1d1f] dark:text-foreground"
-                          style={{ fontFamily: "Inter Tight, ui-sans-serif, system-ui, sans-serif" }}
-                        >
-                          {selectedConversation.other_participant?.username ||
-                            selectedConversation.other_participant?.display_name}
-                        </p>
-                        {selectedConversation.other_participant?.user_id && (
-                          <OnlineStatus
-                            userId={selectedConversation.other_participant.user_id}
-                            display="subtitle"
-                            className="mt-0.5"
-                          />
-                        )}
-                      </div>
-                    </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                  <div style={{ backgroundColor: chatPageBg }}>
+                    {isDirectMessage ? (
+                      <div
+                        className="flex items-center gap-2 px-3 pb-2.5"
+                        style={{
+                          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+                          background: chatPageBg,
+                          borderBottom: "1px solid #E5E5EA",
+                        }}
+                      >
                         <button
                           type="button"
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1d1d1f] dark:text-foreground"
+                          onClick={() => setSelectedConversation(null)}
+                          className="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center transition-opacity active:opacity-70"
+                          aria-label="Retour"
+                        >
+                          <ChevronLeft className="h-7 w-7 text-[#0A0F1F]" strokeWidth={2.4} />
+                        </button>
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left active:opacity-80"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openThreadMenu();
+                          }}
+                        >
+                          <Avatar className="h-9 w-9 shrink-0 rounded-full">
+                            <AvatarImage src={selectedConversation.other_participant?.avatar_url || ""} />
+                            <AvatarFallback
+                              className="rounded-full bg-[#E5E5EA] text-[13px] font-semibold text-[#0A0F1F]"
+                              style={{ fontFamily: "system-ui, sans-serif" }}
+                            >
+                              {(selectedConversation.other_participant?.username ||
+                                selectedConversation.other_participant?.display_name ||
+                                "").charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <h1
+                            className="min-w-0 flex-1 truncate"
+                            style={{
+                              fontSize: 18,
+                              fontWeight: 800,
+                              color: "#0A0F1F",
+                              letterSpacing: "-0.02em",
+                              margin: 0,
+                              fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+                            }}
+                          >
+                            {selectedConversation.other_participant?.username ||
+                              selectedConversation.other_participant?.display_name}
+                          </h1>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={openThreadMenu}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center transition-opacity active:opacity-70"
                           aria-label="Plus d’options"
                         >
-                          <MoreVertical className="h-4 w-4" />
+                          <MoreVertical className="h-5 w-5 text-[#0A0F1F]" strokeWidth={2.4} />
                         </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-56 rounded-ios-lg border border-border bg-card shadow-lg"
-                      >
-                        <DropdownMenuItem
-                          onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
-                          className="py-ios-3"
-                        >
-                          <User className="mr-ios-3 h-4 w-4 text-primary" />
-                          Voir le profil
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedConversation(null);
-                            openCreateGroupTab();
-                          }}
-                          className="py-ios-3"
-                        >
-                          <Users className="mr-ios-3 h-4 w-4 text-primary" />
-                          Créer un groupe
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => {
-                            if (!userNotifSettings.notifications_enabled) {
-                              navigate("/profile");
-                              setTimeout(() => {
-                                window.dispatchEvent(new CustomEvent("open-notification-settings"));
-                              }, 500);
-                              return;
-                            }
-                            const newMuted = !isMuted;
-                            setIsMuted(newMuted);
-                            if (user) {
-                              supabase
-                                .from("profiles")
-                                .update({ notif_message: !newMuted })
-                                .eq("user_id", user.id);
-                            }
-                          }}
-                          className="justify-between py-ios-3"
-                        >
-                          <div className="flex items-center">
-                            <span className="mr-ios-3 text-lg">
-                              {!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}
-                            </span>
-                            <span>Notifications</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {!userNotifSettings.notifications_enabled
-                              ? "Désactivées"
-                              : isMuted
-                                ? "Off"
-                                : "On"}
-                          </span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-                          className="justify-between py-ios-3"
-                        >
-                          <div className="flex items-center">
-                            <span className="mr-ios-3 text-lg">📌</span>
-                            <span>Épingler</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
-                          </span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => setThreadSearchOpen(true)}
-                          className="py-ios-3"
-                        >
-                          <Search className="mr-ios-3 h-4 w-4 text-primary" />
-                          Rechercher dans la conversation
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => confirmDeleteConversation()}
-                          className="py-ios-3 text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-ios-3 h-4 w-4" />
-                          Supprimer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2.5 px-4 py-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedConversation(null)}
-                      className="h-9 shrink-0 gap-1 px-0 font-normal text-primary hover:bg-transparent dark:hover:bg-secondary"
-                    >
-                      <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
-                      Retour
-                    </Button>
-
-                    <div className="min-w-0 flex flex-1 items-center justify-center">
-                      <div
-                        className="flex min-w-0 cursor-pointer flex-col items-center gap-1"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const clubData = selectedConversation;
-                          setSelectedConversation(null);
-                          setTimeout(() => {
-                            setGroupInfoData(clubData);
-                            setShowClubProfile(true);
-                          }, 100);
-                        }}
-                      >
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={selectedConversation.group_avatar_url || ""} />
-                          <AvatarFallback className="border bg-border text-muted-foreground">
-                            <Users className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex max-w-full items-center gap-1 px-1">
-                          <p className="truncate font-semibold text-ios-footnote text-foreground">
-                            {selectedConversation.group_name}
-                          </p>
-                          <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <button
-                        type="button"
-                        className={cn(
-                          "p-ios-2 text-primary",
-                          threadSearchOpen && "rounded-ios-md bg-secondary"
-                        )}
-                        aria-label="Rechercher dans la conversation"
-                        onClick={() => {
-                          setThreadSearchOpen((o) => {
-                            if (o) setThreadSearch("");
-                            return !o;
-                          });
+                    ) : (
+                      <div
+                        className="flex items-center gap-2 px-3 pb-2.5"
+                        style={{
+                          paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+                          background: chatPageBg,
+                          borderBottom: "1px solid #E5E5EA",
                         }}
                       >
-                        <Search className="h-5 w-5" />
-                      </button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button type="button" className="shrink-0 p-ios-2 text-primary">
-                            <MoreVertical className="h-5 w-5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 rounded-ios-lg border border-border bg-card shadow-lg">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedConversation(null);
-                              openCreateGroupTab();
+                        <button
+                          type="button"
+                          onClick={() => setSelectedConversation(null)}
+                          className="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center transition-opacity active:opacity-70"
+                          aria-label="Retour"
+                        >
+                          <ChevronLeft className="h-7 w-7 text-[#0A0F1F]" strokeWidth={2.4} />
+                        </button>
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left active:opacity-80"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openThreadMenu();
+                          }}
+                        >
+                          <Avatar className="h-9 w-9 shrink-0 rounded-full">
+                            <AvatarImage src={selectedConversation.group_avatar_url || ""} />
+                            <AvatarFallback className="rounded-full bg-[#E5E5EA]">
+                              <Users className="h-4 w-4 text-[#0A0F1F]" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <h1
+                            className="min-w-0 flex-1 truncate"
+                            style={{
+                              fontSize: 18,
+                              fontWeight: 800,
+                              color: "#0A0F1F",
+                              letterSpacing: "-0.02em",
+                              margin: 0,
+                              fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
                             }}
-                            className="py-ios-3"
                           >
-                            <Users className="mr-ios-3 h-4 w-4 text-primary" />
-                            Créer un groupe
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (!userNotifSettings.notifications_enabled) {
-                                navigate("/profile");
-                                setTimeout(() => {
-                                  window.dispatchEvent(new CustomEvent("open-notification-settings"));
-                                }, 500);
-                                return;
-                              }
-                              const newMuted = !isMuted;
-                              setIsMuted(newMuted);
-                              if (user) {
-                                supabase
-                                  .from("profiles")
-                                  .update({ notif_message: !newMuted })
-                                  .eq("user_id", user.id);
-                              }
-                            }}
-                            className="justify-between py-ios-3"
-                          >
-                            <div className="flex items-center">
-                              <span className="mr-ios-3 text-lg">
-                                {!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}
-                              </span>
-                              <span>Notifications</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {!userNotifSettings.notifications_enabled
-                                ? "Désactivées"
-                                : isMuted
-                                  ? "Off"
-                                  : "On"}
-                            </span>
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-                            className="justify-between py-ios-3"
-                          >
-                            <div className="flex items-center">
-                              <span className="mr-ios-3 text-lg">📌</span>
-                              <span>Épingler</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
-                            </span>
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem onClick={() => setThreadSearchOpen(true)} className="py-ios-3">
-                            <Search className="mr-ios-3 h-4 w-4 text-primary" />
-                            Rechercher dans la conversation
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() => confirmDeleteConversation()}
-                            className="py-ios-3 text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-ios-3 h-4 w-4" />
-                            {selectedConversation.created_by !== user?.id ? "Quitter le club" : "Supprimer"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                            {selectedConversation.group_name}
+                          </h1>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={openThreadMenu}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center transition-opacity active:opacity-70"
+                          aria-label="Plus d’options"
+                        >
+                          <MoreVertical className="h-5 w-5 text-[#0A0F1F]" strokeWidth={2.4} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
                 </>
               }
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
@@ -2706,11 +2525,12 @@ const Messages = () => {
               <div
                 ref={composerRef}
                 className={cn(
-                  "keyboard-input-container z-40 mx-auto w-full max-w-md shrink-0 border-0 bg-transparent px-3 pt-1",
-                  "dark:backdrop-blur-none"
+                  "keyboard-input-container z-40 mx-auto w-full max-w-md shrink-0 px-3 pt-2.5",
+                  "border-t border-[#E5E5EA]"
                 )}
                 style={{
-                  paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
+                  backgroundColor: chatPageBg,
+                  paddingBottom: "max(env(safe-area-inset-bottom, 0px), 10px)",
                 }}
               >
                 {replyTo && (
@@ -2740,18 +2560,21 @@ const Messages = () => {
                     <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 rounded-[26px] border border-[#e0e0e0] bg-white py-1 pl-3 pr-1.5 dark:border-[#1f1f1f] dark:bg-[#1c1c1e]">
+                <div
+                  className="flex items-center gap-2 rounded-[9999px] border border-[#E5E5EA] bg-white py-1 pl-1.5 pr-1.5"
+                  style={{ padding: "4px 4px 4px 6px" }}
+                >
                   {!isRecording && (
                     <>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5f7] text-[#1d1d1f] disabled:opacity-50 dark:bg-secondary dark:text-foreground"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
                             disabled={isLoading}
                             type="button"
                             aria-label="Pièces jointes"
                           >
-                            <Plus className="h-4 w-4" strokeWidth={2.25} />
+                            <Plus className="h-5 w-5 text-[#8E8E93]" strokeWidth={2.4} />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-56">
@@ -2848,7 +2671,7 @@ const Messages = () => {
                           handleTyping();
                         }}
                         onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                        className="min-w-0 flex-1 bg-transparent py-2 text-[14px] text-[#1d1d1f] outline-none placeholder:text-[#7a7a7a] dark:text-foreground dark:placeholder:text-muted-foreground"
+                        className="min-w-0 flex-1 bg-transparent px-1 py-2 text-[16px] font-medium text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
                         disabled={isLoading}
                       />
                       {newMessage.trim() ? (
@@ -2856,20 +2679,22 @@ const Messages = () => {
                           type="button"
                           onClick={sendMessage}
                           disabled={loading || !newMessage.trim()}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0066cc] text-white disabled:opacity-50 dark:bg-primary"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity active:opacity-80 disabled:opacity-50"
+                          style={{ backgroundColor: msgBlue }}
                           aria-label="Envoyer"
                         >
-                          <Send className="h-[18px] w-[18px]" strokeWidth={2} />
+                          <Send className="h-[18px] w-[18px]" strokeWidth={2.4} />
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={handleVoiceRecording}
                           disabled={loading}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0066cc] text-white dark:bg-primary"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity active:opacity-80"
+                          style={{ backgroundColor: msgBlue }}
                           aria-label="Message vocal"
                         >
-                          <Mic className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                          <Mic className="h-[18px] w-[18px]" strokeWidth={2.4} />
                         </button>
                       )}
                     </>
@@ -2904,7 +2729,10 @@ const Messages = () => {
             }
           >
             {threadSearchOpen && (
-              <div className="shrink-0 border-b border-[#e0e0e0] bg-white px-4 py-2 dark:border-border dark:bg-card">
+              <div
+                className="shrink-0 border-b border-[#E5E5EA] px-3 py-2"
+                style={{ backgroundColor: chatPageBg }}
+              >
                 <div className="flex items-center gap-2">
                   <div className="apple-search min-h-9 min-w-0 flex-1 gap-1.5 px-2 py-0">
                     <Search
@@ -3018,7 +2846,7 @@ const Messages = () => {
                     )}
                     
                     <div
-                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} py-1`}
+                      className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} py-1`}
                       onClick={toggleTimestamp}
                     >
                       <div className={`relative max-w-[78%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
@@ -3104,7 +2932,7 @@ const Messages = () => {
                           {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
                             <SignedImage 
                               fileUrl={message.file_url} 
-                              className="h-auto max-w-full rounded-[18px]"
+                              className="h-auto max-w-full rounded-[22px]"
                               style={{ maxHeight: '240px' }}
                             />
                           )}
@@ -3128,14 +2956,22 @@ const Messages = () => {
                             <div
                               className={cn(
                                 !sessionShareOnly &&
-                                  "rounded-[18px] px-[14px] py-[10px] text-[14px] leading-[1.4] tracking-normal",
+                                  "max-w-[78%] rounded-[22px] px-4 py-2.5 text-[16px] leading-[1.3] tracking-normal",
                                 !sessionShareOnly &&
                                   (isOwnMessage
-                                    ? "rounded-br-[6px] bg-[#1d1d1f] text-white dark:bg-primary dark:text-primary-foreground"
-                                    : "rounded-bl-[6px] border border-[#e0e0e0] bg-white text-[#1d1d1f] dark:border-[#1f1f1f] dark:bg-[#2c2c2e] dark:text-foreground"),
+                                    ? "text-white"
+                                    : "border border-[rgba(0,0,0,0.06)] bg-white text-[#0A0F1F] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"),
+                                !sessionShareOnly &&
+                                  isOwnMessage &&
+                                  "shadow-[0_1px_2px_rgba(0,122,255,0.18)]",
                                 sessionShareOnly &&
-                                  "max-w-[min(240px,78vw)] rounded-[18px] border-0 bg-transparent p-0 text-[#1d1d1f] dark:bg-transparent dark:text-foreground"
+                                  "max-w-[min(240px,78vw)] rounded-[22px] border-0 bg-transparent p-0 text-[#0A0F1F]"
                               )}
+                              style={
+                                !sessionShareOnly && isOwnMessage
+                                  ? { backgroundColor: msgBlue }
+                                  : undefined
+                              }
                             >
                               {/* Reply context */}
                               {message.reply_to && !message.deleted_at && (
@@ -3207,7 +3043,7 @@ const Messages = () => {
                                           <path
                                             d="M20 50 Q60 30 110 42 T216 34"
                                             fill="none"
-                                            stroke="#0066cc"
+                                            stroke={msgBlue}
                                             strokeLinecap="round"
                                             strokeWidth="2"
                                           />
@@ -3230,7 +3066,8 @@ const Messages = () => {
                                             : ""}
                                         </div>
                                         <div
-                                          className="mt-2 flex h-8 w-full cursor-pointer select-none items-center justify-center rounded-lg bg-[#0066cc] text-[12px] font-bold text-white dark:bg-primary"
+                                          className="mt-2 flex h-8 w-full cursor-pointer select-none items-center justify-center rounded-lg text-[12px] font-bold text-white"
+                                          style={{ backgroundColor: msgBlue }}
                                           role="presentation"
                                         >
                                           Rejoindre
@@ -3321,7 +3158,7 @@ const Messages = () => {
               
               {/* Typing indicators */}
               {Object.entries(typingUsers).map(([userId]) => (
-                <TypingIndicator key={userId} isTyping={true} variant="caption" />
+                <TypingIndicator key={userId} isTyping={true} />
               ))}
               
               <div ref={messagesEndRef} />
@@ -3449,6 +3286,87 @@ const Messages = () => {
           }}
         />
       </Suspense>
+
+      <ConversationMenuSheet
+        open={conversationThreadMenuOpen}
+        onClose={closeThreadMenu}
+        title={
+          isDirectMessage
+            ? selectedConversation.other_participant?.username ||
+              selectedConversation.other_participant?.display_name ||
+              "Conversation"
+            : selectedConversation.group_name || "Groupe"
+        }
+        subtitle={isDirectMessage ? "Conversation" : "Groupe"}
+        avatarUrl={
+          isDirectMessage
+            ? selectedConversation.other_participant?.avatar_url ?? null
+            : selectedConversation.group_avatar_url ?? null
+        }
+        avatarFallbackLabel={
+          isDirectMessage
+            ? selectedConversation.other_participant?.username ||
+              selectedConversation.other_participant?.display_name ||
+              "?"
+            : selectedConversation.group_name || "Groupe"
+        }
+        isGroup={!isDirectMessage}
+        onViewProfile={() => {
+          closeThreadMenu();
+          if (isDirectMessage && selectedConversation.other_participant?.user_id) {
+            navigate(`/profile?user=${selectedConversation.other_participant.user_id}`);
+            return;
+          }
+          const clubData = selectedConversation;
+          setSelectedConversation(null);
+          setTimeout(() => {
+            setGroupInfoData(clubData);
+            setShowClubProfile(true);
+          }, 100);
+        }}
+        onToggleMute={() => {
+          if (!userNotifSettings.notifications_enabled) {
+            closeThreadMenu();
+            navigate("/profile");
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent("open-notification-settings"));
+            }, 500);
+            return;
+          }
+          const newMuted = !isMuted;
+          setIsMuted(newMuted);
+          if (user) {
+            void supabase.from("profiles").update({ notif_message: !newMuted }).eq("user_id", user.id);
+          }
+          closeThreadMenu();
+        }}
+        onSearch={() => {
+          closeThreadMenu();
+          setThreadSearchOpen(true);
+        }}
+        onSharedMedia={() => {
+          closeThreadMenu();
+          setShowConversationInfo(true);
+        }}
+        onDelete={() => {
+          closeThreadMenu();
+          confirmDeleteConversation();
+        }}
+        onReport={() => {
+          closeThreadMenu();
+          toast({
+            title: "Bientôt disponible",
+            description: "Le signalement sera proposé dans une prochaine version.",
+          });
+        }}
+        onBlock={() => {
+          closeThreadMenu();
+          toast({
+            title: "Bientôt disponible",
+            description: "Le blocage sera proposé dans une prochaine version.",
+          });
+        }}
+      />
 
       <SessionStoryDialog
         open={!!storyViewerOpen}
@@ -3610,60 +3528,19 @@ const Messages = () => {
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <MessagesInboxStickyScroll onOpenCompose={() => setMessagesComposeSheetOpen(true)}>
-              {isInboxSearchMode ? (
-                <>
-                  <div className="flex w-full items-center gap-2">
-                    <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl bg-[#E5E5EA] px-3 py-2">
-                      <Search className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.5} aria-hidden />
-                      <input
-                        value={conversationSearch}
-                        onChange={(e) => setConversationSearch(e.target.value)}
-                        placeholder="Rechercher amis · clubs · groupes"
-                        className="min-w-0 flex-1 bg-transparent py-1 text-[15px] font-medium text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
-                        aria-label="Rechercher utilisateurs ou clubs"
-                        autoCorrect="off"
-                        autoCapitalize="none"
-                        autoFocus
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#8E8E93] active:bg-black/[0.06]"
-                      aria-label="Quitter la recherche"
-                      onClick={() => setIsInboxSearchMode(false)}
-                    >
-                      <X className="h-5 w-5" strokeWidth={2.2} />
-                    </button>
-                  </div>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setMessageSearchOpen(true)}
+                  className="flex w-full items-center gap-2 rounded-xl bg-[#E5E5EA] px-3 py-2.5 text-left active:opacity-90"
+                >
+                  <Search className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.5} aria-hidden />
+                  <span className="text-[15px] font-medium text-[#8E8E93]">
+                    Rechercher amis · clubs · groupes
+                  </span>
+                </button>
 
-                  <div className="-mx-5 px-5">
-                    <MessagesDiscoveryTabsMaquette
-                      activeTab={messageDiscoveryTab}
-                      onTabChange={setMessageDiscoveryTab}
-                    />
-                  </div>
-
-                  <div className="mt-2 min-w-0 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-                    {messageDiscoveryTab === "profiles" && <ProfilesTab searchQuery={conversationSearch} />}
-                    {messageDiscoveryTab === "clubs" && <ClubsTab searchQuery={conversationSearch} />}
-                    {messageDiscoveryTab === "strava" && <StravaTab searchQuery={conversationSearch} />}
-                    {messageDiscoveryTab === "contacts" && <ContactsTab searchQuery={conversationSearch} />}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsInboxSearchMode(true)}
-                    className="flex w-full items-center gap-2 rounded-xl bg-[#E5E5EA] px-3 py-2.5 text-left active:opacity-90"
-                  >
-                    <Search className="h-4 w-4 shrink-0 text-[#8E8E93]" strokeWidth={2.5} aria-hidden />
-                    <span className="text-[15px] font-medium text-[#8E8E93]">
-                      Rechercher amis · clubs · groupes
-                    </span>
-                  </button>
-
-                  <div className="mt-5 flex items-end gap-3">
+                <div className="mt-5 flex items-end gap-3">
                     <div className="relative shrink-0">
                       <button
                         type="button"
@@ -3979,8 +3856,9 @@ const Messages = () => {
                     </>
                   )}
                 </div>
-                </>
-              )}
+              </>
+
+            {messageSearchOpen ? <MessageSearchSheet onClose={() => setMessageSearchOpen(false)} /> : null}
             </MessagesInboxStickyScroll>
 
             <Sheet open={messagesComposeSheetOpen} onOpenChange={setMessagesComposeSheetOpen}>
