@@ -39,9 +39,9 @@ function monPlanBarHeightPct(block: MiniProfileBlock): number {
 }
 
 /** Aperçu minimal façon maquette quand les blocs n’ont pas encore été résolus en mini-profils. */
-function MonPlanSchemaBarsFallback() {
+function MonPlanSchemaBarsFallback({ className }: { className?: string }) {
   return (
-    <div className="mt-3 flex h-14 items-end gap-[2px] px-3" aria-hidden>
+    <div className={cn("mt-3 flex h-14 items-end gap-[2px] px-3", className)} aria-hidden>
       <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "38%" }} />
       <div className="min-w-0 flex-[2] rounded-sm bg-[#34C759]" style={{ height: "68%" }} />
       <div className="min-w-0 flex-[3] rounded-sm bg-[#007AFF]" style={{ height: "35%" }} />
@@ -55,17 +55,20 @@ export function MonPlanSchemaBars({
   interactive = false,
   selectedBarIndex = null,
   onSelectBarIndex,
+  className,
 }: {
   blocks: MiniProfileBlock[];
   interactive?: boolean;
   selectedBarIndex?: number | null;
   onSelectBarIndex?: (index: number) => void;
+  /** Ex. espacement horizontal du bandeau de barres (Mon plan carte plus aérée à droite). */
+  className?: string;
 }) {
   if (!blocks.length) {
-    return <MonPlanSchemaBarsFallback />;
+    return <MonPlanSchemaBarsFallback className={className} />;
   }
   return (
-    <div className="mt-3 flex h-14 items-end gap-[2px] px-3">
+    <div className={cn("mt-3 flex h-14 items-end gap-[2px] px-3", className)}>
       {blocks.map((block, i) => {
         const band = zoneBandFromMiniBlock(block);
         const heightPct = monPlanBarHeightPct(block);
@@ -183,8 +186,8 @@ export function DayPlanningRow({
     return (
       <div
         className={cn(
-          /** Marge gauche/droite comme les titres de semaine (`px-5`) pour ne pas coller aux bords écran. Barre « aujourd’hui » après ce retrait. */
-          "flex items-stretch px-5 py-[11px] [-webkit-font-smoothing:antialiased]",
+          /** Gauche comme les titres de semaine (`pl-5`) ; droit un peu plus large pour ne pas coller aux bords. */
+          "flex items-stretch pl-5 pr-7 py-[11px] [-webkit-font-smoothing:antialiased]",
           '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif]',
         )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
@@ -229,7 +232,7 @@ export function DayPlanningRow({
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
                 </div>
-                <MonPlanSchemaBars blocks={session.miniProfile ?? []} />
+                <MonPlanSchemaBars blocks={session.miniProfile ?? []} className="mx-2 px-[18px]" />
                 <p className="mt-2 truncate text-[16px] font-bold leading-snug tracking-[-0.01em] text-[#0A0F1F]">
                   {session.title}
                 </p>
