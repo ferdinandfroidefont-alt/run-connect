@@ -5556,7 +5556,8 @@ export function CoachPlanningExperience() {
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-[24px] border-[#E5E5EA] bg-white p-0 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:max-w-lg"
+          overlayClassName="z-[140]"
+          className="z-[140] flex max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-[24px] border-[#E5E5EA] bg-white p-0 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:max-w-lg"
         >
           {previewSessionItem ? (
             <>

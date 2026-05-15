@@ -198,7 +198,10 @@ export function SessionDiscussionView({
   const isOrganizer = (userId: string) => userId === session.organizer.user_id;
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden" style={{ background: DISCUSSION_BG }}>
+    <div
+      className="relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+      style={{ background: DISCUSSION_BG }}
+    >
       {/* HEADER — maquette */}
       <div
         className="shrink-0 px-4 pb-3 pt-[max(12px,var(--safe-area-top))]"

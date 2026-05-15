@@ -174,13 +174,13 @@ export function FeedActivitiesMaquette({
 
   if (discussionSessionId && waitingForDiscussionResolve) {
     const inner = (
-      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 bg-secondary px-6 pb-[calc(env(safe-area-inset-bottom,0)+24px)] pt-[calc(var(--safe-area-top)+24px)]">
+      <div className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-4 bg-secondary px-6 pb-[calc(env(safe-area-inset-bottom,0)+24px)] pt-[calc(var(--safe-area-top)+24px)]">
         <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
         <p className="text-center text-ios-subheadline text-muted-foreground">Ouverture de la discussion…</p>
       </div>
     );
     return embeddedInDiscoverChrome ? (
-      <div className="fixed inset-0 z-[140] flex bg-secondary">{inner}</div>
+      <div className="fixed inset-0 z-[140] flex min-h-0 w-full min-w-0 flex-col bg-secondary">{inner}</div>
     ) : (
       inner
     );
@@ -198,9 +198,9 @@ export function FeedActivitiesMaquette({
       />
     );
     return embeddedInDiscoverChrome ? (
-      <div className="fixed inset-0 z-[140] flex min-h-0 bg-background">{inner}</div>
+      <div className="fixed inset-0 z-[140] flex min-h-0 w-full min-w-0 flex-col bg-background">{inner}</div>
     ) : (
-      inner
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">{inner}</div>
     );
   }
 

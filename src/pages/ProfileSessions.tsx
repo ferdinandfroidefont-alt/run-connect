@@ -407,14 +407,16 @@ export default function ProfileSessions() {
 
   if (discussionSession) {
     return (
-      <SessionDiscussionView
-        session={discussionSession}
-        onBack={() => {
-          setDiscussionSessionId(null);
-          setDiscussionSessionOverride(null);
-        }}
-        onAddComment={addCommentForFeed}
-      />
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+        <SessionDiscussionView
+          session={discussionSession}
+          onBack={() => {
+            setDiscussionSessionId(null);
+            setDiscussionSessionOverride(null);
+          }}
+          onAddComment={addCommentForFeed}
+        />
+      </div>
     );
   }
 

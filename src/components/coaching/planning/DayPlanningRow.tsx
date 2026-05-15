@@ -183,18 +183,19 @@ export function DayPlanningRow({
     return (
       <div
         className={cn(
-          "flex items-stretch pl-5 pr-5 py-[11px] [-webkit-font-smoothing:antialiased]",
+          /** Barre « aujourd’hui » en bord gauche du bandeau (pl-0) ; carte gagne la largeur perdue avant le jour. */
+          "flex items-stretch py-[11px] pl-0 pr-5 [-webkit-font-smoothing:antialiased]",
           '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif]',
         )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
       >
-        <div className="mr-3 flex w-5 shrink-0 flex-col justify-center py-0.5" aria-hidden={!isToday}>
+        <div className="flex w-[3px] shrink-0 flex-col items-stretch justify-center self-stretch" aria-hidden={!isToday}>
           {isToday ? (
-            <div className="mx-auto h-11 min-h-[2.75rem] w-[3px] shrink-0 rounded-full bg-[#007AFF]" aria-hidden />
+            <div className="h-11 min-h-[2.75rem] w-full shrink-0 rounded-r-sm bg-[#007AFF]" aria-hidden />
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 items-stretch gap-3">
+        <div className="flex min-w-0 flex-1 items-stretch gap-3 pl-3">
           <div className="flex w-10 shrink-0 flex-col justify-center">
             <p
               className="text-[11px] font-bold leading-none tracking-wide"
@@ -211,44 +212,44 @@ export function DayPlanningRow({
           </div>
 
           <div className="min-w-0 flex-1">
-          {!session || isRest ? (
-            <div className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-[18px]">
-              <p className="text-center text-[15px] font-semibold leading-snug text-[#0A0F1F]">{emptyLabel ?? "Repos"}</p>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpen}
-              className="w-full min-w-0 overflow-hidden rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-transform active:scale-[0.98]"
-            >
-              <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <Footprints className="h-4 w-4 shrink-0 text-[#007AFF]" strokeWidth={2.4} aria-hidden />
-                  <p className="truncate text-[15px] font-bold leading-none text-[#0A0F1F]">Détail</p>
+            {!session || isRest ? (
+              <div className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-[#C7C7CC] bg-transparent px-4 py-[18px]">
+                <p className="text-center text-[15px] font-semibold leading-snug text-[#0A0F1F]">{emptyLabel ?? "Repos"}</p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpen}
+                className="w-full min-w-0 overflow-hidden rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-transform active:scale-[0.98]"
+              >
+                <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <Footprints className="h-4 w-4 shrink-0 text-[#007AFF]" strokeWidth={2.4} aria-hidden />
+                    <p className="truncate text-[15px] font-bold leading-none text-[#0A0F1F]">Détail</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-[#C7C7CC]" aria-hidden />
-              </div>
-              <MonPlanSchemaBars blocks={session.miniProfile ?? []} />
-              <p className="mt-2 truncate text-[16px] font-bold leading-snug tracking-[-0.01em] text-[#0A0F1F]">
-                {session.title}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] font-medium leading-snug text-[#8E8E93]">
-                {session.duration ? (
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
-                    {session.duration}
-                  </span>
-                ) : null}
-                {session.distance ? (
-                  <span className="inline-flex items-center gap-1">
-                    <Ruler className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
-                    {session.distance}
-                  </span>
-                ) : null}
-              </div>
-            </button>
-          )}
-        </div>
+                <MonPlanSchemaBars blocks={session.miniProfile ?? []} />
+                <p className="mt-2 truncate text-[16px] font-bold leading-snug tracking-[-0.01em] text-[#0A0F1F]">
+                  {session.title}
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] font-medium leading-snug text-[#8E8E93]">
+                  {session.duration ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
+                      {session.duration}
+                    </span>
+                  ) : null}
+                  {session.distance ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Ruler className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
+                      {session.distance}
+                    </span>
+                  ) : null}
+                </div>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
