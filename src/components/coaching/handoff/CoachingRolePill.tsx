@@ -10,13 +10,16 @@ export function CoachingRolePill({
   active,
   onSelect,
   className,
+  /** Sans rôle coach : pastille Coach visible mais non interactive (vue Mon plan athlète). */
+  coachSegmentDisabled = false,
 }: {
   active: Role;
   onSelect: (role: Role) => void;
   className?: string;
+  coachSegmentDisabled?: boolean;
 }) {
   return (
-    <div className={cn("px-5 pt-3 pb-0", className)}>
+    <div className={cn("px-6 pt-3 pb-0", className)}>
       <div className="flex rounded-xl bg-[#E5E5EA] p-1">
         {(
           [
@@ -25,12 +28,18 @@ export function CoachingRolePill({
           ] as const
         ).map((item) => {
           const selected = active === item.id;
+          const disabled = coachSegmentDisabled && item.id === "coach";
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => onSelect(item.id)}
-              className="flex-1 rounded-lg py-2 text-[15px] font-semibold transition-all"
+              disabled={disabled}
+              aria-disabled={disabled}
+              onClick={() => !disabled && onSelect(item.id)}
+              className={cn(
+                "flex-1 rounded-lg py-2 text-[15px] font-semibold transition-all",
+                disabled && "cursor-not-allowed opacity-45"
+              )}
               style={{
                 background: selected ? "white" : "transparent",
                 color: selected ? "#0A0F1F" : "#8E8E93",

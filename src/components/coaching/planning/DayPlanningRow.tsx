@@ -151,7 +151,7 @@ export function DayPlanningRow({
     return (
       <div
         className={cn(
-          "relative flex items-stretch gap-2.5 px-5 py-2 [-webkit-font-smoothing:antialiased]",
+          "relative flex items-stretch gap-2.5 px-0 py-2 [-webkit-font-smoothing:antialiased]",
           '[font-family:-apple-system,BlinkMacSystemFont,"SF_Pro_Display",system-ui,sans-serif]',
         )}
         style={isToday ? { background: "#E5F0FF" } : undefined}
