@@ -14,7 +14,7 @@ import { StravaConnect } from "@/components/StravaConnect";
 import { InstagramConnect } from "@/components/InstagramConnect";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
-import { ReferralDialog } from "@/components/ReferralDialog";
+import { ReferralParrainagePage } from "@/components/referral/ReferralParrainagePage";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
@@ -228,7 +228,7 @@ export const SettingsConnections = ({
   } = useShareProfile();
   const { isNative, hasPermission, requestPermissions } = useContacts();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [showReferralDialog, setShowReferralDialog] = useState(false);
+  const [showReferralPage, setShowReferralPage] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     const uid = user?.id;
@@ -307,6 +307,10 @@ export const SettingsConnections = ({
   };
 
   const suggestionsOn = profile?.allow_friend_suggestions !== false;
+
+  if (showReferralPage) {
+    return <ReferralParrainagePage onBack={() => setShowReferralPage(false)} />;
+  }
 
   return (
     <motion.div
@@ -516,8 +520,8 @@ export const SettingsConnections = ({
                   Icon={Gift}
                   color="#FF9500"
                   label="Parrainage"
-                  subtitle="Invitez vos amis"
-                  onClick={() => setShowReferralDialog(true)}
+                  subtitle="Invitez vos amis · Gagnez du Premium"
+                  onClick={() => setShowReferralPage(true)}
                 />
                 <div className="ml-[64px] h-px bg-[#E5E5EA]" />
                 <SettingsConnexionsRow
@@ -530,8 +534,6 @@ export const SettingsConnections = ({
               </div>
         </div>
       </IosFixedPageHeaderShell>
-
-      <ReferralDialog isOpen={showReferralDialog} onClose={() => setShowReferralDialog(false)} />
 
       <ProfileShareScreen
         open={showProfileShare}

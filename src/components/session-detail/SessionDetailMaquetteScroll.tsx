@@ -39,7 +39,7 @@ export type SessionDetailMaquetteScrollProps = {
   onGoogleCalendar: () => void;
   onGoogleMaps: () => void;
   routeMapRef?: RefObject<HTMLDivElement | null>;
-  routeSectionRef?: RefObject<HTMLDivElement | null>;
+  routeSectionRef?: RefObject<HTMLDivElement | null> | null;
   hasRoute: boolean;
   routeDistanceLabel?: string;
   onRouteExpand?: () => void;
@@ -258,10 +258,9 @@ export function SessionDetailMaquetteScroll(props: SessionDetailMaquetteScrollPr
       {props.hasRoute ? (
         <>
           <SessionDetailSectionTitle label="Itinéraire" />
-          <div className="px-4">
+          <div className="px-4" ref={props.routeSectionRef ?? undefined}>
             <button
               type="button"
-              ref={props.routeSectionRef as RefObject<HTMLButtonElement> | undefined}
               onClick={props.onRouteExpand}
               className="w-full overflow-hidden rounded-[18px] bg-white text-left shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.05)] transition-transform active:scale-[0.99]"
             >

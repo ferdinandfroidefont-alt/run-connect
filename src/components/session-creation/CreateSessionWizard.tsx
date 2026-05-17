@@ -20,12 +20,18 @@ import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { DEFAULT_SESSION_CALENDAR_DURATION_MIN, estimateSessionDurationMinutes } from '@/lib/estimateSessionDurationMinutes';
 import { normalizeBlocksForStorage, resolveSessionTotals } from '@/lib/sessionBlockCalculations';
 
-import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
+import { useSessionWizard, CoachingSessionPrefill, type WizardFlow } from './useSessionWizard';
 import { LocationStep } from './steps/LocationStep';
 import { ActivityStep } from './steps/ActivityStep';
 import { DateTimeStep } from './steps/DateTimeStep';
 import { DetailsStep } from './steps/DetailsStep';
 import { ConfirmStep } from './steps/ConfirmStep';
+import { EssentialsStep } from './steps/EssentialsStep';
+import { FinalizeStep } from './steps/FinalizeStep';
+import {
+  buildCreatorPreviewSessionSeed,
+  type CreateSessionCreatorPreviewRequest,
+} from '@/lib/createSessionCreatorPreview';
 import { BoostSessionDialog } from '@/components/sessions/BoostSessionDialog';
 import {
   FREE_VISIBILITY_RADIUS_KM,
@@ -57,6 +63,9 @@ interface CreateSessionWizardProps {
   // Coaching mode — pre-fill from coaching session
   coachingSession?: CoachingSessionPrefill | null;
   onCoachingScheduled?: () => void;
+  /** Aperçu interne support créateur (flux 2 étapes, données fictives). */
+  creatorPreview?: CreateSessionCreatorPreviewRequest | null;
+  onCreatorPreviewConsumed?: () => void;
 }
 
 export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
@@ -71,6 +80,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   isEditMode = false,
   coachingSession,
   onCoachingScheduled,
+  creatorPreview = null,
+  onCreatorPreviewConsumed,
 }) => {
   const { user } = useAuth();
   const { isPreviewMode } = useAppPreview();
@@ -84,13 +95,16 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const [boostDialogOpen, setBoostDialogOpen] = useState(false);
   const [boostingSessionId, setBoostingSessionId] = useState<string | null>(null);
 
+  const wizardFlow: WizardFlow = creatorPreview ? 'quick' : 'full';
   const wizard = useSessionWizard({
     presetLocation,
     initialSession: editSession,
     isEditMode,
     coachingSession,
+    wizardFlow,
   });
   const lastAppliedPresetRouteRef = useRef<string | null>(null);
+  const lastAppliedCreatorPreviewKeyRef = useRef<string | null>(null);
 
   // Handle preset location
   useEffect(() => {
@@ -113,8 +127,33 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   useEffect(() => {
     if (!isOpen) {
       wizard.resetWizard();
+      if (lastAppliedCreatorPreviewKeyRef.current) {
+        lastAppliedCreatorPreviewKeyRef.current = null;
+        onCreatorPreviewConsumed?.();
+      }
     }
-  }, [isOpen, wizard.resetWizard]);
+  }, [isOpen, wizard.resetWizard, onCreatorPreviewConsumed]);
+
+  const creatorPreviewKey = creatorPreview
+    ? `${creatorPreview.step}:${creatorPreview.readOnly ? 1 : 0}`
+    : null;
+
+  useEffect(() => {
+    if (!isOpen || !creatorPreview || !creatorPreviewKey) return;
+    if (lastAppliedCreatorPreviewKeyRef.current === creatorPreviewKey) return;
+    lastAppliedCreatorPreviewKeyRef.current = creatorPreviewKey;
+    const seed = buildCreatorPreviewSessionSeed();
+    wizard.updateFormData(seed.formPatch);
+    wizard.updateLocation(seed.location);
+    wizard.goToStep(creatorPreview.step);
+  }, [
+    isOpen,
+    creatorPreview,
+    creatorPreviewKey,
+    wizard.updateFormData,
+    wizard.updateLocation,
+    wizard.goToStep,
+  ]);
 
   const handleReverseGeocode = async (lat: number, lng: number) => {
     try {
@@ -179,10 +218,12 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const handleSubmit = async () => {
     if (!user || !wizard.selectedLocation) return;
 
-    if (isPreviewMode) {
+    if (isPreviewMode || creatorPreview?.readOnly) {
       toast({
-        title: "Mode aperçu",
-        description: "La création ou modification de séance est désactivée.",
+        title: creatorPreview?.readOnly ? "Aperçu support créateur" : "Mode aperçu",
+        description: creatorPreview?.readOnly
+          ? "Aucune séance n’est publiée depuis cet écran d’aperçu."
+          : "La création ou modification de séance est désactivée.",
         variant: "destructive",
       });
       return;
@@ -526,6 +567,34 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
     const shellFooter = wizard.wizardSteps.length >= 5;
 
     switch (wizard.currentStep) {
+      case 'essentials':
+        return (
+          <EssentialsStep
+            map={map}
+            formData={wizard.formData}
+            selectedLocation={wizard.selectedLocation}
+            onLocationSelect={(loc) => wizard.updateLocation(loc)}
+            onFormDataChange={wizard.updateFormData}
+            onNext={wizard.goToNextStep}
+            canProceed={wizard.canProceed()}
+          />
+        );
+      case 'finalize':
+        return (
+          <FinalizeStep
+            formData={wizard.formData}
+            selectedLocation={wizard.selectedLocation}
+            imagePreview={wizard.imagePreview}
+            isPremium={subscriptionInfo?.subscribed || false}
+            loading={loading || uploadingImage}
+            isCoachingMode={!!coachingSession}
+            onFormDataChange={wizard.updateFormData}
+            onImageSelect={handleImageSelect}
+            onImageRemove={handleImageRemove}
+            onSubmit={handleSubmit}
+            onBack={wizard.goToPreviousStep}
+          />
+        );
       case 'location':
         return (
           <LocationStep
@@ -666,7 +735,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-        <DialogContent className="flex h-full max-h-full w-full max-w-full min-h-0 flex-col overflow-hidden rounded-none border-0 p-0 sm:max-h-[90vh] sm:max-w-md sm:rounded-lg sm:border sm:border-[#E5E5EA]">
+        <DialogContent className="flex h-full max-h-full w-full max-w-full min-h-0 touch-pan-y flex-col overflow-hidden overscroll-x-none rounded-none border-0 p-0 sm:max-h-[90vh] sm:max-w-md sm:rounded-lg sm:border sm:border-[#E5E5EA]">
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
             headerWrapperClassName="z-40 shrink-0 border-b border-[#E5E5EA] bg-white"
@@ -701,7 +770,11 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
                     )
                   }
                   title={
-                    isEditMode ? 'Modifier la séance' : 'Créer une séance'
+                    creatorPreview
+                      ? 'Aperçu · Création séance'
+                      : isEditMode
+                        ? 'Modifier la séance'
+                        : 'Créer une séance'
                   }
                   right={
                     wizard.wizardSteps.length > 1 ? (
@@ -729,9 +802,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             scrollClassName="min-h-0"
             scrollProps={{ style: { background: WIZARD_BG } }}
           >
-            <div className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden px-5 pb-4 pt-5">
+            <div className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overscroll-x-none px-5 pb-4 pt-5">
               <AnimatePresence mode="wait">
-                <div key={wizard.currentStep} className="flex min-h-0 flex-1 flex-col">
+                <div key={wizard.currentStep} className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
                   {renderStep()}
                 </div>
               </AnimatePresence>

@@ -1,6 +1,7 @@
 /* Polices optionnelles — la priorité reste la stack système (SF Pro sur Apple) */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap");
+@import "./styles/ios-theme.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -148,15 +149,15 @@ html, body {
     color-scheme: dark;
 
     --background: 0 0% 0%;
-    /* Texte proche « label » iOS (pas un blanc #fff qui crase sur OLED) */
-    --foreground: 240 4% 96%;
+    /* Label iOS dark (#FFFFFF) — maquette RunConnect (24) */
+    --foreground: 0 0% 100%;
 
     /* Surfaces élevées type Settings.app (systemGray6 dark ≈ #1C1C1E) */
     --card: 240 2% 11%;
-    --card-foreground: 240 4% 96%;
+    --card-foreground: 0 0% 100%;
 
     --popover: 240 2% 11%;
-    --popover-foreground: 240 4% 96%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 211 100% 52%;
     --primary-foreground: 0 0% 100%;
@@ -165,10 +166,11 @@ html, body {
 
     /* Secondaires / blocs désactivés (systemGray5 « pleine » ~#2C2C2E) */
     --secondary: 240 2% 17%;
-    --secondary-foreground: 240 4% 96%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 240 2% 14%;
-    --muted-foreground: 240 4% 64%;
+    /* Secondary label dark — rgba(235,235,245,0.78) */
+    --muted-foreground: 240 20% 94%;
 
     --accent: 142 50% 46%;
     --accent-foreground: 0 0% 100%;
@@ -249,7 +251,7 @@ html, body {
 
   /* Strict Viewport Locking for iOS Stability */
   html, body {
-    background-color: hsl(var(--background)) !important;
+    background-color: var(--bg, hsl(var(--background))) !important;
     height: 100%;
     width: 100%;
     overflow-x: hidden;
@@ -272,7 +274,7 @@ html, body {
     display: flex;
     flex-direction: column;
     /* Jamais transparent : si le layout laisse un trou subpixel, on ne voit pas le bleu natif Capacitor */
-    background-color: hsl(var(--background));
+    background-color: var(--bg, hsl(var(--background)));
   }
 }
 
@@ -1165,6 +1167,7 @@ html, body {
 /* Zone scroll sous header épinglé (évite saut d’ancrage vue clavier). */
 .ios-keyboard-scroll-body {
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: none;
   overscroll-behavior-y: contain;
   overflow-anchor: none;
 }

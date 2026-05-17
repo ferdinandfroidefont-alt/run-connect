@@ -1,0 +1,353 @@
+/* RunConnect iOS theme — aligné maquette RunConnect (24).jsx */
+:root {
+  /* ===== LIGHT MODE (Apple iOS System Colors - Light) ===== */
+  --bg: #F2F2F7;              /* System Background */
+  --card-bg: #FFFFFF;          /* Secondary System Background (niveau 1) */
+  --bg-elevated: #FFFFFF;      /* Tertiary System Background (niveau 2) */
+  --bg-tertiary: #F8F8F8;      /* Variante très claire */
+  --bg-input: #E5E5EA;         /* Fill : System Gray 6 */
+  --bg-chip: #F2F2F7;          /* System Gray 6 background */
+  --bg-grouped: #F2F2F7;       /* Grouped tables background */
+  --text-primary: #0A0F1F;     /* Label */
+  --text-secondary: #8E8E93;   /* Secondary Label */
+  --text-tertiary: #C7C7CC;    /* Tertiary Label */
+  --text-quaternary: rgba(60,60,67,0.18);
+  --separator: #E5E5EA;        /* Separator (non-opaque) */
+  --separator-strong: #C6C6C8; /* Opaque Separator */
+  --border: #E5E5EA;
+  --shadow-color: rgba(0,0,0,0.06);
+  --backdrop: rgba(0,0,0,0.45);
+  --nav-bg: rgba(242,242,247,0.92);
+
+  /* Couleurs système (Light) — Apple HIG */
+  --system-blue: #007AFF;
+  --system-green: #34C759;
+  --system-red: #FF3B30;
+  --system-orange: #FF9500;
+  --system-yellow: #FFCC00;
+  --system-purple: #AF52DE;
+  --system-pink: #FF2D55;
+  --system-teal: #5AC8FA;
+  --system-indigo: #5856D6;
+}
+
+.dark {
+  /* ===== DARK MODE (Apple iOS Elevated System Colors) ===== */
+  /* Principe Apple : plus un élément est ÉLEVÉ (cards posées sur le fond), */
+  /* plus il est CLAIR — c'est l'inverse de l'intuition. */
+  --bg: #000000;               /* System Background (niveau 0 — le plus profond) */
+  --card-bg: #1C1C1E;          /* Secondary System Background (niveau 1) */
+  --bg-elevated: #2C2C2E;      /* Tertiary System Background (niveau 2, plus clair) */
+  --bg-tertiary: #3A3A3C;      /* Niveau 3, encore plus clair */
+  --bg-input: #1C1C1E;         /* Fill : System Gray 6 */
+  --bg-chip: #2C2C2E;          /* System Gray 5 (pills, chips) */
+  --bg-grouped: #000000;       /* Grouped tables background = noir */
+  --text-primary: #FFFFFF;     /* Label */
+  --text-secondary: rgba(235,235,245,0.78);   /* Secondary Label (boosté de 0.6 à 0.78) */
+  --text-tertiary: rgba(235,235,245,0.5);    /* Tertiary Label (boosté de 0.3 à 0.5) */
+  --text-quaternary: rgba(235,235,245,0.25); /* Quaternary Label */
+  --separator: rgba(84,84,88,0.65);  /* Separator */
+  --separator-strong: #38383A;       /* Opaque Separator */
+  --border: #38383A;
+  --shadow-color: rgba(0,0,0,0.5);
+  --backdrop: rgba(0,0,0,0.6);
+  --nav-bg: rgba(28,28,30,0.92);
+
+  /* Couleurs système (Dark) — Apple HIG : légèrement plus vives qu'en light */
+  --system-blue: #0A84FF;
+  --system-green: #30D158;
+  --system-red: #FF453A;
+  --system-orange: #FF9F0A;
+  --system-yellow: #FFD60A;
+  --system-purple: #BF5AF2;
+  --system-pink: #FF375F;
+  --system-teal: #64D2FF;
+  --system-indigo: #5E5CE6;
+
+  color-scheme: dark;
+}
+
+html, body {
+  background-color: var(--bg);
+}
+
+/* ==== Override Tailwind classes communes en mode dark ==== */
+.dark [class~="bg-white"] { background-color: var(--card-bg) !important; }
+.dark [class~="bg-[#F2F2F7]"] { background-color: var(--bg) !important; }
+.dark [class~="bg-[#F8F8F8]"] { background-color: var(--bg-elevated) !important; }
+.dark [class~="bg-[#E5E5EA]"] { background-color: var(--bg-input) !important; }
+.dark [class~="bg-[#FAFAFA]"] { background-color: var(--bg-elevated) !important; }
+.dark [class~="bg-[#FFFFFF]"] { background-color: var(--card-bg) !important; }
+
+/* Active states */
+.dark [class~="active:bg-[#F8F8F8]"]:active { background-color: rgba(255,255,255,0.06) !important; }
+.dark [class~="active:bg-[#F2F2F7]"]:active { background-color: rgba(255,255,255,0.06) !important; }
+.dark [class~="active:bg-black/[0.04]"]:active { background-color: rgba(255,255,255,0.06) !important; }
+
+/* Textes sombres → blancs */
+.dark [class~="text-[#0A0F1F]"] { color: var(--text-primary) !important; }
+.dark [class~="text-[#1A1A1F]"] { color: var(--text-primary) !important; }
+.dark [class~="text-[#3C3C43]"] { color: var(--text-secondary) !important; }
+.dark [class~="text-black"] { color: var(--text-primary) !important; }
+
+/* Textes secondaires (gris) gardent la teinte */
+.dark [class~="text-[#8E8E93]"] { color: var(--text-secondary) !important; }
+.dark [class~="text-[#C7C7CC]"] { color: var(--text-tertiary) !important; }
+
+/* Borders / séparateurs */
+.dark [class~="border-[#E5E5EA]"] { border-color: var(--separator) !important; }
+.dark [class~="border-[#C7C7CC]"] { border-color: var(--text-tertiary) !important; }
+.dark [class~="border-[#D1D1D6]"] { border-color: var(--separator) !important; }
+.dark [class~="border-white"] { border-color: var(--card-bg) !important; }
+
+/* ==== Override des inline styles via attribute selectors ==== */
+/* Backgrounds */
+.dark [style*="background: white"],
+.dark [style*="background:white"],
+.dark [style*="background: #FFFFFF"],
+.dark [style*="background:#FFFFFF"],
+.dark [style*="background: #fff"],
+.dark [style*="background:#fff"] {
+  background-color: var(--card-bg) !important;
+}
+.dark [style*="background: #F2F2F7"],
+.dark [style*="background:#F2F2F7"] {
+  background-color: var(--bg) !important;
+}
+.dark [style*="background: #F8F8F8"],
+.dark [style*="background:#F8F8F8"] {
+  background-color: var(--bg-elevated) !important;
+}
+.dark [style*="background: #E5E5EA"],
+.dark [style*="background:#E5E5EA"] {
+  background-color: var(--bg-input) !important;
+}
+
+/* ===== Couleurs système (inline) : ajustement Apple dark ===== */
+/* Bleu système */
+.dark [style*="background: #007AFF"],
+.dark [style*="background:#007AFF"] {
+  background-color: var(--system-blue) !important;
+}
+.dark [style*="color: #007AFF"],
+.dark [style*="color:#007AFF"] {
+  color: var(--system-blue) !important;
+}
+/* Vert système */
+.dark [style*="background: #34C759"],
+.dark [style*="background:#34C759"] {
+  background-color: var(--system-green) !important;
+}
+.dark [style*="color: #34C759"],
+.dark [style*="color:#34C759"] {
+  color: var(--system-green) !important;
+}
+/* Rouge système */
+.dark [style*="background: #FF3B30"],
+.dark [style*="background:#FF3B30"] {
+  background-color: var(--system-red) !important;
+}
+.dark [style*="color: #FF3B30"],
+.dark [style*="color:#FF3B30"] {
+  color: var(--system-red) !important;
+}
+/* Orange système */
+.dark [style*="background: #FF9500"],
+.dark [style*="background:#FF9500"] {
+  background-color: var(--system-orange) !important;
+}
+.dark [style*="color: #FF9500"],
+.dark [style*="color:#FF9500"] {
+  color: var(--system-orange) !important;
+}
+/* Jaune système */
+.dark [style*="background: #FFCC00"],
+.dark [style*="background:#FFCC00"] {
+  background-color: var(--system-yellow) !important;
+}
+.dark [style*="color: #FFCC00"],
+.dark [style*="color:#FFCC00"] {
+  color: var(--system-yellow) !important;
+}
+/* Violet système */
+.dark [style*="background: #AF52DE"],
+.dark [style*="background:#AF52DE"] {
+  background-color: var(--system-purple) !important;
+}
+.dark [style*="color: #AF52DE"],
+.dark [style*="color:#AF52DE"] {
+  color: var(--system-purple) !important;
+}
+/* Rose système */
+.dark [style*="background: #FF2D55"],
+.dark [style*="background:#FF2D55"] {
+  background-color: var(--system-pink) !important;
+}
+.dark [style*="color: #FF2D55"],
+.dark [style*="color:#FF2D55"] {
+  color: var(--system-pink) !important;
+}
+/* Teal système */
+.dark [style*="background: #5AC8FA"],
+.dark [style*="background:#5AC8FA"] {
+  background-color: var(--system-teal) !important;
+}
+.dark [style*="color: #5AC8FA"],
+.dark [style*="color:#5AC8FA"] {
+  color: var(--system-teal) !important;
+}
+/* Indigo système */
+.dark [style*="background: #5856D6"],
+.dark [style*="background:#5856D6"] {
+  background-color: var(--system-indigo) !important;
+}
+.dark [style*="color: #5856D6"],
+.dark [style*="color:#5856D6"] {
+  color: var(--system-indigo) !important;
+}
+
+/* Texts */
+.dark [style*="color: #0A0F1F"],
+.dark [style*="color:#0A0F1F"],
+.dark [style*="color: rgb(10, 15, 31)"],
+.dark [style*="color:rgb(10,15,31)"] {
+  color: var(--text-primary) !important;
+}
+.dark [style*="color: #1A1A1F"],
+.dark [style*="color:#1A1A1F"],
+.dark [style*="color: rgb(26, 26, 31)"],
+.dark [style*="color:rgb(26,26,31)"] {
+  color: var(--text-primary) !important;
+}
+.dark [style*="color: #1C1C1E"],
+.dark [style*="color:#1C1C1E"],
+.dark [style*="color: rgb(28, 28, 30)"] {
+  color: var(--text-primary) !important;
+}
+.dark [style*="color: #3C3C43"],
+.dark [style*="color:#3C3C43"],
+.dark [style*="color: rgb(60, 60, 67)"] {
+  color: var(--text-secondary) !important;
+}
+.dark [style*="color: #8E8E93"],
+.dark [style*="color:#8E8E93"],
+.dark [style*="color: rgb(142, 142, 147)"] {
+  color: var(--text-secondary) !important;
+}
+.dark [style*="color: #C7C7CC"],
+.dark [style*="color:#C7C7CC"],
+.dark [style*="color: rgb(199, 199, 204)"] {
+  color: var(--text-tertiary) !important;
+}
+
+/* ===== Fallback global : tout texte sombre non couvert devient lisible ===== */
+/* Si quelqu'un utilise black, navy, gray-900 etc. en inline */
+.dark [style*="color: black"],
+.dark [style*="color:black"],
+.dark [style*="color: #000"],
+.dark [style*="color:#000"] {
+  color: var(--text-primary) !important;
+}
+
+/* Renforcer le contraste des textes light gris (anciens labels) */
+.dark [class~="text-gray-500"],
+.dark [class~="text-gray-600"],
+.dark [class~="text-gray-700"],
+.dark [class~="text-gray-800"],
+.dark [class~="text-gray-900"],
+.dark [class~="text-neutral-700"],
+.dark [class~="text-neutral-800"],
+.dark [class~="text-neutral-900"] {
+  color: var(--text-primary) !important;
+}
+.dark [class~="text-gray-300"],
+.dark [class~="text-gray-400"],
+.dark [class~="text-neutral-400"],
+.dark [class~="text-neutral-500"] {
+  color: var(--text-secondary) !important;
+}
+
+/* Borders en inline */
+.dark [style*="border: 1px solid #E5E5EA"],
+.dark [style*="border: 0.5px solid #E5E5EA"],
+.dark [style*="border-bottom: 1px solid #E5E5EA"],
+.dark [style*="borderBottom: 1px solid #E5E5EA"] {
+  border-color: var(--separator) !important;
+}
+
+/* ===== Fixes spécifiques dark mode ===== */
+
+/* Tabs Conversations/Clubs/Groupes : background #E8E8ED → dark */
+.dark [style*="background: #E8E8ED"],
+.dark [style*="background:#E8E8ED"] {
+  background-color: var(--bg-chip) !important;
+}
+
+/* Icônes lucide-react avec stroke en hex sombre → blanc */
+.dark svg[stroke="#0A0F1F"],
+.dark [stroke="#0A0F1F"] {
+  stroke: var(--text-primary) !important;
+}
+.dark svg[stroke="#1A1A1F"],
+.dark [stroke="#1A1A1F"] {
+  stroke: var(--text-primary) !important;
+}
+.dark svg[stroke="#1C1C1E"],
+.dark [stroke="#1C1C1E"] {
+  stroke: var(--text-primary) !important;
+}
+.dark svg[stroke="#3C3C43"],
+.dark [stroke="#3C3C43"] {
+  stroke: var(--text-secondary) !important;
+}
+.dark svg[stroke="black"],
+.dark svg[stroke="#000"],
+.dark svg[stroke="#000000"] {
+  stroke: var(--text-primary) !important;
+}
+
+/* Headers sticky translucides : adapter la couleur de fond en dark */
+.dark .rc-sticky-header[style*="rgba(242, 242, 247, 0.72)"],
+.dark .rc-sticky-header[style*="rgba(242,242,247,0.72)"] {
+  background-color: rgba(28, 28, 30, 0.78) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Toute backgroundColor avec rgba(242, 242, 247, X) translucide → adapter */
+.dark [style*="rgba(242, 242, 247, 0.92)"],
+.dark [style*="rgba(242,242,247,0.92)"] {
+  background-color: rgba(28, 28, 30, 0.92) !important;
+}
+.dark [style*="rgba(242, 242, 247, 0.85)"],
+.dark [style*="rgba(242,242,247,0.85)"] {
+  background-color: rgba(28, 28, 30, 0.85) !important;
+}
+.dark [style*="rgba(255, 255, 255, 0.95)"],
+.dark [style*="rgba(255,255,255,0.95)"] {
+  background-color: rgba(44, 44, 46, 0.95) !important;
+}
+
+/* Inputs : barres de recherche grises etc. */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--text-tertiary) !important;
+}
+.dark input,
+.dark textarea {
+  color: var(--text-primary) !important;
+}
+/* backgroundColor (React inline) — même mapping que background */
+.dark [style*="backgroundColor: #F2F2F7"],
+.dark [style*="backgroundColor:#F2F2F7"],
+.dark [style*="background-color: #F2F2F7"] {
+  background-color: var(--bg) !important;
+}
+.dark [style*="backgroundColor: white"],
+.dark [style*="backgroundColor:#FFFFFF"],
+.dark [style*="backgroundColor: #FFFFFF"] {
+  background-color: var(--card-bg) !important;
+}
+.dark [style*="backgroundColor: #E5E5EA"],
+.dark [style*="backgroundColor:#E5E5EA"] {
+  background-color: var(--bg-input) !important;
+}

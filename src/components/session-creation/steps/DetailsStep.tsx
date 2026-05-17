@@ -299,17 +299,22 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   const headline =
     locationHeadline && activityShort ? `${activityShort} à ${locationHeadline}` : activityShort || 'Séance';
 
+  const scrollInStep = !hideNavigation && !wizardShellFooter;
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: 12 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -12 }}
-      className={cn('flex min-h-0 w-full flex-col', !hideNavigation && 'flex-1')}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className={cn(
+        'flex min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden',
+        !hideNavigation && 'flex-1'
+      )}
     >
       <div
         className={cn(
-          'space-y-4 px-0',
-          hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4'
+          'min-w-0 max-w-full space-y-4 overflow-x-hidden px-0 overscroll-x-none',
+          hideNavigation ? 'pb-0' : scrollInStep ? 'flex-1 overflow-y-auto overscroll-contain pb-4' : 'pb-4'
         )}
       >
         {!hideNavigation && wizardShellFooter && (
@@ -357,13 +362,16 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         </div>
 
         {builderTab === 'build' ? (
-          <CoachingBlockEditorPanel
-            key={schemaEditorKey}
-            sport={sportProp}
-            initialBlocks={coachingBlocks.length ? coachingBlocks : undefined}
-            onChange={handleCoachingBlocksChange}
-          />
+          <div className="min-w-0 max-w-full overflow-x-hidden">
+            <CoachingBlockEditorPanel
+              key={schemaEditorKey}
+              sport={sportProp}
+              initialBlocks={coachingBlocks.length ? coachingBlocks : undefined}
+              onChange={handleCoachingBlocksChange}
+            />
+          </div>
         ) : (
+          <div className="min-w-0 max-w-full overflow-x-hidden">
           <ModelsPage
             weekDays={weekDays}
             existingSessionsByDay={{}}
@@ -381,6 +389,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
               setMyModels((prev) => prev.filter((m) => m.id !== model.id));
             }}
           />
+          </div>
         )}
       </div>
 

@@ -44,7 +44,7 @@ export const ReferralCodeInput = ({ onSuccess, appearance = "default" }: Referra
       if (data.success) {
         toast({
           title: "Parrainage réussi !",
-          description: "Votre parrain vient de recevoir 1 jour de premium gratuit !",
+          description: "Ton parrain gagne 1 jour Premium et tu débloques 1 semaine offerte.",
         });
         setReferralCode('');
         onSuccess?.();
@@ -111,7 +111,7 @@ export const ReferralCodeInput = ({ onSuccess, appearance = "default" }: Referra
           </button>
         </div>
         <p className="m-0 mt-2.5 text-[13px] leading-snug text-[#8E8E93]">
-          En utilisant un code de parrainage, vous et votre parrain obtenez des avantages premium !
+          En utilisant un code de parrainage, ton parrain gagne 1 jour Premium et tu obtiens 1 semaine offerte.
         </p>
       </div>
     );
@@ -153,7 +153,7 @@ export const ReferralCodeInput = ({ onSuccess, appearance = "default" }: Referra
       </div>
 
       <p className="text-xs text-muted-foreground">
-        En utilisant un code de parrainage, vous et votre parrain obtenez des avantages premium !
+        En utilisant un code de parrainage, ton parrain gagne 1 jour Premium et tu obtiens 1 semaine offerte.
       </p>
     </div>
   );

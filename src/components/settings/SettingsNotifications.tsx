@@ -1,13 +1,19 @@
 import { useState, useEffect, useRef, useCallback, type ComponentType, type CSSProperties, type ReactNode } from "react";
 import type { LucideProps } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, ChevronLeft, ChevronRight, Smartphone, Users, MessageCircle, Play, Check, UserCheck } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
 import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import {
+  NOTIFICATION_PREFERENCE_SECTIONS,
+  NOTIFICATION_PROFILE_SELECT,
+  NOTIFICATION_PUSH_ROW,
+  type NotificationProfileColumn,
+} from "@/lib/notificationPreferenceConfig";
 
 /** Tokens maquette Réglages (RunConnect.jsx). */
 const ACTION_BLUE = "#007AFF";
@@ -15,6 +21,11 @@ const SETTINGS_BG = "#F2F2F7";
 const CARD_SHADOW = "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
 
 type IconComp = ComponentType<LucideProps>;
+
+type Profile = {
+  notifications_enabled?: boolean;
+  is_premium?: boolean;
+} & Partial<Record<NotificationProfileColumn, boolean>>;
 
 function SettingsMaquetteSubHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
@@ -26,10 +37,7 @@ function SettingsMaquetteSubHeader({ title, onBack }: { title: string; onBack: (
         style={{ width: 90 }}
       >
         <ChevronLeft className="size-6" color={ACTION_BLUE} strokeWidth={2.6} />
-        <span
-          className="-tracking-[0.01em]"
-          style={{ fontSize: 17, fontWeight: 500, color: ACTION_BLUE }}
-        >
+        <span className="-tracking-[0.01em]" style={{ fontSize: 17, fontWeight: 500, color: ACTION_BLUE }}>
           Retour
         </span>
       </button>
@@ -71,7 +79,7 @@ function SettingsMaquetteToggle({
         transition: "background 0.2s",
       }}
     >
-      <div
+      <motion.div
         style={{
           width: 27,
           height: 27,
@@ -210,18 +218,6 @@ function SettingsMaquetteChevronRow({
   );
 }
 
-interface Profile {
-  notifications_enabled?: boolean;
-  notif_follow_request?: boolean;
-  notif_message?: boolean;
-  notif_session_request?: boolean;
-  notif_friend_session?: boolean;
-  notif_club_invitation?: boolean;
-  notif_session_accepted?: boolean;
-  notif_presence_confirmed?: boolean;
-  is_premium?: boolean;
-}
-
 interface SettingsNotificationsProps {
   onBack: () => void;
 }
@@ -247,9 +243,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select(
-          "notifications_enabled, notif_follow_request, notif_message, notif_session_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed, is_premium"
-        )
+        .select(NOTIFICATION_PROFILE_SELECT)
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -344,31 +338,38 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
 
   const pushOn = profile?.notifications_enabled === true;
   const typesDisabled = !pushOn;
-
-  const notificationItems: {
-    key: keyof Profile;
-    icon: IconComp;
-    iconColor: string;
-    label: string;
-    desc: string;
-    premium?: boolean;
-  }[] = [
-    { key: "notif_follow_request", icon: Users, iconColor: ACTION_BLUE, label: "Demandes de suivi", desc: "Quand quelqu'un vous suit" },
-    { key: "notif_message", icon: MessageCircle, iconColor: "#34C759", label: "Messages", desc: "Nouveaux messages reçus" },
-    { key: "notif_session_request", icon: Play, iconColor: "#FF9500", label: "Demandes de session", desc: "Demandes de participation" },
-    { key: "notif_friend_session", icon: Users, iconColor: "#5856D6", label: "Sessions d'amis", desc: "Vos amis créent une session", premium: true },
-    { key: "notif_club_invitation", icon: Users, iconColor: "#FF3B30", label: "Invitations de club", desc: "Invitations à rejoindre un club" },
-    { key: "notif_session_accepted", icon: Check, iconColor: "#34C759", label: "Participants acceptés", desc: "Quelqu'un rejoint votre session" },
-    {
-      key: "notif_presence_confirmed",
-      icon: UserCheck,
-      iconColor: ACTION_BLUE,
-      label: "Confirmation de présence",
-      desc: "L'organisateur confirme votre présence",
-    },
-  ];
-
   const showAuthorizeRow = !isRegistered && isNative && pushOn;
+  const PushIcon = NOTIFICATION_PUSH_ROW.icon;
+
+  const renderPreferenceCard = (section: (typeof NOTIFICATION_PREFERENCE_SECTIONS)[number]) => (
+    <div key={section.id} data-tutorial={`settings-notifications-${section.id}`}>
+      <SettingsMaquetteSectionLabel>{section.label}</SettingsMaquetteSectionLabel>
+      <div className="mx-4 overflow-hidden" style={maquetteCardSx()}>
+        {section.items.map((item, index) => {
+          const rowDisabled = typesDisabled || !!(item.premium && !profile?.is_premium);
+          const checked = profile?.[item.key] === true;
+          return (
+            <div key={item.key}>
+              {index > 0 ? <div className="ml-[64px] h-px bg-[#E5E5EA]" /> : null}
+              <SettingsMaquetteToggleRow
+                Icon={item.icon}
+                iconColor={item.iconColor}
+                label={item.label}
+                subtitle={item.desc}
+                premium={!!item.premium}
+                value={checked}
+                disabled={rowDisabled}
+                onChange={(v) => {
+                  if (!user || typesDisabled || (item.premium && !profile?.is_premium)) return;
+                  void updatePrivacySettings(item.key, v);
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <motion.div
@@ -395,14 +396,13 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       >
         <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
           <div className="min-w-0 max-w-full pb-8" data-tutorial="settings-notifications-root">
-            {/* NOTIFICATIONS PUSH */}
             <div data-tutorial="settings-notifications-push">
               <SettingsMaquetteSectionLabel>NOTIFICATIONS PUSH</SettingsMaquetteSectionLabel>
               <div className="mx-4 overflow-hidden" style={maquetteCardSx()}>
                 <SettingsMaquetteToggleRow
-                  Icon={Smartphone}
-                  iconColor="#FF3B30"
-                  label="Notifications push"
+                  Icon={PushIcon}
+                  iconColor={NOTIFICATION_PUSH_ROW.iconColor}
+                  label={NOTIFICATION_PUSH_ROW.label}
                   subtitle={pushOn ? "Activées" : "Désactivées"}
                   value={pushOn}
                   onChange={(v) => void updatePrivacySettings("notifications_enabled", v)}
@@ -430,34 +430,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
               </div>
             </div>
 
-            {/* TYPES */}
-            <div data-tutorial="settings-notifications-types">
-              <SettingsMaquetteSectionLabel>TYPES DE NOTIFICATIONS</SettingsMaquetteSectionLabel>
-              <div className="mx-4 overflow-hidden" style={maquetteCardSx()}>
-                {notificationItems.map((item, index) => {
-                  const rowDisabled = typesDisabled || !!(item.premium && !profile?.is_premium);
-                  const checked = profile?.[item.key] === true;
-                  return (
-                    <div key={item.key}>
-                      {index > 0 ? <div className="ml-[64px] h-px bg-[#E5E5EA]" /> : null}
-                      <SettingsMaquetteToggleRow
-                        Icon={item.icon}
-                        iconColor={item.iconColor}
-                        label={item.label}
-                        subtitle={item.desc}
-                        premium={!!item.premium}
-                        value={checked}
-                        disabled={rowDisabled}
-                        onChange={(v) => {
-                          if (!user || typesDisabled || (item.premium && !profile?.is_premium)) return;
-                          void updatePrivacySettings(item.key as string, v);
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {NOTIFICATION_PREFERENCE_SECTIONS.map((section) => renderPreferenceCard(section))}
 
             {import.meta.env.DEV ? (
               <div className="mt-6">

@@ -1,6 +1,20 @@
 import { useState, useMemo, type ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, Play, MapPin, MessageCircle, GraduationCap, User, Share2, Film, Calendar, LayoutList, Sparkles, UserPlus } from "lucide-react";
+import {
+  Eye,
+  Play,
+  MapPin,
+  MessageCircle,
+  GraduationCap,
+  User,
+  Share2,
+  Film,
+  Calendar,
+  LayoutList,
+  Sparkles,
+  UserPlus,
+  CalendarPlus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useAppPreview } from "@/contexts/AppPreviewContext";
+import { useAppContext } from "@/contexts/AppContext";
 import {
   type PreviewIdentity,
   type PreviewRole,
@@ -21,6 +36,7 @@ import { COUNTRY_LABELS } from "@/lib/countryLabels";
 import { cn } from "@/lib/utils";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { AUTH_ARRIVAL_PREVIEW_PARAM } from "@/lib/authArrivalPreview";
+import { canUseCreateSessionCreatorPreview } from "@/lib/createSessionCreatorPreview";
 
 const SPORT_OPTIONS = [
   { value: "running", label: "Course" },
@@ -53,6 +69,7 @@ export function AdminAppPreviewTab({ onClose }: AdminAppPreviewTabProps) {
   const { user } = useAuth();
   const { userProfile } = useUserProfile();
   const { enterPreview, isPreviewMode, exitPreview } = useAppPreview();
+  const { requestCreateSessionCreatorPreview } = useAppContext();
 
   const [draft, setDraft] = useState<PreviewIdentity>(() => createEmptyPreviewIdentity());
 
@@ -152,6 +169,37 @@ export function AdminAppPreviewTab({ onClose }: AdminAppPreviewTabProps) {
         >
           <UserPlus className="mr-2 h-4 w-4" />
           Ouvrir le parcours arrivée
+        </Button>
+      </div>
+
+      <div className="rounded-[14px] border border-border/60 bg-card/80 p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Création de séance
+        </p>
+        <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
+          Ouvrir l’étape <span className="font-semibold text-foreground">2/2 · Publier</span> du wizard (données
+          fictives, aucune publication).
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          className="h-10 w-full rounded-[12px] text-[13px] font-semibold"
+          onClick={() => {
+            if (!canUseCreateSessionCreatorPreview(user?.email, userProfile?.username ?? null)) {
+              toast({
+                title: "Accès refusé",
+                description: "Réservé au compte administrateur créateur.",
+                variant: "destructive",
+              });
+              return;
+            }
+            requestCreateSessionCreatorPreview({ step: "finalize", readOnly: true });
+            onClose();
+            navigate("/", { replace: true });
+          }}
+        >
+          <CalendarPlus className="mr-2 h-4 w-4" />
+          Ouvrir création séance · étape 2/2
         </Button>
       </div>
 

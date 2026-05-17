@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from "react";
+import type { CreateSessionCreatorPreviewRequest } from "@/lib/createSessionCreatorPreview";
 
 export type HomeFeedSheetSnap = 0 | 1 | 2;
 
@@ -7,6 +8,10 @@ interface AppContextType {
   setRefreshSessions: (refresh: () => void) => void;
   openCreateSession: () => void;
   setOpenCreateSession: (openFunction: () => void) => void;
+  /** Aperçu support créateur : ouvre le wizard création à l’étape demandée (données fictives). */
+  createSessionCreatorPreviewRequest: CreateSessionCreatorPreviewRequest | null;
+  requestCreateSessionCreatorPreview: (request: CreateSessionCreatorPreviewRequest) => void;
+  consumeCreateSessionCreatorPreview: () => void;
   openCreateRoute: () => void;
   setOpenCreateRoute: (openFunction: () => void) => void;
   hideBottomNav: boolean;
@@ -49,6 +54,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [refreshSessions, setRefreshSessionsState] = useState<() => void>(() => () => {});
   const [openCreateSession, setOpenCreateSessionState] = useState<() => void>(() => () => {});
   const [openCreateRoute, setOpenCreateRouteState] = useState<() => void>(() => () => {});
+  const [createSessionCreatorPreviewRequest, setCreateSessionCreatorPreviewRequest] =
+    useState<CreateSessionCreatorPreviewRequest | null>(null);
   const [bottomNavSuppressors, setBottomNavSuppressors] = useState<Record<string, boolean>>({});
 
   const setBottomNavSuppressed = useCallback((id: string, suppressed: boolean) => {
@@ -110,12 +117,23 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     setOpenCreateRouteState(() => openFunction);
   }, []);
 
+  const requestCreateSessionCreatorPreview = useCallback((request: CreateSessionCreatorPreviewRequest) => {
+    setCreateSessionCreatorPreviewRequest(request);
+  }, []);
+
+  const consumeCreateSessionCreatorPreview = useCallback(() => {
+    setCreateSessionCreatorPreviewRequest(null);
+  }, []);
+
   return (
     <AppContext.Provider value={{ 
       refreshSessions, 
       setRefreshSessions, 
       openCreateSession,
       setOpenCreateSession,
+      createSessionCreatorPreviewRequest,
+      requestCreateSessionCreatorPreview,
+      consumeCreateSessionCreatorPreview,
       openCreateRoute,
       setOpenCreateRoute,
       hideBottomNav,

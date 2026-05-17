@@ -41,16 +41,19 @@ import type { DistanceUnit } from "@/lib/distanceUnits";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetArrivalFlowForDev } from "@/lib/arrivalFlowDev";
 import { clearOnboardingCompleted } from "@/lib/arrivalFlowStorage";
-
-/** Palette / mesures alignées maquette RunConnect (9).jsx — sous-page Général */
-const SETTINGS_BG = "#F2F2F7";
-const SETTINGS_ACTION_BLUE = "#007AFF";
-const SETTINGS_TITLE_INK = "#0A0F1F";
-const SETTINGS_SUBTITLE = "#8E8E93";
-const SETTINGS_CARD_SHADOW =
-  "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
-const SETTINGS_FONT =
-  "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif";
+import {
+  SETTINGS_ACTION_BLUE,
+  SETTINGS_BG,
+  SETTINGS_CARD_BG,
+  SETTINGS_CARD_SHADOW,
+  SETTINGS_CHIP_BG,
+  SETTINGS_FONT,
+  SETTINGS_INPUT_BG,
+  SETTINGS_SEPARATOR,
+  SETTINGS_SUBTITLE,
+  SETTINGS_TERTIARY,
+  SETTINGS_TITLE_INK,
+} from "@/lib/settingsMaquetteTokens";
 
 interface SettingsGeneralProps {
   onBack: () => void;
@@ -134,7 +137,7 @@ function SettingsMaquetteSegmented<T extends string>({
   return (
     <div
       className="mx-3 mb-3 mt-1 flex p-1"
-      style={{ background: "#E5E5EA", borderRadius: 12, fontFamily: SETTINGS_FONT }}
+      style={{ background: SETTINGS_INPUT_BG, borderRadius: 12, fontFamily: SETTINGS_FONT }}
     >
       {options.map((o) => {
         const sel = value === o.id;
@@ -145,7 +148,7 @@ function SettingsMaquetteSegmented<T extends string>({
             onClick={() => onChange(o.id)}
             className="flex flex-1 flex-col items-center justify-center gap-1 py-2 transition-opacity active:opacity-80"
             style={{
-              background: sel ? "white" : "transparent",
+              background: sel ? SETTINGS_CARD_BG : "transparent",
               borderRadius: 10,
               boxShadow: sel
                 ? "0 1px 3px rgba(0,0,0,0.1), 0 0 0 0.5px rgba(0,0,0,0.04)"
@@ -189,7 +192,7 @@ function SettingsMaquetteToggle({
         width: 51,
         height: 31,
         borderRadius: 9999,
-        background: value ? SETTINGS_ACTION_BLUE : "#E5E5EA",
+        background: value ? SETTINGS_ACTION_BLUE : SETTINGS_INPUT_BG,
         position: "relative",
         padding: 2,
         transition: "background 0.2s",
@@ -364,7 +367,7 @@ function SettingsMaquetteNavRow({
           </p>
         )}
       </div>
-      <ChevronRight className="h-5 w-5 flex-shrink-0 text-[#C7C7CC]" />
+      <ChevronRight className="h-5 w-5 flex-shrink-0" color={SETTINGS_TERTIARY} />
     </button>
   );
 }
@@ -374,7 +377,7 @@ function SettingsMaquetteCard({ children }: { children: ReactNode }) {
     <div
       className="mx-4 overflow-hidden"
       style={{
-        background: "white",
+        background: SETTINGS_CARD_BG,
         borderRadius: 16,
         boxShadow: SETTINGS_CARD_SHADOW,
         fontFamily: SETTINGS_FONT,
@@ -386,7 +389,7 @@ function SettingsMaquetteCard({ children }: { children: ReactNode }) {
 }
 
 function RowSep() {
-  return <div className="ml-[64px] h-px bg-[#E5E5EA]" />;
+  return <motion.div className="ml-[64px] h-px" style={{ background: SETTINGS_SEPARATOR }} />;
 }
 
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
@@ -519,7 +522,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                           type="button"
                           className="flex items-center gap-1 px-3 py-1.5 transition-opacity active:opacity-80"
                           style={{
-                            background: "#F2F2F7",
+                            background: SETTINGS_CHIP_BG,
                             borderRadius: 9999,
                           }}
                         >
@@ -629,7 +632,10 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                   </div>
                 </div>
                 {!themeMounted ? (
-                  <div className="mx-3 mb-3 mt-1 h-[72px] animate-pulse rounded-[12px] bg-[#E5E5EA]" />
+                  <motion.div
+                    className="mx-3 mb-3 mt-1 h-[72px] animate-pulse rounded-[12px]"
+                    style={{ background: SETTINGS_INPUT_BG }}
+                  />
                 ) : (
                   <SettingsMaquetteSegmented
                     value={(theme ?? "system") as "light" | "dark" | "system"}

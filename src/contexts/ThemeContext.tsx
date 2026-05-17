@@ -12,6 +12,19 @@ function ThemeMetaSync() {
 
   useEffect(() => {
     const isDark = resolvedTheme === 'dark';
+    const effective =
+      resolvedTheme === 'dark' || resolvedTheme === 'light' ? resolvedTheme : null;
+
+    try {
+      if (effective) {
+        document.documentElement.dataset.theme = effective;
+      } else {
+        delete document.documentElement.dataset.theme;
+      }
+    } catch {
+      /* SSR / environnement restreint */
+    }
+
     const applyChrome = () => {
       applyWebChromeForTheme(isDark);
       void applyIosStatusBarForTheme(isDark);

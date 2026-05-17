@@ -233,6 +233,7 @@ export const SettingsPremium = ({ onBack }: SettingsPremiumProps) => {
   } = useSubscription();
   const [loading, setLoading] = useState<"monthly" | "annual" | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -688,12 +689,11 @@ export const SettingsPremium = ({ onBack }: SettingsPremiumProps) => {
 
           <PremiumSectionHeader label="Soutenir RunConnect" />
           <PremiumFormCard>
-            <DonationDialog
-              trigger={
-                <button
-                  type="button"
-                  className="flex w-full items-center px-4 py-3 text-left transition-colors active:bg-[#F8F8F8]"
-                >
+            <button
+              type="button"
+              onClick={() => setDonateOpen(true)}
+              className="flex w-full items-center px-4 py-3 text-left transition-colors active:bg-[#F8F8F8]"
+            >
                   <div
                     className="mr-3 flex shrink-0 items-center justify-center"
                     style={{
@@ -730,10 +730,9 @@ export const SettingsPremium = ({ onBack }: SettingsPremiumProps) => {
                       Soutenez le développement
                     </p>
                   </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" />
-                </button>
-              }
-            />
+              <ChevronRight className="h-5 w-5 shrink-0 text-[#C7C7CC]" />
+            </button>
+            <DonationDialog open={donateOpen} onOpenChange={setDonateOpen} />
           </PremiumFormCard>
         </div>
       </IosFixedPageHeaderShell>

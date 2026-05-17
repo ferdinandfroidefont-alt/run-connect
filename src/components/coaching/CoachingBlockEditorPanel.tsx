@@ -723,7 +723,7 @@ export function CoachingBlockEditorPanel({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className={isCreerSeance ? "" : "space-y-4"}>
+    <div className={cn(isCreerSeance ? "" : "space-y-4", "min-w-0 max-w-full overflow-x-hidden")}>
       {/* Schema section */}
       <div className="space-y-3">
         <div className="space-y-3">

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { MapPin, X } from "lucide-react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { MiniMapPreview } from "@/components/feed/MiniMapPreview";
+import { firstMapPointFromRouteCoordinates, pickSessionCoordinate } from "@/lib/geoUtils";
 
 const ACTION_BLUE = "#007AFF";
 const IOS_BG = "#F2F2F7";
@@ -17,20 +19,7 @@ const RELIABILITY_CONTENT_LAYOUT =
 
 const CARD_SHADOW = "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
 
-const MAP_GRADIENTS = [
-  "linear-gradient(135deg, #e8f5e9, #c8e6c9, #a5d6a7)",
-  "linear-gradient(135deg, #c8e6c9, #a5d6a7, #81c784)",
-  "linear-gradient(135deg, #e3f2fd, #bbdefb, #90caf9)",
-  "linear-gradient(135deg, #fce4ec, #f8bbd0, #f48fb1)",
-  "linear-gradient(135deg, #fff3e0, #ffe0b2, #ffcc80)",
-  "linear-gradient(135deg, #f3e5f5, #e1bee7, #ce93d8)",
-];
-
-function gradientForSessionId(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return MAP_GRADIENTS[h % MAP_GRADIENTS.length];
-}
+const PARIS_FALLBACK = { lat: 48.8566, lng: 2.3522 };
 
 function dayStartMs(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -79,6 +68,10 @@ interface SessionMini {
   scheduled_at: string;
   location_name: string;
   organizer_id: string;
+  location_lat: number | null;
+  location_lng: number | null;
+  route_id: string | null;
+  activity_type: string | null;
 }
 
 interface HistoryCardModel {
@@ -89,7 +82,10 @@ interface HistoryCardModel {
   organizerId: string;
   organizerLabel: string;
   organizerInitials: string;
-  mapGradient: string;
+  organizerAvatarUrl: string | null;
+  locationLat: number;
+  locationLng: number;
+  activityType: string | null;
   presenceBadge: string;
 }
 
@@ -152,42 +148,56 @@ export const ReliabilityDetailsDialog = ({
     const load = async () => {
       setHistoryLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("session_participants")
-          .select(
-            "validation_status, confirmed_by_creator, confirmed_by_gps, sessions(id, title, scheduled_at, location_name, organizer_id)",
-          )
-          .eq("user_id", reliabilitySubjectUserId)
-          .order("joined_at", { ascending: false })
-          .limit(80);
+        const now = Date.now();
+
+        const [{ data: participationData, error: partError }, { data: organizedData, error: orgError }] =
+          await Promise.all([
+            supabase
+              .from("session_participants")
+              .select(
+                "validation_status, confirmed_by_creator, confirmed_by_gps, sessions(id, title, scheduled_at, location_name, organizer_id, location_lat, location_lng, route_id, activity_type)",
+              )
+              .eq("user_id", reliabilitySubjectUserId)
+              .order("joined_at", { ascending: false })
+              .limit(500),
+            supabase
+              .from("sessions")
+              .select(
+                "id, title, scheduled_at, location_name, organizer_id, location_lat, location_lng, route_id, activity_type",
+              )
+              .eq("organizer_id", reliabilitySubjectUserId)
+              .order("scheduled_at", { ascending: false })
+              .limit(500),
+          ]);
 
         if (cancelled) return;
-        if (error || !data) {
+        if (partError && orgError) {
           setUpcomingCount(0);
           setHistoryCards([]);
           return;
         }
 
-        const now = Date.now();
-        type Row = {
+        type ParticipationRow = {
           validation_status: string | null;
           confirmed_by_creator: boolean | null;
           confirmed_by_gps: boolean | null;
           sessions: SessionMini | SessionMini[] | null;
         };
 
-        const normalized: Array<{
+        type NormalizedRow = {
           session: SessionMini;
           validation_status: string | null;
           confirmed_by_creator: boolean | null;
           confirmed_by_gps: boolean | null;
-        }> = [];
+        };
 
-        for (const raw of data as Row[]) {
+        const bySessionId = new Map<string, NormalizedRow>();
+
+        for (const raw of (participationData || []) as ParticipationRow[]) {
           const s = raw.sessions;
           const session = Array.isArray(s) ? s[0] : s;
           if (!session?.id) continue;
-          normalized.push({
+          bySessionId.set(session.id, {
             session,
             validation_status: raw.validation_status,
             confirmed_by_creator: raw.confirmed_by_creator,
@@ -195,8 +205,20 @@ export const ReliabilityDetailsDialog = ({
           });
         }
 
+        for (const session of (organizedData || []) as SessionMini[]) {
+          if (!session?.id || bySessionId.has(session.id)) continue;
+          bySessionId.set(session.id, {
+            session,
+            validation_status: null,
+            confirmed_by_creator: null,
+            confirmed_by_gps: null,
+          });
+        }
+
+        const normalized = [...bySessionId.values()];
+
         let upcoming = 0;
-        const pastRows: typeof normalized = [];
+        const pastRows: NormalizedRow[] = [];
         for (const r of normalized) {
           const t = new Date(r.session.scheduled_at).getTime();
           if (t > now) upcoming++;
@@ -204,19 +226,40 @@ export const ReliabilityDetailsDialog = ({
         }
 
         const organizerIds = [...new Set(pastRows.map((r) => r.session.organizer_id))];
-        let profileByUserId = new Map<string, { username: string | null; display_name: string | null }>();
+        let profileByUserId = new Map<
+          string,
+          { username: string | null; display_name: string | null; avatar_url: string | null }
+        >();
         if (organizerIds.length > 0) {
           const { data: profRows } = await supabase
             .from("profiles")
-            .select("user_id, username, display_name")
+            .select("user_id, username, display_name, avatar_url")
             .in("user_id", organizerIds);
           if (!cancelled && profRows) {
             profileByUserId = new Map(
               profRows.map((p) => [
                 p.user_id as string,
-                { username: p.username ?? null, display_name: p.display_name ?? null },
+                {
+                  username: p.username ?? null,
+                  display_name: p.display_name ?? null,
+                  avatar_url: p.avatar_url ?? null,
+                },
               ]),
             );
+          }
+        }
+
+        const routeIds = [
+          ...new Set(pastRows.map((r) => r.session.route_id).filter(Boolean)),
+        ] as string[];
+        const routeAnchorById = new Map<string, { lat: number; lng: number }>();
+        if (routeIds.length > 0) {
+          const { data: routes } = await supabase.from("routes").select("id, coordinates").in("id", routeIds);
+          if (!cancelled) {
+            for (const route of routes || []) {
+              const pt = firstMapPointFromRouteCoordinates(route.coordinates);
+              if (pt) routeAnchorById.set(route.id, pt);
+            }
           }
         }
 
@@ -236,6 +279,7 @@ export const ReliabilityDetailsDialog = ({
             (prof?.display_name && prof.display_name.trim()) ||
             (prof?.username && prof.username.trim()) ||
             "Organisateur";
+          const anchor = s.route_id ? routeAnchorById.get(s.route_id) : undefined;
           return {
             sessionId: s.id,
             title: s.title || "Séance",
@@ -244,7 +288,10 @@ export const ReliabilityDetailsDialog = ({
             organizerId: s.organizer_id,
             organizerLabel: label,
             organizerInitials: initialsFromName(label),
-            mapGradient: gradientForSessionId(s.id),
+            organizerAvatarUrl: prof?.avatar_url ?? null,
+            locationLat: pickSessionCoordinate(s.location_lat, anchor?.lat ?? PARIS_FALLBACK.lat),
+            locationLng: pickSessionCoordinate(s.location_lng, anchor?.lng ?? PARIS_FALLBACK.lng),
+            activityType: s.activity_type,
             presenceBadge: honorée ? "✓ Présent" : "✗ Absent",
           };
         });
@@ -502,21 +549,17 @@ function ReliabilityHistoryActivityCard({ card }: { card: HistoryCardModel }) {
         </span>
       </div>
 
-      <div className="relative mx-3.5 h-40 overflow-hidden rounded-xl" style={{ background: card.mapGradient }}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative">
-            <div
-              className="relative h-12 w-12 rounded-full border-[3px] border-white shadow-lg"
-              style={{ background: "white" }}
-            />
-            <MapPin
-              className="absolute -bottom-2 left-1/2 h-10 w-10 -translate-x-1/2"
-              color={ACTION_BLUE}
-              fill={ACTION_BLUE}
-              strokeWidth={2}
-            />
-          </div>
-        </div>
+      <div className="relative mx-3.5 h-40 overflow-hidden rounded-xl border border-[#E5E5EA]">
+        <MiniMapPreview
+          lat={card.locationLat}
+          lng={card.locationLng}
+          sessionId={card.sessionId}
+          avatarUrl={card.organizerAvatarUrl}
+          activityType={card.activityType ?? undefined}
+          interactive={false}
+          showHint={false}
+          className="h-full w-full"
+        />
       </div>
 
       <div className="p-3.5">

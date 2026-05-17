@@ -474,6 +474,62 @@ export default function MySessions() {
     };
   }, [user]);
 
+  const openSavedSessionDetail = useCallback(async (snap: SavedSessionSnapshot) => {
+    const { data } = await supabase
+      .from('sessions')
+      .select('*, routes(*)')
+      .eq('id', snap.id)
+      .maybeSingle();
+
+    if (data) {
+      const { data: orgProfile } = await supabase
+        .from('profiles')
+        .select('username, display_name, avatar_url, user_id')
+        .eq('user_id', data.organizer_id)
+        .maybeSingle();
+
+      setSelectedSessionForDialog({
+        ...data,
+        session_type: data.session_type || data.activity_type,
+        intensity: data.intensity || 'moderate',
+        profiles: orgProfile
+          ? {
+              username: orgProfile.username || '',
+              display_name: orgProfile.display_name || '',
+              avatar_url: orgProfile.avatar_url || undefined,
+            }
+          : {
+              username: snap.organizer_username || '',
+              display_name: snap.organizer_display || '',
+              avatar_url: snap.organizer_avatar || undefined,
+            },
+      });
+      return;
+    }
+
+    setSelectedSessionForDialog({
+      id: snap.id,
+      title: snap.title,
+      description: snap.description || '',
+      activity_type: snap.activity_type,
+      session_type: snap.activity_type,
+      intensity: 'moderate',
+      location_name: snap.location_name || '',
+      scheduled_at: snap.scheduled_at,
+      max_participants: 0,
+      current_participants: 0,
+      organizer_id: snap.organizer_id || '',
+      location_lat: 48.8566,
+      location_lng: 2.3522,
+      distance_km: snap.distance_km,
+      profiles: {
+        username: snap.organizer_username || '',
+        display_name: snap.organizer_display || '',
+        avatar_url: snap.organizer_avatar || undefined,
+      },
+    });
+  }, []);
+
   const handleSessionClick = (session: UserSession) => {
     const fallbackOrganizer = session.organizer_id ? organizerProfiles.get(session.organizer_id) : null;
     const fallbackUsername =

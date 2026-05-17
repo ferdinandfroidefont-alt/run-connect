@@ -19,7 +19,7 @@ const ACTION_BLUE = "#007AFF";
 
 export function ModelFilters({ value, onChange, maquette }: ModelFiltersProps) {
   return (
-    <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+    <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto overscroll-x-contain px-5 pb-1 touch-pan-x">
       {FILTERS.map((filter) => (
         <button
           key={filter.id}

@@ -381,6 +381,8 @@ export const InteractiveMap = ({
     setRefreshSessions,
     setOpenCreateSession,
     setOpenCreateRoute,
+    createSessionCreatorPreviewRequest,
+    consumeCreateSessionCreatorPreview,
     setHomeMapImmersive,
     homeFeedSheetSnap,
     setBottomNavSuppressed,
@@ -713,6 +715,11 @@ export const InteractiveMap = ({
       { replace: true },
     );
   }, [isActive, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!isActive || !createSessionCreatorPreviewRequest) return;
+    setIsCreateDialogOpen(true);
+  }, [isActive, createSessionCreatorPreviewRequest]);
 
   // Load user profile
   useEffect(() => {
@@ -2462,7 +2469,10 @@ export const InteractiveMap = ({
           setIsCreateDialogOpen(false);
           setPresetLocation(null);
           setSessionPresetRouteId(null);
+          consumeCreateSessionCreatorPreview();
         }}
+        creatorPreview={createSessionCreatorPreviewRequest}
+        onCreatorPreviewConsumed={consumeCreateSessionCreatorPreview}
         presetRouteId={sessionPresetRouteId}
         onSessionCreated={async (sessionId) => {
       console.log('🎯 Session created callback triggered, sessionId:', sessionId);

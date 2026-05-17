@@ -68,6 +68,103 @@ function isUuidLike(s: string): boolean {
 
 type ProfileRow = Record<string, unknown>;
 
+/** Aligné sur src/lib/notificationPreferenceConfig.ts */
+const NOTIF_PREF_COLUMNS = [
+  "notif_follow_request",
+  "notif_message",
+  "notif_comment",
+  "notif_mention",
+  "notif_like",
+  "notif_story_view",
+  "notif_friend_first_post",
+  "notif_session_request",
+  "notif_friend_session",
+  "notif_session_accepted",
+  "notif_presence_confirmed",
+  "notif_session_edited",
+  "notif_session_cancelled",
+  "notif_reminder_d1",
+  "notif_reminder_h1",
+  "notif_bad_weather",
+  "notif_boost_nearby",
+  "notif_recurring_approaching",
+  "notif_coach_sends",
+  "notif_athlete_validates",
+  "notif_coach_review",
+  "notif_new_plan",
+  "notif_missed_session",
+  "notif_athlete_absent",
+  "notif_club_invitation",
+  "notif_club_announcement",
+  "notif_club_new_session",
+  "notif_club_new_member",
+  "notif_weekly_goal",
+  "notif_streak",
+  "notif_weekly_report",
+  "notif_anniversary",
+  "notif_views_peak",
+  "notif_personal_record",
+  "notif_premium_expiring",
+  "notif_strava_to_associate",
+].join(", ");
+
+const NOTIFICATION_TYPE_PREF_COLUMN: Record<string, string> = {
+  message: "notif_message",
+  follow_request: "notif_follow_request",
+  follow_accepted: "notif_follow_request",
+  follow_back: "notif_follow_request",
+  comment: "notif_comment",
+  mention: "notif_mention",
+  like: "notif_like",
+  story_view: "notif_story_view",
+  friend_first_post: "notif_friend_first_post",
+  session_request: "notif_session_request",
+  friend_session: "notif_friend_session",
+  session_accepted: "notif_session_accepted",
+  presence_confirmed: "notif_presence_confirmed",
+  session_edited: "notif_session_edited",
+  session_cancelled: "notif_session_cancelled",
+  reminder_d1: "notif_reminder_d1",
+  reminder_h1: "notif_reminder_h1",
+  bad_weather: "notif_bad_weather",
+  boost_nearby: "notif_boost_nearby",
+  nearby_session: "notif_boost_nearby",
+  recurring_approaching: "notif_recurring_approaching",
+  coaching_session: "notif_coach_sends",
+  coach_sends: "notif_coach_sends",
+  coaching_plan: "notif_new_plan",
+  new_plan: "notif_new_plan",
+  coaching_completed: "notif_athlete_validates",
+  athlete_validates: "notif_athlete_validates",
+  coaching_scheduled: "notif_athlete_validates",
+  coaching_feedback: "notif_coach_review",
+  coach_review: "notif_coach_review",
+  coaching_reminder: "notif_missed_session",
+  missed_session: "notif_missed_session",
+  athlete_absent: "notif_athlete_absent",
+  club_invitation: "notif_club_invitation",
+  club_announcement: "notif_club_announcement",
+  club_new_session: "notif_club_new_session",
+  club_new_member: "notif_club_new_member",
+  weekly_goal: "notif_weekly_goal",
+  challenge_reminder: "notif_weekly_goal",
+  streak: "notif_streak",
+  coaching_weekly_recap: "notif_weekly_report",
+  weekly_report: "notif_weekly_report",
+  anniversary: "notif_anniversary",
+  views_peak: "notif_views_peak",
+  personal_record: "notif_personal_record",
+  premium_expiring: "notif_premium_expiring",
+  strava_to_associate: "notif_strava_to_associate",
+};
+
+function profileAllowsNotificationType(profile: ProfileRow, notifType: string | undefined): boolean {
+  if (!notifType || notifType === "test") return true;
+  const col = NOTIFICATION_TYPE_PREF_COLUMN[notifType];
+  if (!col) return true;
+  return profile[col] !== false;
+}
+
 /**
  * PostgREST échoue si une colonne du SELECT n'existe pas en prod.
  * On essaie du schéma complet au minimal (push_token seul).
@@ -78,6 +175,7 @@ async function fetchProfileRowsForPush(
   traceId: string,
 ): Promise<{ rows: ProfileRow[]; lastError: { code?: string; message?: string; details?: string } | null }> {
   const selectAttempts: string[] = [
+    `push_token, push_token_platform, push_token_updated_at, notifications_enabled, ${NOTIF_PREF_COLUMNS}`,
     "push_token, push_token_platform, push_token_updated_at, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed",
     "push_token, push_token_platform, push_token_updated_at, notifications_enabled",
     "push_token, notifications_enabled",
@@ -505,24 +603,15 @@ serve(async (req) => {
     }
 
     // 4. Check per-type preferences (colonnes absentes = pas de blocage)
-    const prefMap: Record<string, unknown> = {
-      message: profile["notif_message"],
-      boost_nearby: profile["notif_boost_nearby"],
-      session_request: profile["notif_session_request"],
-      follow_request: profile["notif_follow_request"],
-      friend_session: profile["notif_friend_session"],
-      club_invitation: profile["notif_club_invitation"],
-      session_accepted: profile["notif_session_accepted"],
-      presence_confirmed: profile["notif_presence_confirmed"],
-    };
-
-    if (type && Object.prototype.hasOwnProperty.call(prefMap, type) && prefMap[type] === false) {
+    if (!profileAllowsNotificationType(profile, type)) {
+      const prefCol = type ? NOTIFICATION_TYPE_PREF_COLUMN[type] : null;
       return ok(corsHeaders, {
         skipped: true,
         stage: "PREFS_DISABLED",
         code: "notifications_disabled",
         message: `Notifications ${type} désactivées`,
         trace_id: traceId,
+        pref_column: prefCol,
       });
     }
 
