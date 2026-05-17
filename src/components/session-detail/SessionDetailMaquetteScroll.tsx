@@ -1,5 +1,5 @@
 import type { ReactNode, RefObject } from "react";
-import { CalendarDays, ChevronRight, Image as ImageIcon, MapPin } from "lucide-react";
+import { CalendarDays, ChevronRight, MapPin } from "lucide-react";
 import { getActivityEmoji, getDiscoverSportTileHex } from "@/lib/discoverSessionVisual";
 import { getActivityLabel } from "@/lib/activityIcons";
 import {
@@ -9,7 +9,7 @@ import {
   SessionSchemaChart,
 } from "@/components/session-detail/SessionDetailMaquetteParts";
 import type { MaquetteChartBlock } from "@/components/session-detail/SessionDetailMaquetteParts";
-import { SessionQuestions } from "@/components/SessionQuestions";
+import { SessionDetailMaquetteComments } from "@/components/session-detail/SessionDetailMaquetteComments";
 
 type ParticipantPreview = {
   user_id: string;
@@ -54,6 +54,8 @@ export function SessionDetailMaquetteScroll(props: SessionDetailMaquetteScrollPr
   const sportEmoji = getActivityEmoji(props.activityType);
   const sportLabel = getActivityLabel(props.activityType);
   const organizerLetters = getInitials(props.organizerName || "?");
+  const hasSchema = props.chartBlocks.length > 0;
+  const hasPhotos = Boolean(props.imageUrl?.trim());
 
   return (
     <div className="flex-1 overflow-y-auto pb-8">
@@ -171,6 +173,8 @@ export function SessionDetailMaquetteScroll(props: SessionDetailMaquetteScrollPr
         </div>
       </div>
 
+      {hasSchema ? (
+        <>
       <SessionDetailSectionTitle label="Schéma de séance" />
       <div className="px-4">
         <div className="rounded-[22px] bg-white px-4 py-[18px] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.05)]">
@@ -193,6 +197,8 @@ export function SessionDetailMaquetteScroll(props: SessionDetailMaquetteScrollPr
           ) : null}
         </div>
       </div>
+        </>
+      ) : null}
 
       <div className="mt-3 grid grid-cols-3 gap-2 px-4">{props.actionButtons}</div>
 
@@ -281,42 +287,22 @@ export function SessionDetailMaquetteScroll(props: SessionDetailMaquetteScrollPr
         </>
       ) : null}
 
-      <SessionDetailSectionTitle label="Photos" />
-      <div className="px-4">
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {props.imageUrl ? (
-            <img
-              src={props.imageUrl}
-              alt=""
-              className="h-24 w-24 shrink-0 rounded-[14px] object-cover shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.05)]"
-            />
-          ) : (
-            [1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[14px] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.05)]"
-                style={{
-                  background: `linear-gradient(135deg, ${sportColor}22 0%, ${sportColor}11 100%)`,
-                }}
-              >
-                <ImageIcon className="h-7 w-7 opacity-50" style={{ color: sportColor }} strokeWidth={2} />
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+      {hasPhotos ? (
+        <>
+          <SessionDetailSectionTitle label="Photos" />
+          <div className="px-4">
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+              <img
+                src={props.imageUrl!}
+                alt=""
+                className="h-24 w-24 shrink-0 rounded-[14px] object-cover shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.05)]"
+              />
+            </div>
+          </div>
+        </>
+      ) : null}
 
-      <SessionDetailSectionTitle label="Commentaires" />
-      <div className="px-4 pb-4">
-        <SessionQuestions
-          sessionId={props.sessionId}
-          sessionTitle={props.title}
-          organizerId={props.organizerId}
-          activityType={props.activityType}
-          locationName={props.locationName}
-          scheduledAt={props.scheduledAt}
-        />
-      </div>
+      <SessionDetailMaquetteComments sessionId={props.sessionId} />
     </div>
   );
 }

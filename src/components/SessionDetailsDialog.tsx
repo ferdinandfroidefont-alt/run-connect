@@ -1002,17 +1002,6 @@ export const SessionDetailsDialog = ({
               </button>
             </div>
           ) : null}
-          {isOrganizer && !isScheduled ? (
-            <div className="px-4 pb-6">
-              <button
-                type="button"
-                onClick={() => navigate(`/my-sessions/confirm/${session.id}`)}
-                className="flex h-12 w-full items-center justify-center rounded-2xl bg-[#34C759] text-[15px] font-bold text-white"
-              >
-                Valider les participants
-              </button>
-            </div>
-          ) : null}
         </ScrollArea>
       </DialogContent>
     </Dialog>
