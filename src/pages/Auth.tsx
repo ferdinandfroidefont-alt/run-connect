@@ -2,7 +2,13 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useNavigate, Link, useSearchParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
-import { isAuthArrivalPreviewUrl } from "@/lib/authArrivalPreview";
+import {
+  ARRIVAL_PREVIEW_EMAIL,
+  ARRIVAL_PREVIEW_FAKE_USER_ID,
+  getAuthArrivalPreviewStep,
+  isAuthArrivalPreviewUrl,
+} from "@/lib/authArrivalPreview";
+import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,10 +48,6 @@ function authErrorMessage(err: unknown): string {
 function isSecurityVerificationError(message: string): boolean {
   return /captcha/i.test(message);
 }
-
-/** UUID factice pour le dialogue profil en parcours arrivée (aucune écriture DB). */
-const ARRIVAL_PREVIEW_FAKE_USER_ID = "00000000-0000-4000-8000-000000000001";
-const ARRIVAL_PREVIEW_EMAIL = "nouveau.compte@exemple.runconnect";
 
 /** Palette écrans connexion / inscription — alignée maquette RunConnect (9).jsx */
 const AUTH_MOCKUP = {
@@ -94,6 +96,14 @@ const Auth = () => {
   const authArrivalPreview = useMemo(
     () => isAuthArrivalPreviewUrl(searchParams, user?.email, userProfile?.username),
     [searchParams, user?.email, userProfile?.username]
+  );
+  const arrivalPreviewStep = useMemo(
+    () => getAuthArrivalPreviewStep(searchParams),
+    [searchParams]
+  );
+  const creatorCanUseArrivalPreview = useMemo(
+    () => hasCreatorSupportAccess(user?.email, userProfile?.username ?? null),
+    [user?.email, userProfile?.username]
   );
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<AuthView>('landing');
@@ -181,6 +191,29 @@ const Auth = () => {
   useLayoutEffect(() => {
     resetBodyInteractionLocks();
   }, []);
+
+  /** Support créateur : ouvrir directement une étape du parcours (`?arrivalPreview=1&step=profile|otp|signup`). */
+  useLayoutEffect(() => {
+    if (!wantsArrivalPreview || !creatorCanUseArrivalPreview || !arrivalPreviewStep) return;
+
+    if (arrivalPreviewStep === "profile") {
+      setNewUserId(ARRIVAL_PREVIEW_FAKE_USER_ID);
+      setEmail((prev) => (prev.trim() ? prev : ARRIVAL_PREVIEW_EMAIL));
+      setShowProfileSetup(true);
+      return;
+    }
+
+    if (arrivalPreviewStep === "otp") {
+      setOtpBackView("email-signup");
+      setEmail((prev) => (prev.trim() ? prev : ARRIVAL_PREVIEW_EMAIL));
+      setView("otp");
+      return;
+    }
+
+    if (arrivalPreviewStep === "signup") {
+      setView("email-signup");
+    }
+  }, [wantsArrivalPreview, creatorCanUseArrivalPreview, arrivalPreviewStep]);
 
   // ── Existing useEffect: session check, referral, reset detection ──
   useEffect(() => {

@@ -13,7 +13,6 @@ import {
   LayoutList,
   Sparkles,
   UserPlus,
-  CalendarPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +23,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useAppPreview } from "@/contexts/AppPreviewContext";
-import { useAppContext } from "@/contexts/AppContext";
 import {
   type PreviewIdentity,
   type PreviewRole,
@@ -35,8 +33,7 @@ import {
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
 import { cn } from "@/lib/utils";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
-import { AUTH_ARRIVAL_PREVIEW_PARAM } from "@/lib/authArrivalPreview";
-import { canUseCreateSessionCreatorPreview } from "@/lib/createSessionCreatorPreview";
+import { buildAuthArrivalPreviewHref, isAuthArrivalPreviewUrl } from "@/lib/authArrivalPreview";
 
 const SPORT_OPTIONS = [
   { value: "running", label: "Course" },
@@ -69,7 +66,6 @@ export function AdminAppPreviewTab({ onClose }: AdminAppPreviewTabProps) {
   const { user } = useAuth();
   const { userProfile } = useUserProfile();
   const { enterPreview, isPreviewMode, exitPreview } = useAppPreview();
-  const { requestCreateSessionCreatorPreview } = useAppContext();
 
   const [draft, setDraft] = useState<PreviewIdentity>(() => createEmptyPreviewIdentity());
 
@@ -148,7 +144,8 @@ export function AdminAppPreviewTab({ onClose }: AdminAppPreviewTabProps) {
           Parcours arrivée (inscription)
         </p>
         <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
-          Parcourir les écrans d&apos;accueil, e-mail, code et création de profil sans créer de compte ni vous déconnecter.
+          Accès direct à l&apos;écran <span className="font-semibold text-foreground">Créer mon profil</span> (pseudo,
+          nom, mot de passe…) sans créer de compte.
         </p>
         <Button
           type="button"
@@ -164,28 +161,18 @@ export function AdminAppPreviewTab({ onClose }: AdminAppPreviewTabProps) {
               return;
             }
             onClose();
-            navigate(`/auth?${AUTH_ARRIVAL_PREVIEW_PARAM}=1`);
+            navigate(buildAuthArrivalPreviewHref("profile"));
           }}
         >
           <UserPlus className="mr-2 h-4 w-4" />
-          Ouvrir le parcours arrivée
+          Création de profil (étape 2)
         </Button>
-      </div>
-
-      <div className="rounded-[14px] border border-border/60 bg-card/80 p-3">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Création de séance
-        </p>
-        <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
-          Ouvrir l’étape <span className="font-semibold text-foreground">2/2 · Publier</span> du wizard (données
-          fictives, aucune publication).
-        </p>
         <Button
           type="button"
-          variant="secondary"
-          className="h-10 w-full rounded-[12px] text-[13px] font-semibold"
+          variant="outline"
+          className="mt-2 h-10 w-full rounded-[12px] text-[13px] font-semibold"
           onClick={() => {
-            if (!canUseCreateSessionCreatorPreview(user?.email, userProfile?.username ?? null)) {
+            if (!hasCreatorSupportAccess(user?.email, userProfile?.username ?? null)) {
               toast({
                 title: "Accès refusé",
                 description: "Réservé au compte administrateur créateur.",
@@ -193,13 +180,30 @@ export function AdminAppPreviewTab({ onClose }: AdminAppPreviewTabProps) {
               });
               return;
             }
-            requestCreateSessionCreatorPreview({ step: "finalize", readOnly: true });
             onClose();
-            navigate("/", { replace: true });
+            navigate(buildAuthArrivalPreviewHref("otp"));
           }}
         >
-          <CalendarPlus className="mr-2 h-4 w-4" />
-          Ouvrir création séance · étape 2/2
+          Code e-mail (inscription 2/2)
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="mt-2 h-10 w-full rounded-[12px] text-[13px] font-semibold"
+          onClick={() => {
+            if (!hasCreatorSupportAccess(user?.email, userProfile?.username ?? null)) {
+              toast({
+                title: "Accès refusé",
+                description: "Réservé au compte administrateur créateur.",
+                variant: "destructive",
+              });
+              return;
+            }
+            onClose();
+            navigate(buildAuthArrivalPreviewHref());
+          }}
+        >
+          Parcours complet depuis l&apos;accueil
         </Button>
       </div>
 

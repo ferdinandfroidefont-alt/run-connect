@@ -733,7 +733,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               >
                 {t('profileSetup.headerAlreadySignedIn')}
               </Button>
-              <h1 className="text-[17px] font-semibold">{t('profileSetup.headerTitle')}</h1>
+              <div className="flex min-w-0 flex-col items-center">
+                <h1 className="text-[17px] font-semibold">{t('profileSetup.headerTitle')}</h1>
+                {arrivalPreview && (
+                  <p className="text-[12px] font-medium text-muted-foreground">2 / 2 · Aperçu</p>
+                )}
+              </div>
               <div className="w-20" />
             </div>
           }
