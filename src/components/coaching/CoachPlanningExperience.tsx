@@ -79,8 +79,6 @@ import {
   type WizardSportEntry,
 } from "@/components/coaching/create-session/CoachingSessionCreateWizardSteps";
 import { COACHING_ACTION_BLUE, COACHING_PAGE_BG } from "@/components/coaching/create-session/CoachingCreateSessionSchema";
-import { CoachingWeekSessionCreateBuild } from "@/components/coaching/create-session/CoachingWeekSessionCreateBuild";
-import type { CoachingSessionBlock } from "@/components/coaching/CoachingBlockEditorPanel";
 import { parseRCC } from "@/lib/rccParser";
 import {
   ClubManagementPage,
@@ -4658,41 +4656,7 @@ export function CoachPlanningExperience() {
                   timeHHmm={draftTimeHHmm}
                 />
               ) : null}
-              {createSessionSurface === "weekEditor" ? (
-                editorTab === "build" ? (
-                  <CoachingWeekSessionCreateBuild
-                    title={draft.title}
-                    onTitleChange={(value) => setDraft((prev) => ({ ...prev, title: value }))}
-                    wizardSportId={draft.wizardSportId ?? "course"}
-                    onSportSelect={(sportId, draftSport) =>
-                      setDraft((prev) => ({ ...prev, wizardSportId: sportId, sport: draftSport }))
-                    }
-                    blocks={draft.blocks as CoachingSessionBlock[]}
-                    onBlocksChange={(blocks) => setDraft((prev) => ({ ...prev, blocks }))}
-                    sport={draft.sport}
-                    editorKey={`${draft.assignedDate}-${draft.blocks.length}`}
-                  />
-                ) : (
-                  <div className="mt-4">
-                    <ModelsPage
-                      weekDays={weekDays}
-                      existingSessionsByDay={existingSessionsByDay}
-                      myModels={myModels}
-                      baseModels={BASE_MODELS}
-                      onCreateModel={() => void createModelFromDraft()}
-                      onAddToPlanning={async (model, day, replaceExisting) => {
-                        const ok = await addModelToPlanning(model, day, replaceExisting);
-                        if (ok) setCoachingTab("planning");
-                      }}
-                      onEditModel={(model) => {
-                        editModel(model);
-                      }}
-                      onDuplicateModel={(model) => void duplicateModel(model)}
-                      onDeleteModel={(model) => void deleteModel(model)}
-                    />
-                  </div>
-                )
-              ) : showCreateSessionEditor ? (
+              {showCreateSessionEditor ? (
                 <div className="space-y-4">
                   <h1
                     className="mb-0 mt-0 text-[22px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
