@@ -22,7 +22,9 @@ import { normalizeBlockRpeLength } from "@/lib/sessionBlockRpe";
 import { WIZARD_ACTION_BLUE, WIZARD_TITLE } from "@/components/session-creation/wizardVisualTokens";
 import { CoachingBlockEditorPanel, type CoachingSessionBlock } from "./CoachingBlockEditorPanel";
 import { ModelsPage } from "./models/ModelsPage";
+import { CreateModelPage } from "./models/CreateModelPage";
 import type { SessionModelItem } from "./models/types";
+import { defaultWizardSportIdForDraftSport } from "@/components/coaching/create-session/CoachingSessionCreateWizardSteps";
 import { cn } from "@/lib/utils";
 
 interface AthleteOverride {
@@ -231,6 +233,7 @@ export const WeeklyPlanSessionEditor = ({
   const [coachingBlocks, setCoachingBlocks] = useState<CoachingSessionBlock[]>([]);
   const [schemaEditorKey, setSchemaEditorKey] = useState(0);
   const [myModels, setMyModels] = useState<SessionModelItem[]>([]);
+  const [createModelOpen, setCreateModelOpen] = useState(false);
   const lastSyncKey = useRef<typeof sessionSyncKey>(undefined);
 
   useEffect(() => {
@@ -389,7 +392,7 @@ export const WeeklyPlanSessionEditor = ({
             existingSessionsByDay={{}}
             myModels={myModels}
             baseModels={BASE_MODELS}
-            onCreateModel={() => setBuilderTab("build")}
+            onCreateModel={() => setCreateModelOpen(true)}
             onApplyToSession={(model) => applyModelToSession(model)}
             onEditModel={(model) => applyModelToSession(model)}
             onDuplicateModel={() => {}}
@@ -414,6 +417,19 @@ export const WeeklyPlanSessionEditor = ({
           </div>
         </div>
       </div>
+
+      {createModelOpen ? (
+        <CreateModelPage
+          defaultWizardSportId={defaultWizardSportIdForDraftSport(sportProp)}
+          defaultSport={sportProp}
+          onClose={() => setCreateModelOpen(false)}
+          onSaved={(model) => {
+            setMyModels((prev) => [model, ...prev]);
+            setCreateModelOpen(false);
+            setBuilderTab("templates");
+          }}
+        />
+      ) : null}
     </div>
   );
 };

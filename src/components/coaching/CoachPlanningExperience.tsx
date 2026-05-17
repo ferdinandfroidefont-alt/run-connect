@@ -68,6 +68,7 @@ import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from 
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
+import { CreateModelPage } from "@/components/coaching/models/CreateModelPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
 import {
   buildCoachSessionHeadline,
@@ -1155,6 +1156,7 @@ export function CoachPlanningExperience() {
   const [savePulse, setSavePulse] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [myModels, setMyModels] = useState<SessionModelItem[]>([]);
+  const [createModelOpen, setCreateModelOpen] = useState(false);
   const [clubMembers, setClubMembers] = useState<ClubMemberItem[]>([]);
   const [clubGroupsAdmin, setClubGroupsAdmin] = useState<ClubGroupItem[]>([]);
   const [clubInvitations, setClubInvitations] = useState<ClubInvitationItem[]>([]);
@@ -2272,36 +2274,10 @@ export function CoachPlanningExperience() {
     toast.success("Semaine collée");
   };
 
-  const createModelFromDraft = async () => {
-    if (!user) return;
-    const name = window.prompt("Nom du modèle", draft.title || "Nouveau modèle");
-    if (!name?.trim()) return;
-    const rccCode = window.prompt("Code séance (RCC)", "20'>5'30, 10'>4'20, 10'>5'45");
-    if (!rccCode?.trim()) return;
-    const payload = {
-      coach_id: user.id,
-      name: name.trim(),
-      objective: draft.title || null,
-      activity_type: draft.sport,
-      rcc_code: rccCode.trim(),
-    };
-    const { data, error } = await supabase.from("coaching_templates").insert(payload).select("id").single();
-    if (error) {
-      toast.error("Création du modèle impossible", error.message);
-      return;
-    }
-    setMyModels((prev) => [
-      {
-        id: data.id,
-        source: "mine",
-        title: payload.name,
-        objective: payload.objective,
-        activityType: payload.activity_type,
-        rccCode: payload.rcc_code,
-      },
-      ...prev,
-    ]);
-    toast.success("Modèle créé");
+  const handleModelCreated = (model: SessionModelItem) => {
+    setMyModels((prev) => [model, ...prev]);
+    setCreateModelOpen(false);
+    setEditorTab("models");
   };
 
   const addModelToPlanning = async (model: SessionModelItem, day: Date, replaceExisting: boolean): Promise<boolean> => {
@@ -4241,7 +4217,7 @@ export function CoachPlanningExperience() {
                 existingSessionsByDay={existingSessionsByDay}
                 myModels={myModels}
                 baseModels={BASE_MODELS}
-                onCreateModel={() => void createModelFromDraft()}
+                onCreateModel={() => setCreateModelOpen(true)}
                 onAddToPlanning={(model, day, replaceExisting) => void addModelToPlanning(model, day, replaceExisting)}
                 onEditModel={editModel}
                 onDuplicateModel={(model) => void duplicateModel(model)}
@@ -4443,6 +4419,15 @@ export function CoachPlanningExperience() {
         onOpenChange={setInviteDialogOpen}
         clubId={activeClubId || undefined}
       />
+
+      {createModelOpen ? (
+        <CreateModelPage
+          defaultWizardSportId={draft.wizardSportId ?? "course"}
+          defaultSport={draft.sport}
+          onClose={() => setCreateModelOpen(false)}
+          onSaved={handleModelCreated}
+        />
+      ) : null}
 
       {coachingTab === "create" && (
         <div
@@ -4673,7 +4658,7 @@ export function CoachPlanningExperience() {
                   existingSessionsByDay={existingSessionsByDay}
                   myModels={myModels}
                   baseModels={BASE_MODELS}
-                  onCreateModel={() => void createModelFromDraft()}
+                  onCreateModel={() => setCreateModelOpen(true)}
                   onApplyToSession={editModel}
                   onEditModel={editModel}
                   onDuplicateModel={(model) => void duplicateModel(model)}
