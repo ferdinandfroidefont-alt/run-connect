@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronRight, Filter, MessageSquare, Plus, Search } from "lucide-react";
+import { Bookmark, Check, ChevronRight, Filter, MessageSquare, Plus, Search } from "lucide-react";
+import type { SavedSessionSnapshot } from "@/lib/savedSessionsStorage";
 import { format, isToday, isTomorrow, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getActivityEmoji, getDiscoverSportTileClass } from "@/lib/discoverSessionVisual";
 import { cn } from "@/lib/utils";
 
-export type MySessionsMaquetteFilterId = "toutes" | "venir" | "ok" | "draft";
+export type MySessionsMaquetteFilterId = "toutes" | "venir" | "ok" | "enregistrees" | "draft";
 
 const ACTION_BLUE = "#007AFF";
 
@@ -13,6 +14,7 @@ const FILTER_CHIPS: { id: MySessionsMaquetteFilterId; label: string }[] = [
   { id: "toutes", label: "Toutes" },
   { id: "venir", label: "À venir" },
   { id: "ok", label: "Confirmées" },
+  { id: "enregistrees", label: "Enregistrées" },
   { id: "draft", label: "Brouillon" },
 ];
 
@@ -130,6 +132,8 @@ export function MySessionsHomeMaquette(props: {
   /** Bloc actions maquette (17) — affiché sous « Cette semaine » ; omit pour masquer */
   onOpenCommentPicker?: () => void;
   onOpenConfirmPicker?: () => void;
+  savedSessions?: SavedSessionSnapshot[];
+  onSavedSessionClick?: (s: SavedSessionSnapshot) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headerScrolled, setHeaderScrolled] = useState(false);
@@ -242,6 +246,83 @@ export function MySessionsHomeMaquette(props: {
               Coaching.
             </p>
           </div>
+        ) : props.listFilter === "enregistrees" ? (
+          (props.savedSessions?.length ?? 0) === 0 ? (
+            <div
+              className="mt-16 flex flex-col items-center justify-center px-8 text-center"
+            >
+              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-[#F2F2F7]">
+                <Bookmark className="h-7 w-7 text-[#8E8E93]" strokeWidth={2.2} />
+              </div>
+              <p className="text-[17px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]">
+                Aucune séance enregistrée
+              </p>
+              <p className="mt-1.5 text-[14px] font-medium leading-snug text-[#8E8E93]">
+                Enregistre des publications d&apos;autres coureurs pour les retrouver ici.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 mt-5 flex items-center justify-between">
+                <h2 className="text-[20px] font-bold tracking-[-0.02em] text-[#0A0F1F]">
+                  Séances enregistrées
+                </h2>
+                <span className="text-[13px] font-extrabold text-[#8E8E93]">
+                  {props.savedSessions!.length}
+                </span>
+              </div>
+              {props.savedSessions!.map((s) => {
+                const d = new Date(s.scheduled_at);
+                const day = format(d, "EEE", { locale: fr }).replace(/\.$/, "");
+                const dayCap = day.charAt(0).toUpperCase() + day.slice(1);
+                const dateLine = `${dayCap} · ${format(d, "HH:mm", { locale: fr })}`;
+                const organizerName = s.organizer_display || s.organizer_username || "Organisateur";
+                const initials = (organizerName.split(/\s+/).map((w) => w[0]).join("") || "?")
+                  .slice(0, 2)
+                  .toUpperCase();
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => props.onSavedSessionClick?.(s)}
+                    className="mb-2.5 w-full rounded-2xl bg-white p-3.5 text-left shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.05)] active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl text-white shadow-sm",
+                          getDiscoverSportTileClass(s.activity_type),
+                        )}
+                      >
+                        {getActivityEmoji(s.activity_type)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15.5px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]">
+                          {s.title}
+                        </p>
+                        <p className="truncate text-[13px] font-semibold text-[#8E8E93]">
+                          {s.description || s.location_name || dateLine} · {dateLine}
+                        </p>
+                      </div>
+                      <Bookmark
+                        className="h-5 w-5 shrink-0 text-[#007AFF]"
+                        strokeWidth={2.2}
+                        fill={ACTION_BLUE}
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 border-t border-[#E5E5EA] pt-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#007AFF] text-[10px] font-black text-white">
+                        {initials}
+                      </div>
+                      <span className="truncate text-[13px] font-semibold text-[#8E8E93]">
+                        {organizerName}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </>
+          )
         ) : (
           <>
             <div className="mt-4 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">

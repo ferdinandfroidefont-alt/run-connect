@@ -4668,19 +4668,14 @@ export function CoachPlanningExperience() {
                   blocks={draft.blocks as CoachingSessionBlock[]}
                   onBlocksChange={(blocks) => setDraft((prev) => ({ ...prev, blocks }))}
                   sport={draft.sport}
-                  editorKey={`${draft.assignedDate}-${draft.blocks.length}`}
+                  editorKey={`${draft.assignedDate}-${draft.blocks.map((b) => b.id).join("|")}`}
                   weekDays={weekDays}
                   existingSessionsByDay={existingSessionsByDay}
                   myModels={myModels}
                   baseModels={BASE_MODELS}
                   onCreateModel={() => void createModelFromDraft()}
-                  onAddToPlanning={async (model, day, replaceExisting) => {
-                    const ok = await addModelToPlanning(model, day, replaceExisting);
-                    if (ok) setCoachingTab("planning");
-                  }}
-                  onEditModel={(model) => {
-                    editModel(model);
-                  }}
+                  onApplyToSession={editModel}
+                  onEditModel={editModel}
                   onDuplicateModel={(model) => void duplicateModel(model)}
                   onDeleteModel={(model) => void deleteModel(model)}
                 />

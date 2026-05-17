@@ -34,6 +34,10 @@ import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
 import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
+import {
+  listSavedSessions,
+  type SavedSessionSnapshot,
+} from '@/lib/savedSessionsStorage';
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
@@ -115,7 +119,12 @@ export default function MySessions() {
   const [showShareConversationDialog, setShowShareConversationDialog] = useState(false);
   const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
   const [selectedSessionForDialog, setSelectedSessionForDialog] = useState<Record<string, unknown> | null>(null);
+  const [savedSessions, setSavedSessions] = useState<SavedSessionSnapshot[]>(() => listSavedSessions());
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
+
+  const refreshSavedSessions = useCallback(() => {
+    setSavedSessions(listSavedSessions());
+  }, []);
 
   /** Flux maquette (17) : commentaire / confirmation depuis la liste */
   const [sessionListPickerMode, setSessionListPickerMode] = useState<null | "comment" | "confirm">(null);
@@ -664,7 +673,7 @@ export default function MySessions() {
   }, [mergedSessions]);
 
   const filteredForMaquette = useMemo(() => {
-    if (listFilter === "draft") return [];
+    if (listFilter === "draft" || listFilter === "enregistrees") return [];
 
     let base = mergedSessions;
 
@@ -1281,6 +1290,8 @@ export default function MySessions() {
             onOpenCreate={() => openCreateSession()}
             onOpenCommentPicker={() => setSessionListPickerMode("comment")}
             onOpenConfirmPicker={() => setSessionListPickerMode("confirm")}
+            savedSessions={savedSessions}
+            onSavedSessionClick={(s) => void openSavedSessionDetail(s)}
           />
         )}
       </div>
@@ -1363,10 +1374,14 @@ export default function MySessions() {
 
       <SessionDetailsDialog
         session={selectedSessionForDialog as never}
-        onClose={() => setSelectedSessionForDialog(null)}
+        onClose={() => {
+          setSelectedSessionForDialog(null);
+          refreshSavedSessions();
+        }}
         onSessionUpdated={() => {
           void loadUserSessions();
           void loadJoinedSessions();
+          refreshSavedSessions();
         }}
       />
 
