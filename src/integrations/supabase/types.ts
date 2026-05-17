@@ -1034,42 +1034,13 @@ export type Database = {
           is_premium: boolean | null
           is_private: boolean | null
           last_seen: string | null
-          notif_anniversary: boolean | null
-          notif_athlete_absent: boolean | null
-          notif_athlete_validates: boolean | null
-          notif_bad_weather: boolean | null
-          notif_boost_nearby: boolean | null
-          notif_club_announcement: boolean | null
           notif_club_invitation: boolean | null
-          notif_club_new_member: boolean | null
-          notif_club_new_session: boolean | null
-          notif_coach_review: boolean | null
-          notif_coach_sends: boolean | null
-          notif_comment: boolean | null
           notif_follow_request: boolean | null
-          notif_friend_first_post: boolean | null
           notif_friend_session: boolean | null
-          notif_like: boolean | null
-          notif_mention: boolean | null
           notif_message: boolean | null
-          notif_missed_session: boolean | null
-          notif_new_plan: boolean | null
-          notif_personal_record: boolean | null
           notif_presence_confirmed: boolean | null
-          notif_premium_expiring: boolean | null
-          notif_recurring_approaching: boolean | null
-          notif_reminder_d1: boolean | null
-          notif_reminder_h1: boolean | null
           notif_session_accepted: boolean | null
-          notif_session_cancelled: boolean | null
-          notif_session_edited: boolean | null
           notif_session_request: boolean | null
-          notif_story_view: boolean | null
-          notif_strava_to_associate: boolean | null
-          notif_streak: boolean | null
-          notif_views_peak: boolean | null
-          notif_weekly_goal: boolean | null
-          notif_weekly_report: boolean | null
           notifications_enabled: boolean | null
           onboarding_completed: boolean | null
           organizer_avg_rating: number | null
@@ -1121,42 +1092,13 @@ export type Database = {
           is_premium?: boolean | null
           is_private?: boolean | null
           last_seen?: string | null
-          notif_anniversary?: boolean | null
-          notif_athlete_absent?: boolean | null
-          notif_athlete_validates?: boolean | null
-          notif_bad_weather?: boolean | null
-          notif_boost_nearby?: boolean | null
-          notif_club_announcement?: boolean | null
           notif_club_invitation?: boolean | null
-          notif_club_new_member?: boolean | null
-          notif_club_new_session?: boolean | null
-          notif_coach_review?: boolean | null
-          notif_coach_sends?: boolean | null
-          notif_comment?: boolean | null
           notif_follow_request?: boolean | null
-          notif_friend_first_post?: boolean | null
           notif_friend_session?: boolean | null
-          notif_like?: boolean | null
-          notif_mention?: boolean | null
           notif_message?: boolean | null
-          notif_missed_session?: boolean | null
-          notif_new_plan?: boolean | null
-          notif_personal_record?: boolean | null
           notif_presence_confirmed?: boolean | null
-          notif_premium_expiring?: boolean | null
-          notif_recurring_approaching?: boolean | null
-          notif_reminder_d1?: boolean | null
-          notif_reminder_h1?: boolean | null
           notif_session_accepted?: boolean | null
-          notif_session_cancelled?: boolean | null
-          notif_session_edited?: boolean | null
           notif_session_request?: boolean | null
-          notif_story_view?: boolean | null
-          notif_strava_to_associate?: boolean | null
-          notif_streak?: boolean | null
-          notif_views_peak?: boolean | null
-          notif_weekly_goal?: boolean | null
-          notif_weekly_report?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           organizer_avg_rating?: number | null
@@ -1208,42 +1150,13 @@ export type Database = {
           is_premium?: boolean | null
           is_private?: boolean | null
           last_seen?: string | null
-          notif_anniversary?: boolean | null
-          notif_athlete_absent?: boolean | null
-          notif_athlete_validates?: boolean | null
-          notif_bad_weather?: boolean | null
-          notif_boost_nearby?: boolean | null
-          notif_club_announcement?: boolean | null
           notif_club_invitation?: boolean | null
-          notif_club_new_member?: boolean | null
-          notif_club_new_session?: boolean | null
-          notif_coach_review?: boolean | null
-          notif_coach_sends?: boolean | null
-          notif_comment?: boolean | null
           notif_follow_request?: boolean | null
-          notif_friend_first_post?: boolean | null
           notif_friend_session?: boolean | null
-          notif_like?: boolean | null
-          notif_mention?: boolean | null
           notif_message?: boolean | null
-          notif_missed_session?: boolean | null
-          notif_new_plan?: boolean | null
-          notif_personal_record?: boolean | null
           notif_presence_confirmed?: boolean | null
-          notif_premium_expiring?: boolean | null
-          notif_recurring_approaching?: boolean | null
-          notif_reminder_d1?: boolean | null
-          notif_reminder_h1?: boolean | null
           notif_session_accepted?: boolean | null
-          notif_session_cancelled?: boolean | null
-          notif_session_edited?: boolean | null
           notif_session_request?: boolean | null
-          notif_story_view?: boolean | null
-          notif_strava_to_associate?: boolean | null
-          notif_streak?: boolean | null
-          notif_views_peak?: boolean | null
-          notif_weekly_goal?: boolean | null
-          notif_weekly_report?: boolean | null
           notifications_enabled?: boolean | null
           onboarding_completed?: boolean | null
           organizer_avg_rating?: number | null
@@ -2530,16 +2443,6 @@ export type Database = {
           walking_records: Json
         }[]
       }
-      get_referral_history: {
-        Args: { user_id_param: string }
-        Returns: {
-          avatar_url: string | null
-          created_at: string
-          display_name: string
-          referred_id: string
-          username: string | null
-        }[]
-      }
       get_referral_stats: {
         Args: { user_id_param: string }
         Returns: {
@@ -2547,10 +2450,6 @@ export type Database = {
           total_referrals: number
           total_rewards: number
         }[]
-      }
-      resolve_referrer_id: {
-        Args: { referral_code_param: string }
-        Returns: string
       }
       get_safe_public_profile: {
         Args: { profile_user_id: string }
