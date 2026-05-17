@@ -1790,19 +1790,31 @@ export function CoachPlanningExperience() {
     !activeGroupId &&
     Boolean(selectedAthleteRunningRefs?.zones);
 
-  const openCreateForDate = (date: Date) => {
-    setEditingSessionId(null);
-    const loc = clubLocation?.trim() ?? "";
-    setDraft({
-      ...emptyDraft(date.toISOString()),
-      defaultLocationName: loc,
-      locationConfirmed: Boolean(loc),
-      wizardSportId: "course",
-    });
-    setCreateWizardStep(1);
-    setEditorTab("build");
-    setCoachingTab("create");
-  };
+  const openCreateForDate = useCallback(
+    (date: Date, opts?: { startStep?: number }) => {
+      setEditingSessionId(null);
+      const loc = clubLocation?.trim() ?? "";
+      const startStep = Math.min(5, Math.max(1, opts?.startStep ?? 1));
+      const wizardSportId = "course";
+      setDraft({
+        ...emptyDraft(date.toISOString()),
+        title:
+          startStep >= 4
+            ? buildCoachSessionHeadline(wizardSportId, loc || "Lieu à préciser")
+            : "",
+        defaultLocationName: loc,
+        locationConfirmed: Boolean(loc) || startStep > 1,
+        wizardSportId,
+        athleteId: activeAthleteId,
+        groupId: activeGroupId,
+      });
+      setCoachWeekProgrammerOpen(false);
+      setCreateWizardStep(startStep);
+      setEditorTab("build");
+      setCoachingTab("create");
+    },
+    [activeAthleteId, activeGroupId, clubLocation]
+  );
 
   const openEditSession = (sessionId: string) => {
     const existing = sessions.find((s) => s.id === sessionId);
@@ -3932,15 +3944,16 @@ export function CoachPlanningExperience() {
               <CoachPlanificationMonthCalendar
                 sessions={calendarSessions}
                 athletes={calendarAthletes}
-                onCreateSession={() => {
-                  setActiveAthleteId(undefined);
-                  setActiveGroupId(undefined);
-                  setSearch("");
-                  setCoachWeekProgrammerOpen(true);
+                onCreateSession={(date) => {
+                  openCreateForDate(date, { startStep: 1 });
                 }}
                 onOpenSession={(id) => openEditSession(id)}
                 onSelectAthlete={(id) => {
-                  goToCoachSection("tracking", { trackingAthleteId: id });
+                  setActiveAthleteId(id);
+                  setActiveGroupId(undefined);
+                  setSearch("");
+                  setCoachWeekProgrammerOpen(true);
+                  scrollWeekPlannerTopIntoView();
                 }}
               />
             ) : activeMenuKey === "planning" ? (
@@ -4023,7 +4036,7 @@ export function CoachPlanningExperience() {
                               layoutVariant="coachWeek"
                               isLast={dayIdx === weekDaysLocal.length - 1}
                               athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
-                              onAdd={() => openCreateForDate(day)}
+                              onAdd={() => openCreateForDate(day, { startStep: 4 })}
                               onOpen={session ? () => openSessionPreview(session.id) : undefined}
                               onEdit={session ? () => openEditSession(session.id) : undefined}
                               onSend={
@@ -4106,7 +4119,7 @@ export function CoachPlanningExperience() {
                             session={summary}
                             isSent={session?.sent}
                             accentColor={accentColor}
-                            onAdd={() => openCreateForDate(day)}
+                            onAdd={() => openCreateForDate(day, { startStep: 4 })}
                             onOpen={session ? () => openSessionPreview(session.id) : undefined}
                             onEdit={session ? () => openEditSession(session.id) : undefined}
                             onSend={
