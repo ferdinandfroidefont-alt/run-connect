@@ -492,7 +492,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
           </div>
         }
       >
-        <div className="ios-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="min-w-0 max-w-full pb-[max(2rem,env(safe-area-inset-bottom))]">
           <div data-tutorial="settings-privacy-consents">
             <PrivacyMaquetteSectionLabel>CONSENTEMENTS</PrivacyMaquetteSectionLabel>
             <PrivacyMaquetteCard>
@@ -730,6 +731,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
             </>
           ) : null}
 
+          </div>
         </div>
       </IosFixedPageHeaderShell>
     </motion.div>

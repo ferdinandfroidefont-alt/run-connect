@@ -1,50 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCamera } from "@/hooks/useCamera";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
-import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
-import { CoachingFullscreenHeader } from "@/components/coaching/CoachingFullscreenHeader";
-import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { Camera, User, Loader2, Globe, Lock, Trash2, ImageIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ProfileEditMaquetteView } from "@/components/profile/ProfileEditMaquetteView";
+import {
+  HomeMapFilterGroupedList,
+  HomeMapFilterRow,
+  HomeMapFilterSheet,
+} from "@/components/map/HomeMapFilterSheet";
 import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
+import { COUNTRY_LABELS } from "@/lib/countryLabels";
+import {
+  PROFILE_SPORT_KEYS,
+  PROFILE_SPORT_LABELS,
+  type ProfileSportKey,
+  parseProfileSports,
+} from "@/lib/profileSports";
+import { Camera, Loader2, Trash2, ImageIcon } from "lucide-react";
 
-const SPORT_OPTIONS = [
-  { value: "", label: "Non renseigné" },
-  { value: "running", label: "🏃 Course à pied" },
-  { value: "cycling", label: "🚴 Vélo" },
-  { value: "triathlon", label: "🏅 Triathlon" },
-  { value: "swimming", label: "🏊 Natation" },
-  { value: "walking", label: "🚶 Marche" },
-  { value: "trail", label: "⛰️ Trail" },
-];
+const COUNTRY_CODES = Object.keys(COUNTRY_LABELS);
 
-const COUNTRY_OPTIONS = [
-  { value: "", label: "Non renseigné" },
-  { value: "FR", label: "🇫🇷 France" },
-  { value: "BE", label: "🇧🇪 Belgique" },
-  { value: "CH", label: "🇨🇭 Suisse" },
-  { value: "CA", label: "🇨🇦 Canada" },
-  { value: "LU", label: "🇱🇺 Luxembourg" },
-  { value: "MA", label: "🇲🇦 Maroc" },
-  { value: "TN", label: "🇹🇳 Tunisie" },
-  { value: "DZ", label: "🇩🇿 Algérie" },
-  { value: "SN", label: "🇸🇳 Sénégal" },
-  { value: "CI", label: "🇨🇮 Côte d'Ivoire" },
-  { value: "ES", label: "🇪🇸 Espagne" },
-  { value: "PT", label: "🇵🇹 Portugal" },
-  { value: "DE", label: "🇩🇪 Allemagne" },
-  { value: "IT", label: "🇮🇹 Italie" },
-  { value: "GB", label: "🇬🇧 Royaume-Uni" },
-  { value: "US", label: "🇺🇸 États-Unis" },
-];
+function profileInitials(
+  fullName: string | null | undefined,
+  username: string | null | undefined
+): string {
+  const source = (fullName || username || "U").trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0] || ""}${parts[1]![0] || ""}`.toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
+}
 
 export default function ProfileEdit() {
   const navigate = useNavigate();
@@ -71,6 +60,8 @@ export default function ProfileEdit() {
   const [originalImageSrc, setOriginalImageSrc] = useState("");
   const [showAvatarSheet, setShowAvatarSheet] = useState(false);
   const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
+  const [sportSheetOpen, setSportSheetOpen] = useState(false);
+  const [countrySheetOpen, setCountrySheetOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -78,7 +69,9 @@ export default function ProfileEdit() {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("username, display_name, bio, phone, age, favorite_sport, country, avatar_url, is_private")
+          .select(
+            "username, display_name, bio, phone, age, favorite_sport, country, avatar_url, is_private"
+          )
           .eq("user_id", user.id)
           .single();
         if (error) throw error;
@@ -95,14 +88,30 @@ export default function ProfileEdit() {
             is_private: data.is_private || false,
           });
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("ProfileEdit fetch error:", e);
       } finally {
         setLoading(false);
       }
     };
-    fetchProfile();
+    void fetchProfile();
   }, [user]);
+
+  const primarySportKey = useMemo(() => {
+    const keys = parseProfileSports(formData.favorite_sport);
+    return keys[0] as ProfileSportKey | undefined;
+  }, [formData.favorite_sport]);
+
+  const sportDisplay = useMemo(() => {
+    if (!primarySportKey || !(primarySportKey in PROFILE_SPORT_LABELS)) return null;
+    const meta = PROFILE_SPORT_LABELS[primarySportKey];
+    return `${meta.emoji} ${meta.label}`;
+  }, [primarySportKey]);
+
+  const countryDisplay = useMemo(() => {
+    if (!formData.country) return null;
+    return COUNTRY_LABELS[formData.country] ?? formData.country;
+  }, [formData.country]);
 
   const openCropFromPreparedInput = async (input: File | string) => {
     setPreparingAvatarCrop(true);
@@ -125,7 +134,7 @@ export default function ProfileEdit() {
   const handlePickFromGallery = async () => {
     setShowAvatarSheet(false);
     try {
-      const isNative = !!(window as any).Capacitor;
+      const isNative = !!(window as Window & { Capacitor?: unknown }).Capacitor;
       if (isNative) {
         const result = await selectFromGallery();
         if (result) {
@@ -139,8 +148,8 @@ export default function ProfileEdit() {
         const input = document.createElement("input");
         input.type = "file";
         input.accept = "image/*";
-        input.onchange = (e: any) => {
-          const file = e.target?.files?.[0];
+        input.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
           if (!file) return;
           if (file.size > 5 * 1024 * 1024) {
             toast({ title: "Erreur", description: "Max 5 Mo", variant: "destructive" });
@@ -158,9 +167,11 @@ export default function ProfileEdit() {
   const handleTakePhoto = async () => {
     setShowAvatarSheet(false);
     try {
-      const isNative = !!(window as any).Capacitor;
+      const isNative = !!(window as Window & { Capacitor?: unknown }).Capacitor;
       if (isNative) {
-        const { Camera: CapCamera, CameraResultType, CameraSource } = await import("@capacitor/camera");
+        const { Camera: CapCamera, CameraResultType, CameraSource } = await import(
+          "@capacitor/camera"
+        );
         const photo = await CapCamera.getPhoto({
           quality: 82,
           allowEditing: false,
@@ -171,13 +182,12 @@ export default function ProfileEdit() {
           await openCropFromPreparedInput(photo.dataUrl);
         }
       } else {
-        // Sur web, ouvrir la caméra via input capture
         const input = document.createElement("input");
         input.type = "file";
         input.accept = "image/*";
         input.setAttribute("capture", "environment");
-        input.onchange = (e: any) => {
-          const file = e.target?.files?.[0];
+        input.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
           if (!file) return;
           if (file.size > 5 * 1024 * 1024) {
             toast({ title: "Erreur", description: "Max 5 Mo", variant: "destructive" });
@@ -196,7 +206,7 @@ export default function ProfileEdit() {
     setShowAvatarSheet(false);
     setAvatarFile(null);
     setAvatarPreview("");
-    setFormData({ ...formData, avatar_url: "" });
+    setFormData((prev) => ({ ...prev, avatar_url: "" }));
   };
 
   const handleCropComplete = (blob: Blob) => {
@@ -232,7 +242,7 @@ export default function ProfileEdit() {
 
       let phone = formData.phone;
       if (phone) {
-        phone = phone.replace(/[\s\-\(\)]/g, "");
+        phone = phone.replace(/[\s\-()]/g, "");
         if (phone.startsWith("+33")) phone = "0" + phone.substring(3);
         else if (phone.startsWith("33") && phone.length === 11) phone = "0" + phone.substring(2);
         else if (phone.length === 9 && /^[1-9]/.test(phone)) phone = "0" + phone;
@@ -256,207 +266,127 @@ export default function ProfileEdit() {
       if (error) throw error;
       toast({ title: "Profil mis à jour !" });
       navigate(-1);
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Erreur inconnue";
+      toast({ title: "Erreur", description: message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
   const displayAvatar = avatarPreview || formData.avatar_url;
+  const avatarInitials = profileInitials(formData.display_name, formData.username);
+
+  const selectSport = (key: ProfileSportKey | "") => {
+    setFormData((prev) => ({
+      ...prev,
+      favorite_sport: key || "",
+    }));
+    setSportSheetOpen(false);
+  };
+
+  const selectCountry = (code: string) => {
+    setFormData((prev) => ({ ...prev, country: code }));
+    setCountrySheetOpen(false);
+  };
 
   if (loading) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-secondary">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div
+        className="flex min-h-[100dvh] items-center justify-center"
+        style={{ background: "#F2F2F7" }}
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-[#007AFF]" />
       </div>
     );
   }
 
   return (
     <>
-      <IosFixedPageHeaderShell
-        className="min-h-0 flex-1 bg-secondary"
-        contentTopOffsetPx={0}
-        headerWrapperClassName="shrink-0 bg-card"
-        header={
-          <CoachingFullscreenHeader
-            title="Modifier le profil"
-            onBack={() => navigate(-1)}
-            rightSlot={
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="text-[17px] font-semibold text-primary disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "OK"}
-              </button>
-            }
-          />
+      <ProfileEditMaquetteView
+        saving={saving}
+        displayAvatar={displayAvatar}
+        avatarInitials={avatarInitials}
+        username={formData.username}
+        displayName={formData.display_name}
+        age={formData.age != null ? String(formData.age) : ""}
+        phone={formData.phone}
+        bio={formData.bio}
+        sportDisplay={sportDisplay}
+        countryDisplay={countryDisplay}
+        isPrivate={formData.is_private}
+        onBack={() => navigate(-1)}
+        onSave={() => void handleSave()}
+        onAvatarClick={() => setShowAvatarSheet(true)}
+        onUsernameChange={(username) => setFormData((prev) => ({ ...prev, username }))}
+        onDisplayNameChange={(display_name) => setFormData((prev) => ({ ...prev, display_name }))}
+        onAgeChange={(raw) => {
+          const parsed = parseInt(raw, 10);
+          setFormData((prev) => ({
+            ...prev,
+            age: raw === "" || Number.isNaN(parsed) ? null : parsed,
+          }));
+        }}
+        onPhoneChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
+        onBioChange={(e) =>
+          setFormData((prev) => ({ ...prev, bio: e.target.value.slice(0, 200) }))
         }
-        scrollClassName="bg-secondary pb-6"
+        onSportClick={() => setSportSheetOpen(true)}
+        onCountryClick={() => setCountrySheetOpen(true)}
+        onPrivateChange={(is_private) => setFormData((prev) => ({ ...prev, is_private }))}
+        saveDisabled={!formData.username.trim()}
+      />
+
+      <HomeMapFilterSheet
+        open={sportSheetOpen}
+        onClose={() => setSportSheetOpen(false)}
+        title="Sport favori"
+        titleId="profile-edit-sport-title"
+        variant="tall"
       >
-        {/* Avatar — collé sous le header (pas de py global sur la zone scroll) */}
-        <div className="flex flex-col items-center pb-4 pt-0">
-          <button type="button" onClick={() => setShowAvatarSheet(true)} className="group relative">
-            <Avatar className="h-24 w-24 border-2 border-border">
-              <AvatarImage src={displayAvatar} />
-              <AvatarFallback className="bg-muted text-muted-foreground">
-                <User className="h-10 w-10" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/30 opacity-0 transition-opacity group-active:opacity-100">
-              <Camera className="h-6 w-6 text-white" />
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowAvatarSheet(true)}
-            className="mt-2 text-[15px] font-medium text-primary"
-          >
-            Changer la photo (facultatif)
-          </button>
-        </div>
+        <HomeMapFilterGroupedList>
+          <HomeMapFilterRow
+            label="Non renseigné"
+            selected={!primarySportKey}
+            onClick={() => selectSport("")}
+          />
+          {PROFILE_SPORT_KEYS.map((key) => {
+            const meta = PROFILE_SPORT_LABELS[key];
+            return (
+              <HomeMapFilterRow
+                key={key}
+                label={`${meta.emoji} ${meta.label}`}
+                selected={primarySportKey === key}
+                onClick={() => selectSport(key)}
+              />
+            );
+          })}
+        </HomeMapFilterGroupedList>
+      </HomeMapFilterSheet>
 
-        {/* Informations */}
-        <IOSListGroup header="INFORMATIONS">
-          <IOSListItem
-            title="Pseudo"
-            showChevron={false}
-            rightElement={
-              <Input
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 h-auto"
-                placeholder="pseudo"
-              />
-            }
+      <HomeMapFilterSheet
+        open={countrySheetOpen}
+        onClose={() => setCountrySheetOpen(false)}
+        title="Pays"
+        titleId="profile-edit-country-title"
+        variant="tall"
+      >
+        <HomeMapFilterGroupedList>
+          <HomeMapFilterRow
+            label="Non renseigné"
+            selected={!formData.country}
+            onClick={() => selectCountry("")}
           />
-          <IOSListItem
-            title="Nom d'affichage"
-            showChevron={false}
-            rightElement={
-              <Input
-                value={formData.display_name}
-                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 h-auto"
-                placeholder="Nom"
-              />
-            }
-          />
-          <IOSListItem
-            title="Âge"
-            showChevron={false}
-            rightElement={
-              <Input
-                type="number"
-                value={formData.age ?? ""}
-                onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 w-20 h-auto"
-                placeholder="—"
-              />
-            }
-          />
-          <IOSListItem
-            title="Téléphone (facultatif)"
-            showChevron={false}
-            rightElement={
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 h-auto"
-                placeholder="06 12 34 56 78"
-              />
-            }
-          />
-        </IOSListGroup>
-
-        {/* Bio */}
-        <IOSListGroup header="BIO">
-          <div className="bg-card px-4 py-3">
-            <Textarea
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              placeholder="Décrivez vos objectifs, vos records..."
-              className="min-h-[80px] border-0 bg-transparent p-0 text-[17px] text-foreground shadow-none resize-none focus-visible:ring-0"
-              maxLength={200}
+          {COUNTRY_CODES.map((code) => (
+            <HomeMapFilterRow
+              key={code}
+              label={COUNTRY_LABELS[code]!}
+              selected={formData.country === code}
+              onClick={() => selectCountry(code)}
             />
-            <p className="mt-1 text-right text-[13px] text-muted-foreground">
-              {formData.bio.length}/200
-            </p>
-          </div>
-        </IOSListGroup>
-
-        {/* Sport & Pays */}
-        <IOSListGroup header="PRÉFÉRENCES">
-          <IOSListItem
-            title="Sport favori (facultatif)"
-            showChevron={false}
-            rightElement={
-              <select
-                value={formData.favorite_sport}
-                onChange={(e) => setFormData({ ...formData, favorite_sport: e.target.value })}
-                className="appearance-none border-0 bg-transparent text-right text-[17px] text-muted-foreground focus:outline-none"
-              >
-                {SPORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            }
-          />
-          <IOSListItem
-            title="Pays (facultatif)"
-            showChevron={false}
-            rightElement={
-              <select
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                className="appearance-none border-0 bg-transparent text-right text-[17px] text-muted-foreground focus:outline-none"
-              >
-                {COUNTRY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            }
-          />
-        </IOSListGroup>
-
-        {/* Confidentialité */}
-        <IOSListGroup header="CONFIDENTIALITÉ">
-          <IOSListItem
-            icon={formData.is_private ? Lock : Globe}
-            iconBgColor={formData.is_private ? "bg-orange-500" : "bg-green-500"}
-            title="Compte privé"
-            showChevron={false}
-            rightElement={
-              <Switch
-                checked={formData.is_private}
-                onCheckedChange={(v) => setFormData({ ...formData, is_private: v })}
-              />
-            }
-          />
-          <div className="bg-card px-4 pb-3 pt-0">
-            <p className="text-[13px] text-muted-foreground leading-tight">
-              {formData.is_private
-                ? "Seuls vos abonnés approuvés peuvent voir vos séances et activités."
-                : "Tout le monde peut voir votre profil et vos séances."}
-            </p>
-          </div>
-        </IOSListGroup>
-
-        {/* Save button */}
-        <div className="px-4 pb-8 pt-4">
-          <Button
-            onClick={handleSave}
-            disabled={saving || !formData.username.trim()}
-            className="w-full rounded-xl h-12 text-[17px] font-semibold"
-          >
-            {saving && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-            Enregistrer les modifications
-          </Button>
-        </div>
-      </IosFixedPageHeaderShell>
+          ))}
+        </HomeMapFilterGroupedList>
+      </HomeMapFilterSheet>
 
       {preparingAvatarCrop && (
         <div className="fixed inset-0 z-[260] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">
@@ -475,7 +405,6 @@ export default function ProfileEdit() {
         onCropComplete={handleCropComplete}
       />
 
-      {/* iOS Action Sheet — Photo */}
       {showAvatarSheet && (
         <div
           className="pointer-events-auto fixed inset-0 z-[250] flex items-end justify-center"
@@ -490,12 +419,12 @@ export default function ProfileEdit() {
             aria-modal="true"
             aria-label="Actions photo de profil"
           >
-            <div className="mb-2 overflow-hidden rounded-2xl bg-card shadow-lg">
+            <div className="mb-2 overflow-hidden rounded-2xl bg-white shadow-lg">
               {displayAvatar && (
                 <button
                   type="button"
                   onClick={handleDeleteAvatar}
-                  className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
+                  className="flex w-full items-center gap-3 border-b border-[#E5E5EA]/80 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-[#F2F2F7]"
                 >
                   <Trash2 className="h-5 w-5 shrink-0" />
                   Supprimer la photo
@@ -503,25 +432,25 @@ export default function ProfileEdit() {
               )}
               <button
                 type="button"
-                onClick={handleTakePhoto}
-                className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                onClick={() => void handleTakePhoto()}
+                className="flex w-full items-center gap-3 border-b border-[#E5E5EA]/80 px-4 py-3.5 text-left text-[16px] font-normal text-[#0A0F1F] transition-colors active:bg-[#F2F2F7]"
               >
-                <Camera className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <Camera className="h-5 w-5 shrink-0 text-[#8E8E93]" />
                 Prendre une photo
               </button>
               <button
                 type="button"
-                onClick={handlePickFromGallery}
-                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                onClick={() => void handlePickFromGallery()}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-[#0A0F1F] transition-colors active:bg-[#F2F2F7]"
               >
-                <ImageIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <ImageIcon className="h-5 w-5 shrink-0 text-[#8E8E93]" />
                 Choisir une photo existante
               </button>
             </div>
             <button
               type="button"
               onClick={() => setShowAvatarSheet(false)}
-              className="w-full rounded-2xl bg-card py-3.5 text-center text-[17px] font-semibold text-primary shadow-lg transition-colors active:bg-secondary/60"
+              className="w-full rounded-2xl bg-white py-3.5 text-center text-[17px] font-semibold text-[#007AFF] shadow-lg transition-colors active:bg-[#F2F2F7]"
             >
               Annuler
             </button>

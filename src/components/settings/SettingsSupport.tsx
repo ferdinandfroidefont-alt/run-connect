@@ -181,9 +181,10 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
         }
       >
         <div
-          className="ios-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pb-[max(2rem,env(safe-area-inset-bottom))]"
+          className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
           data-tutorial="settings-support-help"
         >
+          <div className="min-w-0 max-w-full pb-[max(2rem,env(safe-area-inset-bottom))]">
           <SupportMaquetteSectionLabel>MENTIONS LÉGALES</SupportMaquetteSectionLabel>
           <SupportMaquetteCard>
             <SupportMaquetteRow
@@ -280,6 +281,7 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
             <SupportMaquetteCard>
               <DeleteAccountCard onClose={onClose} riskSubtitle="Action irréversible" />
             </SupportMaquetteCard>
+          </div>
           </div>
         </div>
       </IosFixedPageHeaderShell>
