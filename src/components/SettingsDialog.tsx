@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Crown,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -49,9 +50,13 @@ const SettingsSupport = lazy(() =>
 const SettingsTutorialCatalog = lazy(() =>
   import("./settings/SettingsTutorialCatalog").then((m) => ({ default: m.SettingsTutorialCatalog }))
 );
+const SettingsPremium = lazy(() =>
+  import("./settings/SettingsPremium").then((m) => ({ default: m.SettingsPremium }))
+);
 
 export type SettingsDialogPage =
   | "hub"
+  | "premium"
   | "general"
   | "notifications"
   | "connections"
@@ -70,6 +75,14 @@ interface SettingsDialogProps {
 }
 
 const settingsCategories = [
+  {
+    id: 'premium' as const,
+    title: 'RunConnect Premium',
+    description: 'Abonnement, avantages, don',
+    icon: Crown,
+    iconBg: '#FFCC00',
+    searchItems: ['Premium', 'Abonnement', 'Mensuel', 'Annuel', 'Don', 'Stripe', 'Synchroniser'],
+  },
   {
     id: 'general' as const,
     title: 'Général',
@@ -195,12 +208,17 @@ export const SettingsDialog = ({
   );
 
   const handleNavigateToSubscription = () => {
-    handleOpenChange(false);
-    window.location.href = '/subscription';
+    setCurrentPage("premium");
   };
 
   const renderPage = () => {
     switch (currentPage) {
+      case "premium":
+        return (
+          <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
+            <SettingsPremium onBack={goToSettingsHub} />
+          </Suspense>
+        );
       case 'general':
       return (
         <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
@@ -341,10 +359,7 @@ export const SettingsDialog = ({
                   {userProfile ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          handleOpenChange(false);
-                          navigate("/profile");
-                        }}
+                        onClick={() => setCurrentPage("premium")}
                         className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition-colors active:bg-[#F8F8F8]"
                         style={{
                           background: "white",

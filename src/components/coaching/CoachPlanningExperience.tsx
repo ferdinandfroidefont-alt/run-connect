@@ -7,7 +7,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { addDays, addWeeks, format, getISOWeek, isSameDay, startOfWeek, subWeeks } from "date-fns";
+import { addDays, addMonths, addWeeks, format, getISOWeek, isSameDay, startOfMonth, startOfWeek, subMonths, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Activity,
@@ -69,6 +69,16 @@ import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
+import {
+  buildCoachSessionHeadline,
+  CoachingWizardStep1Location,
+  CoachingWizardStep2Sport,
+  CoachingWizardStep3DateTime,
+  CoachingWizardStep5Final,
+  defaultWizardSportIdForDraftSport,
+  type WizardSportEntry,
+} from "@/components/coaching/create-session/CoachingSessionCreateWizardSteps";
+import { COACHING_ACTION_BLUE, COACHING_PAGE_BG } from "@/components/coaching/create-session/CoachingCreateSessionSchema";
 import { parseRCC } from "@/lib/rccParser";
 import {
   ClubManagementPage,
@@ -233,6 +243,7 @@ type TrainingSession = {
   /** Statut participation de l’athlète ciblé (vue coach semaine). */
   athleteParticipationStatus?: string | null;
   athleteCompletedAt?: string | null;
+  defaultLocationName?: string | null;
 };
 
 function athletePlanSessionToTrainingSession(s: AthletePlanSessionModel): TrainingSession {
@@ -259,7 +270,12 @@ type SessionPreviewState = {
   anchorTop: number;
 };
 
-type SessionDraft = Omit<TrainingSession, "id" | "sent">;
+type SessionDraft = Omit<TrainingSession, "id" | "sent"> & {
+  /** UI wizard · confirmation lieu (étape 1). */
+  locationConfirmed?: boolean;
+  /** Carte sport étape 2 (`course`, `trail`, …). */
+  wizardSportId?: string;
+};
 const SPORTS: Array<{ id: SportType; label: string; emoji: string }> = [
   { id: "running", label: "Course à pied", emoji: "🏃" },
   { id: "cycling", label: "Vélo", emoji: "🚴" },
@@ -970,6 +986,9 @@ function emptyDraft(dateIso: string): SessionDraft {
     sport: "running",
     assignedDate: dateIso,
     blocks: [],
+    defaultLocationName: "",
+    locationConfirmed: false,
+    wizardSportId: "course",
   };
 }
 
@@ -1084,6 +1103,8 @@ export function CoachPlanningExperience() {
   /** Maquette 16 · ouverture « Programmer la semaine » sans athlète (ex. FAB Créer une séance). */
   const [coachWeekProgrammerOpen, setCoachWeekProgrammerOpen] = useState(false);
   const [coachingTab, setCoachingTab] = useState<"planning" | "create">("planning");
+  const [createWizardStep, setCreateWizardStep] = useState(1);
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [editorTab, setEditorTab] = useState<"build" | "models">("build");
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(() => emptyDraft(new Date().toISOString()));
@@ -1185,6 +1206,16 @@ export function CoachPlanningExperience() {
     setBottomNavSuppressed("coaching-create", hideTabBar);
     return () => setBottomNavSuppressed("coaching-create", false);
   }, [isActiveCoachingTab, coachingTab, setBottomNavSuppressed]);
+
+  useEffect(() => {
+    if (coachingTab !== "create") setCreateWizardStep(1);
+  }, [coachingTab]);
+
+  useEffect(() => {
+    if (coachingTab === "create" && createWizardStep === 3) {
+      setCalendarMonth(startOfMonth(new Date(draft.assignedDate)));
+    }
+  }, [coachingTab, createWizardStep, draft.assignedDate]);
 
   useEffect(() => {
     if (!user || !effectiveAthleteMode) return;
@@ -1446,7 +1477,7 @@ export function CoachPlanningExperience() {
       const horizonEnd = addDays(weekAnchor, 7 * COACHING_TIMELINE_WEEK_COUNT);
       let query = supabase
         .from("coaching_sessions")
-        .select("id, title, activity_type, scheduled_at, status, target_athletes, target_group_id, session_blocks")
+        .select("id, title, activity_type, scheduled_at, status, target_athletes, target_group_id, session_blocks, default_location_name")
         .eq("club_id", activeClubId)
         .gte("scheduled_at", weekAnchor.toISOString())
         .lt("scheduled_at", horizonEnd.toISOString());
@@ -1475,6 +1506,7 @@ export function CoachPlanningExperience() {
               groupId: row.target_group_id || undefined,
               sent: row.status === "sent",
               blocks,
+              defaultLocationName: row.default_location_name ?? null,
             };
           });
 
@@ -1760,7 +1792,14 @@ export function CoachPlanningExperience() {
 
   const openCreateForDate = (date: Date) => {
     setEditingSessionId(null);
-    setDraft(emptyDraft(date.toISOString()));
+    const loc = clubLocation?.trim() ?? "";
+    setDraft({
+      ...emptyDraft(date.toISOString()),
+      defaultLocationName: loc,
+      locationConfirmed: Boolean(loc),
+      wizardSportId: "course",
+    });
+    setCreateWizardStep(1);
     setEditorTab("build");
     setCoachingTab("create");
   };
@@ -1776,7 +1815,11 @@ export function CoachPlanningExperience() {
       athleteId: existing.athleteId,
       groupId: existing.groupId,
       blocks: [...existing.blocks].sort((a, b) => a.order - b.order),
+      defaultLocationName: existing.defaultLocationName ?? "",
+      locationConfirmed: Boolean(existing.defaultLocationName?.trim()),
+      wizardSportId: defaultWizardSportIdForDraftSport(existing.sport),
     });
+    setCreateWizardStep(4);
     setEditorTab("build");
     setCoachingTab("create");
   };
@@ -1931,6 +1974,7 @@ export function CoachPlanningExperience() {
       status: "draft",
       session_blocks: draft.blocks,
       distance_km: Number.isFinite(totalDistanceKm) && totalDistanceKm > 0 ? totalDistanceKm : null,
+      default_location_name: draft.defaultLocationName?.trim() || null,
     };
     let dbId = editingSessionId;
     if (editingSessionId) {
@@ -1957,6 +2001,7 @@ export function CoachPlanningExperience() {
       groupId: draft.groupId ?? activeGroupId,
       sent: editingSessionId ? sessions.find((s) => s.id === editingSessionId)?.sent ?? false : false,
       blocks: draft.blocks.map((b, idx) => ({ ...b, order: idx + 1 })),
+      defaultLocationName: draft.defaultLocationName?.trim() || null,
     };
     setSessions((prev) => {
       if (!editingSessionId) return [...prev, payload];
@@ -1993,6 +2038,7 @@ export function CoachPlanningExperience() {
       status: "draft",
       session_blocks: session.blocks,
       distance_km: computeSessionDistanceKm(session.blocks, session.sport) || null,
+      default_location_name: session.defaultLocationName?.trim() || null,
     };
     const { data, error } = await supabase.from("coaching_sessions").insert(clonePayload).select("id").single();
     if (error) {
@@ -2010,6 +2056,7 @@ export function CoachPlanningExperience() {
         blocks: session.blocks.map((b) => ({ ...b, id: uid() })),
         athleteParticipationStatus: null,
         athleteCompletedAt: null,
+        defaultLocationName: session.defaultLocationName ?? null,
       },
     ]);
   };
@@ -2276,6 +2323,7 @@ export function CoachPlanningExperience() {
       groupId: activeGroupId,
       sent: false,
       blocks,
+      defaultLocationName: null,
     };
     setSessions((prev) => [...prev.filter((s) => !(replaceExisting && existing && s.id === existing.id)), created]);
     toast.success("Séance ajoutée au planning");
@@ -2283,14 +2331,16 @@ export function CoachPlanningExperience() {
   };
 
   const editModel = (model: SessionModelItem) => {
-    setDraft({
+    setDraft((prev) => ({
+      ...prev,
       title: model.title,
       sport: (model.activityType as SportType) || "running",
-      assignedDate: draft.assignedDate,
+      wizardSportId: defaultWizardSportIdForDraftSport(((model.activityType as SportType) || "running")),
+      assignedDate: prev.assignedDate,
       athleteId: activeAthleteId,
       groupId: activeGroupId,
       blocks: parsedRccToSessionBlocks(model.rccCode),
-    });
+    }));
     setEditorTab("build");
   };
 
@@ -2695,9 +2745,112 @@ export function CoachPlanningExperience() {
     (user?.email ? user.email.split("@")[0] : "Coach");
   const [showCoachRequiredDialog, setShowCoachRequiredDialog] = useState(false);
   const hasCreateDraftWork = useMemo(
-    () => Boolean(draft.title.trim()) || draft.blocks.length > 0,
-    [draft.blocks.length, draft.title]
+    () =>
+      createWizardStep > 1 ||
+      Boolean(draft.defaultLocationName?.trim()) ||
+      Boolean(draft.locationConfirmed) ||
+      Boolean(draft.title.trim()) ||
+      draft.blocks.length > 0,
+    [createWizardStep, draft.defaultLocationName, draft.locationConfirmed, draft.title, draft.blocks.length]
   );
+
+  const draftTimeHHmm = useMemo(() => {
+    const d = new Date(draft.assignedDate);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }, [draft.assignedDate]);
+
+  const canContinueCreateWizard = useMemo(() => {
+    if (createWizardStep === 1) return Boolean(draft.defaultLocationName?.trim()) && Boolean(draft.locationConfirmed);
+    if (createWizardStep === 2) return Boolean(draft.wizardSportId);
+    if (createWizardStep === 3) return true;
+    if (createWizardStep === 4) return true;
+    return true;
+  }, [createWizardStep, draft.defaultLocationName, draft.locationConfirmed, draft.wizardSportId]);
+
+  const tryCloseCreateWizard = () => {
+    if (hasCreateDraftWork) {
+      setPendingDrawerKey(null);
+      setShowExitDraftDialog(true);
+    } else {
+      setCoachingTab("planning");
+    }
+  };
+
+  const goCreateWizardPrev = () => {
+    if (createWizardStep <= 1) tryCloseCreateWizard();
+    else setCreateWizardStep((s) => s - 1);
+  };
+
+  const goCreateWizardNext = () => {
+    if (createWizardStep === 3) {
+      setDraft((d) => ({
+        ...d,
+        title: d.title.trim() || buildCoachSessionHeadline(d.wizardSportId ?? "course", d.defaultLocationName ?? ""),
+      }));
+    }
+    setCreateWizardStep((s) => Math.min(5, s + 1));
+  };
+
+  const mergeDraftCalendarDay = (day: Date) => {
+    setDraft((prev) => {
+      const cur = new Date(prev.assignedDate);
+      const next = new Date(day);
+      next.setHours(cur.getHours(), cur.getMinutes(), cur.getSeconds(), 0);
+      return { ...prev, assignedDate: next.toISOString() };
+    });
+  };
+
+  const applyDraftTimeHHmm = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map((x) => Number.parseInt(x, 10));
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return;
+    setDraft((prev) => {
+      const b = new Date(prev.assignedDate);
+      b.setHours(h, m, 0, 0);
+      return { ...prev, assignedDate: b.toISOString() };
+    });
+  };
+
+  const openDraftTimeWheel = () => {
+    const d = new Date(draft.assignedDate);
+    const nA = String(d.getHours());
+    const nB = String(d.getMinutes());
+    setWheelAValue(nA);
+    setWheelBValue(nB);
+    openWheelColumns(
+      "Heure de départ",
+      [
+        {
+          items: Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })),
+          value: nA,
+          onChange: setWheelAValue,
+          suffix: "h",
+        },
+        {
+          items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })),
+          value: nB,
+          onChange: setWheelBValue,
+          suffix: "m",
+        },
+      ],
+      () => {
+        const hh = Number.parseInt(wheelARef.current, 10) || 0;
+        const mi = Number.parseInt(wheelBRef.current, 10) || 0;
+        setDraft((prev) => {
+          const b = new Date(prev.assignedDate);
+          b.setHours(hh, mi, 0, 0);
+          return { ...prev, assignedDate: b.toISOString() };
+        });
+      }
+    );
+  };
+
+  const onWizardSportPicked = (entry: WizardSportEntry) => {
+    setDraft((prev) => ({
+      ...prev,
+      wizardSportId: entry.id,
+      sport: entry.draftSport as SportType,
+    }));
+  };
 
   const goToCoachSection = useCallback((key: CoachMenuKey, opts?: { trackingAthleteId?: string | null }) => {
     if (key !== "planning") setCoachWeekProgrammerOpen(false);
@@ -4252,113 +4405,183 @@ export function CoachPlanningExperience() {
       />
 
       {coachingTab === "create" && (
-        <div className="coaching-create-flat fixed inset-0 z-[125] flex min-h-0 flex-col overflow-hidden">
+        <div
+          className="coaching-create-flat fixed inset-0 z-[125] flex min-h-0 flex-col overflow-hidden"
+          style={{
+            background: COACHING_PAGE_BG,
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+          }}
+        >
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
-            headerWrapperClassName="shrink-0 border-b border-border bg-card"
+            headerWrapperClassName="shrink-0 border-b bg-white"
             header={
               <div className="pt-[calc(var(--safe-area-top)-4px)]">
-                <IosPageHeaderBar
-                  leadingBack={{
-                    onClick: () => {
-                      if (hasCreateDraftWork) {
-                        setPendingDrawerKey("planning");
-                        setShowExitDraftDialog(true);
-                        return;
-                      }
-                      setCoachingTab("planning");
-                    },
-                    label: "Retour",
-                  }}
-                  title="Créer une séance"
-                  right={
-                    <button
-                      type="button"
-                      onClick={() => setCoachingTab("planning")}
-                      className="text-[17px] font-semibold text-primary"
-                    >
-                      OK
-                    </button>
-                  }
-                />
-                <div className="grid grid-cols-2 gap-2 px-4 pb-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setEditorTab("build")}
-                    className={cn(
-                      "h-8 rounded-full border text-center text-[13px] font-semibold transition-colors",
-                      editorTab === "build"
-                        ? "border-[#0066cc] bg-[#0066cc] text-white"
-                        : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
+                <div className="flex shrink-0 items-center gap-2 border-b border-[#E5E5EA] px-4 pb-3 pt-1">
+                  <button type="button" onClick={goCreateWizardPrev} className="flex shrink-0 items-center gap-0">
+                    {createWizardStep === 1 ? (
+                      <>
+                        <X className="h-6 w-6" color={COACHING_ACTION_BLUE} strokeWidth={2.6} />
+                        <span className="ml-1 text-[17px] font-semibold" style={{ color: COACHING_ACTION_BLUE }}>
+                          Fermer
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronLeft className="h-6 w-6" color={COACHING_ACTION_BLUE} strokeWidth={2.6} />
+                        <span className="text-[17px] font-semibold" style={{ color: COACHING_ACTION_BLUE }}>
+                          Retour
+                        </span>
+                      </>
                     )}
-                  >
-                    Construire
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditorTab("models")}
-                    className={cn(
-                      "h-8 rounded-full border text-center text-[13px] font-semibold transition-colors",
-                      editorTab === "models"
-                        ? "border-[#0066cc] bg-[#0066cc] text-white"
-                        : "border-[#e0e0e0] bg-white text-[#1d1d1f]"
-                    )}
-                  >
-                    Modèles
-                  </button>
+                  <p className="min-w-0 flex-1 truncate px-1 text-center text-[17px] font-bold text-[#0A0F1F]">
+                    Créer une séance
+                  </p>
+                  <span className="shrink-0 text-[15px] font-medium text-[#8E8E93]">
+                    Étape {createWizardStep}/5
+                  </span>
+                </div>
+                <div className="flex shrink-0 gap-1.5 bg-white px-5 pb-1 pt-3">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <div
+                      key={n}
+                      className="h-1 flex-1 rounded-full transition-colors duration-200"
+                      style={{ background: n <= createWizardStep ? COACHING_ACTION_BLUE : "#E5E5EA" }}
+                    />
+                  ))}
                 </div>
               </div>
             }
-            scrollClassName="bg-[#f5f5f7] pb-24"
+            scrollClassName="pb-6"
+            scrollProps={{
+              style: {
+                background: COACHING_PAGE_BG,
+                WebkitOverflowScrolling: "touch",
+              },
+            }}
             footer={
-              editorTab === "build" && (
-                <div className="border-t border-[#e0e0e0] bg-[#f5f5f7] px-[17px] pb-[max(1.4rem,var(--safe-area-bottom))] pt-[14px]">
-                  <Button
-                    onClick={() => void saveSession()}
-                    className="h-[50px] w-full rounded-full bg-[#0066cc] text-[17px] font-semibold text-white"
-                    disabled={draft.blocks.length === 0}
-                  >
-                    Enregistrer la séance
-                  </Button>
-                </div>
-              )
+              <div
+                className="shrink-0 border-t border-[#E5E5EA] bg-white px-5 py-3"
+                style={{ paddingBottom: "max(12px, var(--safe-area-bottom))" }}
+              >
+                <button
+                  type="button"
+                  disabled={createWizardStep === 5 ? draft.blocks.length === 0 : !canContinueCreateWizard}
+                  onClick={() => {
+                    if (createWizardStep === 5) void saveSession();
+                    else goCreateWizardNext();
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-full py-4 text-[17px] font-extrabold transition-transform active:scale-[0.99] disabled:opacity-[0.38]"
+                  style={{
+                    background:
+                      createWizardStep === 5
+                        ? draft.blocks.length === 0
+                          ? `${COACHING_ACTION_BLUE}66`
+                          : COACHING_ACTION_BLUE
+                        : canContinueCreateWizard
+                          ? COACHING_ACTION_BLUE
+                          : `${COACHING_ACTION_BLUE}66`,
+                    color: "white",
+                    boxShadow:
+                      (createWizardStep === 5 ? draft.blocks.length === 0 : !canContinueCreateWizard)
+                        ? "none"
+                        : "0 2px 8px rgba(0, 122, 255, 0.25)",
+                  }}
+                >
+                  {createWizardStep === 5 ? <Check className="h-5 w-5 text-white" strokeWidth={3} /> : null}
+                  <span>
+                    {createWizardStep === 4
+                      ? "Aperçu"
+                      : createWizardStep === 5
+                        ? "Programmer & booster"
+                        : "Continuer"}
+                  </span>
+                </button>
+              </div>
             }
           >
-            {editorTab === "build" ? (
-              <div className="space-y-4 px-4 pb-6">
-                <input
-                  value={draft.title}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Nom de la séance"
-                  className="w-full bg-transparent font-display text-[42px] font-semibold tracking-[-0.8px] text-[#1d1d1f] placeholder:text-[#7a7a7a] focus:outline-none"
+            <div className="px-5 pb-6 pt-5" style={{ background: COACHING_PAGE_BG }}>
+              {createWizardStep === 1 ? (
+                <CoachingWizardStep1Location
+                  location={draft.defaultLocationName ?? ""}
+                  locationConfirmed={Boolean(draft.locationConfirmed)}
+                  onLocationChange={(value) =>
+                    setDraft((prev) => ({ ...prev, defaultLocationName: value, locationConfirmed: false }))
+                  }
+                  onConfirmToggle={() =>
+                    setDraft((prev) => ({ ...prev, locationConfirmed: !prev.locationConfirmed }))
+                  }
+                  onUseApproxLocation={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      defaultLocationName: "Ma position actuelle",
+                      locationConfirmed: true,
+                    }))
+                  }
                 />
-                <div className="py-3">
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-4 gap-[10px]">
-                      {[
-                        { id: "running", emoji: "🏃", bg: "#007AFF" },
-                        { id: "cycling", emoji: "🚴", bg: "#FF3B30" },
-                        { id: "swimming", emoji: "🏊", bg: "#5AC8FA" },
-                        { id: "strength", emoji: "💪", bg: "#FF9500" },
-                      ].map((sport) => (
-                        <button
-                          key={sport.id}
-                          type="button"
-                          onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id as typeof prev.sport }))}
-                          aria-label={sport.id}
-                          className="relative aspect-square rounded-[14px] text-[36px] leading-none flex items-center justify-center transition-transform active:scale-95"
-                          style={{ backgroundColor: sport.bg }}
-                        >
-                          {draft.sport === sport.id && (
-                            <span className="pointer-events-none absolute inset-0 rounded-[14px] shadow-[0_0_0_2px_#f5f5f7,0_0_0_4px_#0066cc]" />
-                          )}
-                          {sport.emoji}
-                        </button>
-                      ))}
-                    </div>
+              ) : null}
+              {createWizardStep === 2 ? (
+                <CoachingWizardStep2Sport
+                  wizardSportId={draft.wizardSportId ?? "course"}
+                  onSelectSport={onWizardSportPicked}
+                />
+              ) : null}
+              {createWizardStep === 3 ? (
+                <CoachingWizardStep3DateTime
+                  calendarMonth={calendarMonth}
+                  onPrevMonth={() => setCalendarMonth((m) => subMonths(m, 1))}
+                  onNextMonth={() => setCalendarMonth((m) => addMonths(m, 1))}
+                  assignedDateIso={draft.assignedDate}
+                  onSelectCalendarDay={mergeDraftCalendarDay}
+                  timeHHmm={draftTimeHHmm}
+                  onSelectQuickTime={applyDraftTimeHHmm}
+                  onTimeRowClick={openDraftTimeWheel}
+                />
+              ) : null}
+              {createWizardStep === 5 ? (
+                <CoachingWizardStep5Final
+                  wizardSportId={draft.wizardSportId ?? "course"}
+                  locationLine={draft.defaultLocationName?.trim() || "Lieu à préciser"}
+                  assignedDateIso={draft.assignedDate}
+                  timeHHmm={draftTimeHHmm}
+                />
+              ) : null}
+              {createWizardStep === 4 ? (
+                <div className="space-y-4">
+                  <h1
+                    className="mb-0 mt-0 text-[22px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
+                    style={{ lineHeight: 1.2 }}
+                  >
+                    {buildCoachSessionHeadline(draft.wizardSportId ?? "course", draft.defaultLocationName ?? "")}
+                  </h1>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab("build")}
+                      className="flex-1 rounded-full py-3 text-[16px] font-bold transition-transform active:scale-[0.98]"
+                      style={{
+                        background: editorTab === "build" ? COACHING_ACTION_BLUE : "white",
+                        color: editorTab === "build" ? "white" : "#0A0F1F",
+                        border: editorTab === "build" ? "none" : "1px solid #E5E5EA",
+                      }}
+                    >
+                      Construire
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab("models")}
+                      className="flex-1 rounded-full py-3 text-[16px] font-bold transition-transform active:scale-[0.98]"
+                      style={{
+                        background: editorTab === "models" ? COACHING_ACTION_BLUE : "white",
+                        color: editorTab === "models" ? "white" : "#0A0F1F",
+                        border: editorTab === "models" ? "none" : "1px solid #E5E5EA",
+                      }}
+                    >
+                      Modèles
+                    </button>
                   </div>
-                </div>
-
+                  {editorTab === "build" ? (
                 <div className="space-y-3">
                   <div className="space-y-3">
                     <p className="px-0.5 text-[14px] font-semibold tracking-[-0.224px]" style={{ color: "#1d1d1f" }}>Schéma de séance</p>
@@ -4984,8 +5207,9 @@ export function CoachPlanningExperience() {
                       </div>
                     </div>
                   ) : null}
-              </div>
+                </div>
             ) : (
+              <div className="mt-4">
               <ModelsPage
                 weekDays={weekDays}
                 existingSessionsByDay={existingSessionsByDay}
@@ -5002,7 +5226,11 @@ export function CoachPlanningExperience() {
                 onDuplicateModel={(model) => void duplicateModel(model)}
                 onDeleteModel={(model) => void deleteModel(model)}
               />
+              </div>
             )}
+                </div>
+              ) : null}
+            </div>
           </IosFixedPageHeaderShell>
         </div>
       )}
