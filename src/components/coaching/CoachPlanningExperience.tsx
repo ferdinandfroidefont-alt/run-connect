@@ -124,6 +124,15 @@ function formatMaquetteMonPlanWeekRange(weekStart: Date): string {
 }
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
+
+/** Maquette `CreerSeancePage` · sports rapides (4 tuiles). */
+const WEEK_EDITOR_SPORTS: { id: string; emoji: string; bg: string; draftSport: SportType }[] = [
+  { id: "course", emoji: "🏃", bg: COACHING_ACTION_BLUE, draftSport: "running" },
+  { id: "velo", emoji: "🚴", bg: "#FF3B30", draftSport: "cycling" },
+  { id: "natation", emoji: "🏊", bg: "#5AC8FA", draftSport: "swimming" },
+  { id: "muscu", emoji: "💪", bg: "#FF9500", draftSport: "strength" },
+];
+
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
 type IntensityMode = "zones" | "rpe";
 type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
@@ -1103,6 +1112,8 @@ export function CoachPlanningExperience() {
   /** Maquette 16 · ouverture « Programmer la semaine » sans athlète (ex. FAB Créer une séance). */
   const [coachWeekProgrammerOpen, setCoachWeekProgrammerOpen] = useState(false);
   const [coachingTab, setCoachingTab] = useState<"planning" | "create">("planning");
+  /** `wizard` = FAB / flux 5 étapes · `weekEditor` = + dans « Programmer la semaine » (maquette CreerSeancePage). */
+  const [createSessionSurface, setCreateSessionSurface] = useState<"wizard" | "weekEditor">("wizard");
   const [createWizardStep, setCreateWizardStep] = useState(1);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [editorTab, setEditorTab] = useState<"build" | "models">("build");
@@ -1791,26 +1802,27 @@ export function CoachPlanningExperience() {
     Boolean(selectedAthleteRunningRefs?.zones);
 
   const openCreateForDate = useCallback(
-    (date: Date, opts?: { startStep?: number }) => {
+    (date: Date, opts?: { surface?: "wizard" | "weekEditor" }) => {
+      const surface = opts?.surface ?? "weekEditor";
       setEditingSessionId(null);
       const loc = clubLocation?.trim() ?? "";
-      const startStep = Math.min(5, Math.max(1, opts?.startStep ?? 1));
       const wizardSportId = "course";
       setDraft({
         ...emptyDraft(date.toISOString()),
-        title:
-          startStep >= 4
-            ? buildCoachSessionHeadline(wizardSportId, loc || "Lieu à préciser")
-            : "",
+        title: "",
         defaultLocationName: loc,
-        locationConfirmed: Boolean(loc) || startStep > 1,
+        locationConfirmed: Boolean(loc),
         wizardSportId,
+        sport: "running",
         athleteId: activeAthleteId,
         groupId: activeGroupId,
       });
-      setCoachWeekProgrammerOpen(false);
-      setCreateWizardStep(startStep);
+      setCreateSessionSurface(surface);
+      setCreateWizardStep(surface === "wizard" ? 1 : 4);
       setEditorTab("build");
+      if (surface === "wizard") {
+        setCoachWeekProgrammerOpen(false);
+      }
       setCoachingTab("create");
     },
     [activeAthleteId, activeGroupId, clubLocation]
@@ -1831,6 +1843,7 @@ export function CoachPlanningExperience() {
       locationConfirmed: Boolean(existing.defaultLocationName?.trim()),
       wizardSportId: defaultWizardSportIdForDraftSport(existing.sport),
     });
+    setCreateSessionSurface("weekEditor");
     setCreateWizardStep(4);
     setEditorTab("build");
     setCoachingTab("create");
@@ -2020,6 +2033,8 @@ export function CoachPlanningExperience() {
       return prev.map((item) => (item.id === editingSessionId ? payload : item));
     });
     setCoachingTab("planning");
+    setCreateSessionSurface("wizard");
+    setCreateWizardStep(1);
     setSavePulse(true);
     window.setTimeout(() => setSavePulse(false), 900);
     toast.success("Séance enregistrée");
@@ -2756,15 +2771,29 @@ export function CoachPlanningExperience() {
     (user?.user_metadata?.full_name as string | undefined) ||
     (user?.email ? user.email.split("@")[0] : "Coach");
   const [showCoachRequiredDialog, setShowCoachRequiredDialog] = useState(false);
-  const hasCreateDraftWork = useMemo(
-    () =>
+  const hasCreateDraftWork = useMemo(() => {
+    if (createSessionSurface === "weekEditor") {
+      return Boolean(draft.title.trim()) || draft.blocks.length > 0;
+    }
+    return (
       createWizardStep > 1 ||
       Boolean(draft.defaultLocationName?.trim()) ||
       Boolean(draft.locationConfirmed) ||
       Boolean(draft.title.trim()) ||
-      draft.blocks.length > 0,
-    [createWizardStep, draft.defaultLocationName, draft.locationConfirmed, draft.title, draft.blocks.length]
-  );
+      draft.blocks.length > 0
+    );
+  }, [
+    createSessionSurface,
+    createWizardStep,
+    draft.defaultLocationName,
+    draft.locationConfirmed,
+    draft.title,
+    draft.blocks.length,
+  ]);
+
+  const showCreateSessionEditor =
+    createSessionSurface === "weekEditor" ||
+    (createSessionSurface === "wizard" && createWizardStep === 4);
 
   const draftTimeHHmm = useMemo(() => {
     const d = new Date(draft.assignedDate);
@@ -2785,6 +2814,8 @@ export function CoachPlanningExperience() {
       setShowExitDraftDialog(true);
     } else {
       setCoachingTab("planning");
+      setCreateSessionSurface("wizard");
+      setCreateWizardStep(1);
     }
   };
 
@@ -3944,8 +3975,9 @@ export function CoachPlanningExperience() {
               <CoachPlanificationMonthCalendar
                 sessions={calendarSessions}
                 athletes={calendarAthletes}
-                onCreateSession={(date) => {
-                  openCreateForDate(date, { startStep: 1 });
+                onCreateSession={() => {
+                  setCoachWeekProgrammerOpen(true);
+                  scrollWeekPlannerTopIntoView();
                 }}
                 onOpenSession={(id) => openEditSession(id)}
                 onSelectAthlete={(id) => {
@@ -4036,7 +4068,7 @@ export function CoachPlanningExperience() {
                               layoutVariant="coachWeek"
                               isLast={dayIdx === weekDaysLocal.length - 1}
                               athleteSessionCompleted={!!activeAthleteId && session?.athleteParticipationStatus === "completed"}
-                              onAdd={() => openCreateForDate(day, { startStep: 4 })}
+                              onAdd={() => openCreateForDate(day, { surface: "weekEditor" })}
                               onOpen={session ? () => openSessionPreview(session.id) : undefined}
                               onEdit={session ? () => openEditSession(session.id) : undefined}
                               onSend={
@@ -4119,7 +4151,7 @@ export function CoachPlanningExperience() {
                             session={summary}
                             isSent={session?.sent}
                             accentColor={accentColor}
-                            onAdd={() => openCreateForDate(day, { startStep: 4 })}
+                            onAdd={() => openCreateForDate(day, { surface: "weekEditor" })}
                             onOpen={session ? () => openSessionPreview(session.id) : undefined}
                             onEdit={session ? () => openEditSession(session.id) : undefined}
                             onSend={
@@ -4386,6 +4418,8 @@ export function CoachPlanningExperience() {
                   goToCoachSection(nextKey);
                 } else {
                   setCoachingTab("planning");
+                  setCreateSessionSurface("wizard");
+                  setCreateWizardStep(1);
                 }
               }}
             >
@@ -4429,6 +4463,55 @@ export function CoachPlanningExperience() {
             className="min-h-0 h-full"
             headerWrapperClassName="shrink-0 border-b bg-white"
             header={
+              createSessionSurface === "weekEditor" ? (
+                <div className="pt-[calc(var(--safe-area-top)-4px)]">
+                  <div className="flex shrink-0 items-center gap-2 border-b border-[#E5E5EA] px-4 pb-3 pt-1">
+                    <button type="button" onClick={tryCloseCreateWizard} className="flex shrink-0 items-center gap-0">
+                      <ChevronLeft className="h-6 w-6" color={COACHING_ACTION_BLUE} strokeWidth={2.6} />
+                      <span className="text-[17px] font-semibold" style={{ color: COACHING_ACTION_BLUE }}>
+                        Retour
+                      </span>
+                    </button>
+                    <p className="min-w-0 flex-1 truncate px-1 text-center text-[17px] font-bold text-[#0A0F1F]">
+                      Créer une séance
+                    </p>
+                    <button
+                      type="button"
+                      onClick={tryCloseCreateWizard}
+                      className="shrink-0 text-[17px] font-bold"
+                      style={{ color: COACHING_ACTION_BLUE }}
+                    >
+                      OK
+                    </button>
+                  </div>
+                  <div className="flex shrink-0 gap-3 border-b border-[#E5E5EA] bg-white px-5 pb-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab("build")}
+                      className="flex-1 rounded-full py-2 text-[16px] font-bold transition-transform active:scale-[0.98]"
+                      style={{
+                        background: editorTab === "build" ? COACHING_ACTION_BLUE : "white",
+                        color: editorTab === "build" ? "white" : "#0A0F1F",
+                        border: editorTab === "build" ? "none" : "1.5px solid #E5E5EA",
+                      }}
+                    >
+                      Construire
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab("models")}
+                      className="flex-1 rounded-full py-2 text-[16px] font-bold transition-transform active:scale-[0.98]"
+                      style={{
+                        background: editorTab === "models" ? COACHING_ACTION_BLUE : "white",
+                        color: editorTab === "models" ? "white" : "#0A0F1F",
+                        border: editorTab === "models" ? "none" : "1.5px solid #E5E5EA",
+                      }}
+                    >
+                      Modèles
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div className="pt-[calc(var(--safe-area-top)-4px)]">
                 <div className="flex shrink-0 items-center gap-2 border-b border-[#E5E5EA] px-4 pb-3 pt-1">
                   <button type="button" onClick={goCreateWizardPrev} className="flex shrink-0 items-center gap-0">
@@ -4465,6 +4548,7 @@ export function CoachPlanningExperience() {
                   ))}
                 </div>
               </div>
+              )
             }
             scrollClassName="pb-6"
             scrollProps={{
@@ -4474,6 +4558,26 @@ export function CoachPlanningExperience() {
               },
             }}
             footer={
+              createSessionSurface === "weekEditor" ? (
+                <div
+                  className="shrink-0 border-t border-[#E5E5EA] bg-white px-5 py-3"
+                  style={{ paddingBottom: "max(12px, var(--safe-area-bottom))" }}
+                >
+                  <button
+                    type="button"
+                    disabled={draft.blocks.length === 0}
+                    onClick={() => void saveSession()}
+                    className="flex w-full items-center justify-center rounded-2xl py-3.5 text-[16px] font-bold text-white transition-transform active:scale-[0.99] disabled:opacity-[0.38]"
+                    style={{
+                      background:
+                        draft.blocks.length === 0 ? `${COACHING_ACTION_BLUE}66` : COACHING_ACTION_BLUE,
+                      boxShadow: draft.blocks.length === 0 ? "none" : "0 2px 8px rgba(0, 122, 255, 0.25)",
+                    }}
+                  >
+                    Enregistrer la séance
+                  </button>
+                </div>
+              ) : (
               <div
                 className="shrink-0 border-t border-[#E5E5EA] bg-white px-5 py-3"
                 style={{ paddingBottom: "max(12px, var(--safe-area-bottom))" }}
@@ -4512,10 +4616,11 @@ export function CoachPlanningExperience() {
                   </span>
                 </button>
               </div>
+              )
             }
           >
             <div className="px-5 pb-6 pt-5" style={{ background: COACHING_PAGE_BG }}>
-              {createWizardStep === 1 ? (
+              {createSessionSurface === "wizard" && createWizardStep === 1 ? (
                 <CoachingWizardStep1Location
                   location={draft.defaultLocationName ?? ""}
                   locationConfirmed={Boolean(draft.locationConfirmed)}
@@ -4534,13 +4639,13 @@ export function CoachPlanningExperience() {
                   }
                 />
               ) : null}
-              {createWizardStep === 2 ? (
+              {createSessionSurface === "wizard" && createWizardStep === 2 ? (
                 <CoachingWizardStep2Sport
                   wizardSportId={draft.wizardSportId ?? "course"}
                   onSelectSport={onWizardSportPicked}
                 />
               ) : null}
-              {createWizardStep === 3 ? (
+              {createSessionSurface === "wizard" && createWizardStep === 3 ? (
                 <CoachingWizardStep3DateTime
                   calendarMonth={calendarMonth}
                   onPrevMonth={() => setCalendarMonth((m) => subMonths(m, 1))}
@@ -4552,7 +4657,7 @@ export function CoachPlanningExperience() {
                   onTimeRowClick={openDraftTimeWheel}
                 />
               ) : null}
-              {createWizardStep === 5 ? (
+              {createSessionSurface === "wizard" && createWizardStep === 5 ? (
                 <CoachingWizardStep5Final
                   wizardSportId={draft.wizardSportId ?? "course"}
                   locationLine={draft.defaultLocationName?.trim() || "Lieu à préciser"}
@@ -4560,14 +4665,51 @@ export function CoachPlanningExperience() {
                   timeHHmm={draftTimeHHmm}
                 />
               ) : null}
-              {createWizardStep === 4 ? (
+              {showCreateSessionEditor ? (
                 <div className="space-y-4">
-                  <h1
-                    className="mb-0 mt-0 text-[22px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
-                    style={{ lineHeight: 1.2 }}
-                  >
-                    {buildCoachSessionHeadline(draft.wizardSportId ?? "course", draft.defaultLocationName ?? "")}
-                  </h1>
+                  {createSessionSurface === "weekEditor" ? (
+                    <>
+                      <p className="text-[15px] font-extrabold tracking-wide text-[#8E8E93]">Nom de la séance</p>
+                      <input
+                        value={draft.title}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                        placeholder="Ex. Fractionné piste"
+                        className="w-full rounded-2xl bg-white px-4 py-3 text-[16px] text-[#0A0F1F] outline-none placeholder:text-[#8E8E93]"
+                        style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+                      />
+                      <div className="grid grid-cols-4 gap-3">
+                        {WEEK_EDITOR_SPORTS.map((sp) => {
+                          const selected = (draft.wizardSportId ?? "course") === sp.id;
+                          return (
+                            <button
+                              key={sp.id}
+                              type="button"
+                              onClick={() =>
+                                setDraft((prev) => ({ ...prev, wizardSportId: sp.id, sport: sp.draftSport }))
+                              }
+                              className="flex aspect-square items-center justify-center rounded-2xl text-[36px] transition-transform active:scale-95"
+                              style={{
+                                background: sp.bg,
+                                boxShadow: selected
+                                  ? `0 0 0 3px white, 0 0 0 5px ${COACHING_ACTION_BLUE}`
+                                  : "0 1px 2px rgba(0,0,0,0.04)",
+                              }}
+                            >
+                              {sp.emoji}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <h1
+                      className="mb-0 mt-0 text-[22px] font-extrabold tracking-[-0.02em] text-[#0A0F1F]"
+                      style={{ lineHeight: 1.2 }}
+                    >
+                      {buildCoachSessionHeadline(draft.wizardSportId ?? "course", draft.defaultLocationName ?? "")}
+                    </h1>
+                  )}
+                  {createSessionSurface === "wizard" ? (
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -4594,6 +4736,7 @@ export function CoachPlanningExperience() {
                       Modèles
                     </button>
                   </div>
+                  ) : null}
                   {editorTab === "build" ? (
                 <div className="space-y-3">
                   <div className="space-y-3">
