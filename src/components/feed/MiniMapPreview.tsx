@@ -39,6 +39,10 @@ interface MiniMapPreviewProps {
   showHint?: boolean;
   className?: string;
   zoom?: number;
+  /** Attendre width/height > 0 avant init (dialog, animations). */
+  waitForLayout?: boolean;
+  /** Désactive le boot Mapbox (ex. hors viewport). */
+  enabled?: boolean;
 }
 
 export const MiniMapPreview = ({
@@ -52,6 +56,8 @@ export const MiniMapPreview = ({
   showHint,
   className,
   zoom = 12,
+  waitForLayout = false,
+  enabled = true,
 }: MiniMapPreviewProps) => {
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -106,6 +112,10 @@ export const MiniMapPreview = ({
     setMapError(false);
     setIsMapLoaded(false);
 
+    if (!enabled) {
+      return;
+    }
+
     if (!getMapboxAccessToken()) {
       setIsMapLoaded(false);
       setMapError(true);
@@ -115,12 +125,13 @@ export const MiniMapPreview = ({
     const { lat: cLat, lng: cLng } = normalizePreviewCoords(lat, lng);
     let cancelled = false;
     let resizeObserver: ResizeObserver | null = null;
+    let layoutRafId: number | null = null;
+    let layoutAttempts = 0;
 
     const initMap = async () => {
       try {
-        await new Promise<void>((r) => requestAnimationFrame(() => r()));
-        await new Promise<void>((r) => requestAnimationFrame(() => r()));
-        if (!mapRef.current || cancelled) {
+        const container = mapRef.current;
+        if (!container || cancelled) {
           if (!cancelled) {
             setMapError(true);
             setIsMapLoaded(false);
@@ -128,7 +139,7 @@ export const MiniMapPreview = ({
           return;
         }
 
-        const map = await createEmbeddedMapboxMap(mapRef.current, {
+        const map = await createEmbeddedMapboxMap(container, {
           center: { lat: cLat, lng: cLng },
           zoom,
           interactive,
@@ -180,6 +191,8 @@ export const MiniMapPreview = ({
         const onReady = () => {
           resizeMap();
           requestAnimationFrame(() => requestAnimationFrame(resizeMap));
+          window.setTimeout(resizeMap, 120);
+          window.setTimeout(resizeMap, 400);
           if (!cancelled) setIsMapLoaded(true);
         };
         if (map.isStyleLoaded()) onReady();
@@ -189,8 +202,6 @@ export const MiniMapPreview = ({
           resizeObserver = new ResizeObserver(() => resizeMap());
           resizeObserver.observe(mapRef.current);
         }
-
-        if (!cancelled) setIsMapLoaded(true);
       } catch (err) {
         console.error('MiniMapPreview error:', err);
         if (!cancelled) {
@@ -200,10 +211,33 @@ export const MiniMapPreview = ({
       }
     };
 
-    void initMap();
+    const tryStart = () => {
+      if (cancelled) return;
+      const el = mapRef.current;
+      if (!el) {
+        if (layoutAttempts++ < 80) {
+          layoutRafId = requestAnimationFrame(tryStart);
+          return;
+        }
+        setMapError(true);
+        return;
+      }
+      if (waitForLayout && (el.offsetWidth < 2 || el.offsetHeight < 2)) {
+        if (layoutAttempts++ < 80) {
+          layoutRafId = requestAnimationFrame(tryStart);
+          return;
+        }
+        setMapError(true);
+        return;
+      }
+      void initMap();
+    };
+
+    tryStart();
 
     return () => {
       cancelled = true;
+      if (layoutRafId != null) cancelAnimationFrame(layoutRafId);
       resizeObserver?.disconnect();
       resizeObserver = null;
       markerRef.current?.remove();
@@ -221,6 +255,8 @@ export const MiniMapPreview = ({
     interactive,
     activityType,
     bootAttempt,
+    waitForLayout,
+    enabled,
   ]);
 
   if (mapError) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,9 +13,9 @@ const IOS_LABEL_GRAY = "#8E8E93";
 const IOS_TITLE = "#0A0F1F";
 const IOS_BORDER = "#E5E5EA";
 
-/** Contenu : mobile plein écran via `fullScreen` ; desktop centré (sm). Z élevé pour passer au-dessus du layout profil / séances. */
+/** Plein écran — pas de `transform` sur sm (sinon Mapbox ne peint pas les tuiles). */
 const RELIABILITY_CONTENT_LAYOUT =
-  "!z-[200] flex max-h-[100dvh] min-h-0 w-full flex-col gap-0 overflow-hidden border-0 bg-[#F2F2F7] p-0 shadow-none sm:!fixed sm:inset-auto sm:left-1/2 sm:top-1/2 sm:z-[200] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[20px] sm:border sm:border-[#E5E5EA] sm:shadow-[0_8px_40px_rgba(0,0,0,0.12)]";
+  "!z-[200] flex max-h-[100dvh] min-h-0 w-full flex-col gap-0 overflow-hidden border-0 bg-[#F2F2F7] p-0 shadow-none sm:!z-[200]";
 
 const CARD_SHADOW = "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)";
 
@@ -135,6 +135,26 @@ export const ReliabilityDetailsDialog = ({
   const [upcomingCount, setUpcomingCount] = useState(0);
   const [historyCards, setHistoryCards] = useState<HistoryCardModel[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  /** Après ouverture du dialog + layout stable (Mapbox refuse transform / taille 0). */
+  const [mapsMountReady, setMapsMountReady] = useState(false);
+
+  useEffect(() => {
+    if (!open || historyLoading) {
+      setMapsMountReady(false);
+      return;
+    }
+    let cancelled = false;
+    const arm = () => {
+      if (!cancelled) setMapsMountReady(true);
+    };
+    const t = window.setTimeout(arm, 150);
+    requestAnimationFrame(() => requestAnimationFrame(arm));
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+      setMapsMountReady(false);
+    };
+  }, [open, historyLoading, historyCards.length]);
 
   useEffect(() => {
     if (!open || !reliabilitySubjectUserId) {
@@ -505,7 +525,7 @@ export const ReliabilityDetailsDialog = ({
           ) : (
             <div className="space-y-4 pb-2">
               {historyCards.map((c) => (
-                <ReliabilityHistoryActivityCard key={c.sessionId} card={c} />
+                <ReliabilityHistoryActivityCard key={c.sessionId} card={c} mapsMountReady={mapsMountReady} />
               ))}
             </div>
           )}
@@ -515,7 +535,62 @@ export const ReliabilityDetailsDialog = ({
   );
 };
 
-function ReliabilityHistoryActivityCard({ card }: { card: HistoryCardModel }) {
+function ReliabilityHistoryMap({
+  card,
+  mapsMountReady,
+}: {
+  card: HistoryCardModel;
+  mapsMountReady: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setInView(true);
+      },
+      { rootMargin: "120px 0px", threshold: 0.01 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const showMap = mapsMountReady && inView;
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative mx-3.5 h-40 min-h-[10rem] overflow-hidden rounded-xl border border-[#E5E5EA] bg-muted"
+    >
+      {showMap ? (
+        <MiniMapPreview
+          lat={card.locationLat}
+          lng={card.locationLng}
+          sessionId={card.sessionId}
+          avatarUrl={card.organizerAvatarUrl}
+          activityType={card.activityType ?? undefined}
+          interactive={false}
+          showHint={false}
+          waitForLayout
+          className="h-full w-full"
+        />
+      ) : (
+        <div className="h-full w-full bg-muted" aria-hidden />
+      )}
+    </div>
+  );
+}
+
+function ReliabilityHistoryActivityCard({
+  card,
+  mapsMountReady,
+}: {
+  card: HistoryCardModel;
+  mapsMountReady: boolean;
+}) {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-3 p-3.5">
@@ -549,18 +624,7 @@ function ReliabilityHistoryActivityCard({ card }: { card: HistoryCardModel }) {
         </span>
       </div>
 
-      <div className="relative mx-3.5 h-40 overflow-hidden rounded-xl border border-[#E5E5EA]">
-        <MiniMapPreview
-          lat={card.locationLat}
-          lng={card.locationLng}
-          sessionId={card.sessionId}
-          avatarUrl={card.organizerAvatarUrl}
-          activityType={card.activityType ?? undefined}
-          interactive={false}
-          showHint={false}
-          className="h-full w-full"
-        />
-      </div>
+      <ReliabilityHistoryMap card={card} mapsMountReady={mapsMountReady} />
 
       <div className="p-3.5">
         <p className="mb-3 text-[15px] font-bold" style={{ color: IOS_TITLE }}>
