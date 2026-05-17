@@ -3353,7 +3353,7 @@ export function CoachPlanningExperience() {
           pinHeader={pinCoachShellHeader}
           scrollRef={coachingMainScrollRef}
           headerWrapperClassName={
-            weekPlannerMode
+            weekPlannerMode || activeMenuKey === "tracking"
               ? "shrink-0 border-b border-[#E5E5EA] bg-[#FFFFFF]"
               : activeMenuKey === "club"
                 ? "shrink-0 border-b border-border apple-grouped-bg"
@@ -3365,19 +3365,28 @@ export function CoachPlanningExperience() {
           }
           header={
             weekPlannerMode ? (
-              <div className="px-4 pb-[14px] pt-[max(12px,calc(var(--safe-area-top)-4px))]">
-                {/* Maquette apple-screens · ScreenCoachWeek : retour puis titre display 28px / 700 (pas titre nav 17px centré). */}
+              <div className="flex shrink-0 items-center px-4 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))]">
                 <button
                   type="button"
                   onClick={clearWeekPlannerTarget}
-                  className="flex min-w-0 items-center gap-0.5 rounded-lg py-1 pr-1 text-left text-[17px] font-semibold text-[#007AFF] active:opacity-60 [-webkit-tap-highlight-color:transparent] dark:text-[#0A84FF]"
+                  className="flex shrink-0 items-center active:opacity-70 [-webkit-tap-highlight-color:transparent]"
+                  aria-label="Retour à la planification"
                 >
-                  <ChevronLeft className="h-6 w-6 shrink-0 stroke-[2.6]" aria-hidden />
-                  <span className="min-w-0 whitespace-nowrap">Planification</span>
+                  <ChevronLeft className="h-6 w-6" color="#007AFF" strokeWidth={2.6} aria-hidden />
+                  <span
+                    className="text-[17px] font-medium tracking-tight"
+                    style={{ color: "#007AFF", letterSpacing: "-0.01em" }}
+                  >
+                    Planification
+                  </span>
                 </button>
-                <h1 className="font-display mt-1 text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#0A0F1F] dark:text-foreground">
+                <h1
+                  className="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-extrabold tracking-tight text-[#0A0F1F]"
+                  style={{ letterSpacing: "-0.01em", margin: 0 }}
+                >
                   Programmer la semaine
                 </h1>
+                <div className="shrink-0" style={{ width: 80 }} aria-hidden />
               </div>
             ) : activeMenuKey === "club" ? (
               <div className="pt-[calc(var(--safe-area-top)-4px)]">
@@ -3405,14 +3414,28 @@ export function CoachPlanningExperience() {
                 />
               </div>
             ) : activeMenuKey === "tracking" ? (
-              <div className="pt-[calc(var(--safe-area-top)-4px)]">
-                <IosPageHeaderBar
-                  leadingBack={{
-                    onClick: () => setActiveMenuKey("planning"),
-                    label: "Page précédente",
-                  }}
-                  title="Suivi athlète"
-                />
+              <div className="flex shrink-0 items-center px-4 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))]">
+                <button
+                  type="button"
+                  onClick={() => setActiveMenuKey("planning")}
+                  className="flex shrink-0 items-center active:opacity-70 [-webkit-tap-highlight-color:transparent]"
+                  aria-label="Retour à la planification"
+                >
+                  <ChevronLeft className="h-6 w-6" color="#007AFF" strokeWidth={2.6} aria-hidden />
+                  <span
+                    className="text-[17px] font-medium tracking-tight"
+                    style={{ color: "#007AFF", letterSpacing: "-0.01em" }}
+                  >
+                    Planification
+                  </span>
+                </button>
+                <h1
+                  className="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-extrabold tracking-tight text-[#0A0F1F]"
+                  style={{ letterSpacing: "-0.01em", margin: 0 }}
+                >
+                  Suivi athlète
+                </h1>
+                <div className="shrink-0" style={{ width: 80 }} aria-hidden />
               </div>
             ) : (
               <PlanningHeader

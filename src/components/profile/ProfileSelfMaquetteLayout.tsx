@@ -304,7 +304,8 @@ export function ProfileSelfMaquetteLayout(props: {
 
   followerCount: number;
   followingCount: number;
-  sessionsJoinedCount: number;
+  /** Total séances (créées + inscriptions participant), pour le bloc héros — indépendant du décompte fiabilité. */
+  seancesTotal: number;
   formatCompactCount: (n: number) => string;
   openFollowDialog: (type: "followers" | "following") => void;
 
@@ -342,7 +343,7 @@ export function ProfileSelfMaquetteLayout(props: {
     navigate,
     followerCount,
     followingCount,
-    sessionsJoinedCount,
+    seancesTotal,
     formatCompactCount,
     openFollowDialog,
     onShareProfile,
@@ -465,7 +466,7 @@ export function ProfileSelfMaquetteLayout(props: {
             locationLabel={locationLabel}
             sportMeta={sportMeta}
             statsFormatted={{
-              seances: formatCompactCount(sessionsJoinedCount),
+              seances: formatCompactCount(seancesTotal),
               abonnes: formatCompactCount(followerCount),
               suivis: formatCompactCount(followingCount),
             }}

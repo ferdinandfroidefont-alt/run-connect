@@ -47,7 +47,7 @@ export function DiscoverLiveMaquetteSection({
 
       <div
         className={`relative mt-4 overflow-hidden rounded-2xl ring-1 ring-black/[0.06] transition-all duration-300 ease-out ${
-          fullscreen ? "h-[calc(100vh-220px)]" : "h-[260px]"
+          fullscreen ? "h-[calc(100dvh-220px-12px)]" : "h-[260px]"
         }`}
       >
         <DiscoverMapCard

@@ -47,16 +47,6 @@ interface PacePickerModalProps {
   initialSecondsPerKm?: number;
 }
 
-function eventFromWheelColumn(target: EventTarget | null) {
-  if (!(target instanceof Element)) return false;
-  return !!target.closest("[data-wheel-column='true']");
-}
-
-function eventFromPickerPanel(target: EventTarget | null) {
-  if (!(target instanceof Element)) return false;
-  return !!target.closest("[data-wheel-panel='true']");
-}
-
 export function SmartPerformancePicker({
   open,
   onClose,
@@ -66,23 +56,6 @@ export function SmartPerformancePicker({
   onConfirm,
 }: SmartPerformancePickerProps) {
   const maxWidth = columns.length >= 3 ? 360 : 320;
-
-  useEffect(() => {
-    if (!open) return;
-
-    const blockBackgroundScroll = (event: TouchEvent | WheelEvent) => {
-      if (eventFromPickerPanel(event.target) || eventFromWheelColumn(event.target)) return;
-      event.preventDefault();
-    };
-
-    document.addEventListener("touchmove", blockBackgroundScroll, { passive: false, capture: true });
-    document.addEventListener("wheel", blockBackgroundScroll, { passive: false, capture: true });
-
-    return () => {
-      document.removeEventListener("touchmove", blockBackgroundScroll, { capture: true } as EventListenerOptions);
-      document.removeEventListener("wheel", blockBackgroundScroll, { capture: true } as EventListenerOptions);
-    };
-  }, [open]);
 
   if (!open) return null;
 

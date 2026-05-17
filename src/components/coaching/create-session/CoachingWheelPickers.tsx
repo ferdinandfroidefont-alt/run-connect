@@ -98,25 +98,55 @@ function useWheelBodyScrollLock(active: boolean) {
   }, [active]);
 }
 
+/** Au-dessus des bottom sheets maquette (`DiscoverMaquetteSheet` ~10100), nav (~120), tutoriel (~10000). */
+const WHEEL_PICKER_PORTAL_Z = 11050;
+
+function wheelPickerScrollGuard(event: TouchEvent | WheelEvent) {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+
+  const stack = target.closest("[data-wheel-picker-stack]");
+  if (!stack) {
+    event.preventDefault();
+    return;
+  }
+
+  if (target.closest("[data-wheel-column='true']")) return;
+
+  event.preventDefault();
+}
+
 /**
- * Portail modale aligné maquette RunConnect (11).jsx : fond 40 %, carte centrée, z-index 9999.
+ * Portail modale aligné maquette RunConnect (11).jsx : fond 40 %, carte centrée, au-dessus du chrome app.
  */
 export function WheelPickerPortal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   useWheelBodyScrollLock(true);
 
+  useEffect(() => {
+    document.addEventListener("touchmove", wheelPickerScrollGuard, { passive: false, capture: true });
+    document.addEventListener("wheel", wheelPickerScrollGuard, { passive: false, capture: true });
+
+    return () => {
+      document.removeEventListener("touchmove", wheelPickerScrollGuard, { capture: true } as EventListenerOptions);
+      document.removeEventListener("wheel", wheelPickerScrollGuard, { capture: true } as EventListenerOptions);
+    };
+  }, []);
+
   return createPortal(
     <div
+      data-wheel-picker-stack=""
       style={{
         position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 9999,
+        zIndex: WHEEL_PICKER_PORTAL_Z,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: 24,
+        isolation: "isolate",
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
       }}
     >
@@ -131,11 +161,26 @@ export function WheelPickerPortal({ onClose, children }: { onClose: () => void; 
           padding: 0,
           border: "none",
           cursor: "pointer",
+          zIndex: 0,
+          touchAction: "none",
           background: "rgba(0,0,0,0.4)",
           animation: "coachingWheelFadeIn 0.2s ease-out",
         }}
       />
-      {children}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          pointerEvents: "auto",
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          touchAction: "auto",
+          overscrollBehavior: "contain",
+        }}
+      >
+        {children}
+      </div>
       <style>{`
         .wheel-scroll::-webkit-scrollbar { display: none; }
         .wheel-scroll { scrollbar-width: none; -ms-overflow-style: none; }
@@ -223,6 +268,8 @@ export function CoachingWheelColumn({
         style={{
           scrollSnapType: "y mandatory",
           WebkitOverflowScrolling: "touch",
+          touchAction: "pan-y",
+          overscrollBehaviorY: "contain",
           paddingTop: PADDING,
           paddingBottom: PADDING,
           boxSizing: "border-box",

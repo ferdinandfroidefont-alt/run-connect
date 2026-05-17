@@ -1,5 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useFeed, type FeedSession } from "@/hooks/useFeed";
 import { useDiscoverFeed } from "@/hooks/useDiscoverFeed";
 import type { DiscoverSession } from "@/hooks/useDiscoverFeed";
@@ -10,10 +12,7 @@ import {
 } from "@/components/discover/DiscoverChromeShell";
 import { DiscoverMapCard } from "@/components/discover/DiscoverMapCard";
 import { DiscoverMapMaquetteToolbar } from "@/components/discover/DiscoverMapMaquetteToolbar";
-import {
-  FeedActivitiesMaquetteSynced,
-  type FeedActivitiesFeedsModel,
-} from "@/components/feed/FeedActivitiesMaquette";
+import { DiscoverFeedInlineSection } from "@/components/discover/DiscoverFeedInlineSection";
 import { DiscoverFriendsSessionsSection } from "@/components/discover/DiscoverFriendsSessionsSection";
 import { DiscoverLiveMaquetteSection } from "@/components/discover/DiscoverLiveMaquetteSection";
 import {
@@ -61,8 +60,11 @@ function feedSessionToDialog(session: FeedSession): Record<string, unknown> {
 }
 
 export function DiscoverPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState<DiscoverChromeActiveChip>("carte");
+  const [feedSubTab, setFeedSubTab] = useState<"amis" | "decouvrir">("amis");
+  const [friendCount, setFriendCount] = useState<number | null>(null);
   const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
   const [discoverMapFullscreen, setDiscoverMapFullscreen] = useState(false);
   const [liveMapFullscreen, setLiveMapFullscreen] = useState(false);
@@ -79,7 +81,6 @@ export function DiscoverPage() {
     hasMore,
     loadMore,
     refresh: refreshFeed,
-    addComment,
   } = useFeed();
 
   const {
@@ -92,8 +93,6 @@ export function DiscoverPage() {
     selectedActivities,
     toggleActivity,
     toggleAllActivities,
-    hasLocation,
-    resetFilters,
   } = useDiscoverFeed();
 
   const liveSessions = useMemo(
@@ -101,46 +100,17 @@ export function DiscoverPage() {
     [discoverSessions],
   );
 
-  const feedActivitiesFeeds = useMemo<FeedActivitiesFeedsModel>(
-    () => ({
-      feedItems,
-      friendsLoading,
-      hasMore,
-      loadMore,
-      refreshFriends: refreshFeed,
-      addComment,
-      discoverSessions,
-      discoverLoading,
-      hasLocation,
-      maxDistance,
-      setMaxDistance,
-      selectedActivities,
-      toggleActivity,
-      toggleAllActivities,
-      joinSession,
-      refreshDiscover,
-      resetFilters,
-    }),
-    [
-      feedItems,
-      friendsLoading,
-      hasMore,
-      loadMore,
-      refreshFeed,
-      addComment,
-      discoverSessions,
-      discoverLoading,
-      hasLocation,
-      maxDistance,
-      setMaxDistance,
-      selectedActivities,
-      toggleActivity,
-      toggleAllActivities,
-      joinSession,
-      refreshDiscover,
-      resetFilters,
-    ],
-  );
+  useEffect(() => {
+    if (!user?.id) return;
+    void (async () => {
+      const { count, error } = await supabase
+        .from("user_follows")
+        .select("*", { count: "exact", head: true })
+        .eq("follower_id", user.id)
+        .eq("status", "accepted");
+      if (!error) setFriendCount(count ?? 0);
+    })();
+  }, [user?.id]);
 
   const onPullRefresh = useCallback(async () => {
     await Promise.allSettled([refreshFeed(), refreshDiscover()]);
@@ -174,7 +144,7 @@ export function DiscoverPage() {
           <>
             <div
               className={`relative mt-4 overflow-hidden rounded-2xl ring-1 ring-black/[0.06] transition-all duration-300 ease-out ${
-                discoverMapFullscreen ? "h-[calc(100vh-220px)]" : "h-[260px]"
+                discoverMapFullscreen ? "h-[calc(100dvh-220px-12px)]" : "h-[260px]"
               }`}
             >
               <DiscoverMapCard
@@ -217,7 +187,25 @@ export function DiscoverPage() {
         ) : null}
 
         {view === "feed" ? (
-          <FeedActivitiesMaquetteSynced embeddedInDiscoverChrome feeds={feedActivitiesFeeds} />
+          <DiscoverFeedInlineSection
+            subTab={feedSubTab}
+            onSubTabChange={setFeedSubTab}
+            friendCount={friendCount}
+            feedItems={feedItems}
+            friendsLoading={friendsLoading}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            discoverSessions={discoverSessions}
+            discoverLoading={discoverLoading}
+            maxDistance={maxDistance}
+            setMaxDistance={setMaxDistance}
+            selectedActivities={selectedActivities}
+            toggleActivity={toggleActivity}
+            toggleAllActivities={toggleAllActivities}
+            joinSession={joinSession}
+            onOpenDiscoverSession={(s) => setSelectedSession(discoverToDialog(s))}
+            onOpenFriendSession={(s) => setSelectedSession(feedSessionToDialog(s))}
+          />
         ) : null}
 
         {view === "live" ? (

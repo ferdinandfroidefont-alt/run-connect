@@ -124,6 +124,8 @@ const Profile = () => {
   const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
   const [totalSessionsAbsent, setTotalSessionsAbsent] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
+  /** Séances affichées dans le bloc héros : créées + participations (tous statuts), pas seulement user_stats. */
+  const [profileSeancesTotal, setProfileSeancesTotal] = useState(0);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [storyHighlights, setStoryHighlights] = useState<ProfileStoryHighlight[]>([]);
   const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
@@ -205,22 +207,39 @@ const Profile = () => {
   const fetchReliabilityStats = async () => {
     if (!user || isViewingOtherUser) return;
     try {
-      const { data } = await supabase
-        .from('user_stats')
-        .select('reliability_rate, total_sessions_joined, total_sessions_completed, total_sessions_absent')
-        .eq('user_id', user.id)
-        .single();
-      if (!data) return;
-      setReliabilityRate(Math.max(0, Math.min(100, Number(data.reliability_rate) || 0)));
-      setTotalSessionsJoined(data.total_sessions_joined || 0);
-      setTotalSessionsCompleted(data.total_sessions_completed || 0);
-      setTotalSessionsAbsent(Number(data.total_sessions_absent) || 0);
+      const [statsRes, createdRes, participantsRes] = await Promise.all([
+        supabase
+          .from('user_stats')
+          .select('reliability_rate, total_sessions_joined, total_sessions_completed, total_sessions_absent')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('organizer_id', user.id),
+        supabase
+          .from('session_participants')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id),
+      ]);
 
-      const { count: createdCount } = await supabase
-        .from('sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('organizer_id', user.id);
-      setTotalSessionsCreated(createdCount || 0);
+      const data = statsRes.data;
+      if (data) {
+        setReliabilityRate(Math.max(0, Math.min(100, Number(data.reliability_rate) || 0)));
+        setTotalSessionsJoined(data.total_sessions_joined || 0);
+        setTotalSessionsCompleted(data.total_sessions_completed || 0);
+        setTotalSessionsAbsent(Number(data.total_sessions_absent) || 0);
+      } else {
+        setReliabilityRate(0);
+        setTotalSessionsJoined(0);
+        setTotalSessionsCompleted(0);
+        setTotalSessionsAbsent(0);
+      }
+
+      const createdCount = createdRes.count ?? 0;
+      const participantRows = participantsRes.count ?? 0;
+      setTotalSessionsCreated(createdCount);
+      setProfileSeancesTotal(createdCount + participantRows);
     } catch (error) {
       console.error('Error fetching reliability stats:', error);
     }
@@ -818,7 +837,7 @@ const Profile = () => {
         navigate={navigate}
         followerCount={followerCount}
         followingCount={followingCount}
-        sessionsJoinedCount={totalSessionsJoined}
+        seancesTotal={profileSeancesTotal}
         formatCompactCount={formatCompactCount}
         openFollowDialog={(type) => {
           setFollowDialogType(type);
