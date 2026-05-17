@@ -4809,8 +4809,7 @@ export function CoachPlanningExperience() {
                         {schemaDragToolLabel(schemaDraggingTool)}
                       </div>
                     ) : null}
-                </div>
-                </div>
+                  </div>
 
                   {draft.blocks.length > 0 ? (
                     <div className="mt-4 space-y-3">
