@@ -69,6 +69,8 @@ interface CoachingBlockEditorPanelProps {
   initialBlocks?: CoachingSessionBlock[];
   onChange?: (blocks: CoachingSessionBlock[]) => void;
   sport?: "running" | "cycling" | "swimming" | "strength";
+  /** `creerSeance` = typo & palette maquette `CreerSeancePage` (RunConnect 20). */
+  layout?: "default" | "creerSeance";
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -458,7 +460,9 @@ export function CoachingBlockEditorPanel({
   initialBlocks,
   onChange,
   sport = "running",
+  layout = "default",
 }: CoachingBlockEditorPanelProps) {
+  const isCreerSeance = layout === "creerSeance";
   const [blocks, setBlocks] = useState<CoachingSessionBlock[]>(() => initialBlocks ?? []);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [expandedPyramidSteps, setExpandedPyramidSteps] = useState<Record<string, boolean>>({});
@@ -719,13 +723,16 @@ export function CoachingBlockEditorPanel({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
+    <div className={isCreerSeance ? "" : "space-y-4"}>
       {/* Schema section */}
       <div className="space-y-3">
         <div className="space-y-3">
           <p
-            className="m-0 text-[18px] font-extrabold tracking-[-0.01em]"
-            style={{ color: "#0A0F1F" }}
+            className={
+              isCreerSeance
+                ? "m-0 mb-3 mt-7 text-[20px] font-extrabold text-[#0A0F1F]"
+                : "m-0 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]"
+            }
           >
             Schéma de séance
           </p>
@@ -774,17 +781,18 @@ export function CoachingBlockEditorPanel({
             ) : null}
           </div>
 
-          {/* Add block cards — aligné maquette RunConnect (11) */}
+          {/* Add block cards — aligné maquette RunConnect (20) */}
           <p
-            className="mb-1 mt-5 text-[18px] font-extrabold tracking-[-0.01em]"
-            style={{ color: "#0A0F1F" }}
+            className={
+              isCreerSeance
+                ? "m-0 mb-1 mt-7 text-[20px] font-extrabold text-[#0A0F1F]"
+                : "mb-1 mt-5 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]"
+            }
           >
             Ajouter un bloc
           </p>
-          <p className="mb-3 text-[13px]" style={{ color: "#8E8E93" }}>
-            Glisse un bloc sur le schéma ↑
-          </p>
-          <div className="grid grid-cols-4 gap-2">
+          <p className="mb-3 text-[13px] text-[#8E8E93]">Glisse un bloc sur le schéma ↑</p>
+          <div className={cn("grid grid-cols-4", isCreerSeance ? "gap-2.5" : "gap-2")}>
             {COACHING_BLOCK_PALETTE.map((bt) => {
               const tool = schemaToolFromPalette(bt.id);
               const isDraggingThis = schemaDraggingTool === tool;
@@ -807,19 +815,40 @@ export function CoachingBlockEditorPanel({
                       addQuickSchemaBlock(tool);
                     }
                   }}
-                  className="flex cursor-grab flex-col items-center rounded-[14px] border border-[#E5E5EA] bg-white py-3 pb-2.5 select-none touch-none transition active:cursor-grabbing"
-                  style={{
-                    opacity: isDraggingThis ? 0.35 : 1,
-                    transform: isDraggingThis ? "scale(0.94)" : "scale(1)",
-                  }}
+                  className={
+                    isCreerSeance
+                      ? "flex cursor-grab select-none touch-none flex-col items-center active:cursor-grabbing"
+                      : "flex cursor-grab flex-col items-center rounded-[14px] border border-[#E5E5EA] bg-white py-3 pb-2.5 select-none touch-none transition active:cursor-grabbing"
+                  }
+                  style={
+                    isCreerSeance
+                      ? {
+                          background: "white",
+                          borderRadius: 18,
+                          padding: "12px 8px 10px 8px",
+                          gap: 6,
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.06)",
+                          opacity: isDraggingThis ? 0.35 : 1,
+                          transform: isDraggingThis ? "scale(0.94)" : "scale(1)",
+                          transition: "opacity 0.18s ease-out, transform 0.18s ease-out",
+                        }
+                      : {
+                          opacity: isDraggingThis ? 0.35 : 1,
+                          transform: isDraggingThis ? "scale(0.94)" : "scale(1)",
+                        }
+                  }
                 >
                   <BlockPreviewBars type={bt.id} />
-                  <p
-                    className="mt-1.5 shrink-0 text-center text-[12px] font-bold leading-none tracking-[-0.01em]"
-                    style={{ color: "#0A0F1F" }}
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: isCreerSeance ? 600 : 700,
+                      color: "#0A0F1F",
+                      letterSpacing: "-0.01em",
+                    }}
                   >
                     {bt.label}
-                  </p>
+                  </span>
                 </div>
               );
             })}
@@ -844,7 +873,7 @@ export function CoachingBlockEditorPanel({
 
       {/* Block list */}
       {blocks.length > 0 ? (
-        <div className="mt-4 space-y-3">
+        <div className={isCreerSeance ? "mt-5 space-y-3" : "mt-4 space-y-3"}>
           {blocks.map((block, index) => {
             const isPyramidBlock = Boolean(block.notes?.includes(PYRAMID_NOTES_PREFIX));
             const isProgressive = isProgressiveBlock(block);

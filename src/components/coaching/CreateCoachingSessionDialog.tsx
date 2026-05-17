@@ -600,12 +600,12 @@ export const CreateCoachingSessionDialog = ({
                     })}
                   </div>
 
-                  <p className="mb-3 mt-7 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">Schéma de séance</p>
+                  <p className="mb-3 mt-7 text-[20px] font-extrabold text-[#0A0F1F]">Schéma de séance</p>
                   <CoachingSchemaChart ref={schemaRef} blocks={chartBlocks} dragOver={dragging?.over} />
 
-                  <p className="mb-1 mt-7 text-[18px] font-extrabold tracking-[-0.01em] text-[#0A0F1F]">Ajouter un bloc</p>
+                  <p className="mb-1 mt-7 text-[20px] font-extrabold text-[#0A0F1F]">Ajouter un bloc</p>
                   <p className="mb-3 text-[13px] text-[#8E8E93]">Glisse un bloc sur le schéma ↑</p>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 gap-2.5">
                     {COACHING_BLOCK_PALETTE.map((bt) => {
                       const isBeingDragged = dragging?.type === bt.id;
                       return (
